@@ -1,0 +1,45 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: aquant-service
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/stock?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: test
+    password: testtest
+    type: com.alibaba.druid.pool.DruidDataSource
+    # Druid \u8FDE\u63A5\u6C60\u914D\u7F6E
+    druid:
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 60000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      validation-query: SELECT 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      pool-prepared-statements: true
+      filters: stat,wall,slf4j
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+
+
+# Druid \u76D1\u63A7\u9875\u9762\u914D\u7F6E
+druid:
+  stat-view-servlet:
+    enabled: true
+    url-pattern: /druid/*
+    login-username: admin
+    login-password: admin
+
+akshare-address: http://127.0.0.1:8080
