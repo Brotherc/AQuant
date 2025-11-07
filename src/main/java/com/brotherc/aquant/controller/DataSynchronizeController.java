@@ -5,6 +5,7 @@ import com.brotherc.aquant.service.DataSynchronizeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -17,6 +18,12 @@ public class DataSynchronizeController {
     @GetMapping("/stockQuote")
     public ResponseDTO<Void> stockQuote() {
         dataSynchronizeService.stockQuote();
+        return ResponseDTO.success();
+    }
+
+    @GetMapping("/stock/dupont/growth/valuation")
+    public ResponseDTO<Void> stockDupontGrowthValuation(@RequestParam Integer count) {
+        dataSynchronizeService.stockDupontGrowthValuation(count);
         return ResponseDTO.success();
     }
 
