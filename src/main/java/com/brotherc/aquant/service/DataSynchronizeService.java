@@ -1,10 +1,10 @@
 package com.brotherc.aquant.service;
 
 import com.brotherc.aquant.entity.*;
-import com.brotherc.aquant.model.dto.stock.StockZhASpot;
-import com.brotherc.aquant.model.dto.stock.StockZhDupontComparisonEm;
-import com.brotherc.aquant.model.dto.stock.StockZhGrowthComparisonEm;
-import com.brotherc.aquant.model.dto.stock.StockZhValuationComparisonEm;
+import com.brotherc.aquant.model.dto.akshare.StockZhASpot;
+import com.brotherc.aquant.model.dto.akshare.StockZhDupontComparisonEm;
+import com.brotherc.aquant.model.dto.akshare.StockZhGrowthComparisonEm;
+import com.brotherc.aquant.model.dto.akshare.StockZhValuationComparisonEm;
 import com.brotherc.aquant.repository.StockQuoteRepository;
 import com.brotherc.aquant.repository.StockSyncRepository;
 import lombok.RequiredArgsConstructor;

@@ -1,7 +1,7 @@
 package com.brotherc.aquant.service;
 
 import com.brotherc.aquant.entity.StockDupontAnalysis;
-import com.brotherc.aquant.model.dto.stock.StockZhDupontComparisonEm;
+import com.brotherc.aquant.model.dto.akshare.StockZhDupontComparisonEm;
 import com.brotherc.aquant.repository.StockDupontAnalysisRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

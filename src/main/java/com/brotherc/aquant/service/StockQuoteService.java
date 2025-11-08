@@ -1,7 +1,7 @@
 package com.brotherc.aquant.service;
 
 import com.brotherc.aquant.entity.StockQuote;
-import com.brotherc.aquant.model.dto.stock.StockZhASpot;
+import com.brotherc.aquant.model.dto.akshare.StockZhASpot;
 import com.brotherc.aquant.repository.StockQuoteRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

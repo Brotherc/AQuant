@@ -1,7 +1,7 @@
 package com.brotherc.aquant.service;
 
 import com.brotherc.aquant.entity.StockValuationMetrics;
-import com.brotherc.aquant.model.dto.stock.StockZhValuationComparisonEm;
+import com.brotherc.aquant.model.dto.akshare.StockZhValuationComparisonEm;
 import com.brotherc.aquant.repository.StockValuationMetricsRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

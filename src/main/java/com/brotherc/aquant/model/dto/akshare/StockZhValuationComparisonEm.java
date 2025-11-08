@@ -1,4 +1,4 @@
-package com.brotherc.aquant.model.dto.stock;
+package com.brotherc.aquant.model.dto.akshare;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
