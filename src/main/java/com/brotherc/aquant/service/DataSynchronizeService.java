@@ -1,8 +1,10 @@
 package com.brotherc.aquant.service;
 
-import com.brotherc.aquant.entity.StockQuote;
-import com.brotherc.aquant.entity.StockSync;
+import com.brotherc.aquant.entity.*;
 import com.brotherc.aquant.model.dto.stock.StockZhASpot;
+import com.brotherc.aquant.model.dto.stock.StockZhDupontComparisonEm;
+import com.brotherc.aquant.model.dto.stock.StockZhGrowthComparisonEm;
+import com.brotherc.aquant.model.dto.stock.StockZhValuationComparisonEm;
 import com.brotherc.aquant.repository.StockQuoteRepository;
 import com.brotherc.aquant.repository.StockSyncRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,9 +24,12 @@ public class DataSynchronizeService {
 
     private final AKShareService aKShareService;
     private final StockQuoteService stockQuoteService;
+    private final StockGrowthMetricsService stockGrowthMetricsService;
+    private final StockDupontAnalysisService stockDupontAnalysisService;
+    private final StockValuationMetricsService stockValuationMetricsService;
 
-    private StockQuoteRepository stockQuoteRepository;
-    private StockSyncRepository stockSyncRepository;
+    private final StockQuoteRepository stockQuoteRepository;
+    private final StockSyncRepository stockSyncRepository;
 
     public void stockQuote() {
         List<StockZhASpot> stockZhASpots = aKShareService.stockZhASpot();
@@ -59,7 +64,14 @@ public class DataSynchronizeService {
         for (StockQuote stock : stockList) {
             log.info("同步股票：" + stock.getCode() + " - " + stock.getName());
 
-            // TODO: 这里可以补充具体的同步逻辑，比如计算杜邦分析、成长性、估值等数据
+            // 同步计算杜邦分析、成长性、估值等数据
+            List<StockZhGrowthComparisonEm> stockZhGrowthComparisonEms = aKShareService.stockZhGrowthComparisonEm(stock.getCode());
+            List<StockZhDupontComparisonEm> stockZhDupontComparisonEms = aKShareService.stockZhDupontComparisonEm(stock.getCode());
+            List<StockZhValuationComparisonEm> stockZhValuationComparisonEms = aKShareService.stockZhValuationComparisonEm(stock.getCode());
+
+            stockGrowthMetricsService.save(stock.getCode(), stock.getName(), stockZhGrowthComparisonEms);
+            stockDupontAnalysisService.save(stock.getCode(), stock.getName(), stockZhDupontComparisonEms);
+            stockValuationMetricsService.save(stock.getCode(), stock.getName(), stockZhValuationComparisonEms);
 
             // 4. 每同步一条更新 stock_sync 表
             stockSync.setValue(stock.getId());

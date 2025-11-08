@@ -1,6 +1,9 @@
 package com.brotherc.aquant.service;
 
 import com.brotherc.aquant.model.dto.stock.StockZhASpot;
+import com.brotherc.aquant.model.dto.stock.StockZhDupontComparisonEm;
+import com.brotherc.aquant.model.dto.stock.StockZhGrowthComparisonEm;
+import com.brotherc.aquant.model.dto.stock.StockZhValuationComparisonEm;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +46,69 @@ public class AKShareService {
         } catch (IOException e) {
             log.error("stock_zh_a_hist请求失败", e);
             throw new RuntimeException("stock_zh_a_hist请求失败");
+        }
+    }
+
+    public List<StockZhValuationComparisonEm> stockZhValuationComparisonEm(String symbol) {
+        Request request = new Request.Builder()
+                .url(akshareAddress + "/api/public/stock_zh_valuation_comparison_em?symbol=" + symbol.toUpperCase())
+                .get()
+                .build();
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                log.info("失败响应: {}", response);
+                throw new RuntimeException("stock_zh_valuation_comparison_em请求失败");
+            }
+
+            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
+            });
+
+        } catch (IOException e) {
+            log.error("stock_zh_valuation_comparison_em请求失败", e);
+            throw new RuntimeException("stock_zh_valuation_comparison_em请求失败");
+        }
+    }
+
+    public List<StockZhGrowthComparisonEm> stockZhGrowthComparisonEm(String symbol) {
+        Request request = new Request.Builder()
+                .url(akshareAddress + "/api/public/stock_zh_growth_comparison_em?symbol=" + symbol.toUpperCase())
+                .get()
+                .build();
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                log.info("失败响应: {}", response);
+                throw new RuntimeException("stock_zh_growth_comparison_em请求失败");
+            }
+
+            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
+            });
+
+        } catch (IOException e) {
+            log.error("stock_zh_growth_comparison_em请求失败", e);
+            throw new RuntimeException("stock_zh_growth_comparison_em请求失败");
+        }
+    }
+
+    public List<StockZhDupontComparisonEm> stockZhDupontComparisonEm(String symbol) {
+        Request request = new Request.Builder()
+                .url(akshareAddress + "/api/public/stock_zh_dupont_comparison_em?symbol=" + symbol.toUpperCase())
+                .get()
+                .build();
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                log.info("失败响应: {}", response);
+                throw new RuntimeException("stock_zh_dupont_comparison_em请求失败");
+            }
+
+            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
+            });
+
+        } catch (IOException e) {
+            log.error("stock_zh_dupont_comparison_em请求失败", e);
+            throw new RuntimeException("stock_zh_dupont_comparison_em请求失败");
         }
     }
 

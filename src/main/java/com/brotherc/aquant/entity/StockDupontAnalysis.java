@@ -322,7 +322,7 @@ public class StockDupontAnalysis {
      * ROE-3年平均排名
      */
     @Column(name = "roe_3y_avg_rank")
-    private Integer roe3yAvgRank;
+    private BigDecimal roe3yAvgRank;
 
     /**
      * 创建时间

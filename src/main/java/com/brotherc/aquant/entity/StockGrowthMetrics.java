@@ -52,19 +52,19 @@ public class StockGrowthMetrics {
      * 基本每股收益增长率-去年实际
      */
     @Column(name = "eps_growth_last_y_a")
-    private BigDecimal epsGrowthLastYearA;
+    private BigDecimal epsGrowthLastYA;
 
     /**
      * 基本每股收益增长率-去年实际-行业中位数
      */
     @Column(name = "eps_growth_last_y_a_industry_med")
-    private BigDecimal epsGrowthLastYearAIndustryMed;
+    private BigDecimal epsGrowthLastYAIndustryMed;
 
     /**
      * 基本每股收益增长率-去年实际-行业均值
      */
     @Column(name = "eps_growth_last_y_a_industry_avg")
-    private BigDecimal epsGrowthLastYearAIndustryAvg;
+    private BigDecimal epsGrowthLastYAIndustryAvg;
 
     /**
      * 基本每股收益增长率-TTM
@@ -88,73 +88,73 @@ public class StockGrowthMetrics {
      * 基本每股收益增长率-今年预测
      */
     @Column(name = "eps_growth_this_y_e")
-    private BigDecimal epsGrowthThisYearE;
+    private BigDecimal epsGrowthThisYE;
 
     /**
      * 基本每股收益增长率-今年预测-行业中值
      */
     @Column(name = "eps_growth_this_y_e_industry_med")
-    private BigDecimal epsGrowthThisYearEIndustryMed;
+    private BigDecimal epsGrowthThisYEIndustryMed;
 
     /**
      * 基本每股收益增长率-今年预测-行业平均
      */
     @Column(name = "eps_growth_this_y_e_industry_avg")
-    private BigDecimal epsGrowthThisYearEIndustryAvg;
+    private BigDecimal epsGrowthThisYEIndustryAvg;
 
     /**
      * 基本每股收益增长率-明年预测
      */
     @Column(name = "eps_growth_next_y_e")
-    private BigDecimal epsGrowthNextYearE;
+    private BigDecimal epsGrowthNextYE;
 
     /**
      * 基本每股收益增长率-明年预测-行业中值
      */
     @Column(name = "eps_growth_next_y_e_industry_med")
-    private BigDecimal epsGrowthNextYearEIndustryMed;
+    private BigDecimal epsGrowthNextYEIndustryMed;
 
     /**
      * 基本每股收益增长率-明年预测-行业平均
      */
     @Column(name = "eps_growth_next_y_e_industry_avg")
-    private BigDecimal epsGrowthNextYearEIndustryAvg;
+    private BigDecimal epsGrowthNextYEIndustryAvg;
 
     /**
      * 基本每股收益增长率-明年预测
      */
-    @Column(name = "eps_growth_next_y_e")
-    private BigDecimal epsGrowthNext2YearE;
+    @Column(name = "eps_growth_next_2y_e")
+    private BigDecimal epsGrowthNext2YE;
 
     /**
      * 基本每股收益增长率-明年预测-行业中值
      */
-    @Column(name = "eps_growth_next_y_e_industry_med")
-    private BigDecimal epsGrowthNext2YearEIndustryMed;
+    @Column(name = "eps_growth_next_2y_e_industry_med")
+    private BigDecimal epsGrowthNext2YEIndustryMed;
 
     /**
      * 基本每股收益增长率-明年预测-行业平均
      */
-    @Column(name = "eps_growth_next_y_e_industry_avg")
-    private BigDecimal epsGrowthNext2YearEIndustryAvg;
+    @Column(name = "eps_growth_next_2y_e_industry_avg")
+    private BigDecimal epsGrowthNext2YEIndustryAvg;
 
     /**
      * 基本每股收益增长率-3年复合排名
      */
     @Column(name = "eps_growth_3y_cagr_rank")
-    private Integer epsGrowth3yCagrRank;
+    private BigDecimal epsGrowth3yCagrRank;
 
     /**
      * 基本每股收益增长率-3年复合排名-行业中值
      */
     @Column(name = "eps_growth_3y_cagr_rank_industry_med")
-    private Integer epsGrowth3yCagrRankIndustryMed;
+    private BigDecimal epsGrowth3yCagrRankIndustryMed;
 
     /**
      * 基本每股收益增长率-3年复合排名-行业平均
      */
     @Column(name = "eps_growth_3y_cagr_rank_industry_avg")
-    private Integer epsGrowth3yCagrRankIndustryAvg;
+    private BigDecimal epsGrowth3yCagrRankIndustryAvg;
 
     /**
      * 营业收入增长率-3年复合
@@ -178,19 +178,19 @@ public class StockGrowthMetrics {
      * 营业收入增长率-去年实际
      */
     @Column(name = "revenue_growth_last_y_a")
-    private BigDecimal revenueGrowthLastYearA;
+    private BigDecimal revenueGrowthLastYA;
 
     /**
      * 营业收入增长率-去年实际-行业中值
      */
     @Column(name = "revenue_growth_last_y_a_industry_med")
-    private BigDecimal revenueGrowthLastYearAIndustryMed;
+    private BigDecimal revenueGrowthLastYAIndustryMed;
 
     /**
      * 营业收入增长率-去年实际-行业平均
      */
     @Column(name = "revenue_growth_last_y_a_industry_avg")
-    private BigDecimal revenueGrowthLastYearAIndustryAvg;
+    private BigDecimal revenueGrowthLastYAIndustryAvg;
 
     /**
      * 营业收入增长率-TTM
@@ -214,55 +214,55 @@ public class StockGrowthMetrics {
      * 营业收入增长率-今年预测
      */
     @Column(name = "revenue_growth_this_y_e")
-    private BigDecimal revenueGrowthThisYearE;
+    private BigDecimal revenueGrowthThisYE;
 
     /**
      * 营业收入增长率-今年预测-行业中值
      */
     @Column(name = "revenue_growth_this_y_e_industry_med")
-    private BigDecimal revenueGrowthThisYearEIndustryMed;
+    private BigDecimal revenueGrowthThisYEIndustryMed;
 
     /**
      * 营业收入增长率-今年预测-行业平均
      */
     @Column(name = "revenue_growth_this_y_e_industry_avg")
-    private BigDecimal revenueGrowthThisYearEIndustryAvg;
+    private BigDecimal revenueGrowthThisYEIndustryAvg;
 
     /**
      * 营业收入增长率-明年预测
      */
     @Column(name = "revenue_growth_next_y_e")
-    private BigDecimal revenueGrowthNextYearE;
+    private BigDecimal revenueGrowthNextYE;
 
     /**
      * 营业收入增长率-明年预测-行业中值
      */
     @Column(name = "revenue_growth_next_y_e_industry_med")
-    private BigDecimal revenueGrowthNextYearEIndustryMed;
+    private BigDecimal revenueGrowthNextYEIndustryMed;
 
     /**
      * 营业收入增长率-明年预测-行业平均
      */
     @Column(name = "revenue_growth_next_y_e_industry_avg")
-    private BigDecimal revenueGrowthNextYearEIndustryAvg;
+    private BigDecimal revenueGrowthNextYEIndustryAvg;
 
     /**
      * 营业收入增长率-后年预测
      */
     @Column(name = "revenue_growth_next_2y_e")
-    private BigDecimal revenueGrowthNext2YearE;
+    private BigDecimal revenueGrowthNext2YE;
 
     /**
      * 营业收入增长率-后年预测-行业中值
      */
     @Column(name = "revenue_growth_next_2y_e_industry_med")
-    private BigDecimal revenueGrowthNext2YearEIndustryMed;
+    private BigDecimal revenueGrowthNext2YEIndustryMed;
 
     /**
      * 营业收入增长率-后年预测-行业平均
      */
     @Column(name = "revenue_growth_next_2y_e_industry_avg")
-    private BigDecimal revenueGrowthNext2YearEIndustryAvg;
+    private BigDecimal revenueGrowthNext2YEIndustryAvg;
 
     /**
      * 净利润增长率-3年复合
@@ -286,19 +286,19 @@ public class StockGrowthMetrics {
      * 净利润增长率-去年实际
      */
     @Column(name = "net_profit_growth_last_y_a")
-    private BigDecimal netProfitGrowthLastYearA;
+    private BigDecimal netProfitGrowthLastYA;
 
     /**
      * 净利润增长率-去年实际-行业中值
      */
     @Column(name = "net_profit_growth_last_y_a_industry_med")
-    private BigDecimal netProfitGrowthLastYearAIndustryMed;
+    private BigDecimal netProfitGrowthLastYAIndustryMed;
 
     /**
      * 净利润增长率-去年实际-行业平均
      */
     @Column(name = "net_profit_growth_last_y_a_industry_avg")
-    private BigDecimal netProfitGrowthLastYearAIndustryAvg;
+    private BigDecimal netProfitGrowthLastYAIndustryAvg;
 
     /**
      * 净利润增长率-TTM
@@ -322,55 +322,55 @@ public class StockGrowthMetrics {
      * 净利润增长率-今年预测
      */
     @Column(name = "net_profit_growth_this_y_e")
-    private BigDecimal netProfitGrowthThisYearE;
+    private BigDecimal netProfitGrowthThisYE;
 
     /**
      * 净利润增长率-今年预测-行业中值
      */
     @Column(name = "net_profit_growth_this_y_e_industry_med")
-    private BigDecimal netProfitGrowthThisYearEIndustryMed;
+    private BigDecimal netProfitGrowthThisYEIndustryMed;
 
     /**
      * 净利润增长率-今年预测-行业平均
      */
     @Column(name = "net_profit_growth_this_y_e_industry_avg")
-    private BigDecimal netProfitGrowthThisYearEIndustryAvg;
+    private BigDecimal netProfitGrowthThisYEIndustryAvg;
 
     /**
      * 净利润增长率-明年预测
      */
     @Column(name = "net_profit_growth_next_y_e")
-    private BigDecimal netProfitGrowthNextYearE;
+    private BigDecimal netProfitGrowthNextYE;
 
     /**
      * 净利润增长率-明年预测-行业中值
      */
     @Column(name = "net_profit_growth_next_y_e_industry_med")
-    private BigDecimal netProfitGrowthNextYearEIndustryMed;
+    private BigDecimal netProfitGrowthNextYEIndustryMed;
 
     /**
      * 净利润增长率-明年预测-行业平均
      */
     @Column(name = "net_profit_growth_next_y_e_industry_avg")
-    private BigDecimal netProfitGrowthNextYearEIndustryAvg;
+    private BigDecimal netProfitGrowthNextYEIndustryAvg;
 
     /**
      * 净利润增长率-后年预测
      */
     @Column(name = "net_profit_growth_next_2y_e")
-    private BigDecimal netProfitGrowthNext2YearE;
+    private BigDecimal netProfitGrowthNext2YE;
 
     /**
      * 净利润增长率-后年预测-行业中值
      */
     @Column(name = "net_profit_growth_next_2y_e_industry_med")
-    private BigDecimal netProfitGrowthNext2YearEIndustryMed;
+    private BigDecimal netProfitGrowthNext2YEIndustryMed;
 
     /**
      * 净利润增长率-后年预测-行业平均
      */
     @Column(name = "net_profit_growth_next_2y_e_industry_avg")
-    private BigDecimal netProfitGrowthNext2YearEIndustryAvg;
+    private BigDecimal netProfitGrowthNext2YEIndustryAvg;
 
     /**
      * 创建时间

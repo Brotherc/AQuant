@@ -94,73 +94,73 @@ public class StockValuationMetrics {
      * 市盈率(今年预测)
      */
     @Column(name = "pe_this_y_e")
-    private BigDecimal peThisYearE;
+    private BigDecimal peThisYE;
 
     /**
      * 市盈率(今年预测)-行业中值
      */
     @Column(name = "pe_this_y_e_industry_med")
-    private BigDecimal peThisYearEIndustryMed;
+    private BigDecimal peThisYEIndustryMed;
 
     /**
      * 市盈率(今年预测)-行业平均
      */
     @Column(name = "pe_this_y_e_industry_avg")
-    private BigDecimal peThisYearEIndustryAvg;
+    private BigDecimal peThisYEIndustryAvg;
 
     /**
      * 市盈率(明年预测)
      */
     @Column(name = "pe_next_y_e")
-    private BigDecimal peNextYearE;
+    private BigDecimal peNextYE;
 
     /**
      * 市盈率(明年预测)-行业中值
      */
     @Column(name = "pe_next_y_e_industry_med")
-    private BigDecimal peNextYearEIndustryMed;
+    private BigDecimal peNextYEIndustryMed;
 
     /**
      * 市盈率(明年预测)-行业平均
      */
     @Column(name = "pe_next_y_e_industry_avg")
-    private BigDecimal peNextYearEIndustryAvg;
+    private BigDecimal peNextYEIndustryAvg;
 
     /**
      * 市盈率(后年预测)
      */
     @Column(name = "pe_next_2y_e")
-    private BigDecimal peNext2YearE;
+    private BigDecimal peNext2YE;
 
     /**
      * 市盈率(后年预测)-行业中值
      */
     @Column(name = "pe_next_2y_e_industry_med")
-    private BigDecimal peNext2YearEIndustryMed;
+    private BigDecimal peNext2YEIndustryMed;
 
     /**
      * 市盈率(后年预测)-行业平均
      */
     @Column(name = "pe_next_2y_e_industry_avg")
-    private BigDecimal peNext2YearEIndustryAvg;
+    private BigDecimal peNext2YEIndustryAvg;
 
     /**
      * 市销率(去年实际)
      */
     @Column(name = "ps_last_y_a")
-    private BigDecimal psLastYearA;
+    private BigDecimal psLastYA;
 
     /**
      * 市销率(去年实际)-行业中值
      */
     @Column(name = "ps_last_y_a_industry_med")
-    private BigDecimal psLastYearAIndustryMed;
+    private BigDecimal psLastYAIndustryMed;
 
     /**
      * 市销率(去年实际)-行业平均
      */
     @Column(name = "ps_last_y_a_industry_avg")
-    private BigDecimal psLastYearAIndustryAvg;
+    private BigDecimal psLastYAIndustryAvg;
 
     /**
      * 市销率(TTM)
@@ -184,73 +184,73 @@ public class StockValuationMetrics {
      * 市销率(今年预测)
      */
     @Column(name = "ps_this_y_e")
-    private BigDecimal psThisYearE;
+    private BigDecimal psThisYE;
 
     /**
      * 市销率(今年预测)-行业中值
      */
     @Column(name = "ps_this_y_e_industry_med")
-    private BigDecimal psThisYearEIndustryMed;
+    private BigDecimal psThisYEIndustryMed;
 
     /**
      * 市销率(今年预测)-行业平均
      */
     @Column(name = "ps_this_y_e_industry_avg")
-    private BigDecimal psThisYearEIndustryAvg;
+    private BigDecimal psThisYEIndustryAvg;
 
     /**
      * 市销率(明年预测)
      */
     @Column(name = "ps_next_y_e")
-    private BigDecimal psNextYearE;
+    private BigDecimal psNextYE;
 
     /**
      * 市销率(明年预测)-行业中值
      */
     @Column(name = "ps_next_y_e_industry_med")
-    private BigDecimal psNextYearEIndustryMed;
+    private BigDecimal psNextYEIndustryMed;
 
     /**
      * 市销率(明年预测)-行业平均
      */
     @Column(name = "ps_next_y_e_industry_avg")
-    private BigDecimal psNextYearEIndustryAvg;
+    private BigDecimal psNextYEIndustryAvg;
 
     /**
      * 市销率(后年预测)
      */
     @Column(name = "ps_next_2y_e")
-    private BigDecimal psNext2YearE;
+    private BigDecimal psNext2YE;
 
     /**
      * 市销率(后年预测)-行业中值
      */
     @Column(name = "ps_next_2y_e_industry_med")
-    private BigDecimal psNext2YearEIndustryMed;
+    private BigDecimal psNext2YEIndustryMed;
 
     /**
      * 市销率(后年预测)-行业平均
      */
     @Column(name = "ps_next_2y_e_industry_avg")
-    private BigDecimal psNext2YearEIndustryAvg;
+    private BigDecimal psNext2YEIndustryAvg;
 
     /**
      * 市净率(去年实际)
      */
     @Column(name = "pb_last_y_a")
-    private BigDecimal pbLastYearA;
+    private BigDecimal pbLastYA;
 
     /**
      * 市净率(去年实际)-行业中值
      */
     @Column(name = "pb_last_y_a_industry_med")
-    private BigDecimal pbLastYearAIndustryMed;
+    private BigDecimal pbLastYAIndustryMed;
 
     /**
      * 市净率(去年实际)-行业平均
      */
     @Column(name = "pb_last_y_a_industry_avg")
-    private BigDecimal pbLastYearAIndustryAvg;
+    private BigDecimal pbLastYAIndustryAvg;
 
     /**
      * 市净率(MRQ)
@@ -274,19 +274,19 @@ public class StockValuationMetrics {
      * 市现率PCE(去年实际)
      */
     @Column(name = "pce_last_y_a")
-    private BigDecimal pceLastYearA;
+    private BigDecimal pceLastYA;
 
     /**
      * 市现率PCE(去年实际)-行业中值
      */
     @Column(name = "pce_last_y_a_industry_med")
-    private BigDecimal pceLastYearAIndustryMed;
+    private BigDecimal pceLastYAIndustryMed;
 
     /**
      * 市现率PCE(去年实际)-行业平均
      */
     @Column(name = "pce_last_y_a_industry_avg")
-    private BigDecimal pceLastYearAIndustryAvg;
+    private BigDecimal pceLastYAIndustryAvg;
 
     /**
      * 市现率PCE(TTM)
@@ -310,19 +310,19 @@ public class StockValuationMetrics {
      * 市现率PCF(去年实际)
      */
     @Column(name = "pcf_last_y_a")
-    private BigDecimal pcfLastYearA;
+    private BigDecimal pcfLastYA;
 
     /**
      * 市现率PCF(去年实际)-行业中值
      */
     @Column(name = "pcf_last_y_a_industry_med")
-    private BigDecimal pcfLastYearAIndustryMed;
+    private BigDecimal pcfLastYAIndustryMed;
 
     /**
      * 市现率PCF(去年实际)-行业平均
      */
     @Column(name = "pcf_last_y_a_industry_avg")
-    private BigDecimal pcfLastYearAIndustryAvg;
+    private BigDecimal pcfLastYAIndustryAvg;
 
     /**
      * 市现率PCF(TTM)
@@ -346,19 +346,19 @@ public class StockValuationMetrics {
      * EV/EBITDA(去年实际)
      */
     @Column(name = "ev_ebitda_last_y_a")
-    private BigDecimal evEbitdaLastYearA;
+    private BigDecimal evEbitdaLastYA;
 
     /**
      * EV/EBITDA(去年实际)-行业中值
      */
     @Column(name = "ev_ebitda_last_y_a_industry_med")
-    private BigDecimal evEbitdaLastYearAIndustryMed;
+    private BigDecimal evEbitdaLastYAIndustryMed;
 
     /**
      * EV/EBITDA(去年实际)-行业平均
      */
     @Column(name = "ev_ebitda_last_y_a_industry_avg")
-    private BigDecimal evEbitdaLastYearAIndustryAvg;
+    private BigDecimal evEbitdaLastYAIndustryAvg;
 
     /**
      * 创建时间
