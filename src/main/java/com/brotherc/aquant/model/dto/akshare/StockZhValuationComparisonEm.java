@@ -53,6 +53,7 @@ public class StockZhValuationComparisonEm {
     @JsonProperty("EV/EBITDA-24A")
     private BigDecimal EV_EBITDA_24A;
 
+    @JsonProperty("PEG排名")
     private BigDecimal PEG排名;
 
 }

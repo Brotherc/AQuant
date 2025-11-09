@@ -80,7 +80,7 @@ public class StockValuationMetricsService {
                 stockValuationMetrics.setPceTtmIndustryMed(data.get市现率PCE_TTM());
 
                 stockValuationMetrics.setPcfLastYAIndustryMed(data.get市现率PCF_24A());
-                stockValuationMetrics.setPcfTtmIndustryAvg(data.get市现率PCF_TTM());
+                stockValuationMetrics.setPcfTtmIndustryMed(data.get市现率PCF_TTM());
 
                 stockValuationMetrics.setEvEbitdaLastYAIndustryMed(data.getEV_EBITDA_24A());
 
