@@ -2,12 +2,21 @@ package com.brotherc.aquant.service;
 
 import com.brotherc.aquant.entity.StockValuationMetrics;
 import com.brotherc.aquant.model.dto.akshare.StockZhValuationComparisonEm;
+import com.brotherc.aquant.model.vo.stockindicator.ValuationMetricsPageReqVO;
 import com.brotherc.aquant.repository.StockValuationMetricsRepository;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -15,6 +24,61 @@ import java.util.List;
 public class StockValuationMetricsService {
 
     private final StockValuationMetricsRepository stockValuationMetricsRepository;
+
+    public Page<StockValuationMetrics> pageQuery(ValuationMetricsPageReqVO reqVO, Pageable pageable) {
+        Specification<StockValuationMetrics> spec = (root, query, cb) -> {
+
+            List<Predicate> predicates = new ArrayList<>();
+
+            // 股票代码等值查询
+            if (StringUtils.isNotBlank(reqVO.getStockCode())) {
+                predicates.add(cb.equal(root.get("stockCode"), reqVO.getStockCode()));
+            }
+
+            // PEG 范围
+            if (reqVO.getPegMin() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("peg"), reqVO.getPegMin()));
+            }
+            if (reqVO.getPegMax() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("peg"), reqVO.getPegMax()));
+            }
+
+            // PE TTM 范围
+            if (reqVO.getPeTtmMin() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("peTtm"), reqVO.getPeTtmMin()));
+            }
+            if (reqVO.getPeTtmMax() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("peTtm"), reqVO.getPeTtmMax()));
+            }
+
+            // PS TTM 范围
+            if (reqVO.getPsTtmMin() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("psTtm"), reqVO.getPsTtmMin()));
+            }
+            if (reqVO.getPsTtmMax() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("psTtm"), reqVO.getPsTtmMax()));
+            }
+
+            // PB MRQ 范围
+            if (reqVO.getPbMrqMin() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("pbMrq"), reqVO.getPbMrqMin()));
+            }
+            if (reqVO.getPbMrqMax() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("pbMrq"), reqVO.getPbMrqMax()));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        if (pageable.getSort().isUnsorted()) {
+            // 默认按 PEG 升序排序
+            int page = pageable.getPageNumber();
+            int size = pageable.getPageSize();
+            pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "peg"));
+        }
+
+        return stockValuationMetricsRepository.findAll(spec, pageable);
+    }
 
     @Transactional(rollbackFor = Exception.class)
     public void save(String code, String name, List<StockZhValuationComparisonEm> list) {
