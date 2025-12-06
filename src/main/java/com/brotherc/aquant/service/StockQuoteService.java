@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,6 +48,26 @@ public class StockQuoteService {
             sq.setTurnover(stockZhASpot.get成交额());
             sq.setQuoteTime(stockZhASpot.get时间戳());
             sq.setCreatedAt(LocalDateTime.now());
+
+            if (sq.getHistoryHightPrice() != null && stockZhASpot.get最新价().compareTo(sq.getHistoryHightPrice()) > 0) {
+                sq.setHistoryHightPrice(stockZhASpot.get最新价());
+            }
+            if (sq.getHistoryLowPrice() != null && stockZhASpot.get最新价().compareTo(sq.getHistoryLowPrice()) < 0) {
+                sq.setHistoryLowPrice(stockZhASpot.get最新价());
+            }
+            if (sq.getHistoryHightPrice() != null && sq.getHistoryLowPrice() != null) {
+                BigDecimal diff = sq.getHistoryHightPrice().subtract(sq.getHistoryLowPrice());
+
+                // 计算百分比：(最新 - low) / diff * 100
+                BigDecimal percent = BigDecimal.ZERO;
+                if (diff.compareTo(BigDecimal.ZERO) != 0) {
+                    percent = stockZhASpot.get最新价().subtract(sq.getHistoryLowPrice())
+                            .divide(diff, 4, RoundingMode.HALF_UP) // 保留4位小数
+                            .multiply(new BigDecimal("100"));
+                }
+                sq.setPir(percent);
+            }
+
             list.add(sq);
         }
         stockQuoteRepository.saveAll(list);

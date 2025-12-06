@@ -60,4 +60,13 @@ public class StockQuote {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    @Column(name = "history_hight_price")
+    private BigDecimal historyHightPrice;
+
+    @Column(name = "history_low_price")
+    private BigDecimal historyLowPrice;
+
+    @Column(name = "pir")
+    private BigDecimal pir;
+
 }

@@ -1,9 +1,6 @@
 package com.brotherc.aquant.service;
 
-import com.brotherc.aquant.model.dto.akshare.StockZhASpot;
-import com.brotherc.aquant.model.dto.akshare.StockZhDupontComparisonEm;
-import com.brotherc.aquant.model.dto.akshare.StockZhGrowthComparisonEm;
-import com.brotherc.aquant.model.dto.akshare.StockZhValuationComparisonEm;
+import com.brotherc.aquant.model.dto.akshare.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -109,6 +106,50 @@ public class AKShareService {
         } catch (IOException e) {
             log.error("stock_zh_dupont_comparison_em请求失败", e);
             throw new RuntimeException("stock_zh_dupont_comparison_em请求失败");
+        }
+    }
+
+    public List<StockZhAHist> stockZhAHist(String symbol) {
+        symbol = symbol.substring(2);
+
+        Request request = new Request.Builder()
+                .url(akshareAddress + "/api/public/stock_zh_a_hist?symbol=" + symbol + "&&adjust=hfq")
+                .get()
+                .build();
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                log.info("失败响应: {}", response);
+                throw new RuntimeException("stock_zh_a_hist请求失败");
+            }
+
+            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
+            });
+
+        } catch (IOException e) {
+            log.error("stock_zh_a_hist请求失败", e);
+            throw new RuntimeException("stock_zh_a_hist请求失败");
+        }
+    }
+
+    public List<StockZhADaily> stockZhADaily(String symbol) {
+        Request request = new Request.Builder()
+                .url(akshareAddress + "/api/public/stock_zh_a_daily?symbol=" + symbol + "&&adjust=hfq")
+                .get()
+                .build();
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                log.info("失败响应: {}", response);
+                throw new RuntimeException("stock_zh_a_daily请求失败");
+            }
+
+            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
+            });
+
+        } catch (IOException e) {
+            log.error("stock_zh_a_daily请求失败", e);
+            throw new RuntimeException("stock_zh_a_daily请求失败");
         }
     }
 
