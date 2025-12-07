@@ -2,6 +2,7 @@ package com.brotherc.aquant.service;
 
 import com.brotherc.aquant.entity.*;
 import com.brotherc.aquant.model.dto.akshare.*;
+import com.brotherc.aquant.repository.StockDividendRecordRepository;
 import com.brotherc.aquant.repository.StockQuoteRepository;
 import com.brotherc.aquant.repository.StockSyncRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,8 +15,11 @@ import org.springframework.util.CollectionUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -30,6 +34,7 @@ public class DataSynchronizeService {
 
     private final StockQuoteRepository stockQuoteRepository;
     private final StockSyncRepository stockSyncRepository;
+    private final StockDividendRecordRepository stockDividendRecordRepository;
 
     public void stockQuote() {
         List<StockZhASpot> stockZhASpots = aKShareService.stockZhASpot();
@@ -158,6 +163,33 @@ public class DataSynchronizeService {
         }
 
         log.info("本次同步完成，最后同步到ID：" + stockList.get(stockList.size() - 1).getId());
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void stockDividend() {
+        List<StockDividendRecord> list = stockDividendRecordRepository.findAll();
+        List<StockHistoryDividend> stockHistoryDividendList = aKShareService.stockHistoryDividend();
+
+        Map<String, StockDividendRecord> codeMapping = list.stream().collect(Collectors.toMap(StockDividendRecord::getCode, o -> o));
+
+        for (StockHistoryDividend dividend : stockHistoryDividendList) {
+            StockDividendRecord stockDividendRecord = codeMapping.get(dividend.get代码());
+            if (stockDividendRecord == null) {
+                stockDividendRecord = new StockDividendRecord();
+                list.add(stockDividendRecord);
+            }
+            stockDividendRecord.setCode(dividend.get代码());
+            stockDividendRecord.setName(dividend.get名称());
+            LocalDateTime time = LocalDateTime.parse(dividend.get上市日期());
+            stockDividendRecord.setListingDate(time);
+            stockDividendRecord.setTotalDividend(dividend.get累计股息());
+            stockDividendRecord.setAvgDividend(dividend.get年均股息());
+            stockDividendRecord.setDividendNum(dividend.get分红次数());
+            stockDividendRecord.setTotalFinancing(dividend.get融资总额());
+            stockDividendRecord.setFinancingNum(dividend.get融资次数());
+            stockDividendRecord.setCreatedAt(LocalDateTime.now());
+        }
+        stockDividendRecordRepository.saveAll(list);
     }
 
 }

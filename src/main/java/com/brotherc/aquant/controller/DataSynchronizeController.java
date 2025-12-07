@@ -27,6 +27,13 @@ public class DataSynchronizeController {
         return ResponseDTO.success();
     }
 
+    @Operation(summary = "股票分红")
+    @GetMapping("/stockDividend")
+    public ResponseDTO<Void> stockDividend() {
+        dataSynchronizeService.stockDividend();
+        return ResponseDTO.success();
+    }
+
     @Operation(summary = "杜邦分析_成长性_估值")
     @GetMapping("/stock/dupont/growth/valuation")
     public ResponseDTO<Void> stockDupontGrowthValuation(@RequestParam Integer count) {
