@@ -22,7 +22,7 @@ public class StockQuoteService {
     private final StockQuoteRepository stockQuoteRepository;
 
     @Transactional(rollbackFor = Exception.class)
-    public void save(List<StockZhASpot> stockZhASpotList) {
+    public void save(List<StockZhASpot> stockZhASpotList, LocalDateTime now) {
         List<StockQuote> dbLlist = stockQuoteRepository.findAll();
         Map<String, StockQuote> map = dbLlist.stream().collect(Collectors.toMap(StockQuote::getCode, o -> o));
 
@@ -47,7 +47,7 @@ public class StockQuoteService {
             sq.setVolume(stockZhASpot.get成交量());
             sq.setTurnover(stockZhASpot.get成交额());
             sq.setQuoteTime(stockZhASpot.get时间戳());
-            sq.setCreatedAt(LocalDateTime.now());
+            sq.setCreatedAt(now);
 
             if (sq.getHistoryHightPrice() != null && stockZhASpot.get最新价().compareTo(sq.getHistoryHightPrice()) > 0) {
                 sq.setHistoryHightPrice(stockZhASpot.get最新价());

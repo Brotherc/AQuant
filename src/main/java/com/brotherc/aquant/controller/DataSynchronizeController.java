@@ -20,13 +20,6 @@ public class DataSynchronizeController {
 
     private final DataSynchronizeService dataSynchronizeService;
 
-    @Operation(summary = "股票")
-    @GetMapping("/stockQuote")
-    public ResponseDTO<Void> stockQuote() {
-        dataSynchronizeService.stockQuote();
-        return ResponseDTO.success();
-    }
-
     @Operation(summary = "股票分红")
     @GetMapping("/stockDividend")
     public ResponseDTO<Void> stockDividend() {

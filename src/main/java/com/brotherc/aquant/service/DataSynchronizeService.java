@@ -1,5 +1,6 @@
 package com.brotherc.aquant.service;
 
+import com.brotherc.aquant.constant.StockSyncConstant;
 import com.brotherc.aquant.entity.*;
 import com.brotherc.aquant.model.dto.akshare.*;
 import com.brotherc.aquant.repository.StockDividendRecordRepository;
@@ -15,7 +16,9 @@ import org.springframework.util.CollectionUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +31,8 @@ public class DataSynchronizeService {
 
     private final AKShareService aKShareService;
     private final StockQuoteService stockQuoteService;
+    private final StockSyncService stockSyncService;
+    private final StockQuoteHistoryService stockQuoteHistoryService;
     private final StockGrowthMetricsService stockGrowthMetricsService;
     private final StockDupontAnalysisService stockDupontAnalysisService;
     private final StockValuationMetricsService stockValuationMetricsService;
@@ -36,10 +41,17 @@ public class DataSynchronizeService {
     private final StockSyncRepository stockSyncRepository;
     private final StockDividendRecordRepository stockDividendRecordRepository;
 
-    public void stockQuote() {
-        List<StockZhASpot> stockZhASpots = aKShareService.stockZhASpot();
-        if (!CollectionUtils.isEmpty(stockZhASpots)) {
-            stockQuoteService.save(stockZhASpots);
+    @Transactional(rollbackFor = Exception.class)
+    public void stockQuote(List<StockZhASpot> stockZhASpotList, StockSync stockDailyLatest, long timestamp) {
+        if (!CollectionUtils.isEmpty(stockZhASpotList)) {
+            LocalDateTime now = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime();
+
+            // 更新A股股票最新行情
+            stockQuoteService.save(stockZhASpotList, now);
+            // 更新A股股票历史行情
+            stockQuoteHistoryService.save(stockZhASpotList, now);
+            // 更新最后一次股票同步时间
+            stockSyncService.save(stockDailyLatest, StockSyncConstant.STOCK_DAILY_LATEST, timestamp);
         }
     }
 
