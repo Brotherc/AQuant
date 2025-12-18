@@ -78,7 +78,7 @@ public class DataSynchronizeService {
             stockDupontAnalysisService.save(stock.getCode(), stock.getName(), stockZhDupontComparisonEms);
             stockValuationMetricsService.save(stock.getCode(), stock.getName(), stockZhValuationComparisonEms);
 
-            List<StockZhADaily> stockZhAHists = aKShareService.stockZhADaily(stock.getCode());
+            List<StockZhADaily> stockZhAHists = aKShareService.stockZhADaily(stock.getCode(), null, null, null);
 
             // 1. 最大收盘
             BigDecimal maxClose = stockZhAHists.stream()

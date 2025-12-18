@@ -5,9 +5,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -132,9 +134,32 @@ public class AKShareService {
         }
     }
 
-    public List<StockZhADaily> stockZhADaily(String symbol) {
+    /**
+     * 历史行情数据-新浪
+     * <p>
+     * <a href="https://finance.sina.com.cn/realstock/company/sh600006/nc.shtml">...</a>
+     * 新浪财经-沪深京 A 股的数据, 历史数据按日频率更新
+     *
+     * @param symbol 股票代码
+     * @return 历史行情日频率数据
+     */
+    public List<StockZhADaily> stockZhADaily(String symbol, String startDate, String endDate, String adjust) {
+        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_zh_a_daily")
+                .newBuilder()
+                .addQueryParameter("symbol", symbol);
+
+        if (StringUtils.isNotBlank(startDate)) {
+            builder.addQueryParameter("start_date", startDate);
+        }
+        if (StringUtils.isNotBlank(endDate)) {
+            builder.addQueryParameter("end_date", endDate);
+        }
+        if (StringUtils.isNotBlank(adjust)) {
+            builder.addQueryParameter("adjust", adjust);
+        }
+
         Request request = new Request.Builder()
-                .url(akshareAddress + "/api/public/stock_zh_a_daily?symbol=" + symbol + "&&adjust=hfq")
+                .url(builder.build())
                 .get()
                 .build();
 
