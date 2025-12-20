@@ -4,6 +4,7 @@ import com.brotherc.aquant.constant.StockSyncConstant;
 import com.brotherc.aquant.entity.*;
 import com.brotherc.aquant.model.dto.akshare.*;
 import com.brotherc.aquant.repository.StockDividendRecordRepository;
+import com.brotherc.aquant.repository.StockQuoteHistoryRepository;
 import com.brotherc.aquant.repository.StockQuoteRepository;
 import com.brotherc.aquant.repository.StockSyncRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,8 +18,10 @@ import org.springframework.util.CollectionUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +43,7 @@ public class DataSynchronizeService {
     private final StockQuoteRepository stockQuoteRepository;
     private final StockSyncRepository stockSyncRepository;
     private final StockDividendRecordRepository stockDividendRecordRepository;
+    private final StockQuoteHistoryRepository stockQuoteHistoryRepository;
 
     @Transactional(rollbackFor = Exception.class)
     public void stockQuote(List<StockZhASpot> stockZhASpotList, StockSync stockDailyLatest, long timestamp) {
@@ -129,6 +133,35 @@ public class DataSynchronizeService {
             // 4. 每同步一条更新 stock_sync 表
             stockSync.setValue(stock.getId().toString());
             stockSyncRepository.save(stockSync);
+
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+            LocalDate start = LocalDate.parse("2021-01-01", formatter);
+            LocalDate end = LocalDate.parse("2025-12-16", formatter);
+
+            List<StockQuoteHistory> filteredList = stockZhAHists.stream()
+                    .filter(daily -> {
+                        LocalDate tradeDate = LocalDate.parse(daily.getDate().substring(0, 10), formatter);
+                        return !tradeDate.isBefore(start) && !tradeDate.isAfter(end);
+                    }).map(o -> {
+                        StockQuoteHistory stockQuoteHistory = new StockQuoteHistory();
+                        stockQuoteHistory.setCode(stock.getCode());
+                        stockQuoteHistory.setName(stock.getName());
+                        stockQuoteHistory.setOpenPrice(o.getOpen());
+                        stockQuoteHistory.setClosePrice(o.getClose());
+                        stockQuoteHistory.setHighPrice(o.getHigh());
+                        stockQuoteHistory.setLowPrice(o.getLow());
+                        stockQuoteHistory.setVolume(o.getVolume());
+                        stockQuoteHistory.setTurnover(o.getAmount());
+                        stockQuoteHistory.setQuoteTime("15:00:00");
+                        String tradeDate = o.getDate().substring(0, 10);
+                        stockQuoteHistory.setTradeDate(tradeDate);
+                        stockQuoteHistory.setCreatedAt(LocalDateTime.now());
+                        return stockQuoteHistory;
+                    })
+                    .collect(Collectors.toList());
+
+            stockQuoteHistoryRepository.saveAll(filteredList);
         }
 
         log.info("本次同步完成，最后同步到ID：" + stockList.get(stockList.size() - 1).getId());

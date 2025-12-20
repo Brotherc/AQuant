@@ -43,7 +43,7 @@ public class StockSyncTask {
         Long lastTimestamp = Optional.ofNullable(stockSync).map(StockSync::getValue).map(Long::valueOf).orElse(null);
 
         // 获取今天3点的时间戳
-        LocalDateTime today3pm = LocalDate.now().atTime(15, 0, 0);
+        LocalDateTime today3pm = LocalDate.now().atTime(17, 0, 0);
         long today3pmMillis = today3pm.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
 
         // 如果没有同步过或上一次同步时间在今天3点之前

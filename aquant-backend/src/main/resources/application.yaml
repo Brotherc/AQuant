@@ -1,12 +1,12 @@
 server:
-  port: 8083
+  port: 8084
 
 spring:
   application:
     name: aquant-service
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://127.0.0.1:3306/stock?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://127.0.0.1:3306/nocobase?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: test
     password: testtest
     type: com.alibaba.druid.pool.DruidDataSource
