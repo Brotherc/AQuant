@@ -2,7 +2,7 @@
   <div>
     
     <!-- 搜索表单 -->
-    <a-card class="mb-4">
+    <a-card style="margin-bottom: 16px">
       <a-form layout="inline" :model="searchParams" @finish="handleSearch">
         <a-form-item label="股票代码">
           <a-input v-model:value="searchParams.code" placeholder="输入代码" allow-clear style="width: 150px" />
