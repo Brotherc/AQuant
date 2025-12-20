@@ -4,13 +4,14 @@ import com.brotherc.aquant.entity.StockQuote;
 import com.brotherc.aquant.model.dto.stockquote.StockCodeName;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 @Repository
-public interface StockQuoteRepository extends JpaRepository<StockQuote, Long> {
+public interface StockQuoteRepository extends JpaRepository<StockQuote, Long>, JpaSpecificationExecutor<StockQuote> {
 
     List<StockQuote> findByIdGreaterThanOrderByIdAsc(Long id, Pageable pageable);
 

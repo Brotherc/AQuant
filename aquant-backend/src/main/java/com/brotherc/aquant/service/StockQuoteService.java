@@ -2,8 +2,16 @@ package com.brotherc.aquant.service;
 
 import com.brotherc.aquant.entity.StockQuote;
 import com.brotherc.aquant.model.dto.akshare.StockZhASpot;
+import com.brotherc.aquant.model.vo.stockquote.StockQuotePageReqVO;
+import com.brotherc.aquant.model.vo.stockquote.StockQuoteVO;
 import com.brotherc.aquant.repository.StockQuoteRepository;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -71,6 +79,41 @@ public class StockQuoteService {
             list.add(sq);
         }
         stockQuoteRepository.saveAll(list);
+    }
+
+    public Page<StockQuoteVO> getPage(StockQuotePageReqVO reqVO, Pageable pageable) {
+        Specification<StockQuote> specification = (root, query, cb) -> {
+
+            List<Predicate> predicates = new ArrayList<>();
+
+            // 股票代码（模糊）
+            if (StringUtils.isNotBlank(reqVO.getCode())) {
+                predicates.add(cb.like(root.get("code"), "%" + reqVO.getCode() + "%"));
+            }
+
+            // 股票名称（模糊）
+            if (StringUtils.isNotBlank(reqVO.getName())) {
+                predicates.add(cb.like(root.get("name"), "%" + reqVO.getName() + "%"));
+            }
+
+            // 最新价下限
+            if (reqVO.getLatestPriceMin() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("latestPrice"), reqVO.getLatestPriceMin()));
+            }
+
+            // 最新价上限
+            if (reqVO.getLatestPriceMax() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("latestPrice"), reqVO.getLatestPriceMax()));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        return stockQuoteRepository.findAll(specification, pageable).map(o -> {
+            StockQuoteVO vo = new StockQuoteVO();
+            BeanUtils.copyProperties(o, vo);
+            return vo;
+        });
     }
 
 }
