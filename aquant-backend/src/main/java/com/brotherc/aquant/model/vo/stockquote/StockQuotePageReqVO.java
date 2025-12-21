@@ -1,6 +1,7 @@
 package com.brotherc.aquant.model.vo.stockquote;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.annotation.Nonnull;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -8,6 +9,10 @@ import java.math.BigDecimal;
 @Data
 @Schema(description = "股票数据分页查询入参")
 public class StockQuotePageReqVO {
+
+    @Schema(description = "是否刷新", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Nonnull
+    private Boolean refresh;
 
     @Schema(description = "股票代码")
     private String code;

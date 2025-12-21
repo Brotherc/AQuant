@@ -52,16 +52,8 @@ public class StockSyncTask {
         // 查询上一次同步的时间戳
         StockSync stockSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_DAILY_LATEST);
         Long lastTimestamp = Optional.ofNullable(stockSync).map(StockSync::getValue).map(Long::valueOf).orElse(null);
-
-        // 获取今天3点的时间戳
-        LocalDateTime today3pm = LocalDate.now().atTime(15, 0, 0);
-        long today3pmMillis = today3pm.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-
-        boolean noSync = lastTimestamp == null;
-        boolean inTradeTime = lastTimestamp != null && lastTimestamp <= today3pmMillis && StockUtils.isTradeDay(LocalDate.now());
-
-        // 如果没有同步过或上一次同步时间在今天3点之前
-        if (noSync || inTradeTime) {
+        boolean startSync = StockUtils.checkIsStartSync(lastTimestamp);
+        if (startSync) {
             long now = System.currentTimeMillis();
             // 查询第三方API获取最新A股股票最新行情
             List<StockZhASpot> stockZhASpots = aKShareService.stockZhASpot();

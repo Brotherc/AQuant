@@ -12,7 +12,6 @@ import com.brotherc.aquant.repository.StockQuoteRepository;
 import com.brotherc.aquant.repository.StockSyncRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -29,6 +28,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -48,9 +48,6 @@ public class StockSyncService {
     private final StockDividendRecordRepository stockDividendRecordRepository;
     private final StockQuoteHistoryRepository stockQuoteHistoryRepository;
 
-    @Autowired
-    private StockSyncService owner;
-
     @Transactional(rollbackFor = Exception.class)
     public void stockQuote(List<StockZhASpot> stockZhASpotList, StockSync stockDailyLatest, long timestamp) {
         if (!CollectionUtils.isEmpty(stockZhASpotList)) {
@@ -61,7 +58,7 @@ public class StockSyncService {
             // 更新A股股票历史行情
             stockQuoteHistoryService.save(stockZhASpotList, now);
             // 更新最后一次股票同步时间
-            owner.save(stockDailyLatest, StockSyncConstant.STOCK_DAILY_LATEST, timestamp);
+            save(stockDailyLatest, StockSyncConstant.STOCK_DAILY_LATEST, timestamp);
         }
     }
 
@@ -203,14 +200,27 @@ public class StockSyncService {
         stockDividendRecordRepository.saveAll(list);
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public void save(StockSync stockSync, String name, Object value) {
+    private void save(StockSync stockSync, String name, Object value) {
         if (stockSync == null) {
             stockSync = new StockSync();
             stockSync.setName(name);
         }
         stockSync.setValue(value != null ? value.toString() : null);
         stockSyncRepository.save(stockSync);
+    }
+
+    public String getStockDailyLatest() {
+        StockSync stockSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_DAILY_LATEST);
+
+        return Optional.ofNullable(stockSync)
+                .map(StockSync::getValue)
+                .map(Long::parseLong)
+                .map(timestamp ->
+                        Instant.ofEpochMilli(timestamp)
+                                .atZone(ZoneId.systemDefault())
+                                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                )
+                .orElse("");
     }
 
 }

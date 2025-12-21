@@ -20,6 +20,12 @@ public class StockSyncController {
 
     private final StockSyncService stockSyncService;
 
+    @Operation(summary = "获取最新同步时间【股票行情数】")
+    @GetMapping("/stockDailyLatest")
+    public ResponseDTO<String> getStockDailyLatest() {
+        return ResponseDTO.success(stockSyncService.getStockDailyLatest());
+    }
+
     @Operation(summary = "股票分红")
     @GetMapping("/stockDividend")
     public ResponseDTO<Void> stockDividend() {

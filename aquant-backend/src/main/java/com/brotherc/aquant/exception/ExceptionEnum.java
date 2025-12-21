@@ -10,7 +10,9 @@ public enum ExceptionEnum {
     SYS_ERROR(1000001, "系统异常"),
     SYS_CHECK_ERROR(1000002, "系统校验异常"),
 
-    STOCK_STRATEGY_DUAL_MA_ILLEGAL(1000101, "短期均线必须小于长期均线")
+    STOCK_STRATEGY_DUAL_MA_ILLEGAL(1000101, "短期均线必须小于长期均线"),
+    STOCK_QUOTE_SYNC_NOT_START(1000102, "非交易日时间无需同步"),
+    STOCK_QUOTE_FREQUENT(1000103, "1分钟内请勿重复刷新")
     ;
 
     /**
