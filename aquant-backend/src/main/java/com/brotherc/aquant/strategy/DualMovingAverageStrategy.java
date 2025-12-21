@@ -2,6 +2,8 @@ package com.brotherc.aquant.strategy;
 
 import com.brotherc.aquant.entity.StockQuoteHistory;
 import com.brotherc.aquant.enums.TradeSignal;
+import com.brotherc.aquant.exception.BusinessException;
+import com.brotherc.aquant.exception.ExceptionEnum;
 import com.brotherc.aquant.model.dto.stockquote.StockCodeName;
 import com.brotherc.aquant.model.vo.strategy.StockTradeSignalVO;
 import com.brotherc.aquant.repository.StockQuoteHistoryRepository;
@@ -22,16 +24,16 @@ public class DualMovingAverageStrategy {
     private final StockQuoteRepository stockQuoteRepository;
     private final StockQuoteHistoryRepository stockQuoteHistoryRepository;
 
-    public List<StockTradeSignalVO> calculate(int shortPeriod, int longPeriod) {
-        if (shortPeriod >= longPeriod) {
-            throw new IllegalArgumentException("短期均线必须小于长期均线");
+    public List<StockTradeSignalVO> calculate(int maShort, int maLong) {
+        if (maShort >= maLong) {
+            throw new BusinessException(ExceptionEnum.STOCK_STRATEGY_DUAL_MA_ILLEGAL);
         }
 
         List<StockTradeSignalVO> result = new ArrayList<>();
 
         List<StockCodeName> stocks = stockQuoteRepository.findAllStockCodes();
 
-        int needDays = longPeriod + 1;
+        int needDays = maLong + 1;
 
         for (StockCodeName stock : stocks) {
 
@@ -49,14 +51,14 @@ public class DualMovingAverageStrategy {
             Collections.reverse(list);
 
             // 今天
-            BigDecimal todayShort = avg(list.subList(list.size() - shortPeriod, list.size()));
+            BigDecimal todayShort = avg(list.subList(list.size() - maShort, list.size()));
 
-            BigDecimal todayLong = avg(list.subList(list.size() - longPeriod, list.size()));
+            BigDecimal todayLong = avg(list.subList(list.size() - maLong, list.size()));
 
             // 昨天
-            BigDecimal yesterdayShort = avg(list.subList(list.size() - shortPeriod - 1, list.size() - 1));
+            BigDecimal yesterdayShort = avg(list.subList(list.size() - maShort - 1, list.size() - 1));
 
-            BigDecimal yesterdayLong = avg(list.subList(list.size() - longPeriod - 1, list.size() - 1));
+            BigDecimal yesterdayLong = avg(list.subList(list.size() - maLong - 1, list.size() - 1));
 
             TradeSignal signal = TradeSignal.HOLD;
 
