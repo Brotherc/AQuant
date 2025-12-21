@@ -5,7 +5,7 @@ import com.brotherc.aquant.entity.StockSync;
 import com.brotherc.aquant.model.dto.akshare.StockZhASpot;
 import com.brotherc.aquant.repository.StockSyncRepository;
 import com.brotherc.aquant.service.AKShareService;
-import com.brotherc.aquant.service.DataSynchronizeService;
+import com.brotherc.aquant.service.StockSyncService;
 import com.brotherc.aquant.utils.StockUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +27,7 @@ import java.util.Optional;
 public class StockSyncTask {
 
     private final AKShareService aKShareService;
-    private final DataSynchronizeService dataSynchronizeService;
+    private final StockSyncService stockSyncService;
     private final StockSyncRepository stockSyncRepository;
 
     /**
@@ -66,7 +66,7 @@ public class StockSyncTask {
             // 查询第三方API获取最新A股股票最新行情
             List<StockZhASpot> stockZhASpots = aKShareService.stockZhASpot();
             // 同步数据
-            dataSynchronizeService.stockQuote(stockZhASpots, stockSync, now);
+            stockSyncService.stockQuote(stockZhASpots, stockSync, now);
         }
         log.info("同步股票数据完成");
     }
