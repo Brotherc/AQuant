@@ -8,6 +8,12 @@ public class StockUtils {
     private StockUtils() {
     }
 
+    /**
+     * 获取最新的一个交易日
+     *
+     * @param date 当前日期
+     * @return 最新的一个交易日
+     */
     public static LocalDate latestTradeDayFallback(LocalDate date) {
         DayOfWeek dow = date.getDayOfWeek();
         if (dow == DayOfWeek.SATURDAY) {
@@ -17,6 +23,17 @@ public class StockUtils {
             return date.minusDays(2);
         }
         return date;
+    }
+
+    /**
+     * 判断当前日期是否是交易日
+     *
+     * @param date 当前日期
+     * @return 是否是交易日
+     */
+    public static boolean isTradeDay(LocalDate date) {
+        DayOfWeek dow = date.getDayOfWeek();
+        return dow != DayOfWeek.SATURDAY && dow != DayOfWeek.SUNDAY;
     }
 
 }
