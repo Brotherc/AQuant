@@ -62,7 +62,6 @@
 <script lang="ts" setup>
 import { ref, reactive, onMounted } from 'vue';
 import { getDualMAPage, type StockTradeSignalVO, type DualMAReqVO } from '@/api/stock';
-import { message } from 'ant-design-vue';
 
 const loading = ref(false);
 const dataSource = ref<StockTradeSignalVO[]>([]);
@@ -122,12 +121,9 @@ const fetchData = async () => {
     if (data.success || data.code === 0) {
       dataSource.value = data.data.content;
       pagination.total = data.data.totalElements;
-    } else {
-      message.error(data.message || '获取数据失败');
     }
   } catch (error) {
     console.error(error);
-    message.error('网络请求失败');
   } finally {
     loading.value = false;
   }

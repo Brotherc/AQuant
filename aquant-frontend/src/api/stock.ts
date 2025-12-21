@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { message } from 'ant-design-vue';
 
 export interface StockQuoteVO {
     id: number;
@@ -40,6 +41,7 @@ export interface StockQuotePageReqVO {
     name?: string;
     latestPriceMin?: number;
     latestPriceMax?: number;
+    refresh?: boolean;
 }
 
 export interface PageResult<T> {
@@ -57,15 +59,37 @@ export interface ResponseDTO<T> {
     data: T;
 }
 
+
+
 const api = axios.create({
     baseURL: '/api'
 });
+
+// 响应拦截器
+api.interceptors.response.use(
+    (response) => {
+        const data = response.data;
+        // 如果是 ResponseDTO 结构，统一检查 success 字段
+        if (data && typeof data === 'object' && 'success' in data) {
+            if (!data.success && data.code !== 0) {
+                // 统一报错提示
+                message.error(data.message || '请求失败');
+            }
+        }
+        return response;
+    },
+    (error) => {
+        console.error('API Error:', error);
+        message.error(error.message || '网络不稳定，请稍后重试');
+        return Promise.reject(error);
+    }
+);
 
 export const getStockQuotePage = (params: StockQuotePageReqVO & { page: number; size: number; sort?: string[] }) => {
     return api.get<ResponseDTO<PageResult<StockQuoteVO>>>('/stockQuote/page', {
         params,
         paramsSerializer: {
-            indexes: null // to support repeated parameters like sort=field1,asc&sort=field2,desc if needed, or just let axios handle arrays
+            indexes: null
         }
     });
 };
@@ -74,4 +98,8 @@ export const getDualMAPage = (params: DualMAReqVO & { page: number; size: number
     return api.get<ResponseDTO<PageResult<StockTradeSignalVO>>>('/stockStrategy/dualMA', {
         params
     });
+};
+
+export const getStockDailyLatest = () => {
+    return api.get<ResponseDTO<string>>('/stockSync/stockDailyLatest');
 };
