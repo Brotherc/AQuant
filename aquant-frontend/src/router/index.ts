@@ -52,6 +52,17 @@ const router = createRouter({
                             component: () => import('@/views/indicators/ValuationMetrics.vue')
                         }
                     ]
+                },
+                {
+                    path: 'strategy',
+                    name: 'StrategyRoot',
+                    children: [
+                        {
+                            path: 'dual-ma',
+                            name: 'DualMA',
+                            component: () => import('@/views/strategy/DualMA.vue')
+                        }
+                    ]
                 }
             ]
         }

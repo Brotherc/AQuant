@@ -22,6 +22,19 @@ export interface StockQuoteVO {
     pir?: number;
 }
 
+export interface DualMAReqVO {
+    code?: string;
+    maShort?: number;
+    maLong?: number;
+    signal?: string;
+}
+
+export interface StockTradeSignalVO {
+    code: string;
+    name: string;
+    signal: string;
+}
+
 export interface StockQuotePageReqVO {
     code?: string;
     name?: string;
@@ -38,8 +51,9 @@ export interface PageResult<T> {
 }
 
 export interface ResponseDTO<T> {
-    code: string;
-    message: string;
+    success: boolean;
+    code: number;
+    message: string | null;
     data: T;
 }
 
@@ -53,5 +67,11 @@ export const getStockQuotePage = (params: StockQuotePageReqVO & { page: number; 
         paramsSerializer: {
             indexes: null // to support repeated parameters like sort=field1,asc&sort=field2,desc if needed, or just let axios handle arrays
         }
+    });
+};
+
+export const getDualMAPage = (params: DualMAReqVO & { page: number; size: number; sort?: string[] }) => {
+    return api.get<ResponseDTO<PageResult<StockTradeSignalVO>>>('/stockStrategy/dualMA', {
+        params
     });
 };

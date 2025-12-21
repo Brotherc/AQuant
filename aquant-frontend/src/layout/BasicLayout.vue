@@ -48,6 +48,19 @@
             <router-link to="/indicators/valuation">估值指标</router-link>
           </a-menu-item>
         </a-sub-menu>
+        
+        <!-- Strategy -->
+        <a-sub-menu key="sub4">
+          <template #title>
+            <span>
+              <radar-chart-outlined />
+              <span>策略</span>
+            </span>
+          </template>
+          <a-menu-item key="6">
+            <router-link to="/strategy/dual-ma">双均线策略</router-link>
+          </a-menu-item>
+        </a-sub-menu>
 
       </a-menu>
     </a-layout-sider>
@@ -70,6 +83,7 @@ import {
   StockOutlined,
   HistoryOutlined,
   LineChartOutlined,
+  RadarChartOutlined,
 } from '@ant-design/icons-vue';
 const collapsed = ref<boolean>(false);
 const selectedKeys = ref<string[]>(['1']);
