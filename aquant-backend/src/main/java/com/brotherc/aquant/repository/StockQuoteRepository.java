@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -15,7 +16,9 @@ public interface StockQuoteRepository extends JpaRepository<StockQuote, Long>, J
 
     List<StockQuote> findByIdGreaterThanOrderByIdAsc(Long id, Pageable pageable);
 
-    @Query("select distinct new com.brotherc.aquant.model.dto.stockquote.StockCodeName(s.code, s.name) from StockQuote s")
-    List<StockCodeName> findAllStockCodes();
+    @Query("select max(s.createdAt) from StockQuote s")
+    LocalDateTime findMaxCreatedAt();
+
+    List<StockQuote> findByCreatedAt(LocalDateTime createdAt);
 
 }

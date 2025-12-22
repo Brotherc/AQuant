@@ -1,10 +1,10 @@
 package com.brotherc.aquant.strategy;
 
+import com.brotherc.aquant.entity.StockQuote;
 import com.brotherc.aquant.entity.StockQuoteHistory;
 import com.brotherc.aquant.enums.TradeSignal;
 import com.brotherc.aquant.exception.BusinessException;
 import com.brotherc.aquant.exception.ExceptionEnum;
-import com.brotherc.aquant.model.dto.stockquote.StockCodeName;
 import com.brotherc.aquant.model.vo.strategy.StockTradeSignalVO;
 import com.brotherc.aquant.repository.StockQuoteHistoryRepository;
 import com.brotherc.aquant.repository.StockQuoteRepository;
@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -31,11 +32,12 @@ public class DualMovingAverageStrategy {
 
         List<StockTradeSignalVO> result = new ArrayList<>();
 
-        List<StockCodeName> stocks = stockQuoteRepository.findAllStockCodes();
+        LocalDateTime maxTime = stockQuoteRepository.findMaxCreatedAt();
+        List<StockQuote> stocks = stockQuoteRepository.findByCreatedAt(maxTime);
 
         int needDays = maLong + 1;
 
-        for (StockCodeName stock : stocks) {
+        for (StockQuote stock : stocks) {
 
             String code = stock.getCode();
             String name = stock.getName();
@@ -43,7 +45,7 @@ public class DualMovingAverageStrategy {
             List<StockQuoteHistory> list = stockQuoteHistoryRepository.findLatestByCode(code, needDays);
 
             if (list.size() < needDays) {
-                result.add(new StockTradeSignalVO(code, name, TradeSignal.HOLD.name()));
+                result.add(new StockTradeSignalVO(code, name, TradeSignal.HOLD.name(), stock.getLatestPrice(), stock.getPir()));
                 continue;
             }
 
@@ -73,7 +75,7 @@ public class DualMovingAverageStrategy {
                 signal = TradeSignal.SELL;
             }
 
-            result.add(new StockTradeSignalVO(code, name, signal.name()));
+            result.add(new StockTradeSignalVO(code, name, signal.name(), stock.getLatestPrice(), stock.getPir()));
         }
 
         return result;
