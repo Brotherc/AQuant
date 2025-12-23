@@ -34,6 +34,8 @@ export interface StockTradeSignalVO {
     code: string;
     name: string;
     signal: string;
+    latestPrice?: number;
+    pir?: number;
 }
 
 export interface StockQuotePageReqVO {
@@ -62,7 +64,10 @@ export interface ResponseDTO<T> {
 
 
 const api = axios.create({
-    baseURL: '/api'
+    baseURL: '/api',
+    paramsSerializer: {
+        indexes: null
+    }
 });
 
 // 响应拦截器
@@ -87,10 +92,7 @@ api.interceptors.response.use(
 
 export const getStockQuotePage = (params: StockQuotePageReqVO & { page: number; size: number; sort?: string[] }) => {
     return api.get<ResponseDTO<PageResult<StockQuoteVO>>>('/stockQuote/page', {
-        params,
-        paramsSerializer: {
-            indexes: null
-        }
+        params
     });
 };
 

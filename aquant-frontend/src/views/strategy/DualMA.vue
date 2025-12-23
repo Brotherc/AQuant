@@ -4,7 +4,7 @@
       <!-- Search Form -->
       <a-form layout="inline" :model="queryParams" @finish="handleSearch" style="margin-bottom: 24px">
         <a-form-item label="股票代码">
-          <a-input v-model:value="queryParams.code" placeholder="请输入股票代码" allow-clear />
+          <a-input v-model:value="queryParams.code" placeholder="输入代码" allow-clear style="width: 120px" />
         </a-form-item>
         <a-form-item label="短期均线">
           <a-select v-model:value="queryParams.maShort" style="width: 100px">
@@ -77,8 +77,13 @@ const pagination = reactive({
   pageSize: 10,
   total: 0,
   showSizeChanger: true,
+  showQuickJumper: true,
   showTotal: (total: number) => `共 ${total} 条数据`,
 });
+
+// 排序状态
+const sortState = ref<string[]>([]);
+
 
 const columns = [
   {
@@ -90,6 +95,20 @@ const columns = [
     title: '股票名称',
     dataIndex: 'name',
     key: 'name',
+  },
+  {
+    title: '最新价',
+    dataIndex: 'latestPrice',
+    key: 'latestPrice',
+    sorter: true,
+    showSorterTooltip: false,
+  },
+  {
+    title: '价格区间',
+    dataIndex: 'pir',
+    key: 'pir',
+    sorter: true,
+    showSorterTooltip: false,
   },
   {
     title: '交易信号',
@@ -116,6 +135,7 @@ const fetchData = async () => {
       ...queryParams,
       page: pagination.current - 1,
       size: pagination.pageSize,
+      sort: sortState.value,
     });
     // 使用 success 字段或 code 0 判断
     if (data.success || data.code === 0) {
@@ -134,9 +154,17 @@ const handleSearch = () => {
   fetchData();
 };
 
-const handleTableChange = (pag: any) => {
+const handleTableChange = (pag: any, _filters: any, sorter: any) => {
   pagination.current = pag.current;
   pagination.pageSize = pag.pageSize;
+  
+  if (sorter.field && sorter.order) {
+    const order = sorter.order === 'ascend' ? 'asc' : 'desc';
+    sortState.value = [`${sorter.field},${order}`];
+  } else {
+    sortState.value = [];
+  }
+
   fetchData();
 };
 
