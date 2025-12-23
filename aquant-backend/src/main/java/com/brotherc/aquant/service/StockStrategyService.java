@@ -9,6 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -36,7 +37,11 @@ public class StockStrategyService {
 
         List<StockTradeSignalVO> filtered = stream.collect(Collectors.toList());
 
-        filtered.sort(Comparator.comparing(StockTradeSignalVO::getCode));
+        Sort sort = pageable.getSort();
+        if (sort.isSorted()) {
+            Comparator<StockTradeSignalVO> comparator = buildComparator(sort);
+            filtered.sort(comparator);
+        }
 
         // 分页
         int total = filtered.size();
@@ -53,6 +58,37 @@ public class StockStrategyService {
         List<StockTradeSignalVO> pageContent = filtered.subList(fromIndex, toIndex);
 
         return new PageImpl<>(pageContent, pageable, total);
+    }
+
+    private Comparator<StockTradeSignalVO> buildComparator(Sort sort) {
+        Comparator<StockTradeSignalVO> result = null;
+
+        for (Sort.Order order : sort) {
+            Comparator<StockTradeSignalVO> comparator = null;
+            if ("code".equals(order.getProperty())) {
+                comparator = Comparator.comparing(StockTradeSignalVO::getCode);
+            } else if ("name".equals(order.getProperty())) {
+                comparator = Comparator.comparing(StockTradeSignalVO::getName);
+            } else if ("signal".equals(order.getProperty())) {
+                comparator = Comparator.comparing(StockTradeSignalVO::getSignal);
+            } else if ("pir".equals(order.getProperty())) {
+                comparator = Comparator.comparing(StockTradeSignalVO::getPir);
+            } else if ("latestPrice".equals(order.getProperty())) {
+                comparator = Comparator.comparing(StockTradeSignalVO::getLatestPrice);
+            }
+
+            if (comparator == null) {
+                continue;
+            }
+
+            if (order.getDirection() == Sort.Direction.DESC) {
+                comparator = comparator.reversed();
+            }
+
+            result = (result == null) ? comparator : result.thenComparing(comparator);
+        }
+
+        return result != null ? result : Comparator.comparing(StockTradeSignalVO::getCode);
     }
 
 }
