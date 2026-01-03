@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -197,6 +198,56 @@ public class AKShareService {
             log.error("stock_history_dividend请求失败", e);
             throw new RuntimeException("stock_history_dividend请求失败");
         }
+    }
+
+    public List<StockBoardIndustryNameEm> stockBoardIndustryNameEm() {
+        Request request = new Request.Builder()
+                .url(akshareAddress + "/api/public/stock_board_industry_name_em")
+                .get()
+                .build();
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                log.info("失败响应: {}", response);
+                throw new RuntimeException("stock_board_industry_name_em请求失败");
+            }
+
+            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
+            });
+
+        } catch (IOException e) {
+            log.error("stock_board_industry_name_em请求失败", e);
+            throw new RuntimeException("stock_board_industry_name_em请求失败");
+        }
+    }
+
+    public StockBoardIndustrySpotEm stockBoardIndustrySpotEm(String symbol) {
+        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_board_industry_spot_em")
+                .newBuilder()
+                .addQueryParameter("symbol", symbol);
+
+        Request request = new Request.Builder()
+                .url(builder.build())
+                .get()
+                .build();
+
+        List<Map<String, Object>> list;
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                log.info("失败响应: {}", response);
+                throw new RuntimeException("stock_board_industry_spot_em请求失败");
+            }
+
+            list = objectMapper.readValue(response.body().string(), new TypeReference<>() {
+            });
+
+        } catch (IOException e) {
+            log.error("stock_board_industry_spot_em请求失败", e);
+            throw new RuntimeException("stock_board_industry_spot_em请求失败");
+        }
+
+        return new StockBoardIndustrySpotEm(list);
     }
 
 }
