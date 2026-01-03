@@ -8,7 +8,7 @@ import com.brotherc.aquant.model.dto.akshare.StockZhASpot;
 import com.brotherc.aquant.model.vo.stockquote.StockQuotePageReqVO;
 import com.brotherc.aquant.model.vo.stockquote.StockQuoteVO;
 import com.brotherc.aquant.repository.StockSyncRepository;
-import com.brotherc.aquant.utils.StockUtils;
+import com.brotherc.aquant.utils.StockHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -25,6 +25,7 @@ public class StockClusterService {
 
     private final StockSyncRepository stockSyncRepository;
 
+    private final StockHelper stockHelper;
     private final AKShareService aKShareService;
     private final StockQuoteService stockQuoteService;
     private final StockSyncService stockSyncService;
@@ -34,7 +35,7 @@ public class StockClusterService {
             // 查询上一次同步的时间戳
             StockSync stockSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_DAILY_LATEST);
             Long lastTimestamp = Optional.ofNullable(stockSync).map(StockSync::getValue).map(Long::valueOf).orElse(null);
-            boolean startSync = StockUtils.checkIsStartSync(lastTimestamp);
+            boolean startSync = stockHelper.checkIsStartSync(lastTimestamp);
 
             if (!startSync) {
                 throw new BusinessException(ExceptionEnum.STOCK_QUOTE_SYNC_NOT_START);

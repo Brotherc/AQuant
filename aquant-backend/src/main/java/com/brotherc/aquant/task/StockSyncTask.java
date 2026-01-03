@@ -6,7 +6,7 @@ import com.brotherc.aquant.model.dto.akshare.StockZhASpot;
 import com.brotherc.aquant.repository.StockSyncRepository;
 import com.brotherc.aquant.service.AKShareService;
 import com.brotherc.aquant.service.StockSyncService;
-import com.brotherc.aquant.utils.StockUtils;
+import com.brotherc.aquant.utils.StockHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -15,9 +15,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,6 +23,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class StockSyncTask {
 
+    private final StockHelper stockHelper;
     private final AKShareService aKShareService;
     private final StockSyncService stockSyncService;
     private final StockSyncRepository stockSyncRepository;
@@ -52,7 +50,7 @@ public class StockSyncTask {
         // 查询上一次同步的时间戳
         StockSync stockSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_DAILY_LATEST);
         Long lastTimestamp = Optional.ofNullable(stockSync).map(StockSync::getValue).map(Long::valueOf).orElse(null);
-        boolean startSync = StockUtils.checkIsStartSync(lastTimestamp);
+        boolean startSync = stockHelper.checkIsStartSync(lastTimestamp);
         if (startSync) {
             long now = System.currentTimeMillis();
             // 查询第三方API获取最新A股股票最新行情
