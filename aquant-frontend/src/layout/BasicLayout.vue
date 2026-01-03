@@ -5,59 +5,59 @@
       <a-menu v-model:selectedKeys="selectedKeys" v-model:openKeys="openKeys" theme="dark" mode="inline">
         
         <!-- Stock Data -->
-        <a-sub-menu key="sub1">
+        <a-sub-menu key="/stock-data">
           <template #title>
             <span>
               <stock-outlined />
               <span>股票数据</span>
             </span>
           </template>
-          <a-menu-item key="1">
+          <a-menu-item key="/stock-data/index">
             <router-link to="/stock-data/index">股票数据</router-link>
           </a-menu-item>
         </a-sub-menu>
 
         <!-- History -->
-        <a-sub-menu key="sub2">
+        <a-sub-menu key="/history">
           <template #title>
             <span>
               <history-outlined />
               <span>历史行情</span>
             </span>
           </template>
-          <a-menu-item key="2">
+          <a-menu-item key="/history/index">
             <router-link to="/history/index">历史行情</router-link>
           </a-menu-item>
         </a-sub-menu>
 
         <!-- Indicators -->
-        <a-sub-menu key="sub3">
+        <a-sub-menu key="/indicators">
           <template #title>
             <span>
               <line-chart-outlined />
               <span>股票指标</span>
             </span>
           </template>
-          <a-menu-item key="3">
+          <a-menu-item key="/indicators/dupont">
             <router-link to="/indicators/dupont">杜邦分析</router-link>
           </a-menu-item>
-          <a-menu-item key="4">
+          <a-menu-item key="/indicators/growth">
             <router-link to="/indicators/growth">行业成长性指标</router-link>
           </a-menu-item>
-          <a-menu-item key="5">
+          <a-menu-item key="/indicators/valuation">
             <router-link to="/indicators/valuation">估值指标</router-link>
           </a-menu-item>
         </a-sub-menu>
         
         <!-- Strategy -->
-        <a-sub-menu key="sub4">
+        <a-sub-menu key="/strategy">
           <template #title>
             <span>
               <radar-chart-outlined />
               <span>策略</span>
             </span>
           </template>
-          <a-menu-item key="6">
+          <a-menu-item key="/strategy/dual-ma">
             <router-link to="/strategy/dual-ma">双均线策略</router-link>
           </a-menu-item>
         </a-sub-menu>
@@ -78,16 +78,39 @@
   </a-layout>
 </template>
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { ref, watch, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import {
   StockOutlined,
   HistoryOutlined,
   LineChartOutlined,
   RadarChartOutlined,
 } from '@ant-design/icons-vue';
+
+const route = useRoute();
 const collapsed = ref<boolean>(false);
-const selectedKeys = ref<string[]>(['1']);
-const openKeys = ref<string[]>(['sub1', 'sub2', 'sub3']);
+const selectedKeys = ref<string[]>([]);
+const openKeys = ref<string[]>([]);
+
+// 同步菜单状态
+const syncMenuState = () => {
+  const path = route.path;
+  selectedKeys.value = [path];
+  
+  // 提取父级路径，例如 /strategy/dual-ma -> /strategy
+  const parentPath = '/' + path.split('/')[1];
+  if (parentPath && !openKeys.value.includes(parentPath)) {
+    openKeys.value.push(parentPath);
+  }
+};
+
+watch(() => route.path, () => {
+  syncMenuState();
+});
+
+onMounted(() => {
+  syncMenuState();
+});
 </script>
 <style>
 .logo {
