@@ -42,6 +42,8 @@ public class StockSyncService {
     private final StockGrowthMetricsService stockGrowthMetricsService;
     private final StockDupontAnalysisService stockDupontAnalysisService;
     private final StockValuationMetricsService stockValuationMetricsService;
+    private final StockIndustryBoardService stockIndustryBoardService;
+    private final StockIndustryBoardHistoryService stockIndustryBoardHistoryService;
 
     private final StockQuoteRepository stockQuoteRepository;
     private final StockSyncRepository stockSyncRepository;
@@ -221,6 +223,22 @@ public class StockSyncService {
                                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
                 )
                 .orElse("");
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void stockBoardIndustry(
+            List<StockBoardIndustryNameEm> stockBoardList, Map<String, StockBoardIndustrySpotEm> stockBoardDetailMap, StockSync stocBoardSync, long timestamp
+    ) {
+        if (!CollectionUtils.isEmpty(stockBoardList)) {
+            LocalDateTime now = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime();
+
+            // 更新A股板块行情最新
+            stockIndustryBoardService.save(stockBoardList, now);
+            // 更新A股板块历史行情
+            stockIndustryBoardHistoryService.save(stockBoardDetailMap, now);
+            // 更新最后一次股票板块行情同步时间
+            save(stocBoardSync, StockSyncConstant.STOCK_BOARD_INDUSTRY_LATEST, timestamp);
+        }
     }
 
 }
