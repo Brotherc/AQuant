@@ -22,6 +22,17 @@ const router = createRouter({
                     ]
                 },
                 {
+                    path: 'board',
+                    name: 'BoardRoot',
+                    children: [
+                        {
+                            path: 'index',
+                            name: 'BoardData',
+                            component: () => import('@/views/board/BoardData.vue')
+                        }
+                    ]
+                },
+                {
                     path: 'history',
                     name: 'HistoryRoot',
                     children: [

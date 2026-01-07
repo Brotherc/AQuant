@@ -17,6 +17,19 @@
           </a-menu-item>
         </a-sub-menu>
 
+        <!-- Board Data -->
+        <a-sub-menu key="/board">
+          <template #title>
+            <span>
+              <appstore-outlined />
+              <span>板块数据</span>
+            </span>
+          </template>
+          <a-menu-item key="/board/index">
+            <router-link to="/board/index">板块数据</router-link>
+          </a-menu-item>
+        </a-sub-menu>
+
         <!-- History -->
         <a-sub-menu key="/history">
           <template #title>
@@ -85,6 +98,7 @@ import {
   HistoryOutlined,
   LineChartOutlined,
   RadarChartOutlined,
+  AppstoreOutlined,
 } from '@ant-design/icons-vue';
 
 const route = useRoute();
