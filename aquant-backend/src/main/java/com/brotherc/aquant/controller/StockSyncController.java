@@ -40,4 +40,15 @@ public class StockSyncController {
         return ResponseDTO.success();
     }
 
+    @Operation(summary = "股票板块行情历史")
+    @GetMapping("/stockIndustryBoardHistory")
+    public ResponseDTO<Void> stockIndustryBoardHistory(
+            @RequestParam String boardName,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate
+    ) {
+        stockSyncService.stockIndustryBoardHistory(boardName, startDate, endDate);
+        return ResponseDTO.success();
+    }
+
 }

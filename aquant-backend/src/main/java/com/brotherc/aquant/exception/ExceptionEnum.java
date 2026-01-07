@@ -12,8 +12,8 @@ public enum ExceptionEnum {
 
     STOCK_STRATEGY_DUAL_MA_ILLEGAL(1000101, "短期均线必须小于长期均线"),
     STOCK_QUOTE_SYNC_NOT_START(1000102, "非交易日时间无需同步"),
-    STOCK_QUOTE_FREQUENT(1000103, "1分钟内请勿重复刷新")
-    ;
+    STOCK_QUOTE_FREQUENT(1000103, "1分钟内请勿重复刷新"),
+    STOCK_INDUSTRY_BOARD_UN_EXIST(1000104, "行业板块不存在");
 
     /**
      * 应用(1~2位)、服务(2位)、模块(2位)、异常(2位)

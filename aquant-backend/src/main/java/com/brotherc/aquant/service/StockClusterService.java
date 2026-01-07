@@ -5,6 +5,8 @@ import com.brotherc.aquant.entity.StockSync;
 import com.brotherc.aquant.exception.BusinessException;
 import com.brotherc.aquant.exception.ExceptionEnum;
 import com.brotherc.aquant.model.dto.akshare.StockZhASpot;
+import com.brotherc.aquant.model.vo.stockindustryboard.StockIndustryBoardPageReqVO;
+import com.brotherc.aquant.model.vo.stockindustryboard.StockIndustryBoardVO;
 import com.brotherc.aquant.model.vo.stockquote.StockQuotePageReqVO;
 import com.brotherc.aquant.model.vo.stockquote.StockQuoteVO;
 import com.brotherc.aquant.repository.StockSyncRepository;
@@ -29,6 +31,7 @@ public class StockClusterService {
     private final AKShareService aKShareService;
     private final StockQuoteService stockQuoteService;
     private final StockSyncService stockSyncService;
+    private final StockIndustryBoardService stockIndustryBoardService;
 
     public Page<StockQuoteVO> stockQuotePage(StockQuotePageReqVO reqVO, Pageable pageable) {
         if (reqVO.getRefresh()) {
@@ -53,6 +56,10 @@ public class StockClusterService {
             stockSyncService.stockQuote(stockZhASpots, stockSync, now);
         }
         return stockQuoteService.getPage(reqVO, pageable);
+    }
+
+    public Page<StockIndustryBoardVO> stockIndustryBoardPage(StockIndustryBoardPageReqVO reqVO, Pageable pageable) {
+        return stockIndustryBoardService.stockIndustryBoardPage(reqVO, pageable);
     }
 
 }

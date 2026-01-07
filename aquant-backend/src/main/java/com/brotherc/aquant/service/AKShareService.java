@@ -250,4 +250,39 @@ public class AKShareService {
         return new StockBoardIndustrySpotEm(list);
     }
 
+    public List<StockBoardIndustryHistEm> stockBoardIndustryHistEm(String symbol, String startDate, String endDate, String adjust) {
+        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_board_industry_hist_em")
+                .newBuilder()
+                .addQueryParameter("symbol", symbol);
+
+        if (StringUtils.isNotBlank(startDate)) {
+            builder.addQueryParameter("start_date", startDate);
+        }
+        if (StringUtils.isNotBlank(endDate)) {
+            builder.addQueryParameter("end_date", endDate);
+        }
+        if (StringUtils.isNotBlank(adjust)) {
+            builder.addQueryParameter("adjust", adjust);
+        }
+
+        Request request = new Request.Builder()
+                .url(builder.build())
+                .get()
+                .build();
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                log.info("失败响应: {}", response);
+                throw new RuntimeException("stock_board_industry_hist_em请求失败");
+            }
+
+            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
+            });
+
+        } catch (IOException e) {
+            log.error("stock_board_industry_hist_em请求失败", e);
+            throw new RuntimeException("stock_board_industry_hist_em请求失败");
+        }
+    }
+
 }

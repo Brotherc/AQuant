@@ -1,15 +1,11 @@
 package com.brotherc.aquant.service;
 
 import com.brotherc.aquant.constant.StockSyncConstant;
-import com.brotherc.aquant.entity.StockDividendRecord;
-import com.brotherc.aquant.entity.StockQuote;
-import com.brotherc.aquant.entity.StockQuoteHistory;
-import com.brotherc.aquant.entity.StockSync;
+import com.brotherc.aquant.entity.*;
+import com.brotherc.aquant.exception.BusinessException;
+import com.brotherc.aquant.exception.ExceptionEnum;
 import com.brotherc.aquant.model.dto.akshare.*;
-import com.brotherc.aquant.repository.StockDividendRecordRepository;
-import com.brotherc.aquant.repository.StockQuoteHistoryRepository;
-import com.brotherc.aquant.repository.StockQuoteRepository;
-import com.brotherc.aquant.repository.StockSyncRepository;
+import com.brotherc.aquant.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -25,10 +21,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -49,6 +42,8 @@ public class StockSyncService {
     private final StockSyncRepository stockSyncRepository;
     private final StockDividendRecordRepository stockDividendRecordRepository;
     private final StockQuoteHistoryRepository stockQuoteHistoryRepository;
+    private final StockIndustryBoardHistoryRepository stockIndustryBoardHistoryRepository;
+    private final StockIndustryBoardRepository stockIndustryBoardRepository;
 
     @Transactional(rollbackFor = Exception.class)
     public void stockQuote(List<StockZhASpot> stockZhASpotList, StockSync stockDailyLatest, long timestamp) {
@@ -239,6 +234,45 @@ public class StockSyncService {
             // 更新最后一次股票板块行情同步时间
             save(stocBoardSync, StockSyncConstant.STOCK_BOARD_INDUSTRY_LATEST, timestamp);
         }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void stockIndustryBoardHistory(String boardName, String startDate, String endDate) {
+        List<StockBoardIndustryHistEm> list = aKShareService.stockBoardIndustryHistEm(boardName, startDate, endDate, null);
+        if (CollectionUtils.isEmpty(list)) {
+            return;
+        }
+
+        StockIndustryBoard stockIndustryBoard = stockIndustryBoardRepository.findByBoardName(boardName);
+        if (stockIndustryBoard == null) {
+            throw new BusinessException(ExceptionEnum.STOCK_INDUSTRY_BOARD_UN_EXIST);
+        }
+        List<StockIndustryBoardHistory> historyList = stockIndustryBoardHistoryRepository.findByBoardCode(stockIndustryBoard.getBoardCode());
+        Map<String, StockIndustryBoardHistory> historyMapping = historyList.stream().collect(Collectors.toMap(StockIndustryBoardHistory::getTradeDate, o -> o));
+
+        List<StockIndustryBoardHistory> saveList = new ArrayList<>();
+        for (StockBoardIndustryHistEm stockBoard : list) {
+            StockIndustryBoardHistory stockIndustryBoardHistory = historyMapping.get(stockBoard.getDate());
+            if (stockIndustryBoardHistory == null) {
+                stockIndustryBoardHistory = new StockIndustryBoardHistory();
+            }
+            stockIndustryBoardHistory.setBoardCode(stockIndustryBoard.getBoardCode());
+            stockIndustryBoardHistory.setBoardName(boardName);
+            stockIndustryBoardHistory.setOpenPrice(stockBoard.getOpen());
+            stockIndustryBoardHistory.setHighPrice(stockBoard.getHigh());
+            stockIndustryBoardHistory.setLowPrice(stockBoard.getLow());
+            stockIndustryBoardHistory.setLatestPrice(stockBoard.getClose());
+            stockIndustryBoardHistory.setChangeAmount(stockBoard.getChangeAmount());
+            stockIndustryBoardHistory.setChangePercent(stockBoard.getChangePercent());
+            stockIndustryBoardHistory.setAmplitude(stockBoard.getAmplitude());
+            stockIndustryBoardHistory.setVolume(stockBoard.getVolume());
+            stockIndustryBoardHistory.setTurnoverAmount(stockBoard.getTurnover());
+            stockIndustryBoardHistory.setTurnoverRate(stockBoard.getTurnoverRate());
+            stockIndustryBoardHistory.setTradeDate(stockBoard.getDate());
+            stockIndustryBoardHistory.setCreatedAt(LocalDateTime.now());
+            saveList.add(stockIndustryBoardHistory);
+        }
+        stockIndustryBoardHistoryRepository.saveAll(saveList);
     }
 
 }
