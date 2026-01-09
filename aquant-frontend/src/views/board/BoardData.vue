@@ -38,15 +38,26 @@
               {{ record.changeAmount }}
             </span>
           </template>
+
+          <template v-if="column.dataIndex === 'operation'">
+            <a @click="handleChart(record)">行情</a>
+          </template>
         </template>
       </a-table>
     </a-card>
+
+    <BoardHistoryChart
+      v-model:visible="chartVisible"
+      :boardCode="currentBoardCode"
+      :boardName="currentBoardName"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { getBoardPage, type StockIndustryBoardVO, type StockIndustryBoardPageReqVO } from '@/api/board';
+import BoardHistoryChart from './components/BoardHistoryChart.vue';
 import type { TableProps } from 'ant-design-vue';
 
 // 搜索参数
@@ -67,6 +78,11 @@ const pagination = reactive({
   showQuickJumper: true,
 });
 
+// 图表弹窗
+const chartVisible = ref(false);
+const currentBoardCode = ref('');
+const currentBoardName = ref('');
+
 // 列定义
 const columns: TableProps['columns'] = [
   { title: '板块代码', dataIndex: 'boardCode', fixed: 'left', width: 100 },
@@ -82,6 +98,7 @@ const columns: TableProps['columns'] = [
   { title: '领涨股', dataIndex: 'leadingStockName', width: 120 },
   { title: '领涨幅', dataIndex: 'leadingStockChangePercent', width: 100 },
   { title: '日期', dataIndex: 'tradeDate', width: 120 },
+  { title: '操作', dataIndex: 'operation', fixed: 'right', width: 80 },
 ];
 
 // 加载数据
@@ -131,6 +148,12 @@ const handleTableChange: TableProps['onChange'] = (pag: any, _filters: any, sort
   }
 
   fetchData();
+};
+
+const handleChart = (record: StockIndustryBoardVO) => {
+  currentBoardCode.value = record.boardCode;
+  currentBoardName.value = record.boardName;
+  chartVisible.value = true;
 };
 
 onMounted(() => {

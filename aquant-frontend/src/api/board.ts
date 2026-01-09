@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { PageResult, ResponseDTO } from './stock'; // Reuse types from stock.ts
+import type { PageResult, ResponseDTO } from './stock';
 
 export interface StockIndustryBoardVO {
     id: number;
@@ -24,6 +24,24 @@ export interface StockIndustryBoardPageReqVO {
     boardName?: string;
 }
 
+export interface StockIndustryBoardHistory {
+    id: number;
+    boardCode: string;
+    boardName: string;
+    openPrice: number;
+    highPrice: number;
+    lowPrice: number;
+    latestPrice: number;
+    changeAmount: number;
+    changePercent: number;
+    amplitude: number;
+    volume: number;
+    turnoverAmount: number;
+    turnoverRate: number;
+    tradeDate: string;
+    createdAt: string;
+}
+
 const api = axios.create({
     baseURL: '/api'
 });
@@ -35,4 +53,8 @@ export const getBoardPage = (params: StockIndustryBoardPageReqVO & { page: numbe
             indexes: null
         }
     });
+};
+
+export const getBoardHistory = (params: { boardCode: string; frequency?: string }) => {
+    return api.get<ResponseDTO<StockIndustryBoardHistory[]>>('/stockIndustryBoard/history/kline', { params });
 };
