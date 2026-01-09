@@ -91,6 +91,21 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
       trigger: 'axis',
       axisPointer: {
         type: 'cross'
+      },
+      formatter: (params: any) => {
+        let result = params[0].name + '<br/>';
+        params.forEach((param: any) => {
+          if (param.seriesType === 'candlestick') {
+            result += param.seriesName + '<br/>';
+            result += '开盘: ' + param.data[1] + '<br/>';
+            result += '收盘: ' + param.data[2] + '<br/>';
+            result += '最低: ' + param.data[3] + '<br/>';
+            result += '最高: ' + param.data[4] + '<br/>';
+          } else if (param.seriesType === 'bar') {
+            result += param.seriesName + ': ' + param.value + '<br/>';
+          }
+        });
+        return result;
       }
     },
     grid: [
@@ -102,7 +117,7 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
       {
         left: '10%',
         right: '8%',
-        top: '63%',
+        top: '70%',
         height: '16%'
       }
     ],
@@ -169,7 +184,7 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
         },
       },
       {
-        name: 'Volume',
+        name: '成交量',
         type: 'bar',
         xAxisIndex: 1,
         yAxisIndex: 1,
