@@ -7,6 +7,9 @@ import lombok.Data;
 @Schema(description = "双均线策略查询入参")
 public class DualMAReqVO {
 
+    @Schema(description = "股票代码")
+    private String code;
+
     @Schema(description = "短均线")
     private int maShort;
 

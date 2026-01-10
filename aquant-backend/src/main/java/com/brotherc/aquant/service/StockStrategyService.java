@@ -34,6 +34,10 @@ public class StockStrategyService {
             stream = stream.filter(vo -> reqVO.getSignal().equalsIgnoreCase(vo.getSignal())
             );
         }
+        if (StringUtils.isNotBlank(reqVO.getCode())) {
+            stream = stream.filter(vo -> reqVO.getCode().equalsIgnoreCase(vo.getCode())
+            );
+        }
 
         List<StockTradeSignalVO> filtered = stream.collect(Collectors.toList());
 
