@@ -30,19 +30,6 @@
           </a-menu-item>
         </a-sub-menu>
 
-        <!-- History -->
-        <a-sub-menu key="/history">
-          <template #title>
-            <span>
-              <history-outlined />
-              <span>历史行情</span>
-            </span>
-          </template>
-          <a-menu-item key="/history/index">
-            <router-link to="/history/index">历史行情</router-link>
-          </a-menu-item>
-        </a-sub-menu>
-
         <!-- Indicators -->
         <a-sub-menu key="/indicators">
           <template #title>

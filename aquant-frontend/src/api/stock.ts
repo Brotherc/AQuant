@@ -1,5 +1,4 @@
-import axios from 'axios';
-import { message } from 'ant-design-vue';
+
 
 export interface ResponseDTO<T> {
     success: boolean;
@@ -75,32 +74,7 @@ export interface PageResult<T> {
     number: number;
 }
 
-const api = axios.create({
-    baseURL: '/api',
-    paramsSerializer: {
-        indexes: null
-    }
-});
-
-// 响应拦截器
-api.interceptors.response.use(
-    (response) => {
-        const data = response.data;
-        // 如果是 ResponseDTO 结构，统一检查 success 字段
-        if (data && typeof data === 'object' && 'success' in data) {
-            if (!data.success && data.code !== 0) {
-                // 统一报错提示
-                message.error(data.message || '请求失败');
-            }
-        }
-        return response;
-    },
-    (error) => {
-        console.error('API Error:', error);
-        message.error(error.message || '网络不稳定，请稍后重试');
-        return Promise.reject(error);
-    }
-);
+import api from '@/utils/request';
 
 
 export const getStockQuotePage = (params: StockQuotePageReqVO & { page: number; size: number; sort?: string[] }) => {

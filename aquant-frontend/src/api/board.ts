@@ -1,4 +1,4 @@
-import axios from 'axios';
+
 import type { PageResult, ResponseDTO } from './stock';
 
 export interface StockIndustryBoardVO {
@@ -22,6 +22,7 @@ export interface StockIndustryBoardVO {
 export interface StockIndustryBoardPageReqVO {
     boardCode?: string;
     boardName?: string;
+    refresh?: boolean;
 }
 
 export interface StockIndustryBoardHistory {
@@ -42,9 +43,7 @@ export interface StockIndustryBoardHistory {
     createdAt: string;
 }
 
-const api = axios.create({
-    baseURL: '/api'
-});
+import api from '@/utils/request';
 
 export const getBoardPage = (params: StockIndustryBoardPageReqVO & { page: number; size: number; sort?: string[] }) => {
     return api.get<ResponseDTO<PageResult<StockIndustryBoardVO>>>('/stockIndustryBoard/page', {
@@ -57,4 +56,8 @@ export const getBoardPage = (params: StockIndustryBoardPageReqVO & { page: numbe
 
 export const getBoardHistory = (params: { boardCode: string; frequency?: string }) => {
     return api.get<ResponseDTO<StockIndustryBoardHistory[]>>('/stockIndustryBoard/history/kline', { params });
+};
+
+export const getStockBoardIndustryLatest = () => {
+    return api.get<ResponseDTO<string>>('/stockSync/stockBoardIndustryLatest');
 };

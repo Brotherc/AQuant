@@ -32,17 +32,7 @@ const router = createRouter({
                         }
                     ]
                 },
-                {
-                    path: 'history',
-                    name: 'HistoryRoot',
-                    children: [
-                        {
-                            path: 'index',
-                            name: 'HistoryQuotes',
-                            component: () => import('@/views/history/HistoryQuotes.vue')
-                        }
-                    ]
-                },
+
                 {
                     path: 'indicators',
                     name: 'IndicatorsRoot',
