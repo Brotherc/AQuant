@@ -61,20 +61,35 @@
               {{ record.changeAmount }}
             </span>
           </template>
+          <template v-if="column.dataIndex === 'operation'">
+            <a @click="handleChart(record)">行情</a>
+          </template>
         </template>
       </a-table>
     </a-card>
+
+    <StockHistoryChart
+      v-model:visible="chartVisible"
+      :stockCode="currentStockCode"
+      :stockName="currentStockName"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { getStockQuotePage, getStockDailyLatest, type StockQuoteVO, type StockQuotePageReqVO } from '@/api/stock';
+import StockHistoryChart from './components/StockHistoryChart.vue';
 import type { TableProps } from 'ant-design-vue';
 
 // 刷新状态
 const refreshLoading = ref(false);
 const lastRefreshTime = ref('');
+
+// 图表弹窗
+const chartVisible = ref(false);
+const currentStockCode = ref('');
+const currentStockName = ref('');
 
 // 搜索参数
 const searchParams = reactive<StockQuotePageReqVO>({
@@ -112,6 +127,7 @@ const columns: TableProps['columns'] = [
   { title: '最高', dataIndex: 'highPrice', width: 100 },
   { title: '最低', dataIndex: 'lowPrice', width: 100 },
   { title: '时间', dataIndex: 'quoteTime', width: 150 },
+  { title: '操作', dataIndex: 'operation', fixed: 'right', width: 80 },
 ];
 
 // 获取最新同步时间
@@ -192,6 +208,14 @@ const handleTableChange: TableProps['onChange'] = (pag: any, _filters: any, sort
   }
 
   fetchData();
+};
+
+
+
+const handleChart = (record: StockQuoteVO) => {
+  currentStockCode.value = record.code;
+  currentStockName.value = record.name;
+  chartVisible.value = true;
 };
 
 onMounted(() => {

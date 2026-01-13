@@ -1,6 +1,27 @@
 import axios from 'axios';
 import { message } from 'ant-design-vue';
 
+export interface ResponseDTO<T> {
+    success: boolean;
+    code: number;
+    message: string | null;
+    data: T;
+}
+
+export interface StockQuoteHistory {
+    id: number;
+    code: string;
+    name: string;
+    closePrice: number;
+    openPrice: number;
+    highPrice: number;
+    lowPrice: number;
+    volume: number;
+    turnover: number;
+    quoteTime: string;
+    tradeDate: string;
+}
+
 export interface StockQuoteVO {
     id: number;
     code: string;
@@ -54,15 +75,6 @@ export interface PageResult<T> {
     number: number;
 }
 
-export interface ResponseDTO<T> {
-    success: boolean;
-    code: number;
-    message: string | null;
-    data: T;
-}
-
-
-
 const api = axios.create({
     baseURL: '/api',
     paramsSerializer: {
@@ -90,6 +102,7 @@ api.interceptors.response.use(
     }
 );
 
+
 export const getStockQuotePage = (params: StockQuotePageReqVO & { page: number; size: number; sort?: string[] }) => {
     return api.get<ResponseDTO<PageResult<StockQuoteVO>>>('/stockQuote/page', {
         params
@@ -104,4 +117,8 @@ export const getDualMAPage = (params: DualMAReqVO & { page: number; size: number
 
 export const getStockDailyLatest = () => {
     return api.get<ResponseDTO<string>>('/stockSync/stockDailyLatest');
+};
+
+export const getStockHistory = (params: { code: string; frequency?: string }) => {
+    return api.get<ResponseDTO<StockQuoteHistory[]>>('/stockQuote/history/kline', { params });
 };

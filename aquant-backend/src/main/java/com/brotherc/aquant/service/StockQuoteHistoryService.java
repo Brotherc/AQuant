@@ -8,10 +8,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.IsoFields;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -35,7 +39,8 @@ public class StockQuoteHistoryService {
         List<StockQuoteHistory> existedList = stockQuoteHistoryRepository.findByTradeDateAndCodeIn(tradeDate, codes);
 
         // 构建 Map：code -> entity
-        Map<String, StockQuoteHistory> existedMap = existedList.stream().collect(Collectors.toMap(StockQuoteHistory::getCode, e -> e));
+        Map<String, StockQuoteHistory> existedMap = existedList.stream()
+                .collect(Collectors.toMap(StockQuoteHistory::getCode, e -> e));
 
         List<StockQuoteHistory> saveList = new ArrayList<>(stockZhASpotList.size());
 
@@ -65,6 +70,72 @@ public class StockQuoteHistoryService {
 
         // 批量保存
         stockQuoteHistoryRepository.saveAll(saveList);
+    }
+
+    /**
+     * 获取个股历史行情 (支持周期聚合)
+     *
+     * @param code      股票代码
+     * @param frequency 频率: 1d, 1w, 1M, 1Q, 1Y
+     * @return 历史数据列表
+     */
+    public List<StockQuoteHistory> getHistory(String code, String frequency) {
+        List<StockQuoteHistory> dailyList = stockQuoteHistoryRepository.findByCodeOrderByTradeDateAsc(code);
+
+        if ("1d".equals(frequency) || CollectionUtils.isEmpty(dailyList)) {
+            return dailyList;
+        }
+
+        // 聚合逻辑
+        Map<String, List<StockQuoteHistory>> groupedMap = new LinkedHashMap<>();
+        for (StockQuoteHistory item : dailyList) {
+            String dateStr = item.getTradeDate();
+            // 处理可能的非标准日期格式，这里假设是 "yyyy-MM-dd"
+            LocalDate date = LocalDate.parse(dateStr);
+            String key;
+            switch (frequency) {
+                case "1w" -> key = date.getYear() + "-W" + date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
+                case "1M" -> key = date.getYear() + "-" + date.getMonthValue();
+                case "1Q" -> key = date.getYear() + "-Q" + date.get(IsoFields.QUARTER_OF_YEAR);
+                case "1Y" -> key = String.valueOf(date.getYear());
+                default -> key = dateStr;
+            }
+            groupedMap.computeIfAbsent(key, k -> new ArrayList<>()).add(item);
+        }
+
+        List<StockQuoteHistory> result = new ArrayList<>();
+        BigDecimal prevClose = null; // No previous close info for first aggregated period unless we query more
+
+        for (List<StockQuoteHistory> group : groupedMap.values()) {
+            if (group.isEmpty())
+                continue;
+
+            StockQuoteHistory first = group.get(0);
+            StockQuoteHistory last = group.get(group.size() - 1);
+
+            StockQuoteHistory aggregated = new StockQuoteHistory();
+            aggregated.setCode(first.getCode());
+            aggregated.setName(first.getName());
+            aggregated.setTradeDate(last.getTradeDate());
+
+            // OHLC
+            aggregated.setOpenPrice(first.getOpenPrice());
+            aggregated.setClosePrice(last.getClosePrice());
+            aggregated.setHighPrice(group.stream().map(StockQuoteHistory::getHighPrice).max(BigDecimal::compareTo)
+                    .orElse(BigDecimal.ZERO));
+            aggregated.setLowPrice(group.stream().map(StockQuoteHistory::getLowPrice).min(BigDecimal::compareTo)
+                    .orElse(BigDecimal.ZERO));
+
+            // Volume & Turnover
+            aggregated.setVolume(
+                    group.stream().map(StockQuoteHistory::getVolume).reduce(BigDecimal.ZERO, BigDecimal::add));
+            aggregated.setTurnover(
+                    group.stream().map(StockQuoteHistory::getTurnover).reduce(BigDecimal.ZERO, BigDecimal::add));
+
+            result.add(aggregated);
+        }
+
+        return result;
     }
 
 }

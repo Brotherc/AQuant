@@ -11,16 +11,15 @@ import java.util.List;
 @Repository
 public interface StockQuoteHistoryRepository extends JpaRepository<StockQuoteHistory, Long> {
 
-    List<StockQuoteHistory> findByTradeDateAndCodeIn(String tradeDate, List<String> codeList);
+        List<StockQuoteHistory> findByTradeDateAndCodeIn(String tradeDate, List<String> codeList);
 
-    @Query(
-            value = "SELECT * " +
-                    "FROM stock_quote_history " +
-                    "WHERE code = :code " +
-                    "ORDER BY trade_date DESC " +
-                    "LIMIT :limit",
-            nativeQuery = true
-    )
-    List<StockQuoteHistory> findLatestByCode(@Param("code") String code, @Param("limit") int limit);
+        List<StockQuoteHistory> findByCodeOrderByTradeDateAsc(String code);
+
+        @Query(value = "SELECT * " +
+                        "FROM stock_quote_history " +
+                        "WHERE code = :code " +
+                        "ORDER BY trade_date DESC " +
+                        "LIMIT :limit", nativeQuery = true)
+        List<StockQuoteHistory> findLatestByCode(@Param("code") String code, @Param("limit") int limit);
 
 }
