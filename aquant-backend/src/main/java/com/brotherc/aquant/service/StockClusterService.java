@@ -4,6 +4,8 @@ import com.brotherc.aquant.constant.StockSyncConstant;
 import com.brotherc.aquant.entity.StockSync;
 import com.brotherc.aquant.exception.BusinessException;
 import com.brotherc.aquant.exception.ExceptionEnum;
+import com.brotherc.aquant.model.dto.akshare.StockBoardIndustryNameEm;
+import com.brotherc.aquant.model.dto.akshare.StockBoardIndustrySpotEm;
 import com.brotherc.aquant.model.dto.akshare.StockZhASpot;
 import com.brotherc.aquant.model.vo.stockindustryboard.StockIndustryBoardPageReqVO;
 import com.brotherc.aquant.model.vo.stockindustryboard.StockIndustryBoardVO;
@@ -17,8 +19,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -41,13 +47,13 @@ public class StockClusterService {
             boolean startSync = stockHelper.checkIsStartSync(lastTimestamp);
 
             if (!startSync) {
-                throw new BusinessException(ExceptionEnum.STOCK_QUOTE_SYNC_NOT_START);
+                throw new BusinessException(ExceptionEnum.STOCK_SYNC_NOT_START);
             }
 
             long now = System.currentTimeMillis();
             boolean notExceedOneMinute = now <= lastTimestamp + 60_000;
             if (notExceedOneMinute) {
-                throw new BusinessException(ExceptionEnum.STOCK_QUOTE_FREQUENT);
+                throw new BusinessException(ExceptionEnum.STOCK_REFRESH_FREQUENT);
             }
 
             // 查询第三方API获取最新A股股票最新行情
@@ -59,7 +65,40 @@ public class StockClusterService {
     }
 
     public Page<StockIndustryBoardVO> stockIndustryBoardPage(StockIndustryBoardPageReqVO reqVO, Pageable pageable) {
+        if (reqVO.getRefresh()) {
+            // 查询上一次同步的时间戳
+            StockSync stockSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_BOARD_INDUSTRY_LATEST);
+            Long lastTimestamp = Optional.ofNullable(stockSync).map(StockSync::getValue).map(Long::valueOf).orElse(null);
+            boolean startSync = stockHelper.checkIsStartSync(lastTimestamp);
+
+            if (!startSync) {
+                throw new BusinessException(ExceptionEnum.STOCK_SYNC_NOT_START);
+            }
+            long now = System.currentTimeMillis();
+
+            // 查询第三方API获取最新A股板块行情
+            List<StockBoardIndustryNameEm> stockBoardList = aKShareService.stockBoardIndustryNameEm();
+
+            Map<String, StockBoardIndustrySpotEm> stockBoardDetailMap = new HashMap<>();
+            for (StockBoardIndustryNameEm stockBoard : stockBoardList) {
+                StockBoardIndustrySpotEm stockBoardIndustrySpotEm = aKShareService.stockBoardIndustrySpotEm(stockBoard.getBlockCode());
+                stockBoardDetailMap.put(stockBoard.getBlockCode() + ":" + stockBoard.getBlockName(), stockBoardIndustrySpotEm);
+
+                long sleepMillis = ThreadLocalRandom.current().nextLong(2000, 3001);
+                try {
+                    TimeUnit.MILLISECONDS.sleep(sleepMillis);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    log.warn("线程被中断，提前结束行业板块行情同步");
+                    break;
+                }
+            }
+
+            // 同步数据
+            stockSyncService.stockBoardIndustry(stockBoardList, stockBoardDetailMap, stockSync, now);
+        }
         return stockIndustryBoardService.stockIndustryBoardPage(reqVO, pageable);
+
     }
 
 }

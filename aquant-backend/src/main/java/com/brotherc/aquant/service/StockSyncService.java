@@ -220,6 +220,20 @@ public class StockSyncService {
                 .orElse("");
     }
 
+    public String getStockBoardIndustryLatest() {
+        StockSync stockSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_BOARD_INDUSTRY_LATEST);
+
+        return Optional.ofNullable(stockSync)
+                .map(StockSync::getValue)
+                .map(Long::parseLong)
+                .map(timestamp ->
+                        Instant.ofEpochMilli(timestamp)
+                                .atZone(ZoneId.systemDefault())
+                                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                )
+                .orElse("");
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public void stockBoardIndustry(
             List<StockBoardIndustryNameEm> stockBoardList, Map<String, StockBoardIndustrySpotEm> stockBoardDetailMap, StockSync stocBoardSync, long timestamp

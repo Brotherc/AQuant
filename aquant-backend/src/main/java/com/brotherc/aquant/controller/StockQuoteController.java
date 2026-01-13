@@ -7,6 +7,7 @@ import com.brotherc.aquant.service.StockClusterService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.validation.annotation.Validated;
@@ -25,7 +26,7 @@ public class StockQuoteController {
 
     @Operation(summary = "分页查询股票数据")
     @GetMapping("/page")
-    public ResponseDTO<Page<StockQuoteVO>> page(StockQuotePageReqVO reqVO, Pageable pageable) {
+    public ResponseDTO<Page<StockQuoteVO>> page(@ParameterObject StockQuotePageReqVO reqVO, @ParameterObject Pageable pageable) {
         return ResponseDTO.success(stockClusterService.stockQuotePage(reqVO, pageable));
     }
 
