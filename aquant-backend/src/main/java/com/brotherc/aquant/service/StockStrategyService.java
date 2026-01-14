@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -76,7 +77,10 @@ public class StockStrategyService {
             } else if ("signal".equals(order.getProperty())) {
                 comparator = Comparator.comparing(StockTradeSignalVO::getSignal);
             } else if ("pir".equals(order.getProperty())) {
-                comparator = Comparator.comparing(StockTradeSignalVO::getPir);
+                comparator = Comparator.comparing(
+                        StockTradeSignalVO::getPir,
+                        Comparator.nullsLast(BigDecimal::compareTo)
+                );
             } else if ("latestPrice".equals(order.getProperty())) {
                 comparator = Comparator.comparing(StockTradeSignalVO::getLatestPrice);
             }
