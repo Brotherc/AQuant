@@ -47,21 +47,31 @@
         @change="handleTableChange"
         row-key="id"
       >
-        <template #bodyCell="{ column, text }">
+        <template #bodyCell="{ column, text, record }">
           <template v-if="column.key === 'signal'">
             <a-tag :color="getSignalLabel(text).color">
               {{ getSignalLabel(text).text }}
             </a-tag>
           </template>
+          <template v-if="column.key === 'operation'">
+            <a @click="handleChart(record)">行情</a>
+          </template>
         </template>
       </a-table>
     </a-card>
+    
+    <StockHistoryChart
+      v-model:visible="chartVisible"
+      :stockCode="currentStockCode"
+      :stockName="currentStockName"
+    />
   </div>
 </template>
 
 <script lang="ts" setup>
 import { ref, reactive, onMounted } from 'vue';
 import { getDualMAPage, type StockTradeSignalVO, type DualMAReqVO } from '@/api/stock';
+import StockHistoryChart from '@/views/stock-data/components/StockHistoryChart.vue';
 
 const loading = ref(false);
 const dataSource = ref<StockTradeSignalVO[]>([]);
@@ -80,6 +90,11 @@ const pagination = reactive({
   showQuickJumper: true,
   showTotal: (total: number) => `共 ${total} 条数据`,
 });
+
+// 图表弹窗
+const chartVisible = ref(false);
+const currentStockCode = ref('');
+const currentStockName = ref('');
 
 // 排序状态
 const sortState = ref<string[]>([]);
@@ -115,6 +130,11 @@ const columns = [
     dataIndex: 'signal',
     key: 'signal',
     width: 120,
+  },
+  {
+    title: '操作',
+    key: 'operation',
+    width: 100,
   }
 ];
 
@@ -166,6 +186,12 @@ const handleTableChange = (pag: any, _filters: any, sorter: any) => {
   }
 
   fetchData();
+};
+
+const handleChart = (record: StockTradeSignalVO) => {
+  currentStockCode.value = record.code;
+  currentStockName.value = record.name;
+  chartVisible.value = true;
 };
 
 onMounted(() => {
