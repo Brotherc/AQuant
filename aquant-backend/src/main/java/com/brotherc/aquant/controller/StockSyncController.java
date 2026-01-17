@@ -1,6 +1,11 @@
 package com.brotherc.aquant.controller;
 
+import com.brotherc.aquant.constant.StockSyncConstant;
+import com.brotherc.aquant.entity.StockSync;
+import com.brotherc.aquant.model.dto.akshare.StockFhpsEm;
 import com.brotherc.aquant.model.dto.common.ResponseDTO;
+import com.brotherc.aquant.repository.StockSyncRepository;
+import com.brotherc.aquant.service.AKShareService;
 import com.brotherc.aquant.service.StockSyncService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -11,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @Validated
 @Tag(name = "股票数据同步")
 @RestController
@@ -19,6 +26,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class StockSyncController {
 
     private final StockSyncService stockSyncService;
+    private final AKShareService aKShareService;
+    private final StockSyncRepository stockSyncRepository;
 
     @Operation(summary = "获取最新同步时间【股票行情数据】")
     @GetMapping("/stockDailyLatest")
@@ -34,8 +43,10 @@ public class StockSyncController {
 
     @Operation(summary = "股票分红")
     @GetMapping("/stockDividend")
-    public ResponseDTO<Void> stockDividend() {
-        stockSyncService.stockDividend();
+    public ResponseDTO<Void> stockDividend(@RequestParam String date) {
+        List<StockFhpsEm> list = aKShareService.stockFhpsEm(date);
+        StockSync stockSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_DIVIDEND_LATEST);
+        stockSyncService.stockDividend(list, date, stockSync);
         return ResponseDTO.success();
     }
 

@@ -285,4 +285,25 @@ public class AKShareService {
         }
     }
 
+    public List<StockFhpsEm> stockFhpsEm(String date) {
+        Request request = new Request.Builder()
+                .url(akshareAddress + "/api/public/stock_fhps_em?date=" + date)
+                .get()
+                .build();
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                log.info("失败响应: {}", response);
+                throw new RuntimeException("stock_fhps_em请求失败");
+            }
+
+            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
+            });
+
+        } catch (IOException e) {
+            log.error("stock_fhps_em请求失败", e);
+            throw new RuntimeException("stock_fhps_em请求失败");
+        }
+    }
+
 }

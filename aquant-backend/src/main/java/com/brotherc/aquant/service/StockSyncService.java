@@ -40,7 +40,7 @@ public class StockSyncService {
 
     private final StockQuoteRepository stockQuoteRepository;
     private final StockSyncRepository stockSyncRepository;
-    private final StockDividendRecordRepository stockDividendRecordRepository;
+    private final StockDividendRepository stockDividendRepository;
     private final StockQuoteHistoryRepository stockQuoteHistoryRepository;
     private final StockIndustryBoardHistoryRepository stockIndustryBoardHistoryRepository;
     private final StockIndustryBoardRepository stockIndustryBoardRepository;
@@ -171,30 +171,47 @@ public class StockSyncService {
      * 股票分红
      */
     @Transactional(rollbackFor = Exception.class)
-    public void stockDividend() {
-        List<StockDividendRecord> list = stockDividendRecordRepository.findAll();
-        List<StockHistoryDividend> stockHistoryDividendList = aKShareService.stockHistoryDividend();
+    public void stockDividend(List<StockFhpsEm> stockFhpsEms, String date, StockSync stockSync) {
+        if (!CollectionUtils.isEmpty(stockFhpsEms)) {
+            stockDividendRepository.deleteByReportDate(date);
 
-        Map<String, StockDividendRecord> codeMapping = list.stream().collect(Collectors.toMap(StockDividendRecord::getCode, o -> o));
+            List<StockDividend> list = stockFhpsEms.stream().map(o -> {
+                StockDividend stockDividend = new StockDividend();
+                stockDividend.setStockCode(o.getCode());
+                stockDividend.setStockName(o.getName());
+                stockDividend.setBonusShareTotalRatio(o.getBonusShareTotalRatio());
+                stockDividend.setBonusShareRatio(o.getBonusShareRatio());
+                stockDividend.setTransferShareRatio(o.getTransferShareRatio());
+                stockDividend.setCashDividendRatio(o.getCashDividendRatio());
+                stockDividend.setDividendYield(o.getDividendYield());
+                stockDividend.setEarningsPerShare(o.getEarningsPerShare());
+                stockDividend.setNetAssetPerShare(o.getNetAssetPerShare());
+                stockDividend.setCapitalReservePerShare(o.getCapitalReservePerShare());
+                stockDividend.setUndistributedProfitPerShare(o.getUndistributedProfitPerShare());
+                stockDividend.setNetProfitGrowthRate(o.getNetProfitGrowthRate());
+                stockDividend.setTotalShares(o.getTotalShares());
+                stockDividend.setProposalAnnouncementDate(LocalDateTime.parse(o.getProposalAnnouncementDate()).toLocalDate());
+                if (o.getRecordDate() != null) {
+                    stockDividend.setRecordDate(LocalDateTime.parse(o.getRecordDate()).toLocalDate());
+                }
+                if (o.getExDividendDate() != null) {
+                    stockDividend.setExDividendDate(LocalDateTime.parse(o.getExDividendDate()).toLocalDate());
+                }
+                stockDividend.setLatestAnnouncementDate(LocalDateTime.parse(o.getLatestAnnouncementDate()).toLocalDate());
+                stockDividend.setPlanStatus(o.getPlanStatus());
+                stockDividend.setReportDate(date);
+                return stockDividend;
+            }).toList();
 
-        for (StockHistoryDividend dividend : stockHistoryDividendList) {
-            StockDividendRecord stockDividendRecord = codeMapping.get(dividend.get代码());
-            if (stockDividendRecord == null) {
-                stockDividendRecord = new StockDividendRecord();
-                list.add(stockDividendRecord);
+            stockDividendRepository.saveAll(list);
+
+            if (stockSync == null) {
+                stockSync = new StockSync();
+                stockSync.setName(StockSyncConstant.STOCK_DIVIDEND_LATEST);
             }
-            stockDividendRecord.setCode(dividend.get代码());
-            stockDividendRecord.setName(dividend.get名称());
-            LocalDateTime time = LocalDateTime.parse(dividend.get上市日期());
-            stockDividendRecord.setListingDate(time);
-            stockDividendRecord.setTotalDividend(dividend.get累计股息());
-            stockDividendRecord.setAvgDividend(dividend.get年均股息());
-            stockDividendRecord.setDividendNum(dividend.get分红次数());
-            stockDividendRecord.setTotalFinancing(dividend.get融资总额());
-            stockDividendRecord.setFinancingNum(dividend.get融资次数());
-            stockDividendRecord.setCreatedAt(LocalDateTime.now());
+            stockSync.setValue(String.valueOf(System.currentTimeMillis()));
+            stockSyncRepository.save(stockSync);
         }
-        stockDividendRecordRepository.saveAll(list);
     }
 
     private void save(StockSync stockSync, String name, Object value) {

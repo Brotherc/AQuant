@@ -4,11 +4,13 @@ import com.brotherc.aquant.constant.StockSyncConstant;
 import com.brotherc.aquant.entity.StockSync;
 import com.brotherc.aquant.model.dto.akshare.StockBoardIndustryNameEm;
 import com.brotherc.aquant.model.dto.akshare.StockBoardIndustrySpotEm;
+import com.brotherc.aquant.model.dto.akshare.StockFhpsEm;
 import com.brotherc.aquant.model.dto.akshare.StockZhASpot;
 import com.brotherc.aquant.repository.StockSyncRepository;
 import com.brotherc.aquant.service.AKShareService;
 import com.brotherc.aquant.service.StockSyncService;
 import com.brotherc.aquant.utils.StockHelper;
+import com.brotherc.aquant.utils.StockUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -92,6 +94,26 @@ public class StockSyncTask {
             stockSyncService.stockBoardIndustry(stockBoardList, stockBoardDetailMap, stockBoardSync, now);
         }
         log.info("同步股票板块数据完成");
+
+        log.info("开始同步股票分红数据");
+
+        StockSync stockDividendSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_DIVIDEND_LATEST);
+        lastTimestamp = Optional.ofNullable(stockDividendSync).map(StockSync::getValue).map(Long::valueOf).orElse(null);
+
+        if (lastTimestamp == null || StockUtils.isAfterDate(lastTimestamp)) {
+            List<String> quarterEndDates = StockUtils.getQuarterEndDatesFromNowToLastYearStart();
+
+            for (String date : quarterEndDates) {
+                try {
+                    List<StockFhpsEm> list = aKShareService.stockFhpsEm(date);
+                    stockSyncService.stockDividend(list, date, stockDividendSync);
+                } catch (Exception e) {
+                    log.error("同步股票分红数据失败:{}", date, e);
+                }
+            }
+        }
+
+        log.info("同步股票分红数据完成");
     }
 
 }
