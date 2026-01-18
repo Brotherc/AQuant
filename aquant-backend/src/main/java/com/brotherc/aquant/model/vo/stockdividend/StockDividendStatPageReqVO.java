@@ -12,6 +12,12 @@ public class StockDividendStatPageReqVO {
     @Schema(description = "最近N年")
     private Integer recentYears;
 
+    @Schema(description = "股票代码")
+    private String stockCode;
+
+    @Schema(description = "股票名称")
+    private String stockName;
+
     @Schema(description = "最近N年平均分红")
     private BigDecimal minAvgDividend;
 

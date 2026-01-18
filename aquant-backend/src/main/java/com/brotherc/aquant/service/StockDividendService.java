@@ -9,6 +9,7 @@ import com.brotherc.aquant.model.vo.stockdividend.StockDividendStatVO;
 import com.brotherc.aquant.repository.StockDividendRepository;
 import com.brotherc.aquant.repository.StockQuoteRepository;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -30,7 +31,8 @@ public class StockDividendService {
     private final StockQuoteRepository stockQuoteRepository;
 
     public Page<StockDividendStatVO> pageDividendStats(StockDividendStatPageReqVO reqVO, Pageable pageable) {
-        List<StockDividendStatVO> all = calcDividendStats(reqVO.getRecentYears(), reqVO.getMinAvgDividend());
+        List<StockDividendStatVO> all = calcDividendStats(reqVO.getRecentYears(), reqVO.getMinAvgDividend(),
+                reqVO.getStockCode(), reqVO.getStockName());
 
         Map<String, StockQuote> stockQuoteMap = stockQuoteRepository.findAll()
                 .stream().collect(Collectors.toMap(o -> o.getCode().substring(2), o -> o));
@@ -49,16 +51,13 @@ public class StockDividendService {
         int start = (int) pageable.getOffset();
         int end = Math.min(start + pageable.getPageSize(), all.size());
 
-        List<StockDividendStatVO> content =
-                start >= all.size() ? Collections.emptyList() : all.subList(start, end);
+        List<StockDividendStatVO> content = start >= all.size() ? Collections.emptyList() : all.subList(start, end);
 
         return new PageImpl<>(content, pageable, all.size());
     }
 
-
     public List<StockDividendStatVO> calcDividendStats(
-            Integer recentYears,
-            BigDecimal minAvgDividend
+            Integer recentYears, BigDecimal minAvgDividend, String stockCodeQuery, String stockNameQuery
     ) {
 
         List<StockDividend> list;
@@ -70,7 +69,8 @@ public class StockDividendService {
         }
 
         // 按股票分组
-        Map<String, List<StockDividend>> group = list.stream().collect(Collectors.groupingBy(StockDividend::getStockCode));
+        Map<String, List<StockDividend>> group = list.stream()
+                .collect(Collectors.groupingBy(StockDividend::getStockCode));
 
         List<StockDividendStatVO> result = new ArrayList<>();
 
@@ -78,6 +78,15 @@ public class StockDividendService {
 
             String stockCode = entry.getKey();
             List<StockDividend> dividends = entry.getValue();
+            String stockName = dividends.get(0).getStockName();
+
+            // 过滤股票代码和名称
+            if (StringUtils.isNotBlank(stockCodeQuery) && !stockCode.contains(stockCodeQuery)) {
+                continue;
+            }
+            if (StringUtils.isNotBlank(stockNameQuery) && !stockName.contains(stockNameQuery)) {
+                continue;
+            }
 
             int currentYear = LocalDate.now().getYear();
             int minYear = dividends.stream()
@@ -134,22 +143,19 @@ public class StockDividendService {
                 case "latestYearDividend":
                     comparator = Comparator.comparing(
                             StockDividendStatVO::getLatestYearDividend,
-                            Comparator.nullsLast(BigDecimal::compareTo)
-                    );
+                            Comparator.nullsLast(BigDecimal::compareTo));
                     break;
 
                 case "avgDividend":
                     comparator = Comparator.comparing(
                             StockDividendStatVO::getAvgDividend,
-                            Comparator.nullsLast(BigDecimal::compareTo)
-                    );
+                            Comparator.nullsLast(BigDecimal::compareTo));
                     break;
 
                 case "latestPrice":
                     comparator = Comparator.comparing(
                             StockDividendStatVO::getLatestPrice,
-                            Comparator.nullsLast(BigDecimal::compareTo)
-                    );
+                            Comparator.nullsLast(BigDecimal::compareTo));
                     break;
 
                 default:
@@ -165,16 +171,15 @@ public class StockDividendService {
         }
 
         // 默认排序（兜底）
-        return result != null
-                ? result
-                : Comparator.comparing(
+        return result != null ? result : Comparator.comparing(
                 StockDividendStatVO::getLatestYearDividend,
                 Comparator.nullsLast(BigDecimal::compareTo)
         ).reversed();
     }
 
     public List<StockDividendDetailVO> getDetailByCode(StockDividendDetailReqVO reqVO) {
-        List<StockDividend> list = stockDividendRepository.findByStockCodeOrderByLatestAnnouncementDateDesc(reqVO.getStockCode());
+        List<StockDividend> list = stockDividendRepository
+                .findByStockCodeOrderByLatestAnnouncementDateDesc(reqVO.getStockCode());
         return list.stream().map(o -> {
             StockDividendDetailVO stockDividendDetailVO = new StockDividendDetailVO();
             BeanUtils.copyProperties(o, stockDividendDetailVO);
