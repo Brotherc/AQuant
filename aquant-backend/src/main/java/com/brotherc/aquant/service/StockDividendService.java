@@ -29,6 +29,16 @@ public class StockDividendService {
     public Page<StockDividendStatVO> pageDividendStats(StockDividendStatPageReqVO reqVO, Pageable pageable) {
         List<StockDividendStatVO> all = calcDividendStats(reqVO.getRecentYears(), reqVO.getMinAvgDividend());
 
+        Map<String, StockQuote> stockQuoteMap = stockQuoteRepository.findAll()
+                .stream().collect(Collectors.toMap(o -> o.getCode().substring(2), o -> o));
+
+        for (StockDividendStatVO item : all) {
+            StockQuote stockQuote = stockQuoteMap.get(item.getStockCode());
+            if (stockQuote != null) {
+                item.setLatestPrice(stockQuote.getLatestPrice());
+            }
+        }
+
         // 排序（按最近一年分红倒序）
         all.sort(buildComparator(pageable.getSort()));
 
@@ -38,28 +48,6 @@ public class StockDividendService {
 
         List<StockDividendStatVO> content =
                 start >= all.size() ? Collections.emptyList() : all.subList(start, end);
-
-        List<String> codeList = content.stream().map(o -> {
-            String code = o.getStockCode();
-            if (code.startsWith("6")) {
-                return "sh" + code;
-            } else if (code.startsWith("0") || code.startsWith("3")) {
-                return "sz" + code;
-            } else if (code.startsWith("8") || code.startsWith("9")) {
-                return "bj" + code;
-            }
-            return code;
-        }).toList();
-
-        Map<String, StockQuote> stockQuoteMap = stockQuoteRepository.findByCodeIn(codeList)
-                .stream().collect(Collectors.toMap(o -> o.getCode().substring(2), o -> o));
-
-        for (StockDividendStatVO item : content) {
-            StockQuote stockQuote = stockQuoteMap.get(item.getStockCode());
-            if (stockQuote != null) {
-                item.setLatestPrice(stockQuote.getLatestPrice());
-            }
-        }
 
         return new PageImpl<>(content, pageable, all.size());
     }
@@ -137,7 +125,7 @@ public class StockDividendService {
         Comparator<StockDividendStatVO> result = null;
 
         for (Sort.Order order : sort) {
-            Comparator<StockDividendStatVO> comparator = null;
+            Comparator<StockDividendStatVO> comparator;
 
             switch (order.getProperty()) {
                 case "latestYearDividend":
@@ -150,6 +138,13 @@ public class StockDividendService {
                 case "avgDividend":
                     comparator = Comparator.comparing(
                             StockDividendStatVO::getAvgDividend,
+                            Comparator.nullsLast(BigDecimal::compareTo)
+                    );
+                    break;
+
+                case "latestPrice":
+                    comparator = Comparator.comparing(
+                            StockDividendStatVO::getLatestPrice,
                             Comparator.nullsLast(BigDecimal::compareTo)
                     );
                     break;
