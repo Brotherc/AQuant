@@ -2,11 +2,14 @@ package com.brotherc.aquant.service;
 
 import com.brotherc.aquant.entity.StockDividend;
 import com.brotherc.aquant.entity.StockQuote;
+import com.brotherc.aquant.model.vo.stockdividend.StockDividendDetailReqVO;
+import com.brotherc.aquant.model.vo.stockdividend.StockDividendDetailVO;
 import com.brotherc.aquant.model.vo.stockdividend.StockDividendStatPageReqVO;
 import com.brotherc.aquant.model.vo.stockdividend.StockDividendStatVO;
 import com.brotherc.aquant.repository.StockDividendRepository;
 import com.brotherc.aquant.repository.StockQuoteRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -168,6 +171,15 @@ public class StockDividendService {
                 StockDividendStatVO::getLatestYearDividend,
                 Comparator.nullsLast(BigDecimal::compareTo)
         ).reversed();
+    }
+
+    public List<StockDividendDetailVO> getDetailByCode(StockDividendDetailReqVO reqVO) {
+        List<StockDividend> list = stockDividendRepository.findByStockCodeOrderByLatestAnnouncementDateDesc(reqVO.getStockCode());
+        return list.stream().map(o -> {
+            StockDividendDetailVO stockDividendDetailVO = new StockDividendDetailVO();
+            BeanUtils.copyProperties(o, stockDividendDetailVO);
+            return stockDividendDetailVO;
+        }).toList();
     }
 
 }

@@ -21,4 +21,6 @@ public interface StockDividendRepository extends JpaRepository<StockDividend, Lo
             """)
     List<StockDividend> findByLatestAnnouncementDateAfter(@Param("fromDate") LocalDate fromDate);
 
+    List<StockDividend> findByStockCodeOrderByLatestAnnouncementDateDesc(String stockCode);
+
 }
