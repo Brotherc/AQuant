@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -29,12 +30,7 @@ public class StockDividendService {
         List<StockDividendStatVO> all = calcDividendStats(reqVO.getRecentYears(), reqVO.getMinAvgDividend());
 
         // 排序（按最近一年分红倒序）
-        all.sort(
-                Comparator.comparing(
-                        StockDividendStatVO::getLatestYearDividend,
-                        Comparator.nullsLast(BigDecimal::compareTo)
-                ).reversed()
-        );
+        all.sort(buildComparator(pageable.getSort()));
 
         // 手动分页
         int start = (int) pageable.getOffset();
@@ -137,5 +133,46 @@ public class StockDividendService {
         return result;
     }
 
+    private Comparator<StockDividendStatVO> buildComparator(Sort sort) {
+        Comparator<StockDividendStatVO> result = null;
+
+        for (Sort.Order order : sort) {
+            Comparator<StockDividendStatVO> comparator = null;
+
+            switch (order.getProperty()) {
+                case "latestYearDividend":
+                    comparator = Comparator.comparing(
+                            StockDividendStatVO::getLatestYearDividend,
+                            Comparator.nullsLast(BigDecimal::compareTo)
+                    );
+                    break;
+
+                case "avgDividend":
+                    comparator = Comparator.comparing(
+                            StockDividendStatVO::getAvgDividend,
+                            Comparator.nullsLast(BigDecimal::compareTo)
+                    );
+                    break;
+
+                default:
+                    // 不认识的排序字段，直接跳过
+                    continue;
+            }
+
+            if (order.getDirection() == Sort.Direction.DESC) {
+                comparator = comparator.reversed();
+            }
+
+            result = (result == null) ? comparator : result.thenComparing(comparator);
+        }
+
+        // 默认排序（兜底）
+        return result != null
+                ? result
+                : Comparator.comparing(
+                StockDividendStatVO::getLatestYearDividend,
+                Comparator.nullsLast(BigDecimal::compareTo)
+        ).reversed();
+    }
 
 }
