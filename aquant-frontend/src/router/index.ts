@@ -55,6 +55,17 @@ const router = createRouter({
                     ]
                 },
                 {
+                    path: 'dividend',
+                    name: 'DividendRoot',
+                    children: [
+                        {
+                            path: 'index',
+                            name: 'StockDividend',
+                            component: () => import('@/views/dividend/StockDividend.vue')
+                        }
+                    ]
+                },
+                {
                     path: 'strategy',
                     name: 'StrategyRoot',
                     children: [

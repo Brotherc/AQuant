@@ -48,6 +48,19 @@
             <router-link to="/indicators/valuation">估值指标</router-link>
           </a-menu-item>
         </a-sub-menu>
+
+        <!-- Dividend Data -->
+        <a-sub-menu key="/dividend">
+          <template #title>
+            <span>
+              <pay-circle-outlined />
+              <span>分红数据</span>
+            </span>
+          </template>
+          <a-menu-item key="/dividend/index">
+            <router-link to="/dividend/index">分红数据</router-link>
+          </a-menu-item>
+        </a-sub-menu>
         
         <!-- Strategy -->
         <a-sub-menu key="/strategy">
@@ -86,6 +99,7 @@ import {
   LineChartOutlined,
   RadarChartOutlined,
   AppstoreOutlined,
+  PayCircleOutlined,
 } from '@ant-design/icons-vue';
 
 const route = useRoute();
