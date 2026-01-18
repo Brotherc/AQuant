@@ -1,7 +1,6 @@
 package com.brotherc.aquant.repository;
 
 import com.brotherc.aquant.entity.StockQuote;
-import com.brotherc.aquant.model.dto.stockquote.StockCodeName;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -20,5 +19,7 @@ public interface StockQuoteRepository extends JpaRepository<StockQuote, Long>, J
     LocalDateTime findMaxCreatedAt();
 
     List<StockQuote> findByCreatedAt(LocalDateTime createdAt);
+
+    List<StockQuote> findByCodeIn(List<String> codeList);
 
 }

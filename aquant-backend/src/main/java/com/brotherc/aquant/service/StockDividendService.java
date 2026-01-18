@@ -1,9 +1,11 @@
 package com.brotherc.aquant.service;
 
 import com.brotherc.aquant.entity.StockDividend;
+import com.brotherc.aquant.entity.StockQuote;
 import com.brotherc.aquant.model.vo.stockdividend.StockDividendStatPageReqVO;
 import com.brotherc.aquant.model.vo.stockdividend.StockDividendStatVO;
 import com.brotherc.aquant.repository.StockDividendRepository;
+import com.brotherc.aquant.repository.StockQuoteRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -21,6 +23,7 @@ import java.util.stream.Collectors;
 public class StockDividendService {
 
     private final StockDividendRepository stockDividendRepository;
+    private final StockQuoteRepository stockQuoteRepository;
 
     public Page<StockDividendStatVO> pageDividendStats(StockDividendStatPageReqVO reqVO, Pageable pageable) {
         List<StockDividendStatVO> all = calcDividendStats(reqVO.getRecentYears(), reqVO.getMinAvgDividend());
@@ -39,6 +42,28 @@ public class StockDividendService {
 
         List<StockDividendStatVO> content =
                 start >= all.size() ? Collections.emptyList() : all.subList(start, end);
+
+        List<String> codeList = content.stream().map(o -> {
+            String code = o.getStockCode();
+            if (code.startsWith("6")) {
+                return "sh" + code;
+            } else if (code.startsWith("0") || code.startsWith("3")) {
+                return "sz" + code;
+            } else if (code.startsWith("8") || code.startsWith("9")) {
+                return "bj" + code;
+            }
+            return code;
+        }).toList();
+
+        Map<String, StockQuote> stockQuoteMap = stockQuoteRepository.findByCodeIn(codeList)
+                .stream().collect(Collectors.toMap(o -> o.getCode().substring(2), o -> o));
+
+        for (StockDividendStatVO item : content) {
+            StockQuote stockQuote = stockQuoteMap.get(item.getStockCode());
+            if (stockQuote != null) {
+                item.setLatestPrice(stockQuote.getLatestPrice());
+            }
+        }
 
         return new PageImpl<>(content, pageable, all.size());
     }
