@@ -12,6 +12,25 @@ export interface StockDividendStatVO {
 export interface StockDividendStatPageReqVO {
     recentYears?: number;
     minAvgDividend?: number;
+    stockCode?: string;
+    stockName?: string;
+}
+
+export interface StockDividendDetailVO {
+    id: number;
+    stockCode: string;
+    stockName: string;
+    bonusShareTotalRatio: number;
+    bonusShareRatio: number;
+    transferShareRatio: number;
+    cashDividendRatio: number;
+    dividendYield: number;
+    proposalAnnouncementDate: string;
+    recordDate: string;
+    exDividendDate: string;
+    latestAnnouncementDate: string;
+    planStatus: string;
+    reportDate: string;
 }
 
 export const getDividendPage = (params: StockDividendStatPageReqVO & { page: number; size: number; sort?: string[] }) => {
@@ -22,3 +41,8 @@ export const getDividendPage = (params: StockDividendStatPageReqVO & { page: num
         }
     });
 };
+
+export const getDividendDetail = (params: { stockCode: string }) => {
+    return api.get<ResponseDTO<StockDividendDetailVO[]>>('/stockDividend/getDetailByCode', { params });
+};
+
