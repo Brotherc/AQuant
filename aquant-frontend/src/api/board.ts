@@ -61,3 +61,38 @@ export const getBoardHistory = (params: { boardCode: string; frequency?: string 
 export const getStockBoardIndustryLatest = () => {
     return api.get<ResponseDTO<string>>('/stockSync/stockBoardIndustryLatest');
 };
+
+export interface StockBoardConstituentQuote {
+    id: number;
+    boardCode: string;
+    stockCode: string;
+    stockName: string;
+    latestPrice: number;
+    changePercent: number;
+    changeAmount: number;
+    volume: number;
+    turnover: number;
+    amplitude: number;
+    highPrice: number;
+    lowPrice: number;
+    openPrice: number;
+    prevClose: number;
+    turnoverRate: number;
+    peTtm: number;
+    pb: number;
+    createdAt: string;
+}
+
+export interface BoardConstituentQuotePageReqVO {
+    boardCode: string;
+}
+
+export const getBoardConstituentQuotePage = (params: BoardConstituentQuotePageReqVO & { page: number; size: number; sort?: string[] }) => {
+    return api.get<ResponseDTO<PageResult<StockBoardConstituentQuote>>>('/stockIndustryBoard/pageConstituentQuote', {
+        params,
+        paramsSerializer: {
+            indexes: null
+        }
+    });
+};
+

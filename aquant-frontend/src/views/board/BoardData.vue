@@ -52,23 +52,59 @@
 
           <template v-if="column.dataIndex === 'operation'">
             <a @click="handleChart(record)">行情</a>
+            <a-divider type="vertical" />
+            <a @click="handleConstituent(record)">成份股</a>
           </template>
         </template>
       </a-table>
     </a-card>
 
+    <!-- 图表弹窗 -->
     <BoardHistoryChart
       v-model:visible="chartVisible"
       :boardCode="currentBoardCode"
       :boardName="currentBoardName"
     />
+
+    <!-- 成份股弹窗 -->
+    <a-modal
+      v-model:visible="constituentVisible"
+      :title="constituentTitle"
+      width="1200px"
+      :footer="null"
+    >
+      <a-table
+        :columns="constituentColumns"
+        :data-source="constituentList"
+        :pagination="constituentPagination"
+        :loading="constituentLoading"
+        @change="handleConstituentTableChange"
+        row-key="id"
+        size="small"
+        :scroll="{ x: 1000 }"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.dataIndex === 'changePercent'">
+            <span :style="{ color: record.changePercent > 0 ? 'red' : record.changePercent < 0 ? 'green' : 'inherit' }">
+              {{ record.changePercent }}%
+            </span>
+          </template>
+          <template v-if="column.dataIndex === 'changeAmount'">
+            <span :style="{ color: record.changeAmount > 0 ? 'red' : record.changeAmount < 0 ? 'green' : 'inherit' }">
+              {{ record.changeAmount }}
+            </span>
+          </template>
+        </template>
+      </a-table>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 
-import { getBoardPage, getStockBoardIndustryLatest, type StockIndustryBoardVO, type StockIndustryBoardPageReqVO } from '@/api/board';
+import { getBoardPage, getStockBoardIndustryLatest, getBoardConstituentQuotePage, 
+         type StockIndustryBoardVO, type StockIndustryBoardPageReqVO, type StockBoardConstituentQuote } from '@/api/board';
 import BoardHistoryChart from './components/BoardHistoryChart.vue';
 import type { TableProps } from 'ant-design-vue';
 
@@ -92,12 +128,28 @@ const pagination = reactive({
   total: 0,
   showSizeChanger: true,
   showQuickJumper: true,
+  showTotal: (total: number) => `共 ${total} 条数据`,
 });
 
 // 图表弹窗
 const chartVisible = ref(false);
 const currentBoardCode = ref('');
 const currentBoardName = ref('');
+
+// 成份股弹窗
+const constituentVisible = ref(false);
+const constituentLoading = ref(false);
+const constituentTitle = ref('');
+const constituentList = ref<StockBoardConstituentQuote[]>([]);
+const constituentPagination = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showSizeChanger: true,
+  pageSizeOptions: ['10', '20', '50', '100'],
+  showTotal: (total: number) => `共 ${total} 条数据`,
+});
+const constituentSort = ref<string[]>([]);
 
 // 列定义
 const columns: TableProps['columns'] = [
@@ -114,7 +166,20 @@ const columns: TableProps['columns'] = [
   { title: '领涨股', dataIndex: 'leadingStockName', width: 120 },
   { title: '领涨幅', dataIndex: 'leadingStockChangePercent', width: 100 },
   { title: '日期', dataIndex: 'tradeDate', width: 120 },
-  { title: '操作', dataIndex: 'operation', fixed: 'right', width: 80 },
+  { title: '操作', dataIndex: 'operation', fixed: 'right', width: 150 },
+];
+
+const constituentColumns: TableProps['columns'] = [
+  { title: '股票代码', dataIndex: 'stockCode', width: 100 },
+  { title: '股票名称', dataIndex: 'stockName', width: 120 },
+  { title: '最新价', dataIndex: 'latestPrice', sorter: true, width: 100 },
+  { title: '涨跌幅', dataIndex: 'changePercent', sorter: true, width: 100 },
+  { title: '涨跌额', dataIndex: 'changeAmount', width: 100 },
+  { title: '成交量', dataIndex: 'volume', width: 120 },
+  { title: '成交额', dataIndex: 'turnover', width: 120 },
+  { title: '换手率', dataIndex: 'turnoverRate', width: 100 },
+  { title: '市盈率', dataIndex: 'peTtm', sorter: true, width: 100 },
+  { title: '市净率', dataIndex: 'pb', sorter: true, width: 100 },
 ];
 
 // 获取最新同步时间
@@ -194,6 +259,47 @@ const handleChart = (record: StockIndustryBoardVO) => {
   currentBoardCode.value = record.boardCode;
   currentBoardName.value = record.boardName;
   chartVisible.value = true;
+};
+
+// 成份股处理
+const handleConstituent = (record: StockIndustryBoardVO) => {
+  currentBoardCode.value = record.boardCode;
+  constituentTitle.value = `板块成份股 - ${record.boardName} (${record.boardCode})`;
+  constituentVisible.value = true;
+  constituentPagination.current = 1;
+  fetchConstituentData();
+};
+
+const fetchConstituentData = async () => {
+  constituentLoading.value = true;
+  try {
+    const res = await getBoardConstituentQuotePage({
+      boardCode: currentBoardCode.value,
+      page: constituentPagination.current - 1,
+      size: constituentPagination.pageSize,
+      sort: constituentSort.value,
+    });
+    if (res.data.success) {
+      constituentList.value = res.data.data.content;
+      constituentPagination.total = res.data.data.totalElements;
+    }
+  } catch (error) {
+    console.error('Failed to fetch constituent data:', error);
+  } finally {
+    constituentLoading.value = false;
+  }
+};
+
+const handleConstituentTableChange = (pag: any, _filters: any, sorter: any) => {
+  constituentPagination.current = pag.current;
+  constituentPagination.pageSize = pag.pageSize;
+  if (sorter.field && sorter.order) {
+    const order = sorter.order === 'ascend' ? 'asc' : 'desc';
+    constituentSort.value = [`${sorter.field},${order}`];
+  } else {
+    constituentSort.value = [];
+  }
+  fetchConstituentData();
 };
 
 onMounted(() => {
