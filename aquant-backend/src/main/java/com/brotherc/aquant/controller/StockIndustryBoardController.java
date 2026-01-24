@@ -1,6 +1,8 @@
 package com.brotherc.aquant.controller;
 
+import com.brotherc.aquant.entity.StockBoardConstituentQuote;
 import com.brotherc.aquant.model.dto.common.ResponseDTO;
+import com.brotherc.aquant.model.vo.stockindustryboard.BoardConstituentQuotePageReqVO;
 import com.brotherc.aquant.model.vo.stockindustryboard.StockIndustryBoardPageReqVO;
 import com.brotherc.aquant.model.vo.stockindustryboard.StockIndustryBoardVO;
 import com.brotherc.aquant.service.StockClusterService;
@@ -28,6 +30,13 @@ public class StockIndustryBoardController {
     @GetMapping("/page")
     public ResponseDTO<Page<StockIndustryBoardVO>> page(@ParameterObject StockIndustryBoardPageReqVO reqVO, @ParameterObject Pageable pageable) {
         return ResponseDTO.success(stockClusterService.stockIndustryBoardPage(reqVO, pageable));
+    }
+
+    @Operation(summary = "分页查询板块成份股数据")
+    @GetMapping("/pageConstituentQuote")
+    public ResponseDTO<Page<StockBoardConstituentQuote>> pageConstituentQuote(
+            @ParameterObject BoardConstituentQuotePageReqVO reqVO, @ParameterObject Pageable pageable) {
+        return ResponseDTO.success(stockClusterService.pageConstituentQuote(reqVO, pageable));
     }
 
 }

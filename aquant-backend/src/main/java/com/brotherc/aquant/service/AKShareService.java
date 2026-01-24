@@ -306,4 +306,25 @@ public class AKShareService {
         }
     }
 
+    public List<StockBoardIndustryConsEm> stockBoardIndustryConsEm(String symbol) {
+        Request request = new Request.Builder()
+                .url(akshareAddress + "/api/public/stock_board_industry_cons_em?symbol=" + symbol)
+                .get()
+                .build();
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                log.info("失败响应: {}", response);
+                throw new RuntimeException("stock_board_industry_cons_em请求失败");
+            }
+
+            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
+            });
+
+        } catch (IOException e) {
+            log.error("stock_board_industry_cons_em请求失败", e);
+            throw new RuntimeException("stock_board_industry_cons_em请求失败");
+        }
+    }
+
 }
