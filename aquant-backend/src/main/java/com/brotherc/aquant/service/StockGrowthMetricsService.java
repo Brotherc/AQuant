@@ -2,12 +2,21 @@ package com.brotherc.aquant.service;
 
 import com.brotherc.aquant.entity.StockGrowthMetrics;
 import com.brotherc.aquant.model.dto.akshare.StockZhGrowthComparisonEm;
+import com.brotherc.aquant.model.vo.stockindicator.GrowthMetricsPageReqVO;
 import com.brotherc.aquant.repository.StockGrowthMetricsRepository;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -15,6 +24,54 @@ import java.util.List;
 public class StockGrowthMetricsService {
 
     private final StockGrowthMetricsRepository stockGrowthMetricsRepository;
+
+    public Page<StockGrowthMetrics> pageQuery(GrowthMetricsPageReqVO reqVO, Pageable pageable) {
+        Specification<StockGrowthMetrics> spec = (root, query, cb) -> {
+
+            List<Predicate> predicates = new ArrayList<>();
+
+            // 股票代码等值查询
+            if (StringUtils.isNotBlank(reqVO.getStockCode())) {
+                predicates.add(cb.equal(root.get("stockCode"), reqVO.getStockCode()));
+            }
+
+            // EPS 3年复合增长率范围
+            if (reqVO.getEpsGrowth3yCagrMin() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("epsGrowth3yCagr"), reqVO.getEpsGrowth3yCagrMin()));
+            }
+            if (reqVO.getEpsGrowth3yCagrMax() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("epsGrowth3yCagr"), reqVO.getEpsGrowth3yCagrMax()));
+            }
+
+            // 营收增长率(TTM)范围
+            if (reqVO.getRevenueGrowthTtmMin() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("revenueGrowthTtm"), reqVO.getRevenueGrowthTtmMin()));
+            }
+            if (reqVO.getRevenueGrowthTtmMax() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("revenueGrowthTtm"), reqVO.getRevenueGrowthTtmMax()));
+            }
+
+            // 净利润增长率(TTM)范围
+            if (reqVO.getNetProfitGrowthTtmMin() != null) {
+                predicates
+                        .add(cb.greaterThanOrEqualTo(root.get("netProfitGrowthTtm"), reqVO.getNetProfitGrowthTtmMin()));
+            }
+            if (reqVO.getNetProfitGrowthTtmMax() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("netProfitGrowthTtm"), reqVO.getNetProfitGrowthTtmMax()));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        if (pageable.getSort().isUnsorted()) {
+            // 默认按 EPS 3年复合增长率排名升序排序
+            int page = pageable.getPageNumber();
+            int size = pageable.getPageSize();
+            pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "epsGrowth3yCagrRank"));
+        }
+
+        return stockGrowthMetricsRepository.findAll(spec, pageable);
+    }
 
     @Transactional(rollbackFor = Exception.class)
     public void save(String code, String name, List<StockZhGrowthComparisonEm> list) {
