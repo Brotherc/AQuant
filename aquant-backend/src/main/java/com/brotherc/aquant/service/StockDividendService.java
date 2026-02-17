@@ -8,6 +8,10 @@ import com.brotherc.aquant.model.vo.stockdividend.StockDividendStatPageReqVO;
 import com.brotherc.aquant.model.vo.stockdividend.StockDividendStatVO;
 import com.brotherc.aquant.repository.StockDividendRepository;
 import com.brotherc.aquant.repository.StockQuoteRepository;
+import com.brotherc.aquant.repository.StockValuationMetricsRepository;
+import com.brotherc.aquant.repository.StockDupontAnalysisRepository;
+import com.brotherc.aquant.entity.StockValuationMetrics;
+import com.brotherc.aquant.entity.StockDupontAnalysis;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
@@ -29,6 +33,8 @@ public class StockDividendService {
 
     private final StockDividendRepository stockDividendRepository;
     private final StockQuoteRepository stockQuoteRepository;
+    private final StockValuationMetricsRepository stockValuationMetricsRepository;
+    private final StockDupontAnalysisRepository stockDupontAnalysisRepository;
 
     public Page<StockDividendStatVO> pageDividendStats(StockDividendStatPageReqVO reqVO, Pageable pageable) {
         List<StockDividendStatVO> all = calcDividendStats(reqVO.getRecentYears(), reqVO.getMinAvgDividend(),
@@ -37,10 +43,29 @@ public class StockDividendService {
         Map<String, StockQuote> stockQuoteMap = stockQuoteRepository.findAll()
                 .stream().collect(Collectors.toMap(o -> o.getCode().substring(2), o -> o));
 
+        Map<String, StockValuationMetrics> valuationMap = stockValuationMetricsRepository.findAll()
+                .stream().collect(Collectors.toMap(o -> o.getStockCode().substring(2), o -> o));
+
+        Map<String, StockDupontAnalysis> dupontMap = stockDupontAnalysisRepository.findAll()
+                .stream().collect(Collectors.toMap(o -> o.getStockCode().substring(2), o -> o));
+
         for (StockDividendStatVO item : all) {
             StockQuote stockQuote = stockQuoteMap.get(item.getStockCode());
             if (stockQuote != null) {
                 item.setLatestPrice(stockQuote.getLatestPrice());
+            }
+
+            StockValuationMetrics valuation = valuationMap.get(item.getStockCode());
+            if (valuation != null) {
+                item.setPeg(valuation.getPeg());
+                item.setPe(valuation.getPeTtm());
+                item.setPeIndustryAvg(valuation.getPeTtmIndustryAvg());
+            }
+
+            StockDupontAnalysis dupont = dupontMap.get(item.getStockCode());
+            if (dupont != null) {
+                item.setRoeActual(dupont.getRoeLastYA());
+                item.setRoe3yAvg(dupont.getRoe3yAvg());
             }
         }
 
@@ -57,8 +82,7 @@ public class StockDividendService {
     }
 
     public List<StockDividendStatVO> calcDividendStats(
-            Integer recentYears, BigDecimal minAvgDividend, String stockCodeQuery, String stockNameQuery
-    ) {
+            Integer recentYears, BigDecimal minAvgDividend, String stockCodeQuery, String stockNameQuery) {
 
         List<StockDividend> list;
         if (recentYears != null) {
@@ -103,8 +127,7 @@ public class StockDividendService {
                     .divide(
                             BigDecimal.valueOf(years),
                             4,
-                            RoundingMode.HALF_UP
-                    );
+                            RoundingMode.HALF_UP);
 
             if (minAvgDividend != null && avg.compareTo(minAvgDividend) < 0) {
                 continue;
@@ -158,6 +181,24 @@ public class StockDividendService {
                             Comparator.nullsLast(BigDecimal::compareTo));
                     break;
 
+                case "peg":
+                    comparator = Comparator.comparing(
+                            StockDividendStatVO::getPeg,
+                            Comparator.nullsLast(BigDecimal::compareTo));
+                    break;
+
+                case "pe":
+                    comparator = Comparator.comparing(
+                            StockDividendStatVO::getPe,
+                            Comparator.nullsLast(BigDecimal::compareTo));
+                    break;
+
+                case "roe":
+                    comparator = Comparator.comparing(
+                            StockDividendStatVO::getRoeActual,
+                            Comparator.nullsLast(BigDecimal::compareTo));
+                    break;
+
                 default:
                     // 不认识的排序字段，直接跳过
                     continue;
@@ -171,10 +212,10 @@ public class StockDividendService {
         }
 
         // 默认排序（兜底）
-        return result != null ? result : Comparator.comparing(
-                StockDividendStatVO::getLatestYearDividend,
-                Comparator.nullsLast(BigDecimal::compareTo)
-        ).reversed();
+        return result != null ? result
+                : Comparator.comparing(
+                        StockDividendStatVO::getLatestYearDividend,
+                        Comparator.nullsLast(BigDecimal::compareTo)).reversed();
     }
 
     public List<StockDividendDetailVO> getDetailByCode(StockDividendDetailReqVO reqVO) {

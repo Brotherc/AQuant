@@ -23,4 +23,19 @@ public class StockDividendStatVO {
     @Schema(description = "最近一年分红")
     private BigDecimal latestYearDividend;
 
+    @Schema(description = "PEG")
+    private BigDecimal peg;
+
+    @Schema(description = "市盈率(TTM)")
+    private BigDecimal pe;
+
+    @Schema(description = "市盈率(TTM)-行业均值")
+    private BigDecimal peIndustryAvg;
+
+    @Schema(description = "ROE(去年实际)")
+    private BigDecimal roeActual;
+
+    @Schema(description = "ROE(3年平均)")
+    private BigDecimal roe3yAvg;
+
 }

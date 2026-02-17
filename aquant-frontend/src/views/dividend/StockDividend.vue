@@ -84,8 +84,33 @@ const columns: TableProps['columns'] = [
   { title: '股票代码', dataIndex: 'stockCode', key: 'stockCode', width: 100 },
   { title: '股票名称', dataIndex: 'stockName', key: 'stockName', width: 120 },
   { title: '最新价', dataIndex: 'latestPrice', key: 'latestPrice', sorter: true, width: 100 },
-  { title: '平均分红', dataIndex: 'avgDividend', key: 'avgDividend', sorter: true, defaultSortOrder: 'descend', width: 150, customRender: ({ text }: any) => (text ? `10派${text}` : '') },
-  { title: '最近一年分红', dataIndex: 'latestYearDividend', key: 'latestYearDividend', sorter: true, width: 150, customRender: ({ text }: any) => (text ? `10派${text}` : '') },
+  { title: '平均分红', dataIndex: 'avgDividend', key: 'avgDividend', sorter: true, defaultSortOrder: 'descend', width: 120, customRender: ({ text }: any) => (text ? `10派${text}` : '') },
+  { title: '最近一年', dataIndex: 'latestYearDividend', key: 'latestYearDividend', sorter: true, width: 120, customRender: ({ text }: any) => (text ? `10派${text}` : '') },
+  { title: 'PEG', dataIndex: 'peg', key: 'peg', sorter: true, width: 100 },
+  { 
+    title: 'PE(TTM) / 行业均值', 
+    dataIndex: 'pe', 
+    key: 'pe', 
+    sorter: true, 
+    width: 150,
+    customRender: ({ record }: any) => {
+      const val = record.pe != null ? record.pe.toFixed(2) : '-';
+      const avg = record.peIndustryAvg != null ? record.peIndustryAvg.toFixed(2) : '-';
+      return `${val} / ${avg}`;
+    }
+  },
+  { 
+    title: 'ROE(去年 / 3年平均)', 
+    dataIndex: 'roe', 
+    key: 'roe', 
+    sorter: true, 
+    width: 180,
+    customRender: ({ record }: any) => {
+      const val = record.roeActual != null ? record.roeActual.toFixed(2) : '-';
+      const avg = record.roe3yAvg != null ? record.roe3yAvg.toFixed(2) : '-';
+      return `${val} / ${avg}`;
+    }
+  },
   { title: '操作', key: 'operation', width: 80, fixed: 'right' },
 ];
 

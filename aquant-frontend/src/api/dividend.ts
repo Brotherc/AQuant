@@ -7,6 +7,11 @@ export interface StockDividendStatVO {
     latestPrice: number;
     avgDividend: number;
     latestYearDividend: number;
+    peg?: number;
+    pe?: number;
+    peIndustryAvg?: number;
+    roeActual?: number;
+    roe3yAvg?: number;
 }
 
 export interface StockDividendStatPageReqVO {
