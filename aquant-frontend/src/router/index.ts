@@ -11,6 +11,17 @@ const router = createRouter({
             redirect: '/stock-data/index',
             children: [
                 {
+                    path: 'watchlist',
+                    name: 'WatchlistRoot',
+                    children: [
+                        {
+                            path: 'index',
+                            name: 'Watchlist',
+                            component: () => import('@/views/watchlist/Watchlist.vue')
+                        }
+                    ]
+                },
+                {
                     path: 'stock-data',
                     name: 'StockDataRoot',
                     children: [

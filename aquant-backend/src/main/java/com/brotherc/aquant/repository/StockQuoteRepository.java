@@ -22,4 +22,6 @@ public interface StockQuoteRepository extends JpaRepository<StockQuote, Long>, J
 
     List<StockQuote> findByCodeIn(List<String> codeList);
 
+    StockQuote findByCode(String code);
+
 }

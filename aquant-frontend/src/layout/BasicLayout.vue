@@ -1,9 +1,22 @@
 <template>
   <a-layout style="min-height: 100vh">
     <a-layout-sider v-model:collapsed="collapsed" collapsible style="overflow: auto; height: 100vh; position: fixed; left: 0; top: 0; bottom: 0; z-index: 1001">
-      <div class="logo" />
+      <div class="logo">量化交易</div>
       <a-menu v-model:selectedKeys="selectedKeys" v-model:openKeys="openKeys" theme="dark" mode="inline">
         
+        <!-- Watchlist -->
+        <a-sub-menu key="/watchlist">
+          <template #title>
+            <span>
+              <heart-outlined />
+              <span>自选股票</span>
+            </span>
+          </template>
+          <a-menu-item key="/watchlist/index">
+            <router-link to="/watchlist/index">我的自选</router-link>
+          </a-menu-item>
+        </a-sub-menu>
+
         <!-- Stock Data -->
         <a-sub-menu key="/stock-data">
           <template #title>
@@ -95,11 +108,11 @@ import { ref, watch, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import {
   StockOutlined,
-  HistoryOutlined,
   LineChartOutlined,
   RadarChartOutlined,
   AppstoreOutlined,
   PayCircleOutlined,
+  HeartOutlined,
 } from '@ant-design/icons-vue';
 
 const route = useRoute();
@@ -131,6 +144,14 @@ onMounted(() => {
 .logo {
   height: 32px;
   margin: 16px;
-  background: rgba(255, 255, 255, 0.3);
+  color: #fff;
+  font-size: 18px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 2px;
+  white-space: nowrap;
+  overflow: hidden;
 }
 </style>
