@@ -99,6 +99,11 @@ AQuant/
 └── README.md                # 项目文档
 ```
 
+## 🤝 特别鸣谢
+
+感谢以下优秀项目及数据源为本平台提供的灵感与数据支持：
+- [AkShare](https://github.com/akfamily/akshare) / [TuShare](https://tushare.pro/) - 强大的金融数据接口支持
+
 ## 📝 许可证
 
 本项目采用 [MIT License](LICENSE) 授权。
