@@ -14,6 +14,13 @@
         <a-form-item label="最低平均分红">
           <a-input-number v-model:value="searchParams.minAvgDividend" placeholder="0" style="width: 120px" :min="0" :step="0.01" />
         </a-form-item>
+        <a-form-item label="自选分组">
+          <a-select v-model:value="searchParams.watchlistGroupId" placeholder="全部" style="width: 150px" allow-clear>
+            <a-select-option v-for="group in watchlistGroups" :key="group.id" :value="group.id">
+              {{ group.name }}
+            </a-select-option>
+          </a-select>
+        </a-form-item>
         <a-form-item>
           <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
           <a-button style="margin-left: 8px" @click="resetSearch">重置</a-button>
@@ -60,6 +67,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { getDividendPage, getDividendDetail, type StockDividendStatVO, type StockDividendStatPageReqVO, type StockDividendDetailVO } from '@/api/dividend';
+import { getWatchlistGroups, type WatchlistGroupVO } from '@/api/watchlist';
 import type { TableProps } from 'ant-design-vue';
 
 const loading = ref(false);
@@ -67,7 +75,10 @@ const dataSource = ref<StockDividendStatVO[]>([]);
 const searchParams = reactive<StockDividendStatPageReqVO>({
   recentYears: 3,
   minAvgDividend: undefined,
+  watchlistGroupId: undefined,
 });
+
+const watchlistGroups = ref<WatchlistGroupVO[]>([]);
 
 const pagination = reactive({
   current: 1,
@@ -162,6 +173,7 @@ const resetSearch = () => {
   searchParams.minAvgDividend = undefined;
   searchParams.stockCode = undefined;
   searchParams.stockName = undefined;
+  searchParams.watchlistGroupId = undefined;
   handleSearch();
 };
 
@@ -195,7 +207,16 @@ const handleDetail = async (record: StockDividendStatVO) => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
   fetchData();
+  // 加载自选分组
+  try {
+    const res = await getWatchlistGroups();
+    if (res.data.success) {
+      watchlistGroups.value = res.data.data;
+    }
+  } catch (error) {
+    console.error('加载自选分组失败:', error);
+  }
 });
 </script>

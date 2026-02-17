@@ -12,6 +12,8 @@ import com.brotherc.aquant.repository.StockValuationMetricsRepository;
 import com.brotherc.aquant.repository.StockDupontAnalysisRepository;
 import com.brotherc.aquant.entity.StockValuationMetrics;
 import com.brotherc.aquant.entity.StockDupontAnalysis;
+import com.brotherc.aquant.repository.StockWatchlistStockRepository;
+import com.brotherc.aquant.entity.StockWatchlistStock;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
@@ -35,10 +37,11 @@ public class StockDividendService {
     private final StockQuoteRepository stockQuoteRepository;
     private final StockValuationMetricsRepository stockValuationMetricsRepository;
     private final StockDupontAnalysisRepository stockDupontAnalysisRepository;
+    private final StockWatchlistStockRepository stockWatchlistStockRepository;
 
     public Page<StockDividendStatVO> pageDividendStats(StockDividendStatPageReqVO reqVO, Pageable pageable) {
         List<StockDividendStatVO> all = calcDividendStats(reqVO.getRecentYears(), reqVO.getMinAvgDividend(),
-                reqVO.getStockCode(), reqVO.getStockName());
+                reqVO.getStockCode(), reqVO.getStockName(), reqVO.getWatchlistGroupId());
 
         Map<String, StockQuote> stockQuoteMap = stockQuoteRepository.findAll()
                 .stream().collect(Collectors.toMap(o -> o.getCode().substring(2), o -> o));
@@ -82,7 +85,17 @@ public class StockDividendService {
     }
 
     public List<StockDividendStatVO> calcDividendStats(
-            Integer recentYears, BigDecimal minAvgDividend, String stockCodeQuery, String stockNameQuery) {
+            Integer recentYears, BigDecimal minAvgDividend, String stockCodeQuery, String stockNameQuery,
+            Long watchlistGroupId) {
+
+        Set<String> watchlistCodes = null;
+        if (watchlistGroupId != null) {
+            watchlistCodes = stockWatchlistStockRepository.findByGroupIdOrderBySortNoDesc(watchlistGroupId)
+                    .stream().map(StockWatchlistStock::getStockCode).collect(Collectors.toSet());
+            if (watchlistCodes.isEmpty()) {
+                return new ArrayList<>();
+            }
+        }
 
         List<StockDividend> list;
         if (recentYears != null) {
@@ -109,6 +122,10 @@ public class StockDividendService {
                 continue;
             }
             if (StringUtils.isNotBlank(stockNameQuery) && !stockName.contains(stockNameQuery)) {
+                continue;
+            }
+            // 过滤自选分组
+            if (watchlistCodes != null && !watchlistCodes.contains(stockCode)) {
                 continue;
             }
 

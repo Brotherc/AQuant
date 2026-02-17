@@ -19,6 +19,7 @@ export interface StockDividendStatPageReqVO {
     minAvgDividend?: number;
     stockCode?: string;
     stockName?: string;
+    watchlistGroupId?: number;
 }
 
 export interface StockDividendDetailVO {

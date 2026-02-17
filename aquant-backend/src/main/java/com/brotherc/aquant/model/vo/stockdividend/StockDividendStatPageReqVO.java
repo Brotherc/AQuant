@@ -21,4 +21,7 @@ public class StockDividendStatPageReqVO {
     @Schema(description = "最近N年平均分红")
     private BigDecimal minAvgDividend;
 
+    @Schema(description = "自选分组ID")
+    private Long watchlistGroupId;
+
 }
