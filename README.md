@@ -72,7 +72,7 @@ mvn clean install
 mvn spring-boot:run
 ```
 - 后端服务默认运行在: `http://localhost:8084`
-- API 文档访问: `http://localhost:8084/swagger-ui.html`
+- API 文档访问: `http://localhost:8084/doc.html`
 
 ### 3. 前端启动
 - 进入 `aquant-frontend` 目录。
