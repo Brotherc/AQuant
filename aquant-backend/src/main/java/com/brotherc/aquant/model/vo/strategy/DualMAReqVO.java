@@ -19,4 +19,6 @@ public class DualMAReqVO {
     @Schema(description = "信号")
     private String signal;
 
+    @Schema(description = "自选分组ID")
+    private Long watchlistGroupId;
 }

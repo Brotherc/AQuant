@@ -48,6 +48,7 @@ export interface DualMAReqVO {
     maShort?: number;
     maLong?: number;
     signal?: string;
+    watchlistGroupId?: number;
 }
 
 export interface StockTradeSignalVO {

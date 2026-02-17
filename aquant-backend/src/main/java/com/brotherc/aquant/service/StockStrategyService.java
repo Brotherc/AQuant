@@ -3,6 +3,8 @@ package com.brotherc.aquant.service;
 import com.brotherc.aquant.model.vo.strategy.DualMAReqVO;
 import com.brotherc.aquant.model.vo.strategy.StockTradeSignalVO;
 import com.brotherc.aquant.strategy.DualMovingAverageStrategy;
+import com.brotherc.aquant.repository.StockWatchlistStockRepository;
+import com.brotherc.aquant.entity.StockWatchlistStock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -25,6 +27,7 @@ import java.util.stream.Stream;
 public class StockStrategyService {
 
     private final DualMovingAverageStrategy dualMovingAverageStrategy;
+    private final StockWatchlistStockRepository stockWatchlistStockRepository;
 
     public Page<StockTradeSignalVO> dualMA(DualMAReqVO reqVO, Pageable pageable) {
         List<StockTradeSignalVO> list = dualMovingAverageStrategy.calculate(reqVO.getMaShort(), reqVO.getMaLong());
@@ -32,12 +35,25 @@ public class StockStrategyService {
         Stream<StockTradeSignalVO> stream = list.stream();
 
         if (StringUtils.isNotBlank(reqVO.getSignal())) {
-            stream = stream.filter(vo -> reqVO.getSignal().equalsIgnoreCase(vo.getSignal())
-            );
+            stream = stream.filter(vo -> reqVO.getSignal().equalsIgnoreCase(vo.getSignal()));
         }
         if (StringUtils.isNotBlank(reqVO.getCode())) {
-            stream = stream.filter(vo -> reqVO.getCode().equalsIgnoreCase(vo.getCode())
-            );
+            stream = stream.filter(vo -> reqVO.getCode().equalsIgnoreCase(vo.getCode()));
+        }
+
+        // 自选分组过滤
+        if (reqVO.getWatchlistGroupId() != null) {
+            java.util.Set<String> watchlistCodes = stockWatchlistStockRepository
+                    .findByGroupIdOrderBySortNoDesc(reqVO.getWatchlistGroupId())
+                    .stream().map(StockWatchlistStock::getStockCode).collect(Collectors.toSet());
+            if (watchlistCodes.isEmpty()) {
+                return new PageImpl<>(Collections.emptyList(), pageable, 0);
+            }
+            stream = stream.filter(vo -> {
+                String c = vo.getCode();
+                String c6 = c.length() > 6 ? c.substring(c.length() - 6) : c;
+                return watchlistCodes.contains(c6);
+            });
         }
 
         List<StockTradeSignalVO> filtered = stream.collect(Collectors.toList());
@@ -79,8 +95,7 @@ public class StockStrategyService {
             } else if ("pir".equals(order.getProperty())) {
                 comparator = Comparator.comparing(
                         StockTradeSignalVO::getPir,
-                        Comparator.nullsLast(BigDecimal::compareTo)
-                );
+                        Comparator.nullsLast(BigDecimal::compareTo));
             } else if ("latestPrice".equals(order.getProperty())) {
                 comparator = Comparator.comparing(StockTradeSignalVO::getLatestPrice);
             }

@@ -33,6 +33,13 @@
             <a-select-option value="HOLD">无</a-select-option>
           </a-select>
         </a-form-item>
+        <a-form-item label="自选分组">
+          <a-select v-model:value="queryParams.watchlistGroupId" placeholder="全部" allow-clear style="width: 150px">
+            <a-select-option v-for="group in watchlistGroups" :key="group.id" :value="group.id">
+              {{ group.name }}
+            </a-select-option>
+          </a-select>
+        </a-form-item>
         <a-form-item>
           <a-button type="primary" html-type="submit">查询</a-button>
         </a-form-item>
@@ -71,6 +78,7 @@
 <script lang="ts" setup>
 import { ref, reactive, onMounted } from 'vue';
 import { getDualMAPage, type StockTradeSignalVO, type DualMAReqVO } from '@/api/stock';
+import { getWatchlistGroups, type WatchlistGroupVO } from '@/api/watchlist';
 import StockHistoryChart from '@/views/stock-data/components/StockHistoryChart.vue';
 
 const loading = ref(false);
@@ -80,7 +88,10 @@ const queryParams = reactive<DualMAReqVO>({
   maShort: 5,
   maLong: 20,
   signal: undefined,
+  watchlistGroupId: undefined,
 });
+
+const watchlistGroups = ref<WatchlistGroupVO[]>([]);
 
 const pagination = reactive({
   current: 1,
@@ -194,8 +205,17 @@ const handleChart = (record: StockTradeSignalVO) => {
   chartVisible.value = true;
 };
 
-onMounted(() => {
+onMounted(async () => {
   fetchData();
+  // 加载自选分组
+  try {
+    const res = await getWatchlistGroups();
+    if (res.data.success) {
+      watchlistGroups.value = res.data.data;
+    }
+  } catch (error) {
+    console.error('加载自选分组失败:', error);
+  }
 });
 </script>
 
