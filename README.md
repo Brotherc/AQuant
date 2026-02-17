@@ -102,7 +102,7 @@ AQuant/
 ## 🤝 特别鸣谢
 
 感谢以下优秀项目及数据源为本平台提供的灵感与数据支持：
-- [AkShare](https://github.com/akfamily/akshare) / [TuShare](https://tushare.pro/) - 强大的金融数据接口支持
+- [AkShare](https://github.com/akfamily/akshare) - 强大的金融数据接口支持
 
 ## 📝 许可证
 
