@@ -52,7 +52,8 @@ public class StockWatchlistService {
         // 假设 StockQuote.code 是带前缀的，而 watchlist 存的 stockCode 是 6位代码，或者一致。
         // 根据之前的代码 `o.getCode().substring(2)`，StockQuote.code 应该是带前缀的（如 sh600519）
 
-        List<String> codes6 = watchlistStocks.stream().map(StockWatchlistStock::getStockCode).collect(Collectors.toList());
+        List<String> codes6 = watchlistStocks.stream().map(StockWatchlistStock::getStockCode)
+                .collect(Collectors.toList());
 
         // 智能补全并批量查询
         List<String> candidates = new ArrayList<>();
@@ -169,6 +170,27 @@ public class StockWatchlistService {
     @Transactional(rollbackFor = Exception.class)
     public void removeStockFromWatchlist(Long groupId, String stockCode) {
         stockRepository.deleteByGroupIdAndStockCode(groupId, stockCode);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void updateStockSort(com.brotherc.aquant.model.vo.watchlist.WatchlistStockReorderReqVO reqVO) {
+        Long groupId = reqVO.getGroupId();
+        List<String> codes = reqVO.getStockCodes();
+
+        List<StockWatchlistStock> stocks = stockRepository.findByGroupIdOrderBySortNoDesc(groupId);
+        Map<String, StockWatchlistStock> stockMap = stocks.stream()
+                .collect(Collectors.toMap(StockWatchlistStock::getStockCode, s -> s));
+
+        // 重新分配排序号：列表第一个排序号最大（目前是降序排列显示）
+        int size = codes.size();
+        for (int i = 0; i < size; i++) {
+            String code = codes.get(i);
+            StockWatchlistStock s = stockMap.get(code);
+            if (s != null) {
+                s.setSortNo(size - i);
+                stockRepository.save(s);
+            }
+        }
     }
 
 }

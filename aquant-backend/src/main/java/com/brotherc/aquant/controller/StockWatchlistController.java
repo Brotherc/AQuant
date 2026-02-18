@@ -59,4 +59,11 @@ public class StockWatchlistController {
         return ResponseDTO.success();
     }
 
+    @Operation(summary = "股票重排序")
+    @PostMapping("/stock/reorder")
+    public ResponseDTO<Void> reorderStock(@RequestBody @Valid WatchlistStockReorderReqVO reqVO) {
+        watchlistService.updateStockSort(reqVO);
+        return ResponseDTO.success();
+    }
+
 }
