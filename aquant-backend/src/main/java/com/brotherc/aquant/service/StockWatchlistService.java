@@ -90,6 +90,9 @@ public class StockWatchlistService {
 
     @Transactional(rollbackFor = Exception.class)
     public StockWatchlistGroup createGroup(WatchlistGroupReqVO reqVO) {
+        if (groupRepository.existsByName(reqVO.getName())) {
+            throw new BusinessException(ExceptionEnum.WATCHLIST_GROUP_NAME_DUPLICATE);
+        }
         StockWatchlistGroup group = new StockWatchlistGroup();
         group.setName(reqVO.getName());
         group.setCreatedAt(LocalDateTime.now());

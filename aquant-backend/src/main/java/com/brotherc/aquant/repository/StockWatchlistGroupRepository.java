@@ -11,4 +11,6 @@ public interface StockWatchlistGroupRepository extends JpaRepository<StockWatchl
 
     List<StockWatchlistGroup> findAllByOrderBySortNoAsc();
 
+    boolean existsByName(String name);
+
 }
