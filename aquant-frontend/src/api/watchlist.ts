@@ -25,6 +25,11 @@ export interface WatchlistStockReqVO {
     stockCode: string;
 }
 
+export interface WatchlistStockReorderReqVO {
+    groupId: number;
+    stockCodes: string[];
+}
+
 export const getWatchlistGroups = () => {
     return request.get<ResponseDTO<WatchlistGroupVO[]>>('/stockWatchlist/group/list');
 };
@@ -47,4 +52,8 @@ export const addStockToWatchlist = (data: WatchlistStockReqVO) => {
 
 export const removeStockFromWatchlist = (groupId: number, stockCode: string) => {
     return request.post<ResponseDTO<void>>('/stockWatchlist/stock/remove', { groupId, stockCode });
+};
+
+export const reorderWatchlistStocks = (data: WatchlistStockReorderReqVO) => {
+    return request.post<ResponseDTO<void>>('/stockWatchlist/stock/reorder', data);
 };

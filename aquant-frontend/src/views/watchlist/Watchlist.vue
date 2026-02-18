@@ -22,6 +22,7 @@
             :loading="loading"
             row-key="stockCode"
             :pagination="false"
+            :customRow="customRow"
           >
             <template #bodyCell="{ column, record, text }">
               <template v-if="column.dataIndex === 'changePercent'">
@@ -63,6 +64,7 @@ import {
   deleteWatchlistGroup, 
   addStockToWatchlist, 
   removeStockFromWatchlist,
+  reorderWatchlistStocks,
   type WatchlistGroupVO,
   type WatchlistStockVO
 } from '@/api/watchlist';
@@ -163,6 +165,8 @@ const handleCreateGroup = async () => {
       message.success('创建成功');
       groupModalVisible.value = false;
       fetchGroups();
+    } else {
+      message.error(res.data.message || '创建失败');
     }
   } catch (error) {
     console.error(error);
@@ -209,6 +213,55 @@ const handleRemoveStock = async (stockCode: string) => {
   } catch (error) {
     console.error(error);
   }
+};
+
+// 拖拽排序逻辑
+const draggedItem = ref<WatchlistStockVO | null>(null);
+
+const customRow = (record: WatchlistStockVO) => {
+  return {
+    draggable: true,
+    style: { cursor: 'move' },
+    onDragstart: (event: DragEvent) => {
+      draggedItem.value = record;
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+      }
+    },
+    onDragover: (event: DragEvent) => {
+      event.preventDefault();
+    },
+    onDrop: async (event: DragEvent) => {
+      event.preventDefault();
+      if (!draggedItem.value || draggedItem.value === record) return;
+
+      const oldIndex = stocks.value.findIndex(s => s.stockCode === draggedItem.value?.stockCode);
+      const newIndex = stocks.value.findIndex(s => s.stockCode === record.stockCode);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newStocks = [...stocks.value];
+        const [removed] = newStocks.splice(oldIndex, 1);
+        if (removed) {
+          newStocks.splice(newIndex, 0, removed);
+          stocks.value = newStocks;
+
+          // 同步到后端
+          if (activeGroupId.value) {
+            try {
+              await reorderWatchlistStocks({
+                groupId: activeGroupId.value,
+                stockCodes: stocks.value.map(s => s.stockCode)
+              });
+              message.success('排序已更新');
+            } catch (e) {
+              console.error(e);
+              message.error('排序更新失败');
+            }
+          }
+        }
+      }
+    }
+  };
 };
 
 onMounted(() => {
