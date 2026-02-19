@@ -162,11 +162,22 @@ public class StockDividendService {
                     .filter(Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+            BigDecimal latestYearTransfer = dividends.stream()
+                    .filter(d -> d.getLatestAnnouncementDate().getYear() == latestYear)
+                    .map(d -> {
+                        BigDecimal bonus = d.getBonusShareRatio() != null ? d.getBonusShareRatio() : BigDecimal.ZERO;
+                        BigDecimal transfer = d.getTransferShareRatio() != null ? d.getTransferShareRatio()
+                                : BigDecimal.ZERO;
+                        return bonus.add(transfer);
+                    })
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
             StockDividendStatVO stockDividendStatVO = new StockDividendStatVO();
             stockDividendStatVO.setStockCode(stockCode);
             stockDividendStatVO.setStockName(dividends.get(0).getStockName());
             stockDividendStatVO.setAvgDividend(avg);
             stockDividendStatVO.setLatestYearDividend(latestYearDividend);
+            stockDividendStatVO.setLatestYearTransfer(latestYearTransfer);
             result.add(stockDividendStatVO);
         }
 
@@ -183,6 +194,12 @@ public class StockDividendService {
                 case "latestYearDividend":
                     comparator = Comparator.comparing(
                             StockDividendStatVO::getLatestYearDividend,
+                            Comparator.nullsLast(BigDecimal::compareTo));
+                    break;
+
+                case "latestYearTransfer":
+                    comparator = Comparator.comparing(
+                            StockDividendStatVO::getLatestYearTransfer,
                             Comparator.nullsLast(BigDecimal::compareTo));
                     break;
 

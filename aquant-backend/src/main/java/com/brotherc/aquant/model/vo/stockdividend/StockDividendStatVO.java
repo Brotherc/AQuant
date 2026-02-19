@@ -38,4 +38,7 @@ public class StockDividendStatVO {
     @Schema(description = "ROE(3年平均)")
     private BigDecimal roe3yAvg;
 
+    @Schema(description = "最近一年转股")
+    private BigDecimal latestYearTransfer;
+
 }

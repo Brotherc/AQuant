@@ -12,6 +12,7 @@ export interface StockDividendStatVO {
     peIndustryAvg?: number;
     roeActual?: number;
     roe3yAvg?: number;
+    latestYearTransfer?: number;
 }
 
 export interface StockDividendStatPageReqVO {
