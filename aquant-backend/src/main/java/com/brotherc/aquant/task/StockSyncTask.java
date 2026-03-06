@@ -54,7 +54,7 @@ public class StockSyncTask {
         log.info("开始同步股票数据");
         // 查询上一次同步的时间戳
         StockSync stockSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_DAILY_LATEST);
-        Long lastTimestamp = Optional.ofNullable(stockSync).map(StockSync::getValue).map(Long::valueOf).orElse(null);
+        Long lastTimestamp = 1772108152000L;
         boolean startSync = stockHelper.checkIsStartSync(lastTimestamp);
         if (startSync) {
             long now = System.currentTimeMillis();
@@ -65,35 +65,40 @@ public class StockSyncTask {
         }
         log.info("同步股票数据完成");
 
-        log.info("开始同步股票板块数据");
-        // 查询上一次同步的时间戳
-        StockSync stockBoardSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_BOARD_INDUSTRY_LATEST);
-        lastTimestamp = Optional.ofNullable(stockBoardSync).map(StockSync::getValue).map(Long::valueOf).orElse(null);
-        startSync = stockHelper.checkIsStartSync(lastTimestamp);
-        if (startSync) {
-            long now = System.currentTimeMillis();
-            // 查询第三方API获取最新A股板块行情
-            List<StockBoardIndustryNameEm> stockBoardList = aKShareService.stockBoardIndustryNameEm();
-
-            Map<String, StockBoardIndustrySpotEm> stockBoardDetailMap = new HashMap<>();
-            for (StockBoardIndustryNameEm stockBoard : stockBoardList) {
-                StockBoardIndustrySpotEm stockBoardIndustrySpotEm = aKShareService.stockBoardIndustrySpotEm(stockBoard.getBlockCode());
-                stockBoardDetailMap.put(stockBoard.getBlockCode() + ":" + stockBoard.getBlockName(), stockBoardIndustrySpotEm);
-
-                long sleepMillis = ThreadLocalRandom.current().nextLong(2000, 3001);
-                try {
-                    TimeUnit.MILLISECONDS.sleep(sleepMillis);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    log.warn("线程被中断，提前结束行业板块行情同步");
-                    break;
-                }
-            }
-
-            // 同步数据
-            stockSyncService.stockBoardIndustry(stockBoardList, stockBoardDetailMap, stockBoardSync, now);
-        }
-        log.info("同步股票板块数据完成");
+//        log.info("开始同步股票板块数据");
+//        // 查询上一次同步的时间戳
+//        StockSync stockBoardSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_BOARD_INDUSTRY_LATEST);
+//        lastTimestamp = Optional.ofNullable(stockBoardSync).map(StockSync::getValue).map(Long::valueOf).orElse(null);
+//        startSync = stockHelper.checkIsStartSync(lastTimestamp);
+//        if (startSync) {
+//            long now = System.currentTimeMillis();
+//            // 查询第三方API获取最新A股板块行情
+//            List<StockBoardIndustryNameEm> stockBoardList = aKShareService.stockBoardIndustryNameEm();
+//
+//            Map<String, StockBoardIndustrySpotEm> stockBoardDetailMap = new HashMap<>();
+//            for (StockBoardIndustryNameEm stockBoard : stockBoardList) {
+//                try {
+//                    StockBoardIndustrySpotEm stockBoardIndustrySpotEm = aKShareService.stockBoardIndustrySpotEm(stockBoard.getBlockCode());
+//                    stockBoardDetailMap.put(stockBoard.getBlockCode() + ":" + stockBoard.getBlockName(), stockBoardIndustrySpotEm);
+//                } catch (Exception e) {
+//                    log.error("获取板块行情失败:{}", stockBoard.getBlockCode(), e);
+//                }
+//                log.info("板块:{}", stockBoard.getBlockName());
+//
+//                long sleepMillis = ThreadLocalRandom.current().nextLong(2000, 3001);
+//                try {
+//                    TimeUnit.MILLISECONDS.sleep(sleepMillis);
+//                } catch (InterruptedException e) {
+//                    Thread.currentThread().interrupt();
+//                    log.warn("线程被中断，提前结束行业板块行情同步");
+//                    break;
+//                }
+//            }
+//
+//            // 同步数据
+//            stockSyncService.stockBoardIndustry(stockBoardList, stockBoardDetailMap, stockBoardSync, now);
+//        }
+//        log.info("同步股票板块数据完成");
 
         log.info("开始同步股票分红数据");
 

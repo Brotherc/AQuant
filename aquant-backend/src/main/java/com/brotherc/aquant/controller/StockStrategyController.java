@@ -27,4 +27,11 @@ public class StockStrategyController {
         return ResponseDTO.success(stockStrategyService.dualMA(reqVO, pageable));
     }
 
+    @Operation(summary = "双均线策略回测")
+    @GetMapping("/dualMABacktest")
+    public ResponseDTO<Page<com.brotherc.aquant.model.vo.strategy.StockTradeBacktestVO>> dualMABacktest(
+            com.brotherc.aquant.model.vo.strategy.DualMABacktestReqVO reqVO, Pageable pageable) {
+        return ResponseDTO.success(stockStrategyService.dualMABacktest(reqVO, pageable));
+    }
+
 }

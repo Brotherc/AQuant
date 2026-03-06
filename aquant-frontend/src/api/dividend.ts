@@ -21,6 +21,7 @@ export interface StockDividendStatPageReqVO {
     stockCode?: string;
     stockName?: string;
     watchlistGroupId?: number;
+    pegRange?: string;
 }
 
 export interface StockDividendDetailVO {

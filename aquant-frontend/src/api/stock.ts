@@ -59,6 +59,22 @@ export interface StockTradeSignalVO {
     pir?: number;
 }
 
+export interface DualMABacktestReqVO {
+    code?: string;
+    maShort?: number;
+    maLong?: number;
+    watchlistGroupId?: number;
+    recentYears?: number;
+}
+
+export interface StockTradeBacktestVO {
+    code: string;
+    name: string;
+    totalReturn?: number;
+    latestPrice?: number;
+    pir?: number;
+}
+
 export interface StockQuotePageReqVO {
     code?: string;
     name?: string;
@@ -87,6 +103,13 @@ export const getStockQuotePage = (params: StockQuotePageReqVO & { page: number; 
 export const getDualMAPage = (params: DualMAReqVO & { page: number; size: number; sort?: string[] }) => {
     return api.get<ResponseDTO<PageResult<StockTradeSignalVO>>>('/stockStrategy/dualMA', {
         params
+    });
+};
+
+export const getDualMABacktestPage = (params: DualMABacktestReqVO & { page: number; size: number; sort?: string[] }) => {
+    return api.get<ResponseDTO<PageResult<StockTradeBacktestVO>>>('/stockStrategy/dualMABacktest', {
+        params,
+        timeout: 60000 // 历史回测需要加载并计算大量K线，放宽超时时间至 60 秒
     });
 };
 

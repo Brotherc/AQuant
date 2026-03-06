@@ -24,4 +24,7 @@ public class StockDividendStatPageReqVO {
     @Schema(description = "自选分组ID")
     private Long watchlistGroupId;
 
+    @Schema(description = "PEG范围: 1(>0), 2(0.5-1)")
+    private String pegRange;
+
 }

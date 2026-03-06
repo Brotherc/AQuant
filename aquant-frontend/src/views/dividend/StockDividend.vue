@@ -21,6 +21,12 @@
             </a-select-option>
           </a-select>
         </a-form-item>
+        <a-form-item label="PEG范围">
+          <a-select v-model:value="searchParams.pegRange" placeholder="全部" style="width: 120px" allow-clear>
+            <a-select-option value="1">0 - 0.5</a-select-option>
+            <a-select-option value="2">0.5 - 1.0</a-select-option>
+          </a-select>
+        </a-form-item>
         <a-form-item>
           <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
           <a-button style="margin-left: 8px" @click="resetSearch">重置</a-button>
@@ -76,6 +82,7 @@ const searchParams = reactive<StockDividendStatPageReqVO>({
   recentYears: 3,
   minAvgDividend: undefined,
   watchlistGroupId: undefined,
+  pegRange: undefined,
 });
 
 const watchlistGroups = ref<WatchlistGroupVO[]>([]);
@@ -175,6 +182,7 @@ const resetSearch = () => {
   searchParams.stockCode = undefined;
   searchParams.stockName = undefined;
   searchParams.watchlistGroupId = undefined;
+  searchParams.pegRange = undefined;
   handleSearch();
 };
 

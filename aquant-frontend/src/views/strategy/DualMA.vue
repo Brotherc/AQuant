@@ -1,6 +1,13 @@
 <template>
   <div class="dual-ma-container">
     <a-card :bordered="false">
+      <div style="margin-bottom: 24px">
+        <a-radio-group v-model:value="analysisMode" button-style="solid" @change="handleModeChange">
+          <a-radio-button value="signal">实时信号</a-radio-button>
+          <a-radio-button value="backtest">历史回测</a-radio-button>
+        </a-radio-group>
+      </div>
+
       <!-- Search Form -->
       <a-form layout="inline" :model="queryParams" @finish="handleSearch" style="margin-bottom: 24px">
         <a-form-item label="股票代码">
@@ -26,11 +33,19 @@
             <a-select-option :value="120">120天</a-select-option>
           </a-select>
         </a-form-item>
-        <a-form-item label="交易信号">
+        <a-form-item label="交易信号" v-if="analysisMode === 'signal'">
           <a-select v-model:value="queryParams.signal" placeholder="请选择" allow-clear style="width: 100px">
             <a-select-option value="BUY">买入</a-select-option>
             <a-select-option value="SELL">卖出</a-select-option>
             <a-select-option value="HOLD">无</a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item label="回测年数" v-if="analysisMode === 'backtest'">
+          <a-select v-model:value="queryParams.recentYears" style="width: 100px">
+            <a-select-option :value="1">近 1 年</a-select-option>
+            <a-select-option :value="2">近 2 年</a-select-option>
+            <a-select-option :value="3">近 3 年</a-select-option>
+            <a-select-option :value="5">近 5 年</a-select-option>
           </a-select>
         </a-form-item>
         <a-form-item label="自选分组">
@@ -60,6 +75,11 @@
               {{ getSignalLabel(text).text }}
             </a-tag>
           </template>
+          <template v-if="column.key === 'totalReturn'">
+            <span :style="{ color: text > 0 ? 'red' : (text < 0 ? 'green' : 'inherit') }">
+              {{ text > 0 ? '+' : '' }}{{ text != null ? (text * 100).toFixed(2) + '%' : '-' }}
+            </span>
+          </template>
           <template v-if="column.key === 'operation'">
             <a @click="handleChart(record)">行情</a>
           </template>
@@ -76,19 +96,22 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, reactive, onMounted } from 'vue';
-import { getDualMAPage, type StockTradeSignalVO, type DualMAReqVO } from '@/api/stock';
+import { ref, reactive, onMounted, computed } from 'vue';
+import { getDualMAPage, getDualMABacktestPage, type StockTradeSignalVO } from '@/api/stock';
 import { getWatchlistGroups, type WatchlistGroupVO } from '@/api/watchlist';
 import StockHistoryChart from '@/views/stock-data/components/StockHistoryChart.vue';
 
+const analysisMode = ref('signal');
+
 const loading = ref(false);
-const dataSource = ref<StockTradeSignalVO[]>([]);
-const queryParams = reactive<DualMAReqVO>({
+const dataSource = ref<any[]>([]);
+const queryParams = reactive<any>({
   code: '',
   maShort: 5,
   maLong: 20,
   signal: undefined,
   watchlistGroupId: undefined,
+  recentYears: 2,
 });
 
 const watchlistGroups = ref<WatchlistGroupVO[]>([]);
@@ -111,43 +134,30 @@ const currentStockName = ref('');
 const sortState = ref<string[]>([]);
 
 
-const columns = [
-  {
-    title: '股票代码',
-    dataIndex: 'code',
-    key: 'code',
-  },
-  {
-    title: '股票名称',
-    dataIndex: 'name',
-    key: 'name',
-  },
-  {
-    title: '最新价',
-    dataIndex: 'latestPrice',
-    key: 'latestPrice',
-    sorter: true,
-    showSorterTooltip: false,
-  },
-  {
-    title: '价格区间',
-    dataIndex: 'pir',
-    key: 'pir',
-    sorter: true,
-    showSorterTooltip: false,
-  },
-  {
-    title: '交易信号',
-    dataIndex: 'signal',
-    key: 'signal',
-    width: 120,
-  },
-  {
-    title: '操作',
-    key: 'operation',
-    width: 100,
+const columns = computed(() => {
+  const baseColumns = [
+    { title: '股票代码', dataIndex: 'code', key: 'code' },
+    { title: '股票名称', dataIndex: 'name', key: 'name' },
+    { title: '最新价', dataIndex: 'latestPrice', key: 'latestPrice', sorter: true, showSorterTooltip: false },
+    { title: '价格区间', dataIndex: 'pir', key: 'pir', sorter: true, showSorterTooltip: false },
+  ];
+
+  if (analysisMode.value === 'signal') {
+    baseColumns.push({ title: '交易信号', dataIndex: 'signal', key: 'signal', width: 120 } as any);
+  } else {
+    baseColumns.push({ 
+      title: '累计收益率', 
+      dataIndex: 'totalReturn', 
+      key: 'totalReturn', 
+      sorter: true, 
+      showSorterTooltip: false, 
+      width: 150 
+    } as any);
   }
-];
+
+  baseColumns.push({ title: '操作', key: 'operation', width: 100 } as any);
+  return baseColumns;
+});
 
 // 信号类型映射
 const getSignalLabel = (signal: string) => {
@@ -162,22 +172,48 @@ const getSignalLabel = (signal: string) => {
 const fetchData = async () => {
   loading.value = true;
   try {
-    const { data } = await getDualMAPage({
-      ...queryParams,
-      page: pagination.current - 1,
-      size: pagination.pageSize,
-      sort: sortState.value,
-    });
-    // 使用 success 字段或 code 0 判断
-    if (data.success || data.code === 0) {
-      dataSource.value = data.data.content;
-      pagination.total = data.data.totalElements;
+    let responseData;
+    if (analysisMode.value === 'signal') {
+      const { data } = await getDualMAPage({
+        code: queryParams.code,
+        maShort: queryParams.maShort,
+        maLong: queryParams.maLong,
+        signal: queryParams.signal,
+        watchlistGroupId: queryParams.watchlistGroupId,
+        page: pagination.current - 1,
+        size: pagination.pageSize,
+        sort: sortState.value,
+      });
+      responseData = data;
+    } else {
+      const { data } = await getDualMABacktestPage({
+        code: queryParams.code,
+        maShort: queryParams.maShort,
+        maLong: queryParams.maLong,
+        recentYears: queryParams.recentYears,
+        watchlistGroupId: queryParams.watchlistGroupId,
+        page: pagination.current - 1,
+        size: pagination.pageSize,
+        sort: sortState.value,
+      });
+      responseData = data;
+    }
+
+    if (responseData.success || responseData.code === 0) {
+      dataSource.value = responseData.data.content;
+      pagination.total = responseData.data.totalElements;
     }
   } catch (error) {
     console.error(error);
   } finally {
     loading.value = false;
   }
+};
+
+const handleModeChange = () => {
+  pagination.current = 1;
+  sortState.value = [];
+  fetchData();
 };
 
 const handleSearch = () => {

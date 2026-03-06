@@ -1,7 +1,10 @@
 package com.brotherc.aquant.service;
 
 import com.brotherc.aquant.model.vo.strategy.DualMAReqVO;
+import com.brotherc.aquant.model.vo.strategy.DualMABacktestReqVO;
 import com.brotherc.aquant.model.vo.strategy.StockTradeSignalVO;
+import com.brotherc.aquant.model.vo.strategy.StockTradeBacktestVO;
+import com.brotherc.aquant.repository.StockQuoteRepository;
 import com.brotherc.aquant.strategy.DualMovingAverageStrategy;
 import com.brotherc.aquant.repository.StockWatchlistStockRepository;
 import com.brotherc.aquant.entity.StockWatchlistStock;
@@ -28,6 +31,7 @@ public class StockStrategyService {
 
     private final DualMovingAverageStrategy dualMovingAverageStrategy;
     private final StockWatchlistStockRepository stockWatchlistStockRepository;
+    private final StockQuoteRepository stockQuoteRepository;
 
     public Page<StockTradeSignalVO> dualMA(DualMAReqVO reqVO, Pageable pageable) {
         List<StockTradeSignalVO> list = dualMovingAverageStrategy.calculate(reqVO.getMaShort(), reqVO.getMaLong());
@@ -112,6 +116,92 @@ public class StockStrategyService {
         }
 
         return result != null ? result : Comparator.comparing(StockTradeSignalVO::getCode);
+    }
+
+    public Page<StockTradeBacktestVO> dualMABacktest(DualMABacktestReqVO reqVO, Pageable pageable) {
+        // Find latest stocks up front to filter targets
+        java.time.LocalDateTime maxTime = stockQuoteRepository.findMaxCreatedAt();
+        List<com.brotherc.aquant.entity.StockQuote> stocks = stockQuoteRepository.findByCreatedAt(maxTime);
+
+        Stream<com.brotherc.aquant.entity.StockQuote> stream = stocks.stream();
+
+        if (StringUtils.isNotBlank(reqVO.getCode())) {
+            stream = stream.filter(vo -> reqVO.getCode().equalsIgnoreCase(vo.getCode()));
+        }
+
+        if (reqVO.getWatchlistGroupId() != null) {
+            java.util.Set<String> watchlistCodes = stockWatchlistStockRepository
+                    .findByGroupIdOrderBySortNoDesc(reqVO.getWatchlistGroupId())
+                    .stream().map(StockWatchlistStock::getStockCode).collect(Collectors.toSet());
+            if (watchlistCodes.isEmpty()) {
+                return new PageImpl<>(Collections.emptyList(), pageable, 0);
+            }
+            stream = stream.filter(vo -> {
+                String c = vo.getCode();
+                String c6 = c.length() > 6 ? c.substring(c.length() - 6) : c;
+                return watchlistCodes.contains(c6);
+            });
+        }
+
+        List<com.brotherc.aquant.entity.StockQuote> targetStocks = stream.collect(Collectors.toList());
+        if (targetStocks.isEmpty()) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
+
+        List<StockTradeBacktestVO> result = dualMovingAverageStrategy.backtest(
+                reqVO.getMaShort(), reqVO.getMaLong(), reqVO.getRecentYears(), targetStocks);
+
+        Sort sort = pageable.getSort();
+        if (sort.isSorted()) {
+            Comparator<StockTradeBacktestVO> comparator = buildBacktestComparator(sort);
+            result.sort(comparator);
+        }
+
+        int total = result.size();
+        int pageSize = pageable.getPageSize();
+        int currentPage = pageable.getPageNumber();
+        int fromIndex = currentPage * pageSize;
+
+        if (fromIndex >= total) {
+            return new PageImpl<>(Collections.emptyList(), pageable, total);
+        }
+
+        int toIndex = Math.min(fromIndex + pageSize, total);
+
+        List<StockTradeBacktestVO> pageContent = result.subList(fromIndex, toIndex);
+
+        return new PageImpl<>(pageContent, pageable, total);
+    }
+
+    private Comparator<StockTradeBacktestVO> buildBacktestComparator(Sort sort) {
+        Comparator<StockTradeBacktestVO> result = null;
+
+        for (Sort.Order order : sort) {
+            Comparator<StockTradeBacktestVO> comparator = null;
+            if ("code".equals(order.getProperty())) {
+                comparator = Comparator.comparing(StockTradeBacktestVO::getCode);
+            } else if ("name".equals(order.getProperty())) {
+                comparator = Comparator.comparing(StockTradeBacktestVO::getName);
+            } else if ("totalReturn".equals(order.getProperty())) {
+                comparator = Comparator.comparing(
+                        StockTradeBacktestVO::getTotalReturn,
+                        Comparator.nullsLast(BigDecimal::compareTo));
+            } else if ("latestPrice".equals(order.getProperty())) {
+                comparator = Comparator.comparing(StockTradeBacktestVO::getLatestPrice);
+            }
+
+            if (comparator == null) {
+                continue;
+            }
+
+            if (order.getDirection() == Sort.Direction.DESC) {
+                comparator = comparator.reversed();
+            }
+
+            result = (result == null) ? comparator : result.thenComparing(comparator);
+        }
+
+        return result != null ? result : Comparator.comparing(StockTradeBacktestVO::getCode);
     }
 
 }

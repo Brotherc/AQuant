@@ -72,6 +72,21 @@ public class StockDividendService {
             }
         }
 
+        // PEG 范围筛选
+        if (StringUtils.isNotBlank(reqVO.getPegRange())) {
+            all = all.stream().filter(item -> {
+                BigDecimal peg = item.getPeg();
+                if (peg == null)
+                    return false;
+                if ("1".equals(reqVO.getPegRange())) {
+                    return peg.compareTo(BigDecimal.ZERO) > 0 && peg.compareTo(new BigDecimal("0.5")) < 0;
+                } else if ("2".equals(reqVO.getPegRange())) {
+                    return peg.compareTo(new BigDecimal("0.5")) >= 0 && peg.compareTo(BigDecimal.ONE) < 0;
+                }
+                return true;
+            }).collect(Collectors.toList());
+        }
+
         // 排序（按最近一年分红倒序）
         all.sort(buildComparator(pageable.getSort()));
 

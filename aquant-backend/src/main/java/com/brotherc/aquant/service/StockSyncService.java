@@ -88,11 +88,17 @@ public class StockSyncService {
             // 同步计算杜邦分析、成长性、估值等数据
             List<StockZhGrowthComparisonEm> stockZhGrowthComparisonEms = aKShareService.stockZhGrowthComparisonEm(stock.getCode());
             List<StockZhDupontComparisonEm> stockZhDupontComparisonEms = aKShareService.stockZhDupontComparisonEm(stock.getCode());
-            List<StockZhValuationComparisonEm> stockZhValuationComparisonEms = aKShareService.stockZhValuationComparisonEm(stock.getCode());
 
             stockGrowthMetricsService.save(stock.getCode(), stock.getName(), stockZhGrowthComparisonEms);
             stockDupontAnalysisService.save(stock.getCode(), stock.getName(), stockZhDupontComparisonEms);
-            stockValuationMetricsService.save(stock.getCode(), stock.getName(), stockZhValuationComparisonEms);
+
+            List<StockZhValuationComparisonEm> stockZhValuationComparisonEms;
+            try {
+                stockZhValuationComparisonEms = aKShareService.stockZhValuationComparisonEm(stock.getCode());
+                stockValuationMetricsService.save(stock.getCode(), stock.getName(), stockZhValuationComparisonEms);
+            } catch (Exception e) {
+                log.error("stock_zh_a_growth_comparison请求失败", e);
+            }
 
             List<StockZhADaily> stockZhAHists = aKShareService.stockZhADaily(stock.getCode(), null, null, "qfq");
 
@@ -137,7 +143,7 @@ public class StockSyncService {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
             LocalDate start = LocalDate.parse("2021-01-01", formatter);
-            LocalDate end = LocalDate.parse("2025-12-16", formatter);
+            LocalDate end = LocalDate.parse("2026-02-23", formatter);
 
             List<StockQuoteHistory> filteredList = stockZhAHists.stream()
                     .filter(daily -> {
