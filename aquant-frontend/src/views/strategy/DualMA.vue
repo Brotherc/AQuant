@@ -150,6 +150,7 @@ const columns = computed(() => {
       dataIndex: 'totalReturn', 
       key: 'totalReturn', 
       sorter: true, 
+      defaultSortOrder: 'descend',
       showSorterTooltip: false, 
       width: 150 
     } as any);
@@ -186,6 +187,7 @@ const fetchData = async () => {
       });
       responseData = data;
     } else {
+      const activeSortState = sortState.value.length > 0 ? sortState.value : ['totalReturn,desc'];
       const { data } = await getDualMABacktestPage({
         code: queryParams.code,
         maShort: queryParams.maShort,
@@ -194,7 +196,7 @@ const fetchData = async () => {
         watchlistGroupId: queryParams.watchlistGroupId,
         page: pagination.current - 1,
         size: pagination.pageSize,
-        sort: sortState.value,
+        sort: activeSortState,
       });
       responseData = data;
     }
