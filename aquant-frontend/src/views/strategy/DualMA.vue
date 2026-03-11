@@ -80,6 +80,19 @@
               {{ text > 0 ? '+' : '' }}{{ text != null ? (text * 100).toFixed(2) + '%' : '-' }}
             </span>
           </template>
+          <template v-if="column.key === 'winRate'">
+            <span>{{ text != null ? (text * 100).toFixed(1) + '%' : '-' }}</span>
+          </template>
+          <template v-if="column.key === 'pValue'">
+            <span :style="{ color: text != null && text < 0.05 ? 'red' : 'inherit' }">
+              {{ text != null ? text.toFixed(4) : '-' }}
+            </span>
+          </template>
+          <template v-if="column.key === 'reliability'">
+            <a-tag :color="text === '高' ? 'success' : (text === '中' ? 'warning' : 'default')">
+              {{ text }}
+            </a-tag>
+          </template>
           <template v-if="column.key === 'operation'">
             <a @click="handleChart(record)">行情</a>
           </template>
@@ -145,15 +158,21 @@ const columns = computed(() => {
   if (analysisMode.value === 'signal') {
     baseColumns.push({ title: '交易信号', dataIndex: 'signal', key: 'signal', width: 120 } as any);
   } else {
-    baseColumns.push({ 
-      title: '累计收益率', 
-      dataIndex: 'totalReturn', 
-      key: 'totalReturn', 
-      sorter: true, 
-      defaultSortOrder: 'descend',
-      showSorterTooltip: false, 
-      width: 150 
-    } as any);
+    baseColumns.push(
+      { title: '交易次数', dataIndex: 'tradeCount', key: 'tradeCount', sorter: true, width: 100 } as any,
+      { title: '胜率', dataIndex: 'winRate', key: 'winRate', sorter: true, width: 100 } as any,
+      { title: '显著性(p)', dataIndex: 'pValue', key: 'pValue', sorter: true, width: 110 } as any,
+      { title: '可靠度', dataIndex: 'reliability', key: 'reliability', width: 90 } as any,
+      { 
+        title: '累计收益率', 
+        dataIndex: 'totalReturn', 
+        key: 'totalReturn', 
+        sorter: true, 
+        defaultSortOrder: 'descend',
+        showSorterTooltip: false, 
+        width: 120 
+      } as any
+    );
   }
 
   baseColumns.push({ title: '操作', key: 'operation', width: 100 } as any);

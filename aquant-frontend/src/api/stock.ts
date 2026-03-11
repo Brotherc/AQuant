@@ -71,6 +71,11 @@ export interface StockTradeBacktestVO {
     code: string;
     name: string;
     totalReturn?: number;
+    tradeCount?: number;
+    winRate?: number;
+    tValue?: number;
+    pValue?: number;
+    reliability?: string;
     latestPrice?: number;
     pir?: number;
 }
