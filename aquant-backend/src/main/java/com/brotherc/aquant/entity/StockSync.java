@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 /**
- * 股票同步
+ * 股票同步配置
  */
 @Data
 @Entity

@@ -6,6 +6,9 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+/**
+ * 股票分红送转方案
+ */
 @Data
 @Entity
 @Table(name = "stock_dividend")

@@ -6,6 +6,9 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * 板块成份股最新行情
+ */
 @Data
 @Entity
 @Table(name = "stock_board_constituent_quote")
