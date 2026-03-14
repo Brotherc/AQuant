@@ -1,6 +1,7 @@
 package com.brotherc.aquant.service;
 
 import com.brotherc.aquant.entity.StockQuoteHistory;
+import com.brotherc.aquant.model.dto.akshare.StockZhADaily;
 import com.brotherc.aquant.model.dto.akshare.StockZhASpot;
 import com.brotherc.aquant.repository.StockQuoteHistoryRepository;
 import com.brotherc.aquant.utils.StockHelper;
@@ -71,6 +72,30 @@ public class StockQuoteHistoryService {
 
         // 批量保存
         stockQuoteHistoryRepository.saveAll(saveList);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void save(List<StockZhADaily> stockZhAHists, String code, String name, LocalDateTime now) {
+        List<StockQuoteHistory> stockQuoteHistoryList = stockZhAHists.stream()
+                .map(o -> {
+                    StockQuoteHistory stockQuoteHistory = new StockQuoteHistory();
+                    stockQuoteHistory.setCode(code);
+                    stockQuoteHistory.setName(name);
+                    stockQuoteHistory.setOpenPrice(o.getOpen());
+                    stockQuoteHistory.setClosePrice(o.getClose());
+                    stockQuoteHistory.setHighPrice(o.getHigh());
+                    stockQuoteHistory.setLowPrice(o.getLow());
+                    stockQuoteHistory.setVolume(o.getVolume());
+                    stockQuoteHistory.setTurnover(o.getTurnover());
+                    stockQuoteHistory.setQuoteTime("15:00:00");
+                    String tradeDate = o.getDate().substring(0, 10);
+                    stockQuoteHistory.setTradeDate(tradeDate);
+                    stockQuoteHistory.setCreatedAt(now);
+                    return stockQuoteHistory;
+                })
+                .toList();
+
+        stockQuoteHistoryRepository.saveAll(stockQuoteHistoryList);
     }
 
     /**

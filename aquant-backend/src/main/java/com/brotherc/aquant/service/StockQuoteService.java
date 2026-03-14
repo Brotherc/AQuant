@@ -7,6 +7,7 @@ import com.brotherc.aquant.model.vo.stockquote.StockQuoteVO;
 import com.brotherc.aquant.repository.StockQuoteRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class StockQuoteService {
@@ -30,14 +32,18 @@ public class StockQuoteService {
     private final StockQuoteRepository stockQuoteRepository;
 
     @Transactional(rollbackFor = Exception.class)
-    public void save(List<StockZhASpot> stockZhASpotList, LocalDateTime now) {
+    public List<StockQuote> save(List<StockZhASpot> stockZhASpotList, LocalDateTime now) {
+        // 查询所有股票最新行情数据
         List<StockQuote> dbLlist = stockQuoteRepository.findAll();
+        // 按股票代码分组
         Map<String, StockQuote> map = dbLlist.stream().collect(Collectors.toMap(StockQuote::getCode, o -> o));
 
         List<StockQuote> list = new ArrayList<>();
 
+        // 遍历第三方股票数据
         for (StockZhASpot stockZhASpot : stockZhASpotList) {
             StockQuote sq = map.get(stockZhASpot.get代码());
+            // 如果不存在则创建
             if (sq == null) {
                 sq = new StockQuote();
             }
@@ -57,28 +63,39 @@ public class StockQuoteService {
             sq.setQuoteTime(stockZhASpot.get时间戳());
             sq.setCreatedAt(now);
 
-            if (sq.getHistoryHightPrice() != null && stockZhASpot.get最新价().compareTo(sq.getHistoryHightPrice()) > 0) {
-                sq.setHistoryHightPrice(stockZhASpot.get最新价());
-            }
-            if (sq.getHistoryLowPrice() != null && stockZhASpot.get最新价().compareTo(sq.getHistoryLowPrice()) < 0) {
-                sq.setHistoryLowPrice(stockZhASpot.get最新价());
-            }
-            if (sq.getHistoryHightPrice() != null && sq.getHistoryLowPrice() != null) {
-                BigDecimal diff = sq.getHistoryHightPrice().subtract(sq.getHistoryLowPrice());
-
-                // 计算百分比：(最新 - low) / diff * 100
-                BigDecimal percent = BigDecimal.ZERO;
-                if (diff.compareTo(BigDecimal.ZERO) != 0) {
-                    percent = stockZhASpot.get最新价().subtract(sq.getHistoryLowPrice())
-                            .divide(diff, 4, RoundingMode.HALF_UP) // 保留4位小数
-                            .multiply(new BigDecimal("100"));
-                }
-                sq.setPir(percent);
-            }
+            setPriceRange(sq, stockZhASpot.get最新价(), stockZhASpot.get最新价(), stockZhASpot.get最新价());
 
             list.add(sq);
         }
+        // 更新股票最新行情
         stockQuoteRepository.saveAll(list);
+        return list;
+    }
+
+    public void setPriceRange(StockQuote sq, BigDecimal latestPrice, BigDecimal maxPrice, BigDecimal minPrice) {
+        // 更新历史最高价
+        if (sq.getHistoryHightPrice() != null && maxPrice.compareTo(sq.getHistoryHightPrice()) > 0) {
+            sq.setHistoryHightPrice(maxPrice);
+        }
+        // 更新历史最低价
+        if (sq.getHistoryLowPrice() != null && minPrice.compareTo(sq.getHistoryLowPrice()) < 0) {
+            sq.setHistoryLowPrice(minPrice);
+        }
+
+        if (sq.getHistoryHightPrice() != null && sq.getHistoryLowPrice() != null) {
+            // 最大最小差值
+            BigDecimal diff = sq.getHistoryHightPrice().subtract(sq.getHistoryLowPrice());
+
+            // 计算百分比：(latest - min) / diff * 100
+            BigDecimal percent = BigDecimal.ZERO;
+            if (diff.compareTo(BigDecimal.ZERO) != 0) {
+                percent = latestPrice.subtract(sq.getHistoryLowPrice())
+                        .divide(diff, 4, RoundingMode.HALF_UP) // 保留4位小数
+                        .multiply(new BigDecimal("100"));
+            }
+            log.info(" pir: " + percent);
+            sq.setPir(percent);
+        }
     }
 
     public Page<StockQuoteVO> getPage(StockQuotePageReqVO reqVO, Pageable pageable) {

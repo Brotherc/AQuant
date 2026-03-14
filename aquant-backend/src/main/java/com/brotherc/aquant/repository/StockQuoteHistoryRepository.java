@@ -22,4 +22,7 @@ public interface StockQuoteHistoryRepository extends JpaRepository<StockQuoteHis
                         "LIMIT :limit", nativeQuery = true)
         List<StockQuoteHistory> findLatestByCode(@Param("code") String code, @Param("limit") int limit);
 
+    @Query("select max(s.tradeDate) from StockQuoteHistory s")
+    String findMaxTradeDate();
+
 }

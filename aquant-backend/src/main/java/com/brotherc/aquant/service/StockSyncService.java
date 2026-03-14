@@ -60,6 +60,54 @@ public class StockSyncService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    public void stockQuote(
+            List<StockZhASpot> stockZhASpotList, StockSync stockDailyLatest,
+            LocalDate startDate, LocalDate endDate, long timestamp
+    ) {
+        if (!CollectionUtils.isEmpty(stockZhASpotList)) {
+            LocalDateTime now = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime();
+
+            // 更新A股股票最新行情
+            List<StockQuote> save = stockQuoteService.save(stockZhASpotList, now);
+            Map<String, StockQuote> mapping = save.stream().collect(Collectors.toMap(StockQuote::getCode, o -> o));
+            // 更新A股股票历史最新行情
+            stockQuoteHistoryService.save(stockZhASpotList, now);
+
+            String start = startDate.toString();
+            String end = endDate.toString();
+            // 遍历每个股票，获取并保存指定区间的历史数据
+            for (StockZhASpot stock : stockZhASpotList) {
+                // 获取指定区间的历史数据
+                List<StockZhADaily> stockZhAHists = aKShareService.stockZhADaily(stock.get代码(), start, end, "qfq");
+
+                // 最大收盘
+                BigDecimal maxClose = stockZhAHists.stream()
+                        .map(StockZhADaily::getClose)
+                        .max(Comparator.naturalOrder())
+                        .orElse(BigDecimal.ZERO);
+
+                // 最小收盘
+                BigDecimal minClose = stockZhAHists.stream()
+                        .map(StockZhADaily::getClose)
+                        .min(Comparator.naturalOrder())
+                        .orElse(BigDecimal.ZERO);
+
+                StockQuote sq = mapping.get(stock.get代码());
+
+                // 更新股票价格区间信息
+                stockQuoteService.setPriceRange(sq, sq.getLatestPrice(), maxClose, minClose);
+                stockQuoteRepository.save(sq);
+
+                // 保存指定区间的历史数据
+                stockQuoteHistoryService.save(stockZhAHists, stock.get代码(), stock.get名称(), now);
+            }
+
+            // 更新最后一次股票同步时间
+            save(stockDailyLatest, StockSyncConstant.STOCK_DAILY_LATEST, timestamp);
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
     public void stockDupontGrowthValuation(Integer count) {
         // 1. 取出上次同步到的 ID
         StockSync stockSync = stockSyncRepository.findByName("stock_select_id");
