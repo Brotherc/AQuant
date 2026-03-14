@@ -60,17 +60,17 @@ public class StockSyncTask {
         StockSync stockSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_DAILY_LATEST);
         Long lastTimestamp = Optional.ofNullable(stockSync).map(StockSync::getValue).map(Long::valueOf).orElse(null);
 
-        log.info("开始同步股票数据");
+        log.info("同步股票行情数据开始");
 
         syncStackQuote(stockSync, lastTimestamp);
 
-        log.info("同步股票数据完成");
+        log.info("同步股票行情数据完成");
 
-//        log.info("开始同步股票板块数据");
+//        log.info("同步股票板块数据开始");
 //        syncStockBoard();
 //        log.info("同步股票板块数据完成");
 
-        log.info("开始同步股票分红数据");
+        log.info("同步股票分红数据开始");
 
         syncStockDividend(lastTimestamp);
 
