@@ -103,7 +103,7 @@ public class StockSyncTask {
                     .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
 
             if (lastTimestamp >= latestTradeDay3pmMillis) {
-                log.info(">> 今日是非交易日，且最近一个交易日的收盘数据已同步（上次同步早于或等于最新交易日 15:00），无需重复获取最新数据");
+                log.info(">> 今日是非交易日，且最近一个交易日的收盘数据已同步（上次同步晚于或等于最新交易日 15:00），无需重复获取最新数据");
                 return;
             }
         }
