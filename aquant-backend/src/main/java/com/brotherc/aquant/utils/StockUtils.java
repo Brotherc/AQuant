@@ -12,23 +12,6 @@ public class StockUtils {
     private StockUtils() {
     }
 
-    /**
-     * 获取最新的一个交易日
-     *
-     * @param date 当前日期
-     * @return 最新的一个交易日
-     */
-    public static LocalDate latestTradeDayFallback(LocalDate date) {
-        DayOfWeek dow = date.getDayOfWeek();
-        if (dow == DayOfWeek.SATURDAY) {
-            return date.minusDays(1);
-        }
-        if (dow == DayOfWeek.SUNDAY) {
-            return date.minusDays(2);
-        }
-        return date;
-    }
-
     public static List<String> getQuarterEndDatesFromNowToLastYearStart() {
         List<String> result = new ArrayList<>();
 
@@ -73,6 +56,9 @@ public class StockUtils {
         return LocalDate.of(date.getYear(), endMonth, endMonth.length(date.isLeapYear()));
     }
 
+    /**
+     * 判断传入的时间戳所代表的日期，是否早于“今天”的日期
+     */
     public static boolean isAfterDate(long timestampMillis) {
         LocalDate targetDate = Instant.ofEpochMilli(timestampMillis)
                 .atZone(ZoneId.systemDefault())

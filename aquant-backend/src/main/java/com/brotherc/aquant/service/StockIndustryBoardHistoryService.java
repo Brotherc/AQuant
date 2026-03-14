@@ -3,7 +3,7 @@ package com.brotherc.aquant.service;
 import com.brotherc.aquant.entity.StockIndustryBoardHistory;
 import com.brotherc.aquant.model.dto.akshare.StockBoardIndustrySpotEm;
 import com.brotherc.aquant.repository.StockIndustryBoardHistoryRepository;
-import com.brotherc.aquant.utils.StockUtils;
+import com.brotherc.aquant.utils.StockHelper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,11 +25,12 @@ import java.util.stream.Collectors;
 public class StockIndustryBoardHistoryService {
 
     private final StockIndustryBoardHistoryRepository stockIndustryBoardHistoryRepository;
+    private final StockHelper stockHelper;
 
     @Transactional(rollbackFor = Exception.class)
     public void save(Map<String, StockBoardIndustrySpotEm> stockBoardDetailMap, LocalDateTime now) {
         // 获取最新的交易日期
-        String tradeDate = StockUtils.latestTradeDayFallback(LocalDate.now()).toString();
+        String tradeDate = stockHelper.latestTradeDayFallback(LocalDate.now()).toString();
 
         // 提取所有股票代码
         List<String> codes = stockBoardDetailMap.keySet().stream().map(o -> o.split(":")[0]).toList();

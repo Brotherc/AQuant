@@ -3,7 +3,7 @@ package com.brotherc.aquant.service;
 import com.brotherc.aquant.entity.StockQuoteHistory;
 import com.brotherc.aquant.model.dto.akshare.StockZhASpot;
 import com.brotherc.aquant.repository.StockQuoteHistoryRepository;
-import com.brotherc.aquant.utils.StockUtils;
+import com.brotherc.aquant.utils.StockHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,11 +26,12 @@ import java.util.stream.Collectors;
 public class StockQuoteHistoryService {
 
     private final StockQuoteHistoryRepository stockQuoteHistoryRepository;
+    private final StockHelper stockHelper;
 
     @Transactional(rollbackFor = Exception.class)
     public void save(List<StockZhASpot> stockZhASpotList, LocalDateTime now) {
         // 获取最新的交易日期
-        String tradeDate = StockUtils.latestTradeDayFallback(LocalDate.now()).toString();
+        String tradeDate = stockHelper.latestTradeDayFallback(LocalDate.now()).toString();
 
         // 提取所有股票代码
         List<String> codes = stockZhASpotList.stream().map(StockZhASpot::get代码).toList();

@@ -33,6 +33,20 @@ public class StockHelper {
         return !isNonTradeDay;
     }
 
+    /**
+     * 获取最新的一个交易日
+     *
+     * @param date 当前日期
+     * @return 最新的一个交易日
+     */
+    public LocalDate latestTradeDayFallback(LocalDate date) {
+        LocalDate safeDate = date;
+        while (!isTradeDay(safeDate)) {
+            safeDate = safeDate.minusDays(1);
+        }
+        return safeDate;
+    }
+
     public boolean checkIsStartSync(Long lastTimestamp) {
         // 获取今天3点的时间戳
         LocalDateTime today3pm = LocalDate.now().atTime(15, 0, 0);

@@ -5,7 +5,7 @@ import com.brotherc.aquant.model.dto.akshare.StockBoardIndustryNameEm;
 import com.brotherc.aquant.model.vo.stockindustryboard.StockIndustryBoardPageReqVO;
 import com.brotherc.aquant.model.vo.stockindustryboard.StockIndustryBoardVO;
 import com.brotherc.aquant.repository.StockIndustryBoardRepository;
-import com.brotherc.aquant.utils.StockUtils;
+import com.brotherc.aquant.utils.StockHelper;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 public class StockIndustryBoardService {
 
     private final StockIndustryBoardRepository stockIndustryBoardRepository;
+    private final StockHelper stockHelper;
 
     @Transactional(rollbackFor = Exception.class)
     public void save(List<StockBoardIndustryNameEm> stockBoardList, LocalDateTime now) {
@@ -53,7 +54,7 @@ public class StockIndustryBoardService {
             sq.setDownCount(stockBoard.getDownCount());
             sq.setLeadingStockName(stockBoard.getLeadingStock());
             sq.setLeadingStockChangePercent(stockBoard.getLeadingStockChangePercent());
-            String tradeDate = StockUtils.latestTradeDayFallback(LocalDate.now()).toString();
+            String tradeDate = stockHelper.latestTradeDayFallback(LocalDate.now()).toString();
             sq.setTradeDate(tradeDate);
             sq.setCreatedAt(now);
 
