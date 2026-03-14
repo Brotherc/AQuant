@@ -6,7 +6,7 @@ spring:
     name: aquant-service
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://127.0.0.1:3306/nocobase?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://127.0.0.1:3306/stock?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: test
     password: testtest
     type: com.alibaba.druid.pool.DruidDataSource
@@ -26,7 +26,7 @@ spring:
       filters: stat,wall,slf4j
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
