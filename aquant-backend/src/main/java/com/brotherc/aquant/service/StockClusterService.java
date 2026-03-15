@@ -48,14 +48,4 @@ public class StockClusterService {
 
     }
 
-    public Page<StockBoardConstituentQuote> pageConstituentQuote(BoardConstituentQuotePageReqVO reqVO, Pageable pageable) {
-        StockBoardConstituentQuote constituentQuote = stockBoardConstituentQuoteRepository.findFirstByBoardCode(reqVO.getBoardCode());
-        if (constituentQuote == null || stockHelper.checkIsStartSync(constituentQuote.getCreatedAt().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())) {
-            List<StockBoardIndustryConsEm> stockBoardIndustryConsEms = aKShareService.stockBoardIndustryConsEm(reqVO.getBoardCode());
-            stockBoardConstituentQuoteService.save(reqVO.getBoardCode(), stockBoardIndustryConsEms);
-        }
-
-        return stockBoardConstituentQuoteRepository.findByBoardCode(reqVO.getBoardCode(), pageable);
-    }
-
 }
