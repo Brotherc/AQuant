@@ -19,16 +19,10 @@ public class StockIndustryBoardHistory {
     private Long id;
 
     /**
-     * 板块代码，例如 BK0480
+     * 板块名称
      */
-    @Column(name = "board_code")
-    private String boardCode;
-
-    /**
-     * 板块名称，例如 航天航空
-     */
-    @Column(name = "board_name")
-    private String boardName;
+    @Column(name = "sector_name")
+    private String sectorName;
 
     /**
      * 开盘价
@@ -49,28 +43,10 @@ public class StockIndustryBoardHistory {
     private BigDecimal lowPrice;
 
     /**
-     * 最新价
+     * 收盘价
      */
-    @Column(name = "latest_price")
-    private BigDecimal latestPrice;
-
-    /**
-     * 涨跌额
-     */
-    @Column(name = "change_amount")
-    private BigDecimal changeAmount;
-
-    /**
-     * 涨跌幅(%)
-     */
-    @Column(name = "change_percent")
-    private BigDecimal changePercent;
-
-    /**
-     * 振幅(%)
-     */
-    @Column(name = "amplitude")
-    private BigDecimal amplitude;
+    @Column(name = "close_price")
+    private BigDecimal closePrice;
 
     /**
      * 成交量
@@ -79,16 +55,10 @@ public class StockIndustryBoardHistory {
     private BigDecimal volume;
 
     /**
-     * 成交额(元)
+     * 成交额
      */
-    @Column(name = "turnover_amount")
-    private BigDecimal turnoverAmount;
-
-    /**
-     * 换手率(%)
-     */
-    @Column(name = "turnover_rate")
-    private BigDecimal turnoverRate;
+    @Column(name = "amount")
+    private BigDecimal amount;
 
     /**
      * 交易日期，如 2025-12-18
@@ -99,7 +69,7 @@ public class StockIndustryBoardHistory {
     /**
      * 创建时间
      */
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    @Column(name = "create_time")
+    private LocalDateTime createTime;
 
 }

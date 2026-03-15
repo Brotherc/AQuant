@@ -8,6 +8,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface StockIndustryBoardRepository extends JpaRepository<StockIndustryBoard, Long>, JpaSpecificationExecutor<StockIndustryBoard> {
 
-    StockIndustryBoard findByBoardName(String boardName);
+    StockIndustryBoard findBySectorName(String sectorName);
 
 }

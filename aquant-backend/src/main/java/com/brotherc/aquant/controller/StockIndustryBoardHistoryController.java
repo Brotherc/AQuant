@@ -1,7 +1,7 @@
 package com.brotherc.aquant.controller;
 
-import com.brotherc.aquant.entity.StockIndustryBoardHistory;
 import com.brotherc.aquant.model.dto.common.ResponseDTO;
+import com.brotherc.aquant.model.vo.stockindustryboard.StockIndustryBoardKVO;
 import com.brotherc.aquant.service.StockIndustryBoardHistoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -26,7 +26,7 @@ public class StockIndustryBoardHistoryController {
 
     @Operation(summary = "获取板块K线数据")
     @GetMapping("/kline")
-    public ResponseDTO<List<StockIndustryBoardHistory>> kline(
+    public ResponseDTO<List<StockIndustryBoardKVO>> kline(
             @Parameter(description = "板块代码") @RequestParam String boardCode,
             @Parameter(description = "频率: 1d, 1w, 1M, 1Q, 1Y") @RequestParam(required = false, defaultValue = "1d") String frequency) {
         return ResponseDTO.success(stockIndustryBoardHistoryService.getHistory(boardCode, frequency));

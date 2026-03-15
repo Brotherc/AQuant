@@ -1,7 +1,7 @@
 package com.brotherc.aquant.service;
 
 import com.brotherc.aquant.entity.StockIndustryBoard;
-import com.brotherc.aquant.model.dto.akshare.StockBoardIndustryNameEm;
+import com.brotherc.aquant.model.dto.akshare.StockBoardIndustrySummaryThs;
 import com.brotherc.aquant.model.vo.stockindustryboard.StockIndustryBoardPageReqVO;
 import com.brotherc.aquant.model.vo.stockindustryboard.StockIndustryBoardVO;
 import com.brotherc.aquant.repository.StockIndustryBoardRepository;
@@ -31,32 +31,32 @@ public class StockIndustryBoardService {
     private final StockHelper stockHelper;
 
     @Transactional(rollbackFor = Exception.class)
-    public void save(List<StockBoardIndustryNameEm> stockBoardList, LocalDateTime now) {
+    public void save(List<StockBoardIndustrySummaryThs> stockBoardList, LocalDateTime now) {
         List<StockIndustryBoard> dbLlist = stockIndustryBoardRepository.findAll();
-        Map<String, StockIndustryBoard> map = dbLlist.stream().collect(Collectors.toMap(StockIndustryBoard::getBoardCode, o -> o));
+        Map<String, StockIndustryBoard> map = dbLlist.stream().collect(Collectors.toMap(StockIndustryBoard::getSectorName, o -> o));
 
         List<StockIndustryBoard> list = new ArrayList<>();
 
-        for (StockBoardIndustryNameEm stockBoard : stockBoardList) {
-            StockIndustryBoard sq = map.get(stockBoard.getBlockCode());
+        for (StockBoardIndustrySummaryThs stockBoard : stockBoardList) {
+            StockIndustryBoard sq = map.get(stockBoard.getSectorName());
             if (sq == null) {
                 sq = new StockIndustryBoard();
             }
-            sq.setBoardCode(stockBoard.getBlockCode());
-            sq.setBoardName(stockBoard.getBlockName());
-            sq.setRankNo(stockBoard.getRank());
-            sq.setLatestPrice(stockBoard.getLatestPrice());
-            sq.setChangeAmount(stockBoard.getChangeAmount());
+            sq.setSeqNo(stockBoard.getIndex());
+            sq.setSectorName(stockBoard.getSectorName());
             sq.setChangePercent(stockBoard.getChangePercent());
-            sq.setTotalMarketValue(stockBoard.getTotalMarketValue());
-            sq.setTurnoverRate(stockBoard.getTurnoverRate());
-            sq.setUpCount(stockBoard.getUpCount());
-            sq.setDownCount(stockBoard.getDownCount());
-            sq.setLeadingStockName(stockBoard.getLeadingStock());
+            sq.setTotalVolume(stockBoard.getTotalVolume());
+            sq.setTotalAmount(stockBoard.getTotalAmount());
+            sq.setNetInflow(stockBoard.getNetInflow());
+            sq.setRiseCount(stockBoard.getRiseCount());
+            sq.setFallCount(stockBoard.getFallCount());
+            sq.setAveragePrice(stockBoard.getAveragePrice());
+            sq.setLeadingStock(stockBoard.getLeadingStock());
+            sq.setLeadingStockPrice(stockBoard.getLeadingStockPrice());
             sq.setLeadingStockChangePercent(stockBoard.getLeadingStockChangePercent());
-            String tradeDate = stockHelper.latestTradeDayFallback(LocalDate.now()).toString();
+            LocalDate tradeDate = stockHelper.latestTradeDayFallback(LocalDate.now());
             sq.setTradeDate(tradeDate);
-            sq.setCreatedAt(now);
+            sq.setCreateTime(now);
 
             list.add(sq);
         }

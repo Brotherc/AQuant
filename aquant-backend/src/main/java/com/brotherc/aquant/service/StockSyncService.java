@@ -2,8 +2,6 @@ package com.brotherc.aquant.service;
 
 import com.brotherc.aquant.constant.StockSyncConstant;
 import com.brotherc.aquant.entity.*;
-import com.brotherc.aquant.exception.BusinessException;
-import com.brotherc.aquant.exception.ExceptionEnum;
 import com.brotherc.aquant.model.dto.akshare.*;
 import com.brotherc.aquant.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -213,7 +211,7 @@ public class StockSyncService {
                         stockQuoteHistory.setCreatedAt(LocalDateTime.now());
                         return stockQuoteHistory;
                     })
-                    .collect(Collectors.toList());
+                    .toList();
 
             stockQuoteHistoryRepository.saveAll(filteredList);
         }
@@ -307,15 +305,18 @@ public class StockSyncService {
 
     @Transactional(rollbackFor = Exception.class)
     public void stockBoardIndustry(
-            List<StockBoardIndustryNameEm> stockBoardList, Map<String, StockBoardIndustrySpotEm> stockBoardDetailMap, StockSync stocBoardSync, long timestamp
+            List<StockBoardIndustrySummaryThs> stockBoardList, List<StockBoardIndustryIndexThs> stockBoardDetailList,
+            LocalDate startDate, LocalDate endDate, StockSync stocBoardSync, long timestamp
     ) {
         if (!CollectionUtils.isEmpty(stockBoardList)) {
             LocalDateTime now = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime();
 
             // 更新A股板块行情最新
             stockIndustryBoardService.save(stockBoardList, now);
+
             // 更新A股板块历史行情
-            stockIndustryBoardHistoryService.save(stockBoardDetailMap, now);
+            stockIndustryBoardHistoryService.save(stockBoardDetailList, startDate, endDate, now);
+
             // 更新最后一次股票板块行情同步时间
             save(stocBoardSync, StockSyncConstant.STOCK_BOARD_INDUSTRY_LATEST, timestamp);
         }
@@ -323,41 +324,11 @@ public class StockSyncService {
 
     @Transactional(rollbackFor = Exception.class)
     public void stockIndustryBoardHistory(String boardName, String startDate, String endDate) {
-        List<StockBoardIndustryHistEm> list = aKShareService.stockBoardIndustryHistEm(boardName, startDate, endDate, null);
+        List<StockBoardIndustryIndexThs> list = aKShareService.stockBoardIndustryIndexThs(boardName, startDate, endDate);
         if (CollectionUtils.isEmpty(list)) {
             return;
         }
-
-        StockIndustryBoard stockIndustryBoard = stockIndustryBoardRepository.findByBoardName(boardName);
-        if (stockIndustryBoard == null) {
-            throw new BusinessException(ExceptionEnum.STOCK_INDUSTRY_BOARD_UN_EXIST);
-        }
-        List<StockIndustryBoardHistory> historyList = stockIndustryBoardHistoryRepository.findByBoardCode(stockIndustryBoard.getBoardCode());
-        Map<String, StockIndustryBoardHistory> historyMapping = historyList.stream().collect(Collectors.toMap(StockIndustryBoardHistory::getTradeDate, o -> o));
-
-        List<StockIndustryBoardHistory> saveList = new ArrayList<>();
-        for (StockBoardIndustryHistEm stockBoard : list) {
-            StockIndustryBoardHistory stockIndustryBoardHistory = historyMapping.get(stockBoard.getDate());
-            if (stockIndustryBoardHistory == null) {
-                stockIndustryBoardHistory = new StockIndustryBoardHistory();
-            }
-            stockIndustryBoardHistory.setBoardCode(stockIndustryBoard.getBoardCode());
-            stockIndustryBoardHistory.setBoardName(boardName);
-            stockIndustryBoardHistory.setOpenPrice(stockBoard.getOpen());
-            stockIndustryBoardHistory.setHighPrice(stockBoard.getHigh());
-            stockIndustryBoardHistory.setLowPrice(stockBoard.getLow());
-            stockIndustryBoardHistory.setLatestPrice(stockBoard.getClose());
-            stockIndustryBoardHistory.setChangeAmount(stockBoard.getChangeAmount());
-            stockIndustryBoardHistory.setChangePercent(stockBoard.getChangePercent());
-            stockIndustryBoardHistory.setAmplitude(stockBoard.getAmplitude());
-            stockIndustryBoardHistory.setVolume(stockBoard.getVolume());
-            stockIndustryBoardHistory.setTurnoverAmount(stockBoard.getTurnover());
-            stockIndustryBoardHistory.setTurnoverRate(stockBoard.getTurnoverRate());
-            stockIndustryBoardHistory.setTradeDate(stockBoard.getDate());
-            stockIndustryBoardHistory.setCreatedAt(LocalDateTime.now());
-            saveList.add(stockIndustryBoardHistory);
-        }
-        stockIndustryBoardHistoryRepository.saveAll(saveList);
+        stockIndustryBoardHistoryService.save(boardName, list, LocalDateTime.now());
     }
 
 }

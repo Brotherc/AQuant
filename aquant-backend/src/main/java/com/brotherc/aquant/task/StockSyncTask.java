@@ -2,10 +2,8 @@ package com.brotherc.aquant.task;
 
 import com.brotherc.aquant.constant.StockSyncConstant;
 import com.brotherc.aquant.entity.StockSync;
-import com.brotherc.aquant.model.dto.akshare.StockBoardIndustryNameEm;
-import com.brotherc.aquant.model.dto.akshare.StockBoardIndustrySpotEm;
-import com.brotherc.aquant.model.dto.akshare.StockFhpsEm;
-import com.brotherc.aquant.model.dto.akshare.StockZhASpot;
+import com.brotherc.aquant.model.dto.akshare.*;
+import com.brotherc.aquant.repository.StockIndustryBoardHistoryRepository;
 import com.brotherc.aquant.repository.StockQuoteHistoryRepository;
 import com.brotherc.aquant.repository.StockSyncRepository;
 import com.brotherc.aquant.service.AKShareService;
@@ -19,6 +17,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -37,6 +36,7 @@ public class StockSyncTask {
     private final StockSyncService stockSyncService;
     private final StockSyncRepository stockSyncRepository;
     private final StockQuoteHistoryRepository stockQuoteHistoryRepository;
+    private final StockIndustryBoardHistoryRepository stockIndustryBoardHistoryRepository;
 
     /**
      * 项目完全启动后，异步执行一次
@@ -56,34 +56,26 @@ public class StockSyncTask {
     }
 
     private void syncStackDtaLatest() {
-        // 查询上一次同步的时间
-        StockSync stockSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_DAILY_LATEST);
-        Long lastTimestamp = Optional.ofNullable(stockSync).map(StockSync::getValue).map(Long::valueOf).orElse(null);
-
         log.info("同步股票行情数据开始");
-
-        syncStackQuote(stockSync, lastTimestamp);
-
+        syncStackQuote();
         log.info("同步股票行情数据完成");
 
-//        log.info("同步股票板块数据开始");
-//        syncStockBoard();
-//        log.info("同步股票板块数据完成");
+        log.info("同步股票板块数据开始");
+        syncStockBoard();
+        log.info("同步股票板块数据完成");
 
         log.info("同步股票分红数据开始");
-
-        syncStockDividend(lastTimestamp);
-
+        syncStockDividend();
         log.info("同步股票分红数据完成");
     }
 
     /**
      * 同步股票行情数据
-     *
-     * @param stockSync     最后一次同步配置信息
-     * @param lastTimestamp 最后一次同步时间
      */
-    private void syncStackQuote(StockSync stockSync, Long lastTimestamp) {
+    public void syncStackQuote() {
+        // 查询上一次同步的时间
+        StockSync stockSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_DAILY_LATEST);
+        Long lastTimestamp = Optional.ofNullable(stockSync).map(StockSync::getValue).map(Long::valueOf).orElse(null);
         long now = System.currentTimeMillis();
 
         // 如果从来没同步过，则同步最新的股票行情和股票历史行情
@@ -132,49 +124,99 @@ public class StockSyncTask {
         }
     }
 
-    private void syncStockBoard() {
-        // 查询上一次同步的时间戳
-        StockSync stockBoardSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_BOARD_INDUSTRY_LATEST);
-        long lastTimestamp = Optional.ofNullable(stockBoardSync).map(StockSync::getValue).map(Long::valueOf).orElse(null);
-        boolean startSync = stockHelper.checkIsStartSync(lastTimestamp);
-        if (startSync) {
-            long now = System.currentTimeMillis();
-            // 查询第三方API获取最新A股板块行情
-            List<StockBoardIndustryNameEm> stockBoardList = aKShareService.stockBoardIndustryNameEm();
+    public void syncStockBoard() {
+        StockSync stockSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_BOARD_INDUSTRY_LATEST);
+        Long lastTimestamp = Optional.ofNullable(stockSync).map(StockSync::getValue).map(Long::valueOf).orElse(null);
+        long now = System.currentTimeMillis();
 
-            Map<String, StockBoardIndustrySpotEm> stockBoardDetailMap = new HashMap<>();
-            for (StockBoardIndustryNameEm stockBoard : stockBoardList) {
-                try {
-                    StockBoardIndustrySpotEm stockBoardIndustrySpotEm = aKShareService.stockBoardIndustrySpotEm(stockBoard.getBlockCode());
-                    stockBoardDetailMap.put(stockBoard.getBlockCode() + ":" + stockBoard.getBlockName(), stockBoardIndustrySpotEm);
-                } catch (Exception e) {
-                    log.error("获取板块行情失败:{}", stockBoard.getBlockCode(), e);
-                }
-                log.info("板块:{}", stockBoard.getBlockName());
+        if (lastTimestamp == null) {
+            // 获取所有同花顺板块聚合数据
+            List<StockBoardIndustrySummaryThs> stockBoardList = aKShareService.stockBoardIndustrySummaryThs();
 
-                long sleepMillis = ThreadLocalRandom.current().nextLong(2000, 3001);
-                try {
-                    TimeUnit.MILLISECONDS.sleep(sleepMillis);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    log.warn("线程被中断，提前结束行业板块行情同步");
-                    break;
-                }
+            LocalDate localDate = stockHelper.latestTradeDayFallback(LocalDate.now());
+
+            List<StockBoardIndustryIndexThs> stockBoardDetailList = getStockBoardDetailList(stockBoardList, localDate, localDate);
+
+            stockSyncService.stockBoardIndustry(stockBoardList, stockBoardDetailList, localDate, localDate, stockSync, now);
+            return;
+        }
+
+        // 假期/周末收盘后校验
+        if (!stockHelper.isTradeDay(LocalDate.now())) {
+            LocalDate latestTradeDay = stockHelper.latestTradeDayFallback(LocalDate.now());
+            long latestTradeDay3pmMillis = latestTradeDay.atTime(15, 0, 0)
+                    .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+
+            if (lastTimestamp >= latestTradeDay3pmMillis) {
+                log.info(">> 今日是非交易日，板块历史数据已同步，无需重复获取");
+                return;
+            }
+        }
+
+        // 获取今天3点的时间戳
+        LocalDateTime today3pm = LocalDate.now().atTime(15, 0, 0);
+        long today3pmMillis = today3pm.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+        // 如果同步时间在今天收盘前，则同步最新的股票板块行情 和 同步时间至今的历史行情数据
+        boolean inTradeTime = lastTimestamp <= today3pmMillis;
+        if (inTradeTime) {
+            // 获取所有同花顺板块聚合数据
+            List<StockBoardIndustrySummaryThs> stockBoardList = aKShareService.stockBoardIndustrySummaryThs();
+
+            // 查询历史行情最新的日期
+            String maxTradeDate = stockIndustryBoardHistoryRepository.findMaxTradeDate();
+            LocalDate maxTradeLocalDate = LocalDate.parse(maxTradeDate);
+            boolean isToday = maxTradeLocalDate.equals(LocalDate.now());
+            // 如果与今天日期一致，则同步最新的股票行情和股票历史行情
+            if (isToday) {
+                List<StockBoardIndustryIndexThs> stockBoardDetailList = getStockBoardDetailList(stockBoardList, maxTradeLocalDate, maxTradeLocalDate);
+
+                stockSyncService.stockBoardIndustry(stockBoardList, stockBoardDetailList, maxTradeLocalDate, maxTradeLocalDate, stockSync, now);
+                return;
             }
 
-            // 同步数据
-            stockSyncService.stockBoardIndustry(stockBoardList, stockBoardDetailMap, stockBoardSync, now);
+            // 同步板块最新行情 与 最后一次同步时间-昨天的历史数据
+            List<StockBoardIndustryIndexThs> stockBoardDetailList =
+                    getStockBoardDetailList(stockBoardList, maxTradeLocalDate, LocalDate.now());
+
+            stockSyncService.stockBoardIndustry(stockBoardList, stockBoardDetailList, maxTradeLocalDate, LocalDate.now(), stockSync, now);
         }
+    }
+
+    private List<StockBoardIndustryIndexThs> getStockBoardDetailList(
+            List<StockBoardIndustrySummaryThs> stockBoardList, LocalDate startDate, LocalDate endDate
+    ) {
+        List<StockBoardIndustryIndexThs> stockBoardDetailList = new ArrayList<>();
+        for (StockBoardIndustrySummaryThs stockBoard : stockBoardList) {
+            try {
+                List<StockBoardIndustryIndexThs> detailList = aKShareService
+                        .stockBoardIndustryIndexThs(stockBoard.getSectorName(), startDate.toString(), endDate.toString());
+                if (!CollectionUtils.isEmpty(detailList)) {
+                    detailList.forEach(o -> o.setSectorName(stockBoard.getSectorName()));
+                    stockBoardDetailList.addAll(detailList);
+                }
+            } catch (Exception e) {
+                log.error("获取板块行情失败:{}", stockBoard.getSectorName(), e);
+            }
+            log.info("板块:{}", stockBoard.getSectorName());
+
+            long sleepMillis = ThreadLocalRandom.current().nextLong(5000, 10001);
+            try {
+                TimeUnit.MILLISECONDS.sleep(sleepMillis);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("线程被中断，提前结束行业板块行情同步");
+                break;
+            }
+        }
+        return stockBoardDetailList;
     }
 
     /**
      * 同步股票分红数据
-     *
-     * @param lastTimestamp 最后一次同步时间
      */
-    private void syncStockDividend(Long lastTimestamp) {
+    private void syncStockDividend() {
         StockSync stockDividendSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_DIVIDEND_LATEST);
-        lastTimestamp = Optional.ofNullable(stockDividendSync).map(StockSync::getValue).map(Long::valueOf).orElse(null);
+        Long lastTimestamp = Optional.ofNullable(stockDividendSync).map(StockSync::getValue).map(Long::valueOf).orElse(null);
 
         if (lastTimestamp == null || StockUtils.isAfterDate(lastTimestamp)) {
             List<String> quarterEndDates = StockUtils.getQuarterEndDatesFromNowToLastYearStart();

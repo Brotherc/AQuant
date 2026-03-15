@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -19,58 +20,16 @@ public class StockIndustryBoard {
     private Long id;
 
     /**
-     * 板块代码，例如 BK0480
+     * 序号
      */
-    @Column(name = "board_code")
-    private String boardCode;
+    @Column(name = "seq_no")
+    private Integer seqNo;
 
     /**
-     * 板块名称，例如 航天航空
+     * 板块名称
      */
-    @Column(name = "board_name")
-    private String boardName;
-
-    /**
-     * 板块涨幅排名
-     */
-    @Column(name = "rank_no")
-    private Integer rankNo;
-
-    /**
-     * 开盘价
-     */
-    @Column(name = "open_price")
-    private BigDecimal openPrice;
-
-    /**
-     * 收盘价
-     */
-    @Column(name = "close_price")
-    private BigDecimal closePrice;
-
-    /**
-     * 最高价
-     */
-    @Column(name = "high_price")
-    private BigDecimal highPrice;
-
-    /**
-     * 最低价
-     */
-    @Column(name = "low_price")
-    private BigDecimal lowPrice;
-
-    /**
-     * 最新价
-     */
-    @Column(name = "latest_price")
-    private BigDecimal latestPrice;
-
-    /**
-     * 涨跌额
-     */
-    @Column(name = "change_amount")
-    private BigDecimal changeAmount;
+    @Column(name = "sector_name")
+    private String sectorName;
 
     /**
      * 涨跌幅(%)
@@ -79,75 +38,69 @@ public class StockIndustryBoard {
     private BigDecimal changePercent;
 
     /**
-     * 振幅(%)
+     * 总成交量
      */
-    @Column(name = "amplitude")
-    private BigDecimal amplitude;
+    @Column(name = "total_volume")
+    private BigDecimal totalVolume;
 
     /**
-     * 成交量
+     * 总成交额
      */
-    @Column(name = "volume")
-    private Long volume;
+    @Column(name = "total_amount")
+    private BigDecimal totalAmount;
 
     /**
-     * 成交额(元)
+     * 净流入
      */
-    @Column(name = "turnover_amount")
-    private BigDecimal turnoverAmount;
-
-    /**
-     * 换手率(%)
-     */
-    @Column(name = "turnover_rate")
-    private BigDecimal turnoverRate;
-
-    /**
-     * 总市值(元)
-     */
-    @Column(name = "total_market_value")
-    private BigDecimal totalMarketValue;
+    @Column(name = "net_inflow")
+    private BigDecimal netInflow;
 
     /**
      * 上涨家数
      */
-    @Column(name = "up_count")
-    private Integer upCount;
+    @Column(name = "rise_count")
+    private Integer riseCount;
 
     /**
      * 下跌家数
      */
-    @Column(name = "down_count")
-    private Integer downCount;
+    @Column(name = "fall_count")
+    private Integer fallCount;
 
     /**
-     * 领涨股票代码
+     * 均价
      */
-    @Column(name = "leading_stock_code")
-    private String leadingStockCode;
+    @Column(name = "average_price")
+    private BigDecimal averagePrice;
 
     /**
-     * 领涨股票名称
+     * 领涨股
      */
-    @Column(name = "leading_stock_name")
-    private String leadingStockName;
+    @Column(name = "leading_stock")
+    private String leadingStock;
 
     /**
-     * 领涨股票涨跌幅(%)
+     * 领涨股最新价
+     */
+    @Column(name = "leading_stock_price")
+    private BigDecimal leadingStockPrice;
+
+    /**
+     * 领涨股涨跌幅(%)
      */
     @Column(name = "leading_stock_change_percent")
     private BigDecimal leadingStockChangePercent;
 
     /**
-     * 交易日期，如 2025-12-18
+     * 交易日期
      */
     @Column(name = "trade_date")
-    private String tradeDate;
+    private LocalDate tradeDate;
 
     /**
      * 创建时间
      */
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    @Column(name = "create_time")
+    private LocalDateTime createTime;
 
 }
