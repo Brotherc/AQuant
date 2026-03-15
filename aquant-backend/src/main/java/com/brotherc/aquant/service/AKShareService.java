@@ -327,4 +327,57 @@ public class AKShareService {
         }
     }
 
+    public List<StockBoardIndustrySummaryThs> stockBoardIndustrySummaryThs() {
+        Request request = new Request.Builder()
+                .url(akshareAddress + "/api/public/stock_board_industry_summary_ths")
+                .get()
+                .build();
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                log.info("失败响应: {}", response);
+                throw new RuntimeException("stock_board_industry_summary_ths请求失败");
+            }
+
+            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
+            });
+
+        } catch (IOException e) {
+            log.error("stock_board_industry_summary_ths请求失败", e);
+            throw new RuntimeException("stock_board_industry_summary_ths请求失败");
+        }
+    }
+
+    public List<StockBoardIndustryIndexThs> stockBoardIndustryIndexThs(String symbol, String startDate, String endDate) {
+        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_board_industry_index_ths")
+                .newBuilder()
+                .addQueryParameter("symbol", symbol);
+
+        if (StringUtils.isNotBlank(startDate)) {
+            builder.addQueryParameter("start_date", startDate);
+        }
+        if (StringUtils.isNotBlank(endDate)) {
+            builder.addQueryParameter("end_date", endDate);
+        }
+
+        Request request = new Request.Builder()
+                .url(builder.build())
+                .get()
+                .build();
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                log.info("失败响应: {}", response);
+                throw new RuntimeException("stock_board_industry_index_ths请求失败");
+            }
+
+            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
+            });
+
+        } catch (IOException e) {
+            log.error("stock_board_industry_index_ths请求失败", e);
+            throw new RuntimeException("stock_board_industry_index_ths请求失败");
+        }
+    }
+
 }
