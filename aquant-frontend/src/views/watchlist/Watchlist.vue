@@ -95,8 +95,11 @@ const fetchGroups = async () => {
     if (res.data.success) {
       groups.value = res.data.data;
       if (groups.value && groups.value.length > 0 && !activeGroupId.value) {
-        activeGroupId.value = groups.value[0].id;
-        fetchStocks(activeGroupId.value);
+        const firstGroup = groups.value[0];
+        if (firstGroup) {
+          activeGroupId.value = firstGroup.id;
+          fetchStocks(activeGroupId.value);
+        }
       }
     }
   } catch (error) {
@@ -134,7 +137,8 @@ const onTabEdit = (targetKey: any, action: string) => {
             message.success('删除成功');
             fetchGroups().then(() => {
               if (activeGroupId.value === targetKey) {
-                activeGroupId.value = (groups.value && groups.value.length > 0) ? groups.value[0].id : undefined;
+                const firstGroup = groups.value && groups.value.length > 0 ? groups.value[0] : undefined;
+                activeGroupId.value = firstGroup ? firstGroup.id : undefined;
                 if (activeGroupId.value) fetchStocks(activeGroupId.value);
                 else stocks.value = [];
               }

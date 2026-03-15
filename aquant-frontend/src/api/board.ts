@@ -3,44 +3,41 @@ import type { PageResult, ResponseDTO } from './stock';
 
 export interface StockIndustryBoardVO {
     id: number;
-    boardCode: string;
-    boardName: string;
-    rankNo: number;
-    latestPrice: number;
-    changeAmount: number;
+    seqNo: number;
+    sectorName: string;
     changePercent: number;
-    turnoverRate: number;
-    totalMarketValue: number;
-    upCount: number;
-    downCount: number;
-    leadingStockName: string;
+    totalVolume: number;
+    totalAmount: number;
+    netInflow: number;
+    riseCount: number;
+    fallCount: number;
+    averagePrice: number;
+    leadingStock: string;
+    leadingStockPrice: number;
     leadingStockChangePercent: number;
     tradeDate: string;
-    createdAt: string;
+    createTime: string;
 }
 
 export interface StockIndustryBoardPageReqVO {
-    boardCode?: string;
     boardName?: string;
     refresh?: boolean;
 }
 
 export interface StockIndustryBoardHistory {
     id: number;
-    boardCode: string;
-    boardName: string;
+    sectorName: string;
     openPrice: number;
     highPrice: number;
     lowPrice: number;
-    latestPrice: number;
+    closePrice: number;
     changeAmount: number;
     changePercent: number;
     amplitude: number;
     volume: number;
-    turnoverAmount: number;
-    turnoverRate: number;
+    amount: number;
     tradeDate: string;
-    createdAt: string;
+    createTime: string;
 }
 
 import api from '@/utils/request';

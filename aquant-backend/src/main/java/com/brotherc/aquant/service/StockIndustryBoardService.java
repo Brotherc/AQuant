@@ -67,12 +67,10 @@ public class StockIndustryBoardService {
         Specification<StockIndustryBoard> specification = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            if (StringUtils.isNotBlank(reqVO.getBoardCode())) {
-                predicates.add(cb.equal(root.get("boardCode"), reqVO.getBoardCode()));
-            }
+
 
             if (StringUtils.isNotBlank(reqVO.getBoardName())) {
-                predicates.add(cb.like(root.get("boardName"), "%" + reqVO.getBoardName() + "%"));
+                predicates.add(cb.like(root.get("sectorName"), "%" + reqVO.getBoardName() + "%"));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));

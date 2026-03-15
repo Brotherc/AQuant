@@ -193,8 +193,8 @@ const renderChart = (data: StockQuoteHistory[]) => {
             color: (params: any) => {
                 const i = params.dataIndex;
                 const dataItem = values[i];
-                if (!dataItem) return '#ef232a';
-                return dataItem[1] > dataItem[0] ? '#ef232a' : '#14b143';
+                if (!dataItem || dataItem.length < 2) return '#ef232a';
+                return dataItem[1]! > dataItem[0]! ? '#ef232a' : '#14b143';
             }
         }
       }

@@ -13,9 +13,7 @@
 
         <!-- 右侧：查询条件 -->
         <a-form layout="inline" :model="searchParams" @finish="handleSearch">
-          <a-form-item label="板块代码">
-            <a-input v-model:value="searchParams.boardCode" placeholder="输入代码" allow-clear style="width: 150px" />
-          </a-form-item>
+
           <a-form-item label="板块名称">
             <a-input v-model:value="searchParams.boardName" placeholder="输入名称" allow-clear style="width: 150px" />
           </a-form-item>
@@ -110,7 +108,6 @@ import type { TableProps } from 'ant-design-vue';
 
 // 搜索参数
 const searchParams = reactive<StockIndustryBoardPageReqVO>({
-  boardCode: '',
   boardName: '',
 });
 
@@ -121,7 +118,7 @@ const lastRefreshTime = ref('');
 // 表格数据
 const loading = ref(false);
 const dataSource = ref<StockIndustryBoardVO[]>([]);
-const sortState = ref<string[]>(['rankNo,asc']); // 默认按 rankNo 升序
+const sortState = ref<string[]>(['seqNo,asc']); // 默认按 seqNo 升序
 const pagination = reactive({
   current: 1,
   pageSize: 20, // 默认每页 20 条
@@ -153,18 +150,18 @@ const constituentSort = ref<string[]>([]);
 
 // 列定义
 const columns: TableProps['columns'] = [
-  { title: '板块代码', dataIndex: 'boardCode', fixed: 'left', width: 100 },
-  { title: '板块名称', dataIndex: 'boardName', fixed: 'left', width: 120 },
-  { title: '排名', dataIndex: 'rankNo', sorter: true, showSorterTooltip: false, width: 80, defaultSortOrder: 'ascend' },
-  { title: '最新价', dataIndex: 'latestPrice', sorter: true, showSorterTooltip: false, width: 100 },
-  { title: '涨跌幅', dataIndex: 'changePercent', sorter: true, showSorterTooltip: false, width: 100 },
-  { title: '涨跌额', dataIndex: 'changeAmount', width: 100 },
-  { title: '换手率', dataIndex: 'turnoverRate', width: 100 },
-  { title: '总市值', dataIndex: 'totalMarketValue', width: 150 },
-  { title: '上涨家数', dataIndex: 'upCount', width: 100 },
-  { title: '下跌家数', dataIndex: 'downCount', width: 100 },
-  { title: '领涨股', dataIndex: 'leadingStockName', width: 120 },
-  { title: '领涨幅', dataIndex: 'leadingStockChangePercent', width: 100 },
+  { title: '序号', dataIndex: 'seqNo', fixed: 'left', sorter: true, showSorterTooltip: false, width: 80, defaultSortOrder: 'ascend' },
+  { title: '板块名称', dataIndex: 'sectorName', fixed: 'left', width: 120 },
+  { title: '涨跌幅(%)', dataIndex: 'changePercent', sorter: true, showSorterTooltip: false, width: 100 },
+  { title: '总成交量', dataIndex: 'totalVolume', width: 120 },
+  { title: '总成交额', dataIndex: 'totalAmount', width: 120 },
+  { title: '净流入', dataIndex: 'netInflow', width: 120 },
+  { title: '上涨家数', dataIndex: 'riseCount', width: 100 },
+  { title: '下跌家数', dataIndex: 'fallCount', width: 100 },
+  { title: '均价', dataIndex: 'averagePrice', width: 100 },
+  { title: '领涨股', dataIndex: 'leadingStock', width: 120 },
+  { title: '领涨股最新价', dataIndex: 'leadingStockPrice', width: 120 },
+  { title: '领涨幅(%)', dataIndex: 'leadingStockChangePercent', width: 100 },
   { title: '日期', dataIndex: 'tradeDate', width: 120 },
   { title: '操作', dataIndex: 'operation', fixed: 'right', width: 150 },
 ];
@@ -236,7 +233,6 @@ const handleSearch = () => {
 };
 
 const resetSearch = () => {
-  searchParams.boardCode = '';
   searchParams.boardName = '';
   handleSearch();
 };
@@ -249,22 +245,21 @@ const handleTableChange: TableProps['onChange'] = (pag: any, _filters: any, sort
     const order = sorter.order === 'ascend' ? 'asc' : 'desc';
     sortState.value = [`${sorter.field},${order}`];
   } else {
-    sortState.value = [];
+    sortState.value = ['seqNo,asc'];
   }
 
   fetchData();
 };
 
 const handleChart = (record: StockIndustryBoardVO) => {
-  currentBoardCode.value = record.boardCode;
-  currentBoardName.value = record.boardName;
+  currentBoardCode.value = record.sectorName;
+  currentBoardName.value = record.sectorName;
   chartVisible.value = true;
 };
 
-// 成份股处理
 const handleConstituent = (record: StockIndustryBoardVO) => {
-  currentBoardCode.value = record.boardCode;
-  constituentTitle.value = `板块成份股 - ${record.boardName} (${record.boardCode})`;
+  currentBoardCode.value = record.sectorName;
+  constituentTitle.value = `板块成份股 - ${record.sectorName}`;
   constituentVisible.value = true;
   constituentPagination.current = 1;
   fetchConstituentData();

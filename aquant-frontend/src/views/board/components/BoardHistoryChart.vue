@@ -80,7 +80,7 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
   const dates = data.map(item => item.tradeDate);
   const values = data.map(item => [
     item.openPrice,
-    item.latestPrice, // close
+    item.closePrice, // close
     item.lowPrice,
     item.highPrice
   ]);
@@ -192,8 +192,9 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
         itemStyle: {
             color: (params: any) => {
                 const i = params.dataIndex;
-                if (!values[i]) return '#ef232a';
-                return values[i][1] > values[i][0] ? '#ef232a' : '#14b143';
+                const v = values[i];
+                if (!v || v.length < 2) return '#ef232a';
+                return v[1]! > v[0]! ? '#ef232a' : '#14b143';
             }
         }
       }

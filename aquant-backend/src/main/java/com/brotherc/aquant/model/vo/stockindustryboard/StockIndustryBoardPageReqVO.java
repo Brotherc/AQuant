@@ -12,8 +12,6 @@ public class StockIndustryBoardPageReqVO {
     @Nonnull
     private Boolean refresh;
 
-    @Schema(description = "板块代码")
-    private String boardCode;
 
     @Schema(description = "板块名称")
     private String boardName;
