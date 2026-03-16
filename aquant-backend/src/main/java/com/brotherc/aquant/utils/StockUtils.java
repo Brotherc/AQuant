@@ -69,4 +69,25 @@ public class StockUtils {
         return today.isAfter(targetDate);
     }
 
+    public static boolean check(long lastTimestamp) {
+        // 时间戳转 LocalDateTime（假设毫秒时间戳）
+        LocalDateTime lastTime = Instant.ofEpochMilli(lastTimestamp)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDateTime();
+
+        // 当前时间
+        LocalDate now = LocalDate.now();
+
+        // 条件1：周五
+        boolean isFriday = lastTime.getDayOfWeek() == DayOfWeek.FRIDAY;
+
+        // 条件2：时间 >= 15:00
+        boolean after3 = !lastTime.toLocalTime().isBefore(LocalTime.of(15, 0));
+
+        // 条件3：今天是周一
+        boolean isMonday = now.getDayOfWeek() == DayOfWeek.MONDAY;
+
+        return isFriday && after3 && isMonday;
+    }
+
 }

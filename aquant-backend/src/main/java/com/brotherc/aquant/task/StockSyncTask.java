@@ -114,7 +114,7 @@ public class StockSyncTask {
             LocalDate maxTradeLocalDate = LocalDate.parse(maxTradeDate);
             boolean isToday = maxTradeLocalDate.equals(LocalDate.now());
             // 如果与今天日期一致，则同步最新的股票行情和股票历史行情
-            if (isToday) {
+            if (isToday || StockUtils.check(lastTimestamp)) {
                 stockSyncService.stockQuote(stockZhASpots, stockSync, now);
                 return;
             }
