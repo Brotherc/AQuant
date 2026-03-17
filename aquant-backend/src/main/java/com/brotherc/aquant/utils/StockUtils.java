@@ -90,4 +90,16 @@ public class StockUtils {
         return isFriday && after3 && isMonday;
     }
 
+    public static boolean isYesterday(long lastTimestamp) {
+        // 时间戳转当前系统时区时间
+        LocalDate date = Instant.ofEpochMilli(lastTimestamp)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        // 昨天
+        LocalDate yesterday = LocalDate.now().minusDays(1);
+
+        return date.equals(yesterday);
+    }
+
 }
