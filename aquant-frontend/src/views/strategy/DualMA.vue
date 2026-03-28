@@ -12,7 +12,7 @@
       </div>
 
       <!-- Search Form -->
-      <a-form layout="inline" :model="queryParams" @finish="handleSearch" style="margin-bottom: 24px">
+      <a-form layout="inline" :model="queryParams" @finish="handleSearch" style="margin-bottom: 24px; justify-content: flex-end;">
         <a-form-item label="股票代码">
           <a-input v-model:value="queryParams.code" placeholder="输入代码" allow-clear style="width: 120px" />
         </a-form-item>
