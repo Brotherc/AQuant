@@ -1,11 +1,14 @@
 <template>
   <div class="dual-ma-container">
     <a-card :bordered="false">
-      <div style="margin-bottom: 24px">
+      <div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
         <a-radio-group v-model:value="analysisMode" button-style="solid" @change="handleModeChange">
           <a-radio-button value="signal">实时信号</a-radio-button>
           <a-radio-button value="backtest">历史回测</a-radio-button>
         </a-radio-group>
+        <a-button type="link" @click="infoVisible = true">
+          <info-circle-outlined /> 了解双均线策略
+        </a-button>
       </div>
 
       <!-- Search Form -->
@@ -100,6 +103,46 @@
       </a-table>
     </a-card>
     
+    <!-- 策略说明抽屉 -->
+    <a-drawer
+      title="双均线策略 (Dual Moving Average)"
+      placement="right"
+      :closable="true"
+      v-model:visible="infoVisible"
+      width="400"
+    >
+      <div class="strategy-info">
+        <h3>基本原理</h3>
+        <p>双均线策略是通过观察两根不同周期的移动平均线（MA）的交叉情况，来判断市场趋势和交易时机的经典量化策略。</p>
+        
+        <h3>交易信号 (金叉/死叉)</h3>
+        <ul>
+          <li><strong>金叉 (买入信号)</strong>：短期均线由下向上穿越长期均线。代表短期上涨动能强，趋势可能向上。</li>
+          <li><strong>死叉 (卖出信号)</strong>：短期均线由上向下穿越长期均线。代表短期下跌动能强，趋势可能向下。</li>
+        </ul>
+
+        <a-divider />
+
+        <h3>模式说明</h3>
+        <h4>实时信号</h4>
+        <p>扫描全市场股票，根据您设置的短期和长期均线参数，找出<strong>今天刚刚发生金叉或死叉</strong>的股票。</p>
+        
+        <h4>历史回测</h4>
+        <p>按照您设置的参数，模拟在过去 N 年内，<strong>每次金叉买入、死叉卖出</strong>，最终能获得多少收益。回测会考虑每次交易的盈亏，并统计以下指标：</p>
+        <ul>
+          <li><strong>累计收益率</strong>：按此策略交易，资金总共增长或亏损的百分比。</li>
+          <li><strong>胜率</strong>：盈利次数占总交易次数的比例。</li>
+          <li><strong>显著性 (p-Value) / 可靠度</strong>：通过统计学 T 检验计算该策略赚钱是否纯属“运气”。可靠度为“高”表示该策略历史表现具备统计学意义上的赚钱效应。</li>
+        </ul>
+        
+        <a-alert message="量化交易提示" type="info" show-icon>
+          <template #description>
+            参数设置（如 5日/20日 还是 10日/60日）对策略表现影响极大。不同股票适合的均线周期可能完全不同。建议先使用「历史回测」跑出高胜率参数，再参考「实时信号」。
+          </template>
+        </a-alert>
+      </div>
+    </a-drawer>
+    
     <StockHistoryChart
       v-model:visible="chartVisible"
       :stockCode="currentStockCode"
@@ -113,8 +156,10 @@ import { ref, reactive, onMounted, computed } from 'vue';
 import { getDualMAPage, getDualMABacktestPage, type StockTradeSignalVO } from '@/api/stock';
 import { getWatchlistGroups, type WatchlistGroupVO } from '@/api/watchlist';
 import StockHistoryChart from '@/views/stock-data/components/StockHistoryChart.vue';
+import { InfoCircleOutlined } from '@ant-design/icons-vue';
 
 const analysisMode = ref('signal');
+const infoVisible = ref(false);
 
 const loading = ref(false);
 const dataSource = ref<any[]>([]);
@@ -279,5 +324,34 @@ onMounted(async () => {
 <style scoped>
 .dual-ma-container {
   padding: 0;
+}
+
+.strategy-info h3 {
+  margin-top: 16px;
+  margin-bottom: 8px;
+  color: #1890ff;
+  font-weight: 600;
+}
+
+.strategy-info h4 {
+  margin-top: 12px;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.strategy-info p {
+  color: #555;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.strategy-info ul {
+  padding-left: 20px;
+  color: #555;
+  line-height: 1.6;
+}
+
+.strategy-info li {
+  margin-bottom: 6px;
 }
 </style>

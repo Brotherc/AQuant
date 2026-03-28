@@ -1,11 +1,14 @@
 <template>
   <div class="momentum-container">
     <a-card :bordered="false">
-      <div style="margin-bottom: 24px">
+      <div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
         <a-radio-group v-model:value="analysisMode" button-style="solid" @change="handleModeChange">
           <a-radio-button value="signal">实时信号</a-radio-button>
           <a-radio-button value="backtest">历史回测</a-radio-button>
         </a-radio-group>
+        <a-button type="link" @click="infoVisible = true">
+          <info-circle-outlined /> 了解动量策略
+        </a-button>
       </div>
 
       <!-- Search Form -->
@@ -101,6 +104,47 @@
       </a-table>
     </a-card>
     
+    <!-- 策略说明抽屉 -->
+    <a-drawer
+      title="动量策略 (Momentum)"
+      placement="right"
+      :closable="true"
+      v-model:visible="infoVisible"
+      width="400"
+    >
+      <div class="strategy-info">
+        <h3>基本原理</h3>
+        <p>动量策略（Momentum Strategy）基于金融市场中常见的“惯性”现象，即：<strong>过去一段时间内表现好的资产，在未来一段时间内倾向于继续表现良好</strong>；反之亦然。核心思想是“追涨杀跌”。</p>
+        
+        <h3>交易信号判断</h3>
+        <p>动量值反映了股票相对于 N 天前的涨跌幅。计算公式：<code>(今日收盘价 - N天前收盘价) / N天前收盘价</code></p>
+        <ul>
+          <li><strong>强势信号</strong>：动量值 > 设定的阈值 (如 5%)。代表股票处于明显的上升趋势。</li>
+          <li><strong>弱势信号</strong>：动量值 < -设定的阈值。代表股票处于明显的下跌趋势。</li>
+        </ul>
+
+        <a-divider />
+
+        <h3>模式说明</h3>
+        <h4>实时信号</h4>
+        <p>根据设定的“回望天数”和“阈值”，扫描当前满足强势或弱势信号的股票。</p>
+        
+        <h4>历史回测</h4>
+        <p>设定“回望天数”计算动量。策略回测的交易规则为：</p>
+        <ul>
+          <li><strong>买入</strong>：当动量值从负数转为正数时，即趋势由跌转涨，触发买入。</li>
+          <li><strong>卖出</strong>：当动量值从正数转为负数时，即趋势由涨转跌，触发卖出。</li>
+        </ul>
+        <p>最终统计过去 N 年内，该“顺势而为”策略带来的<strong>累计收益率</strong>、<strong>交易频率</strong>及通过 T 检验计算出的<strong>信号可靠度</strong>。</p>
+        
+        <a-alert message="量化交易提示" type="info" show-icon>
+          <template #description>
+            动量策略在单边趋势行情（牛市或熊市）中表现极佳，但在震荡市（牛皮市）中可能会因为频繁错误发出“突破”信号而导致反复亏损（即“被来回打脸”）。因此选择合适的回望周期至关重要。
+          </template>
+        </a-alert>
+      </div>
+    </a-drawer>
+    
     <StockHistoryChart
       v-model:visible="chartVisible"
       :stockCode="currentStockCode"
@@ -114,8 +158,10 @@ import { ref, reactive, onMounted, computed } from 'vue';
 import { getMomentumPage, getMomentumBacktestPage, type StockTradeSignalVO } from '@/api/stock';
 import { getWatchlistGroups, type WatchlistGroupVO } from '@/api/watchlist';
 import StockHistoryChart from '@/views/stock-data/components/StockHistoryChart.vue';
+import { InfoCircleOutlined } from '@ant-design/icons-vue';
 
 const analysisMode = ref('signal');
+const infoVisible = ref(false);
 
 const loading = ref(false);
 const dataSource = ref<any[]>([]);
@@ -281,5 +327,42 @@ onMounted(async () => {
 <style scoped>
 .momentum-container {
   padding: 0;
+}
+
+.strategy-info h3 {
+  margin-top: 16px;
+  margin-bottom: 8px;
+  color: #1890ff;
+  font-weight: 600;
+}
+
+.strategy-info h4 {
+  margin-top: 12px;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.strategy-info p {
+  color: #555;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.strategy-info ul {
+  padding-left: 20px;
+  color: #555;
+  line-height: 1.6;
+}
+
+.strategy-info li {
+  margin-bottom: 6px;
+}
+
+.strategy-info code {
+  background-color: #f0f2f5;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #cf1322;
+  font-size: 0.9em;
 }
 </style>
