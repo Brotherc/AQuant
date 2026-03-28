@@ -86,6 +86,9 @@
           <a-menu-item key="/strategy/dual-ma">
             <router-link to="/strategy/dual-ma">双均线策略</router-link>
           </a-menu-item>
+          <a-menu-item key="/strategy/momentum">
+            <router-link to="/strategy/momentum">动量策略</router-link>
+          </a-menu-item>
         </a-sub-menu>
 
       </a-menu>

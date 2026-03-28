@@ -84,6 +84,11 @@ const router = createRouter({
                             path: 'dual-ma',
                             name: 'DualMA',
                             component: () => import('@/views/strategy/DualMA.vue')
+                        },
+                        {
+                            path: 'momentum',
+                            name: 'Momentum',
+                            component: () => import('@/views/strategy/Momentum.vue')
                         }
                     ]
                 }

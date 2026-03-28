@@ -57,6 +57,7 @@ export interface StockTradeSignalVO {
     signal: string;
     latestPrice?: number;
     pir?: number;
+    momentumValue?: number;
 }
 
 export interface DualMABacktestReqVO {
@@ -124,4 +125,34 @@ export const getStockDailyLatest = () => {
 
 export const getStockHistory = (params: { code: string; frequency?: string }) => {
     return api.get<ResponseDTO<StockQuoteHistory[]>>('/stockQuote/history/kline', { params });
+};
+
+// ==================== 动量策略 ====================
+
+export interface MomentumReqVO {
+    code?: string;
+    lookbackDays?: number;
+    threshold?: number;
+    signal?: string;
+    watchlistGroupId?: number;
+}
+
+export interface MomentumBacktestReqVO {
+    code?: string;
+    lookbackDays?: number;
+    watchlistGroupId?: number;
+    recentYears?: number;
+}
+
+export const getMomentumPage = (params: MomentumReqVO & { page: number; size: number; sort?: string[] }) => {
+    return api.get<ResponseDTO<PageResult<StockTradeSignalVO>>>('/stockStrategy/momentum', {
+        params
+    });
+};
+
+export const getMomentumBacktestPage = (params: MomentumBacktestReqVO & { page: number; size: number; sort?: string[] }) => {
+    return api.get<ResponseDTO<PageResult<StockTradeBacktestVO>>>('/stockStrategy/momentumBacktest', {
+        params,
+        timeout: 60000
+    });
 };
