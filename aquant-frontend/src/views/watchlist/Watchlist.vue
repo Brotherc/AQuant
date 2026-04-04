@@ -24,12 +24,30 @@
 
     <!-- 自选股内容区 -->
     <div class="watchlist-content" v-if="activeGroupId">
+    
+      <!-- 轻量级排序操作带 -->
+      <div class="control-bar">
+        <span class="ctrl-label">排序：</span>
+        <span class="ctrl-item" :class="{ active: sortKey === 'default' }" @click="handleSortChange('default')">默认</span>
+        <span class="ctrl-item" :class="{ active: sortKey === 'latestPrice' }" @click="handleSortChange('latestPrice')">
+          最新价 <caret-up-outlined v-if="sortKey === 'latestPrice' && sortOrder === 'asc'"/><caret-down-outlined v-else />
+        </span>
+        <span class="ctrl-item" :class="{ active: sortKey === 'changePercent' }" @click="handleSortChange('changePercent')">
+          涨跌幅 <caret-up-outlined v-if="sortKey === 'changePercent' && sortOrder === 'asc'"/><caret-down-outlined v-else />
+        </span>
+        <span class="ctrl-item" :class="{ active: sortKey === 'pe' }" @click="handleSortChange('pe')">
+          PE <caret-up-outlined v-if="sortKey === 'pe' && sortOrder === 'asc'"/><caret-down-outlined v-else />
+        </span>
+        <span class="ctrl-item" :class="{ active: sortKey === 'roe' }" @click="handleSortChange('roe')">
+          ROE <caret-up-outlined v-if="sortKey === 'roe' && sortOrder === 'asc'"/><caret-down-outlined v-else />
+        </span>
+      </div>
 
-          <a-spin :spinning="loading">
+      <a-spin :spinning="loading">
             <a-row :gutter="[16, 16]" class="card-grid">
               <a-col 
                 :xs="24" :sm="24" :md="12" :lg="8" :xl="6"
-                v-for="stock in stocks" 
+                v-for="stock in sortedStocks" 
                 :key="stock.stockCode"
               >
                 <div class="draggable-wrapper">
@@ -124,9 +142,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import { DeleteOutlined, CloseOutlined, PlusOutlined } from '@ant-design/icons-vue';
+import { DeleteOutlined, CloseOutlined, PlusOutlined, CaretUpOutlined, CaretDownOutlined } from '@ant-design/icons-vue';
 import MiniKlineChart from './components/MiniKlineChart.vue';
 import { 
   getWatchlistGroups, 
@@ -150,6 +168,40 @@ const newStockCode = ref('');
 const groupModalVisible = ref(false);
 const groupLoading = ref(false);
 const groupForm = reactive({ name: '' });
+
+// 排序状态控制
+const sortKey = ref<string>('default');
+const sortOrder = ref<'asc' | 'desc'>('desc');
+
+const handleSortChange = (key: string) => {
+  if (key === 'default') {
+    sortKey.value = 'default';
+    return;
+  }
+  if (sortKey.value === key) {
+    // 再次点击时反转排序
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    // 首次点击默认降序（最高价、涨得最多最前）
+    sortKey.value = key;
+    sortOrder.value = 'desc';
+  }
+};
+
+const sortedStocks = computed(() => {
+  if (sortKey.value === 'default') return stocks.value;
+  
+  return [...stocks.value].sort((a, b) => {
+    let valA = (a as any)[sortKey.value];
+    let valB = (b as any)[sortKey.value];
+    
+    // 把空值或者无效值放到末尾
+    if (valA == null || isNaN(valA)) valA = sortOrder.value === 'asc' ? Infinity : -Infinity;
+    if (valB == null || isNaN(valB)) valB = sortOrder.value === 'asc' ? Infinity : -Infinity;
+    
+    return sortOrder.value === 'asc' ? valA - valB : valB - valA;
+  });
+});
 
 const getPriceColorClass = (changePercent: number | undefined | null) => {
   if (changePercent == null) return 'neutral';
@@ -560,5 +612,41 @@ onMounted(() => {
 .div-text {
   color: #d46b08; /* 橙色高亮分红信息 */
   font-weight: 500;
+}
+
+/* 排序控制器样式 */
+.control-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #888;
+}
+
+.control-bar .ctrl-label {
+  margin-right: 8px;
+}
+
+.control-bar .ctrl-item {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 16px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.control-bar .ctrl-item:hover {
+  color: #333;
+}
+
+.control-bar .ctrl-item.active {
+  color: #1890ff; /* 激活项采用焦点色 */
+  font-weight: 500;
+}
+
+.control-bar .ctrl-item .anticon {
+  margin-left: 2px;
+  font-size: 11px;
 }
 </style>
