@@ -74,6 +74,17 @@
                         <span class="val">{{ stock.roe != null ? stock.roe.toFixed(2) + '%' : '-' }}</span>
                       </div>
                     </div>
+
+                    <!-- 分红数据 -->
+                    <template v-if="stock.recentDividends && stock.recentDividends.length > 0">
+                      <a-divider style="margin: 6px 0" dashed />
+                      <div class="dividends-wrap">
+                        <div v-for="(div, idx) in stock.recentDividends" :key="idx" class="dividend-row">
+                          <span class="div-date">{{ formatReportDate(div.proposalAnnouncementDate) }}</span>
+                          <span class="div-text">{{ formatDividend(div) }}</span>
+                        </div>
+                      </div>
+                    </template>
                   </a-card>
                 </div>
               </a-col>
@@ -143,6 +154,28 @@ const groupForm = reactive({ name: '' });
 const getPriceColorClass = (changePercent: number | undefined | null) => {
   if (changePercent == null) return 'neutral';
   return changePercent > 0 ? 'up' : changePercent < 0 ? 'down' : 'neutral';
+};
+
+import type { WatchlistDividendVO } from '@/api/watchlist';
+const formatDividend = (div: WatchlistDividendVO) => {
+  const parts = [];
+  if (div.cashDividendRatio) parts.push(`派${div.cashDividendRatio}`);
+  if (div.bonusShareRatio) parts.push(`送${div.bonusShareRatio}`);
+  if (div.transferShareRatio) parts.push(`转${div.transferShareRatio}`);
+  
+  if (parts.length === 0) {
+    return div.planStatus || '不分红';
+  }
+  return `10${parts.join('')}`;
+};
+
+const formatReportDate = (dateStr: string | undefined | null) => {
+  if (!dateStr) return '-';
+  // 如果是 yyyyMMdd 格式，则转换为 yyyy-MM-dd
+  if (dateStr.length === 8 && !dateStr.includes('-')) {
+    return `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`;
+  }
+  return dateStr;
 };
 
 const fetchGroups = async () => {
@@ -505,6 +538,27 @@ onMounted(() => {
 
 .fund-item .val {
   color: #333;
+  font-weight: 500;
+}
+
+.dividends-wrap {
+  margin-top: 4px;
+}
+
+.dividend-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #666;
+  margin-bottom: 2px;
+}
+
+.div-date {
+  color: #999;
+}
+
+.div-text {
+  color: #d46b08; /* 橙色高亮分红信息 */
   font-weight: 500;
 }
 </style>

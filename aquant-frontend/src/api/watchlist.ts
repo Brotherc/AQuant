@@ -1,6 +1,14 @@
 import request from '@/utils/request';
 import type { ResponseDTO } from './stock';
 
+export interface WatchlistDividendVO {
+    proposalAnnouncementDate: string;
+    planStatus: string;
+    cashDividendRatio: number;
+    bonusShareRatio: number;
+    transferShareRatio: number;
+}
+
 export interface WatchlistStockVO {
     stockCode: string;
     stockName: string;
@@ -10,6 +18,7 @@ export interface WatchlistStockVO {
     pe?: number;
     peg?: number;
     roe?: number;
+    recentDividends?: WatchlistDividendVO[];
 }
 
 export interface WatchlistGroupVO {

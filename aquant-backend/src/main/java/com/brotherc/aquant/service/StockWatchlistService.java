@@ -21,8 +21,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
+import com.brotherc.aquant.repository.StockDividendRepository;
+import com.brotherc.aquant.entity.StockDividend;
+import com.brotherc.aquant.model.vo.watchlist.WatchlistDividendVO;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -36,6 +41,7 @@ public class StockWatchlistService {
     private final StockQuoteRepository quoteRepository;
     private final StockValuationMetricsRepository valuationMetricsRepository;
     private final StockDupontAnalysisRepository dupontAnalysisRepository;
+    private final StockDividendRepository dividendRepository;
 
     public List<WatchlistGroupVO> getAllGroups() {
         List<StockWatchlistGroup> groups = groupRepository.findAllByOrderBySortNoAsc();
@@ -98,6 +104,30 @@ public class StockWatchlistService {
                     return c.length() > 6 ? c.substring(c.length() - 6) : c;
                 }, d -> d, (a, b) -> a));
 
+        List<StockDividend> dividendList = dividendRepository.findByStockCodeIn(codes6);
+        Map<String, List<WatchlistDividendVO>> dividendMap = dividendList.stream()
+                .collect(Collectors.groupingBy(d -> {
+                    String c = d.getStockCode();
+                    if(c == null) return "";
+                    return c.length() > 6 ? c.substring(c.length() - 6) : c;
+                }, Collectors.collectingAndThen(Collectors.toList(), list -> list.stream()
+                        .sorted(
+                                Comparator.comparing(StockDividend::getProposalAnnouncementDate,
+                                                Comparator.nullsLast(Comparator.reverseOrder()))
+                                        .thenComparing(StockDividend::getReportDate,
+                                                Comparator.nullsLast(Comparator.reverseOrder()))
+                        )
+                        .limit(2)
+                        .map(d -> {
+                            WatchlistDividendVO vo = new WatchlistDividendVO();
+                            vo.setProposalAnnouncementDate(d.getProposalAnnouncementDate() != null ? d.getProposalAnnouncementDate().toString() : null);
+                            vo.setPlanStatus(d.getPlanStatus());
+                            vo.setCashDividendRatio(d.getCashDividendRatio());
+                            vo.setBonusShareRatio(d.getBonusShareRatio());
+                            vo.setTransferShareRatio(d.getTransferShareRatio());
+                            return vo;
+                        }).collect(Collectors.toList()))));
+
         return watchlistStocks.stream().map(ws -> {
             WatchlistStockVO vo = new WatchlistStockVO();
             vo.setStockCode(ws.getStockCode());
@@ -120,6 +150,8 @@ public class StockWatchlistService {
             if (dupont != null) {
                 vo.setRoe(dupont.getRoe3yAvg()); 
             }
+            
+            vo.setRecentDividends(dividendMap.get(ws.getStockCode()));
             
             return vo;
         }).toList();

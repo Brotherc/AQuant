@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 @Schema(description = "自选股票信息")
@@ -32,5 +33,8 @@ public class WatchlistStockVO {
 
     @Schema(description = "排序号")
     private Integer sortNo;
+
+    @Schema(description = "近期分红")
+    private List<WatchlistDividendVO> recentDividends;
 
 }
