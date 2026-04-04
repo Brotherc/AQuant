@@ -6,8 +6,8 @@
     @close="handleClose"
     destroy-on-close
   >
-    <div class="mb-4">
-      <a-radio-group v-model:value="frequency" button-style="solid" @change="fetchHistory">
+    <div class="mb-4" style="text-align: right;">
+      <a-radio-group v-model:value="frequency" @change="fetchHistory">
         <a-radio-button value="1d">日K</a-radio-button>
         <a-radio-button value="1w">周K</a-radio-button>
         <a-radio-button value="1M">月K</a-radio-button>
@@ -15,7 +15,7 @@
         <a-radio-button value="1Y">年K</a-radio-button>
       </a-radio-group>
     </div>
-    <div ref="chartContainer" style="width: 100%; height: 500px"></div>
+    <div ref="chartContainer" style="width: 100%; height: 700px"></div>
   </a-drawer>
 </template>
 
@@ -87,62 +87,111 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
   const volumes = data.map(item => item.volume);
 
   const option = {
+    animation: false,
     tooltip: {
       trigger: 'axis',
-      axisPointer: {
-        type: 'cross'
-      },
-      formatter: (params: any) => {
-        let result = params[0].name + '<br/>';
-        params.forEach((param: any) => {
-          if (param.seriesType === 'candlestick') {
-            result += param.seriesName + '<br/>';
-            result += '开盘: ' + param.data[1] + '<br/>';
-            result += '收盘: ' + param.data[2] + '<br/>';
-            result += '最低: ' + param.data[3] + '<br/>';
-            result += '最高: ' + param.data[4] + '<br/>';
-          } else if (param.seriesType === 'bar') {
-            result += param.seriesName + ': ' + param.value + '<br/>';
+      axisPointer: { type: 'none' },
+      textStyle: { fontSize: 12 },
+      padding: 8,
+      formatter: function (params: any) {
+        const param = params[0];
+        const date = param.name;
+        
+        let open = 0, close = 0, low = 0, high = 0, volume = 0;
+        params.forEach((p: any) => {
+          if (p.seriesType === 'candlestick') {
+            open = p.value[1];
+            close = p.value[2];
+            low = p.value[3];
+            high = p.value[4];
+          } else if (p.seriesType === 'bar') {
+            volume = p.value;
           }
         });
-        return result;
+        
+        const color = close >= open ? '#ff4d4f' : '#52c41a';
+        return `
+          <div style="font-weight:bold;margin-bottom:4px;font-size:12px;">${date}</div>
+          <div style="color:${color};">收盘: ${close || '-'}</div>
+          <div>开盘: ${open || '-'}</div>
+          <div>最高: ${high || '-'}</div>
+          <div>最低: ${low || '-'}</div>
+          <div style="margin-top:4px;color:#888;">成交量: ${volume || '-'}</div>
+        `;
       }
     },
-    grid: [
+    dataZoom: [
       {
-        left: '10%',
-        right: '8%',
-        height: '50%'
+        type: 'inside', 
+        xAxisIndex: [0, 1],
+        zoomLock: true, 
+        startValue: dates.length > 50 ? dates.length - 50 : 0,
+        endValue: dates.length > 0 ? dates.length - 1 : 0
       },
       {
-        left: '10%',
-        right: '8%',
-        top: '70%',
-        height: '16%'
+        type: 'slider', 
+        xAxisIndex: [0, 1],
+        show: true,
+        height: 6, 
+        bottom: 8,
+        borderColor: 'transparent',
+        backgroundColor: '#f5f5f5',
+        fillerColor: 'rgba(180, 180, 180, 0.4)', 
+        showDetail: false, 
+        zoomLock: true, 
+        showDataShadow: false, 
+        handleSize: 0, 
+        moveHandleSize: 0, 
+        startValue: dates.length > 50 ? dates.length - 50 : 0,
+        endValue: dates.length > 0 ? dates.length - 1 : 0
+      }
+    ],
+    grid: [
+      {
+        left: 50,
+        right: 15,
+        top: 30,
+        height: '75%', 
+      },
+      {
+        left: 50,
+        right: 15,
+        top: '86%',
+        height: '10%', 
       }
     ],
     xAxis: [
       {
         type: 'category',
         data: dates,
-        scale: true,
-        boundaryGap: false,
-        axisLine: { onZero: false },
-        splitLine: { show: false },
-        splitNumber: 20
+        show: true,
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: {
+          fontSize: 10,
+          color: '#999',
+          margin: 8,
+          interval: 'auto',
+        }
       },
       {
         type: 'category',
         gridIndex: 1,
         data: dates,
-        axisLabel: { show: false }
+        axisLabel: { show: false },
+        axisLine: { show: false },
+        axisTick: { show: false }
       }
     ],
     yAxis: [
       {
         scale: true,
-        splitArea: {
-          show: true
+        splitArea: { show: false },
+        splitLine: { show: false }, 
+        axisLabel: {
+          fontSize: 10,
+          color: '#999',
+          formatter: (val: number) => val.toString()
         }
       },
       {
@@ -155,33 +204,17 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
         splitLine: { show: false }
       }
     ],
-    dataZoom: [
-      {
-        type: 'inside',
-        xAxisIndex: [0, 1],
-        start: 50,
-        end: 100
-      },
-      {
-        show: true,
-        xAxisIndex: [0, 1],
-        type: 'slider',
-        top: '85%',
-        start: 50,
-        end: 100
-      }
-    ],
     series: [
       {
-        name: '日K',
         type: 'candlestick',
         data: values,
         itemStyle: {
-          color: '#ef232a', // Up color
-          color0: '#14b143', // Down color
-          borderColor: '#ef232a',
-          borderColor0: '#14b143'
+          color: '#ff4d4f',      // 阳线 红色
+          color0: '#52c41a',     // 阴线 绿色
+          borderColor: '#ff4d4f',
+          borderColor0: '#52c41a'
         },
+        barWidth: '60%'
       },
       {
         name: '成交量',
@@ -193,15 +226,15 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
             color: (params: any) => {
                 const i = params.dataIndex;
                 const v = values[i];
-                if (!v || v.length < 2) return '#ef232a';
-                return v[1]! > v[0]! ? '#ef232a' : '#14b143';
+                if (!v || v.length < 2) return '#ff4d4f';
+                return v[1]! >= v[0]! ? '#ff4d4f' : '#52c41a';
             }
         }
       }
     ]
   };
 
-  chartInstance?.setOption(option);
+  chartInstance?.setOption(option, true);
 };
 
 watch(
