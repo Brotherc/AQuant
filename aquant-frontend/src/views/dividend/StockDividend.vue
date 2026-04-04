@@ -116,16 +116,16 @@ const columns: TableProps['columns'] = [
   { title: '股票代码', dataIndex: 'stockCode', key: 'stockCode', width: 100 },
   { title: '股票名称', dataIndex: 'stockName', key: 'stockName', width: 120 },
   { title: '最新价', dataIndex: 'latestPrice', key: 'latestPrice', sorter: true, width: 100 },
-  { title: '平均分红', dataIndex: 'avgDividend', key: 'avgDividend', sorter: true, defaultSortOrder: 'descend', width: 120, customRender: ({ text }: any) => (text ? `10派${text}` : '') },
-  { title: '最近一年分红', dataIndex: 'latestYearDividend', key: 'latestYearDividend', sorter: true, width: 120, customRender: ({ text }: any) => (text ? `10派${text}` : '') },
-  { title: '最近一年转股', dataIndex: 'latestYearTransfer', key: 'latestYearTransfer', sorter: true, width: 120, customRender: ({ text }: any) => (text ? `10转${text}` : '') },
-  { title: 'PEG', dataIndex: 'peg', key: 'peg', sorter: true, width: 100 },
+  { title: '平均分红', dataIndex: 'avgDividend', key: 'avgDividend', sorter: true, defaultSortOrder: 'descend', width: 160, customRender: ({ text }: any) => (text ? `10派${text}` : '-') },
+  { title: '最近一年分红', dataIndex: 'latestYearDividend', key: 'latestYearDividend', sorter: true, width: 160, customRender: ({ text }: any) => (text ? `10派${text}` : '-') },
+  { title: '最近一年转股', dataIndex: 'latestYearTransfer', key: 'latestYearTransfer', sorter: true, width: 160, customRender: ({ text }: any) => (text ? `10转${text}` : '-') },
+  { title: 'PEG', dataIndex: 'peg', key: 'peg', sorter: true, width: 100, customRender: ({ text }: any) => (text != null ? text.toFixed(2) : '-') },
   { 
     title: 'PE(TTM) / 行业均值', 
     dataIndex: 'pe', 
     key: 'pe', 
     sorter: true, 
-    width: 150,
+    width: 200,
     customRender: ({ record }: any) => {
       const val = record.pe != null ? record.pe.toFixed(2) : '-';
       const avg = record.peIndustryAvg != null ? record.peIndustryAvg.toFixed(2) : '-';
@@ -137,7 +137,7 @@ const columns: TableProps['columns'] = [
     dataIndex: 'roe', 
     key: 'roe', 
     sorter: true, 
-    width: 180,
+    width: 220,
     customRender: ({ record }: any) => {
       const val = record.roeActual != null ? record.roeActual.toFixed(2) : '-';
       const avg = record.roe3yAvg != null ? record.roe3yAvg.toFixed(2) : '-';
@@ -153,15 +153,15 @@ const detailLoading = ref(false);
 const detailTitle = ref('');
 const detailList = ref<StockDividendDetailVO[]>([]);
 const detailColumns = [
-  { title: '最新公告日', dataIndex: 'latestAnnouncementDate', width: 110 },
-  { title: '分红', dataIndex: 'cashDividendRatio', width: 120, customRender: ({ text }: any) => (text ? `10派${text}` : '') },
-  { title: '送股', dataIndex: 'bonusShareRatio', width: 100, customRender: ({ text }: any) => (text ? `10转${text}` : '') },
-  { title: '转股', dataIndex: 'transferShareRatio', width: 100, customRender: ({ text }: any) => (text ? `10转${text}` : '') },
-  { title: '股息率(%)', dataIndex: 'dividendYield', width: 100, customRender: ({ text }: any) => (text ? (text * 100).toFixed(2) : '') },
-  { title: '股权登记日', dataIndex: 'recordDate', width: 110 },
-  { title: '股权除息日', dataIndex: 'exDividendDate', width: 110 },
-  { title: '方案进度', dataIndex: 'planStatus' },
-  { title: '报告期', dataIndex: 'reportDate', width: 110 },
+  { title: '最新公告日', dataIndex: 'latestAnnouncementDate', width: 110, customRender: ({ text }: any) => (text || '-') },
+  { title: '分红', dataIndex: 'cashDividendRatio', width: 120, customRender: ({ text }: any) => (text ? `10派${text}` : '-') },
+  { title: '送股', dataIndex: 'bonusShareRatio', width: 100, customRender: ({ text }: any) => (text ? `10转${text}` : '-') },
+  { title: '转股', dataIndex: 'transferShareRatio', width: 100, customRender: ({ text }: any) => (text ? `10转${text}` : '-') },
+  { title: '股息率(%)', dataIndex: 'dividendYield', width: 100, customRender: ({ text }: any) => (text ? (text * 100).toFixed(2) : '-') },
+  { title: '股权登记日', dataIndex: 'recordDate', width: 110, customRender: ({ text }: any) => (text || '-') },
+  { title: '股权除息日', dataIndex: 'exDividendDate', width: 110, customRender: ({ text }: any) => (text || '-') },
+  { title: '方案进度', dataIndex: 'planStatus', width: 150, customRender: ({ text }: any) => (text || '-') },
+  { title: '报告期', dataIndex: 'reportDate', width: 110, customRender: ({ text }: any) => (text || '-') },
 ];
 
 const fetchData = async () => {
