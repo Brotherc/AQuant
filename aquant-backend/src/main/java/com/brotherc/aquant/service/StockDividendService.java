@@ -263,18 +263,26 @@ public class StockDividendService {
         // 默认排序（兜底）
         return result != null ? result
                 : Comparator.comparing(
-                        StockDividendStatVO::getLatestYearDividend,
-                        Comparator.nullsLast(BigDecimal::compareTo)).reversed();
+                StockDividendStatVO::getLatestYearDividend,
+                Comparator.nullsLast(BigDecimal::compareTo)).reversed();
     }
 
     public List<StockDividendDetailVO> getDetailByCode(StockDividendDetailReqVO reqVO) {
         List<StockDividend> list = stockDividendRepository
                 .findByStockCodeOrderByLatestAnnouncementDateDesc(reqVO.getStockCode());
-        return list.stream().map(o -> {
-            StockDividendDetailVO stockDividendDetailVO = new StockDividendDetailVO();
-            BeanUtils.copyProperties(o, stockDividendDetailVO);
-            return stockDividendDetailVO;
-        }).toList();
+        return list.stream()
+                .sorted(
+                        Comparator.comparing(StockDividend::getLatestAnnouncementDate,
+                                        Comparator.nullsLast(Comparator.reverseOrder()))
+                                .thenComparing(StockDividend::getReportDate,
+                                        Comparator.nullsLast(Comparator.reverseOrder()))
+                )
+                .map(o -> {
+                    StockDividendDetailVO vo = new StockDividendDetailVO();
+                    BeanUtils.copyProperties(o, vo);
+                    return vo;
+                })
+                .toList();
     }
 
 }
