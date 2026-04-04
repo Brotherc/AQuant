@@ -25,9 +25,23 @@
     <!-- 自选股内容区 -->
     <div class="watchlist-content" v-if="activeGroupId">
     
-      <!-- 轻量级排序操作带 -->
+      <!-- 轻量级排序与搜索操作带 -->
       <div class="control-bar">
-        <span class="ctrl-label">排序：</span>
+        <div class="search-box">
+          <a-input 
+            v-model:value="searchQuery" 
+            placeholder="输入名称或代码搜索" 
+            allowClear 
+            size="small"
+            style="width: 200px; border-radius: 4px;"
+          >
+            <template #prefix>
+              <search-outlined style="color: rgba(0, 0, 0, 0.45)" />
+            </template>
+          </a-input>
+        </div>
+        <div class="sort-options">
+          <span class="ctrl-label">排序：</span>
         <span class="ctrl-item" :class="{ active: sortKey === 'default' }" @click="handleSortChange('default')">默认</span>
         <span class="ctrl-item" :class="{ active: sortKey === 'latestPrice' }" @click="handleSortChange('latestPrice')">
           最新价 <caret-up-outlined v-if="sortKey === 'latestPrice' && sortOrder === 'asc'"/><caret-down-outlined v-else />
@@ -41,6 +55,7 @@
         <span class="ctrl-item" :class="{ active: sortKey === 'roe' }" @click="handleSortChange('roe')">
           ROE <caret-up-outlined v-if="sortKey === 'roe' && sortOrder === 'asc'"/><caret-down-outlined v-else />
         </span>
+        </div>
       </div>
 
       <a-spin :spinning="loading">
@@ -144,7 +159,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import { DeleteOutlined, CloseOutlined, PlusOutlined, CaretUpOutlined, CaretDownOutlined } from '@ant-design/icons-vue';
+import { DeleteOutlined, CloseOutlined, PlusOutlined, CaretUpOutlined, CaretDownOutlined, SearchOutlined } from '@ant-design/icons-vue';
 import MiniKlineChart from './components/MiniKlineChart.vue';
 import { 
   getWatchlistGroups, 
@@ -169,7 +184,8 @@ const groupModalVisible = ref(false);
 const groupLoading = ref(false);
 const groupForm = reactive({ name: '' });
 
-// 排序状态控制
+// 搜索与排序状态控制
+const searchQuery = ref<string>('');
 const sortKey = ref<string>('default');
 const sortOrder = ref<'asc' | 'desc'>('desc');
 
@@ -179,19 +195,29 @@ const handleSortChange = (key: string) => {
     return;
   }
   if (sortKey.value === key) {
-    // 再次点击时反转排序
     sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
   } else {
-    // 首次点击默认降序（最高价、涨得最多最前）
     sortKey.value = key;
     sortOrder.value = 'desc';
   }
 };
 
 const sortedStocks = computed(() => {
-  if (sortKey.value === 'default') return stocks.value;
+  let result = stocks.value;
   
-  return [...stocks.value].sort((a, b) => {
+  // 1. 本地实时过滤
+  if (searchQuery.value) {
+    const q = searchQuery.value.trim().toLowerCase();
+    result = result.filter(stock => 
+      (stock.stockName && stock.stockName.toLowerCase().includes(q)) || 
+      (stock.stockCode && stock.stockCode.toLowerCase().includes(q))
+    );
+  }
+
+  // 2. 本地实时排序
+  if (sortKey.value === 'default') return result;
+  
+  return [...result].sort((a, b) => {
     let valA = (a as any)[sortKey.value];
     let valB = (b as any)[sortKey.value];
     
@@ -614,14 +640,24 @@ onMounted(() => {
   font-weight: 500;
 }
 
-/* 排序控制器样式 */
+/* 排序与搜索控制器样式 */
 .control-bar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
   font-size: 13px;
   color: #888;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+}
+
+.sort-options {
+  display: flex;
+  align-items: center;
 }
 
 .control-bar .ctrl-label {
