@@ -115,7 +115,7 @@ public class StockUtils {
             return "sh" + stockCode;
         } else if (stockCode.startsWith("0") || stockCode.startsWith("3")) {
             return "sz" + stockCode;
-        } else if (stockCode.startsWith("8") || stockCode.startsWith("4")) {
+        } else if (stockCode.startsWith("8") || stockCode.startsWith("4") || stockCode.startsWith("9")) {
             return "bj" + stockCode;
         }
         
