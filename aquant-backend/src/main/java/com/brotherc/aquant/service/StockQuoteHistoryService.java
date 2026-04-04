@@ -5,6 +5,7 @@ import com.brotherc.aquant.model.dto.akshare.StockZhADaily;
 import com.brotherc.aquant.model.dto.akshare.StockZhASpot;
 import com.brotherc.aquant.repository.StockQuoteHistoryRepository;
 import com.brotherc.aquant.utils.StockHelper;
+import com.brotherc.aquant.utils.StockUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -106,6 +107,7 @@ public class StockQuoteHistoryService {
      * @return 历史数据列表
      */
     public List<StockQuoteHistory> getHistory(String code, String frequency) {
+        code = StockUtils.wrapExchangePrefix(code);
         List<StockQuoteHistory> dailyList = stockQuoteHistoryRepository.findByCodeOrderByTradeDateAsc(code);
 
         if ("1d".equals(frequency) || CollectionUtils.isEmpty(dailyList)) {

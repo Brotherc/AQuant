@@ -101,5 +101,25 @@ public class StockUtils {
 
         return date.equals(yesterday);
     }
+    public static String wrapExchangePrefix(String stockCode) {
+        if (stockCode == null || stockCode.trim().isEmpty()) {
+            return stockCode;
+        }
+        
+        String regex = "^(sh|sz|bj).*";
+        if (stockCode.matches(regex)) {
+            return stockCode;
+        }
+
+        if (stockCode.startsWith("6")) {
+            return "sh" + stockCode;
+        } else if (stockCode.startsWith("0") || stockCode.startsWith("3")) {
+            return "sz" + stockCode;
+        } else if (stockCode.startsWith("8") || stockCode.startsWith("4")) {
+            return "bj" + stockCode;
+        }
+        
+        return stockCode;
+    }
 
 }

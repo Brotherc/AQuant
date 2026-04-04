@@ -12,6 +12,10 @@ import com.brotherc.aquant.model.vo.watchlist.WatchlistStockVO;
 import com.brotherc.aquant.repository.StockQuoteRepository;
 import com.brotherc.aquant.repository.StockWatchlistGroupRepository;
 import com.brotherc.aquant.repository.StockWatchlistStockRepository;
+import com.brotherc.aquant.repository.StockValuationMetricsRepository;
+import com.brotherc.aquant.repository.StockDupontAnalysisRepository;
+import com.brotherc.aquant.entity.StockValuationMetrics;
+import com.brotherc.aquant.entity.StockDupontAnalysis;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +34,8 @@ public class StockWatchlistService {
     private final StockWatchlistGroupRepository groupRepository;
     private final StockWatchlistStockRepository stockRepository;
     private final StockQuoteRepository quoteRepository;
+    private final StockValuationMetricsRepository valuationMetricsRepository;
+    private final StockDupontAnalysisRepository dupontAnalysisRepository;
 
     public List<WatchlistGroupVO> getAllGroups() {
         List<StockWatchlistGroup> groups = groupRepository.findAllByOrderBySortNoAsc();
@@ -55,7 +61,7 @@ public class StockWatchlistService {
         List<String> codes6 = watchlistStocks.stream().map(StockWatchlistStock::getStockCode)
                 .collect(Collectors.toList());
 
-        // 智能补全并批量查询
+        // 智能补全并批量查询核心行情
         List<String> candidates = new ArrayList<>();
         for (String c6 : codes6) {
             candidates.add("sh" + c6);
@@ -75,16 +81,46 @@ public class StockWatchlistService {
                     return c.length() > 6 ? c.substring(c.length() - 6) : c;
                 }, q -> q, (a, b) -> a));
 
+        // 批量查询估值与杜邦数据
+        List<StockValuationMetrics> valuationList = valuationMetricsRepository.findByStockCodeIn(candidates);
+        Map<String, StockValuationMetrics> valuationMap = valuationList.stream()
+                .collect(Collectors.toMap(v -> {
+                    String c = v.getStockCode();
+                    if(c == null) return "";
+                    return c.length() > 6 ? c.substring(c.length() - 6) : c;
+                }, v -> v, (a, b) -> a));
+
+        List<StockDupontAnalysis> dupontList = dupontAnalysisRepository.findByStockCodeIn(candidates);
+        Map<String, StockDupontAnalysis> dupontMap = dupontList.stream()
+                .collect(Collectors.toMap(d -> {
+                    String c = d.getStockCode();
+                    if(c == null) return "";
+                    return c.length() > 6 ? c.substring(c.length() - 6) : c;
+                }, d -> d, (a, b) -> a));
+
         return watchlistStocks.stream().map(ws -> {
             WatchlistStockVO vo = new WatchlistStockVO();
             vo.setStockCode(ws.getStockCode());
             vo.setSortNo(ws.getSortNo());
+            
             StockQuote quote = quoteMap.get(ws.getStockCode());
             if (quote != null) {
                 vo.setStockName(quote.getName());
                 vo.setLatestPrice(quote.getLatestPrice());
                 vo.setChangePercent(quote.getChangePercent());
             }
+
+            StockValuationMetrics valuation = valuationMap.get(ws.getStockCode());
+            if (valuation != null) {
+                vo.setPe(valuation.getPeTtm());
+                vo.setPeg(valuation.getPeg());
+            }
+
+            StockDupontAnalysis dupont = dupontMap.get(ws.getStockCode());
+            if (dupont != null) {
+                vo.setRoe(dupont.getRoe3yAvg()); 
+            }
+            
             return vo;
         }).toList();
     }

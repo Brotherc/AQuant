@@ -21,6 +21,15 @@ public class WatchlistStockVO {
     @Schema(description = "涨跌幅(%)")
     private BigDecimal changePercent;
 
+    @Schema(description = "市盈率(PE_TTM)")
+    private BigDecimal pe;
+
+    @Schema(description = "PEG(估值指标)")
+    private BigDecimal peg;
+
+    @Schema(description = "净资产收益率(ROE_3年平均)")
+    private BigDecimal roe;
+
     @Schema(description = "排序号")
     private Integer sortNo;
 

@@ -1,47 +1,111 @@
 <template>
   <div class="watchlist-container">
-    <a-tabs v-model:activeKey="activeGroupId" @change="handleTabChange" type="editable-card" @edit="onTabEdit" hide-add>
-      <template #tabBarExtraContent>
-        <a-button type="primary" @click="showAddGroupModal">新增分组</a-button>
-      </template>
-        <a-tab-pane v-for="group in groups" :key="group.id" :tab="group.name" :closable="true">
-          <div style="margin-bottom: 16px; display: flex; gap: 8px">
-            <a-input-search
-              v-model:value="newStockCode"
-              placeholder="输入股票代码"
-              enter-button="添加股票"
-              @search="handleAddStock"
-              style="width: 250px"
-              :loading="addLoading"
-            />
-          </div>
+    <!-- 分组导航标签 -->
+    <div class="group-tags-header">
+      <div class="group-label">自选分组：</div>
+      <div 
+        v-for="group in groups" 
+        :key="group.id" 
+        class="custom-group-tag"
+        :class="{ active: activeGroupId === group.id }"
+        @click="handleTabChange(group.id)"
+      >
+        <span class="tag-name">{{ group.name }}</span>
+        <close-outlined 
+          v-if="activeGroupId === group.id" 
+          class="delete-group-icon"
+          @click.stop="onDeleteGroup(group.id)" 
+        />
+      </div>
+      <div class="custom-group-tag add-btn" @click="showAddGroupModal">
+        ＋
+      </div>
+    </div>
 
-          <a-table
-            :columns="columns"
-            :data-source="stocks"
-            :loading="loading"
-            row-key="stockCode"
-            :pagination="false"
-            :customRow="customRow"
-          >
-            <template #bodyCell="{ column, record, text }">
-              <template v-if="column.dataIndex === 'changePercent'">
-                <span :style="{ color: text > 0 ? '#ff4d4f' : text < 0 ? '#52c41a' : '#000' }">
-                  {{ text > 0 ? '+' : '' }}{{ text != null ? text.toFixed(2) + '%' : '-' }}
-                </span>
-              </template>
-              <template v-else-if="column.dataIndex === 'latestPrice'">
-                {{ text != null ? text.toFixed(2) : '-' }}
-              </template>
-              <template v-if="column.key === 'operation'">
-                <a-popconfirm title="确定移除该股票吗？" @confirm="handleRemoveStock(record.stockCode)">
-                  <a style="color: #ff4d4f">移除</a>
-                </a-popconfirm>
-              </template>
-            </template>
-          </a-table>
-        </a-tab-pane>
-      </a-tabs>
+    <!-- 自选股内容区 -->
+    <div class="watchlist-content" v-if="activeGroupId">
+
+          <a-spin :spinning="loading">
+            <a-row :gutter="[16, 16]" class="card-grid">
+              <a-col 
+                :xs="24" :sm="24" :md="12" :lg="8" :xl="6"
+                v-for="stock in stocks" 
+                :key="stock.stockCode"
+              >
+                <div 
+                  class="draggable-wrapper"
+                  draggable="true"
+                  @dragstart="onDragStart(stock, $event)"
+                  @dragover="onDragOver"
+                  @drop="onDrop(stock, $event)"
+                >
+                  <a-card hoverable class="stock-card" size="small">
+                    <!-- 头部：代码与名称，移除操作 -->
+                    <div class="card-header">
+                      <div class="stock-info">
+                        <span class="stock-name">{{ stock.stockName }}</span>
+                        <span class="stock-code">{{ stock.stockCode }}</span>
+                      </div>
+                      <a-popconfirm title="确定移除该股票吗？" @confirm="handleRemoveStock(stock.stockCode)">
+                        <delete-outlined class="delete-icon" />
+                      </a-popconfirm>
+                    </div>
+                    
+                    <!-- 行情数据 -->
+                    <div class="quote-info" :class="getPriceColorClass(stock.changePercent)">
+                      <div class="latest-price">{{ stock.latestPrice != null ? stock.latestPrice.toFixed(2) : '-' }}</div>
+                      <div class="change-percent">
+                        {{ stock.changePercent > 0 ? '+' : '' }}{{ stock.changePercent != null ? stock.changePercent.toFixed(2) + '%' : '-' }}
+                      </div>
+                    </div>
+                    
+                    <!-- 迷你K线 -->
+                    <div class="kline-box">
+                      <MiniKlineChart :stockCode="stock.stockCode" />
+                    </div>
+
+                    <!-- 基本面数据 -->
+                    <a-divider style="margin: 8px 0" />
+                    <div class="fundamentals">
+                      <div class="fund-item">
+                        <span class="label">PE</span>
+                        <span class="val">{{ stock.pe != null ? stock.pe.toFixed(2) : '-' }}</span>
+                      </div>
+                      <div class="fund-item">
+                        <span class="label">PEG</span>
+                        <span class="val">{{ stock.peg != null ? stock.peg.toFixed(2) : '-' }}</span>
+                      </div>
+                      <div class="fund-item">
+                        <span class="label">ROE</span>
+                        <span class="val">{{ stock.roe != null ? stock.roe.toFixed(2) + '%' : '-' }}</span>
+                      </div>
+                    </div>
+                  </a-card>
+                </div>
+              </a-col>
+              <!-- 添加股票的常驻卡片 -->
+              <a-col :xs="24" :sm="24" :md="12" :lg="8" :xl="6">
+                <a-card hoverable class="add-stock-card" size="small" @click="showAddStockModal">
+                  <plus-outlined class="add-icon" />
+                  <div class="add-text">添加股票</div>
+                </a-card>
+              </a-col>
+            </a-row>
+          </a-spin>
+    </div>
+
+    <!-- 新增股票 Modal -->
+    <a-modal v-model:visible="addStockModalVisible" title="添加自选股票" @ok="handleAddStock" :confirmLoading="addLoading">
+      <a-form layout="vertical">
+        <a-form-item label="股票代码" required>
+          <a-input 
+            v-model:value="newStockCode" 
+            placeholder="请输入 6 位股票代码，例如 600519" 
+            @pressEnter="handleAddStock" 
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
 
     <!-- 新增分组 Modal -->
     <a-modal v-model:visible="groupModalVisible" title="新增自选分组" @ok="handleCreateGroup" :confirmLoading="groupLoading">
@@ -57,6 +121,8 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { message, Modal } from 'ant-design-vue';
+import { DeleteOutlined, CloseOutlined, PlusOutlined } from '@ant-design/icons-vue';
+import MiniKlineChart from './components/MiniKlineChart.vue';
 import { 
   getWatchlistGroups, 
   getWatchlistStocks, 
@@ -81,13 +147,10 @@ const groupModalVisible = ref(false);
 const groupLoading = ref(false);
 const groupForm = reactive({ name: '' });
 
-const columns = [
-  { title: '股票代码', dataIndex: 'stockCode', key: 'stockCode' },
-  { title: '股票名称', dataIndex: 'stockName', key: 'stockName' },
-  { title: '最新价', dataIndex: 'latestPrice', key: 'latestPrice' },
-  { title: '涨跌幅', dataIndex: 'changePercent', key: 'changePercent' },
-  { title: '操作', key: 'operation', width: 100 },
-];
+const getPriceColorClass = (changePercent: number | undefined | null) => {
+  if (changePercent == null) return 'neutral';
+  return changePercent > 0 ? 'up' : changePercent < 0 ? 'down' : 'neutral';
+};
 
 const fetchGroups = async () => {
   try {
@@ -122,34 +185,33 @@ const fetchStocks = async (groupId: number) => {
 };
 
 const handleTabChange = (key: any) => {
+  activeGroupId.value = key;
   fetchStocks(key);
 };
 
-const onTabEdit = (targetKey: any, action: string) => {
-  if (action === 'remove') {
-    Modal.confirm({
-      title: '确定删除该分组吗？',
-      content: '删除分组将同步移除该分组下的所有自选股票。',
-      onOk: async () => {
-        try {
-          const res = await deleteWatchlistGroup(targetKey);
-          if (res.data.success) {
-            message.success('删除成功');
-            fetchGroups().then(() => {
-              if (activeGroupId.value === targetKey) {
-                const firstGroup = groups.value && groups.value.length > 0 ? groups.value[0] : undefined;
-                activeGroupId.value = firstGroup ? firstGroup.id : undefined;
-                if (activeGroupId.value) fetchStocks(activeGroupId.value);
-                else stocks.value = [];
-              }
-            });
-          }
-        } catch (error) {
-          console.error(error);
+const onDeleteGroup = (targetKey: number) => {
+  Modal.confirm({
+    title: '确定删除该分组吗？',
+    content: '删除分组将同步移除该分组下的所有自选股票。',
+    onOk: async () => {
+      try {
+        const res = await deleteWatchlistGroup(targetKey);
+        if (res.data.success) {
+          message.success('删除成功');
+          fetchGroups().then(() => {
+            if (activeGroupId.value === targetKey) {
+              const firstGroup = groups.value && groups.value.length > 0 ? groups.value[0] : undefined;
+              activeGroupId.value = firstGroup ? firstGroup.id : undefined;
+              if (activeGroupId.value) fetchStocks(activeGroupId.value);
+              else stocks.value = [];
+            }
+          });
         }
-      },
-    });
-  }
+      } catch (error) {
+        console.error(error);
+      }
+    },
+  });
 };
 
 const showAddGroupModal = () => {
@@ -179,6 +241,17 @@ const handleCreateGroup = async () => {
   }
 };
 
+const addStockModalVisible = ref(false);
+
+const showAddStockModal = () => {
+  if (!activeGroupId.value) {
+    message.warning('请先创建并选择一个分组');
+    return;
+  }
+  newStockCode.value = '';
+  addStockModalVisible.value = true;
+};
+
 const handleAddStock = async () => {
   if (!activeGroupId.value) {
     message.warning('请先创建分组');
@@ -196,6 +269,7 @@ const handleAddStock = async () => {
     });
     if (res.data.success) {
       message.success('添加成功');
+      addStockModalVisible.value = false;
       newStockCode.value = '';
       fetchStocks(activeGroupId.value);
     }
@@ -222,50 +296,46 @@ const handleRemoveStock = async (stockCode: string) => {
 // 拖拽排序逻辑
 const draggedItem = ref<WatchlistStockVO | null>(null);
 
-const customRow = (record: WatchlistStockVO) => {
-  return {
-    draggable: true,
-    style: { cursor: 'move' },
-    onDragstart: (event: DragEvent) => {
-      draggedItem.value = record;
-      if (event.dataTransfer) {
-        event.dataTransfer.effectAllowed = 'move';
-      }
-    },
-    onDragover: (event: DragEvent) => {
-      event.preventDefault();
-    },
-    onDrop: async (event: DragEvent) => {
-      event.preventDefault();
-      if (!draggedItem.value || draggedItem.value === record) return;
+const onDragStart = (stock: WatchlistStockVO, event: DragEvent) => {
+  draggedItem.value = stock;
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move';
+  }
+};
 
-      const oldIndex = stocks.value.findIndex(s => s.stockCode === draggedItem.value?.stockCode);
-      const newIndex = stocks.value.findIndex(s => s.stockCode === record.stockCode);
+const onDragOver = (event: DragEvent) => {
+  event.preventDefault();
+};
 
-      if (oldIndex !== -1 && newIndex !== -1) {
-        const newStocks = [...stocks.value];
-        const [removed] = newStocks.splice(oldIndex, 1);
-        if (removed) {
-          newStocks.splice(newIndex, 0, removed);
-          stocks.value = newStocks;
+const onDrop = async (targetStock: WatchlistStockVO, event: DragEvent) => {
+  event.preventDefault();
+  if (!draggedItem.value || draggedItem.value === targetStock) return;
 
-          // 同步到后端
-          if (activeGroupId.value) {
-            try {
-              await reorderWatchlistStocks({
-                groupId: activeGroupId.value,
-                stockCodes: stocks.value.map(s => s.stockCode)
-              });
-              message.success('排序已更新');
-            } catch (e) {
-              console.error(e);
-              message.error('排序更新失败');
-            }
-          }
+  const oldIndex = stocks.value.findIndex(s => s.stockCode === draggedItem.value?.stockCode);
+  const newIndex = stocks.value.findIndex(s => s.stockCode === targetStock.stockCode);
+
+  if (oldIndex !== -1 && newIndex !== -1) {
+    const newStocks = [...stocks.value];
+    const [removed] = newStocks.splice(oldIndex, 1);
+    if (removed) {
+      newStocks.splice(newIndex, 0, removed);
+      stocks.value = newStocks;
+
+      // 同步到后端
+      if (activeGroupId.value) {
+        try {
+          await reorderWatchlistStocks({
+            groupId: activeGroupId.value,
+            stockCodes: stocks.value.map(s => s.stockCode)
+          });
+          message.success('排序已更新');
+        } catch (e) {
+          console.error(e);
+          message.error('排序更新失败');
         }
       }
     }
-  };
+  }
 };
 
 onMounted(() => {
@@ -275,6 +345,217 @@ onMounted(() => {
 
 <style scoped>
 .watchlist-container {
-  padding: 0;
+  padding: 16px;
+}
+
+.group-tags-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 24px;
+  gap: 8px;
+}
+
+.group-label {
+  font-size: 16px;
+  font-weight: 500;
+  color: #111;
+  margin-right: 8px;
+}
+
+.custom-group-tag {
+  font-size: 13px;
+  padding: 4px 12px;
+  cursor: pointer;
+  border-radius: 6px;
+  border: 1px solid #d9d9d9;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+  color: #111;
+  background-color: #fff;
+  user-select: none;
+}
+
+.custom-group-tag:hover {
+  background-color: #fafafa;
+  border-color: #1677ff;
+  color: #1677ff;
+}
+
+.custom-group-tag.active {
+  background-color: #fff;
+  border-color: #1677ff;
+  color: #1677ff;
+}
+
+.custom-group-tag.active:hover {
+  background-color: #f5f5f5;
+  border-color: #4096ff;
+  color: #4096ff;
+}
+
+.delete-group-icon {
+  margin-left: 6px;
+  font-size: 12px;
+  color: inherit;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+  cursor: pointer;
+}
+
+.delete-group-icon:hover {
+  opacity: 1;
+}
+
+.custom-group-tag.add-btn {
+  color: #888;
+  padding: 4px 10px;
+  border: 1px dashed #d9d9d9;
+}
+
+.custom-group-tag.add-btn:hover {
+  color: #1677ff;
+  border-color: #1677ff;
+  background-color: #fafafa;
+}
+
+.draggable-wrapper {
+  cursor: move;
+  height: 100%;
+}
+
+.stock-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.add-stock-card {
+  height: 100%;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border: 1px dashed #d9d9d9 !important;
+  background-color: transparent;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.add-stock-card:hover {
+  border-color: #1677ff !important;
+  background-color: #f0f5ff;
+}
+
+.add-stock-card:hover .add-icon,
+.add-stock-card:hover .add-text {
+  color: #1677ff;
+}
+
+.add-icon {
+  font-size: 32px;
+  color: #bfbfbf;
+  margin-bottom: 12px;
+  transition: all 0.3s;
+}
+
+.add-text {
+  font-size: 15px;
+  color: #888;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.stock-info {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.stock-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.stock-code {
+  font-size: 12px;
+  color: #888;
+}
+
+.delete-icon {
+  color: #ff4d4f;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.delete-icon:hover {
+  opacity: 1;
+}
+
+.quote-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.latest-price {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.change-percent {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.up {
+  color: #ff4d4f;
+}
+
+.down {
+  color: #52c41a;
+}
+
+.neutral {
+  color: #333;
+}
+
+.kline-box {
+  flex-grow: 1;
+  min-height: 100px;
+}
+
+.fundamentals {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.fund-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.fund-item .label {
+  color: #888;
+  margin-bottom: 2px;
+}
+
+.fund-item .val {
+  color: #333;
+  font-weight: 500;
 }
 </style>

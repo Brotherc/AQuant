@@ -7,6 +7,9 @@ export interface WatchlistStockVO {
     latestPrice: number;
     changePercent: number;
     sortNo: number;
+    pe?: number;
+    peg?: number;
+    roe?: number;
 }
 
 export interface WatchlistGroupVO {
