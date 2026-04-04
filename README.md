@@ -66,9 +66,18 @@ git clone <repository-url>
 cd AQuant
 ```
 
-### 2. 后端启动
-- 进入 `aquant-backend` 目录。
-- 在 `src/main/resources/application.properties` 中配置您的 MySQL 连接信息。
+### 2. 数据服务器启动 (Python)
+由于本项目依赖 AkShare 获取实时金融数据，需先启动 `aktools` 作为本地数据服务端：
+- 确保已安装 Python 3.x。
+- 执行以下命令：
+```bash
+pip install aktools
+python3 -m aktools
+```
+- 服务默认运行在: `http://127.0.0.1:8080`
+
+### 3. 后端启动 (Java)
+- 在 `src/main/resources/application.yaml` 中配置您的 MySQL 连接信息。
 - 执行本地构建并运行：
 ```bash
 mvn clean install
@@ -77,7 +86,7 @@ mvn spring-boot:run
 - 后端服务默认运行在: `http://localhost:8084`
 - API 文档访问: `http://localhost:8084/doc.html`
 
-### 3. 前端启动
+### 4. 前端启动
 - 进入 `aquant-frontend` 目录。
 - 安装依赖并启动开发服务器：
 ```bash
