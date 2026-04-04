@@ -1,5 +1,16 @@
 <template>
-  <div class="mini-kline-container" ref="chartContainer"></div>
+  <div class="mini-kline-wrapper">
+    <div class="kline-header">
+      <a-radio-group v-model:value="frequency" size="small" class="freq-selector">
+        <a-radio-button value="1d">日</a-radio-button>
+        <a-radio-button value="1w">周</a-radio-button>
+        <a-radio-button value="1M">月</a-radio-button>
+        <a-radio-button value="1Q">季</a-radio-button>
+        <a-radio-button value="1Y">年</a-radio-button>
+      </a-radio-group>
+    </div>
+    <div class="mini-kline-container" ref="chartContainer"></div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -12,6 +23,7 @@ const props = defineProps<{
 }>();
 
 const chartContainer = ref<HTMLElement | null>(null);
+const frequency = ref<'1d' | '1w' | '1M' | '1Q' | '1Y'>('1d');
 let chartInstance: echarts.ECharts | null = null;
 let resizeObserver: ResizeObserver | null = null;
 
@@ -34,12 +46,12 @@ const fetchHistory = async () => {
   try {
     const res = await getStockHistory({
       code: props.stockCode,
-      frequency: '1d', // 默认日K
+      frequency: frequency.value,
     });
     
     const data = res.data.data;
     if (data && data.length > 0) {
-      // 为了迷你图效果，只截取最近30天的交易日
+      // 为了迷你图效果，截取最近30根K线
       const recentData = data.slice(-30);
       renderChart(recentData);
     }
@@ -97,7 +109,7 @@ const renderChart = (data: StockQuoteHistory[]) => {
   chartInstance?.setOption(option);
 };
 
-watch(() => props.stockCode, () => {
+watch([() => props.stockCode, frequency], () => {
     fetchHistory();
 });
 
@@ -117,8 +129,24 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.mini-kline-wrapper {
+  width: 100%;
+}
+
+.kline-header {
+  display: flex;
+  justify-content: flex-end;
+  height: 20px;
+  margin-bottom: 2px;
+}
+
+.freq-selector {
+  transform: scale(0.75); /* 缩小比例以适应迷你卡片 */
+  transform-origin: right top;
+}
+
 .mini-kline-container {
   width: 100%;
-  height: 120px;
+  height: 98px;
 }
 </style>
