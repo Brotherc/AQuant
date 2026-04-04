@@ -32,13 +32,7 @@
                 v-for="stock in stocks" 
                 :key="stock.stockCode"
               >
-                <div 
-                  class="draggable-wrapper"
-                  draggable="true"
-                  @dragstart="onDragStart(stock, $event)"
-                  @dragover="onDragOver"
-                  @drop="onDrop(stock, $event)"
-                >
+                <div class="draggable-wrapper">
                   <a-card hoverable class="stock-card" size="small">
                     <!-- 头部：代码与名称，移除操作 -->
                     <div class="card-header">
@@ -130,7 +124,6 @@ import {
   deleteWatchlistGroup, 
   addStockToWatchlist, 
   removeStockFromWatchlist,
-  reorderWatchlistStocks,
   type WatchlistGroupVO,
   type WatchlistStockVO
 } from '@/api/watchlist';
@@ -293,50 +286,6 @@ const handleRemoveStock = async (stockCode: string) => {
   }
 };
 
-// 拖拽排序逻辑
-const draggedItem = ref<WatchlistStockVO | null>(null);
-
-const onDragStart = (stock: WatchlistStockVO, event: DragEvent) => {
-  draggedItem.value = stock;
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = 'move';
-  }
-};
-
-const onDragOver = (event: DragEvent) => {
-  event.preventDefault();
-};
-
-const onDrop = async (targetStock: WatchlistStockVO, event: DragEvent) => {
-  event.preventDefault();
-  if (!draggedItem.value || draggedItem.value === targetStock) return;
-
-  const oldIndex = stocks.value.findIndex(s => s.stockCode === draggedItem.value?.stockCode);
-  const newIndex = stocks.value.findIndex(s => s.stockCode === targetStock.stockCode);
-
-  if (oldIndex !== -1 && newIndex !== -1) {
-    const newStocks = [...stocks.value];
-    const [removed] = newStocks.splice(oldIndex, 1);
-    if (removed) {
-      newStocks.splice(newIndex, 0, removed);
-      stocks.value = newStocks;
-
-      // 同步到后端
-      if (activeGroupId.value) {
-        try {
-          await reorderWatchlistStocks({
-            groupId: activeGroupId.value,
-            stockCodes: stocks.value.map(s => s.stockCode)
-          });
-          message.success('排序已更新');
-        } catch (e) {
-          console.error(e);
-          message.error('排序更新失败');
-        }
-      }
-    }
-  }
-};
 
 onMounted(() => {
   fetchGroups();
