@@ -103,9 +103,9 @@ const currentBoardName = ref('');
 
 // 列定义
 const columns: TableProps['columns'] = [
-  { title: '序号', dataIndex: 'seqNo', fixed: 'left', sorter: true, showSorterTooltip: false, width: 80, defaultSortOrder: 'ascend' },
+  // 隐藏序号列 { title: '序号', dataIndex: 'seqNo', fixed: 'left', sorter: true, showSorterTooltip: false, width: 80, defaultSortOrder: 'ascend' },
   { title: '板块名称', dataIndex: 'sectorName', fixed: 'left', width: 120 },
-  { title: '涨跌幅(%)', dataIndex: 'changePercent', sorter: true, showSorterTooltip: false, width: 100 },
+  { title: '涨跌幅(%)', dataIndex: 'changePercent', sorter: true, showSorterTooltip: false, width: 150 },
   { title: '总成交量', dataIndex: 'totalVolume', width: 120 },
   { title: '总成交额', dataIndex: 'totalAmount', width: 120 },
   { title: '净流入', dataIndex: 'netInflow', width: 120 },
