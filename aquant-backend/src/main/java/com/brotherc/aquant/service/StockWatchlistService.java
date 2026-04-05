@@ -7,6 +7,7 @@ import com.brotherc.aquant.exception.BusinessException;
 import com.brotherc.aquant.exception.ExceptionEnum;
 import com.brotherc.aquant.model.vo.watchlist.WatchlistGroupReqVO;
 import com.brotherc.aquant.model.vo.watchlist.WatchlistGroupVO;
+import com.brotherc.aquant.model.vo.watchlist.WatchlistGroupUpdateReqVO;
 import com.brotherc.aquant.model.vo.watchlist.WatchlistStockReqVO;
 import com.brotherc.aquant.model.vo.watchlist.WatchlistStockVO;
 import com.brotherc.aquant.model.vo.watchlist.WatchlistStockMoveGroupReqVO;
@@ -177,6 +178,20 @@ public class StockWatchlistService {
         group.setSortNo(maxSort + 1);
 
         return groupRepository.save(group);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void updateGroup(WatchlistGroupUpdateReqVO reqVO) {
+        StockWatchlistGroup group = groupRepository.findById(reqVO.getId())
+                .orElseThrow(() -> new BusinessException(ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND));
+
+        if (!group.getName().equals(reqVO.getName()) && groupRepository.existsByName(reqVO.getName())) {
+            throw new BusinessException(ExceptionEnum.WATCHLIST_GROUP_NAME_DUPLICATE);
+        }
+
+        group.setName(reqVO.getName());
+        group.setUpdatedAt(LocalDateTime.now());
+        groupRepository.save(group);
     }
 
     @Transactional(rollbackFor = Exception.class)

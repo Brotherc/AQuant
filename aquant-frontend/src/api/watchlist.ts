@@ -56,6 +56,15 @@ export const createWatchlistGroup = (data: WatchlistGroupReqVO) => {
     return request.post<ResponseDTO<void>>('/stockWatchlist/group/create', data);
 };
 
+export interface WatchlistGroupUpdateReqVO {
+    id: number;
+    name: string;
+}
+
+export const updateWatchlistGroup = (data: WatchlistGroupUpdateReqVO) => {
+    return request.post<ResponseDTO<void>>('/stockWatchlist/group/update', data);
+};
+
 export const deleteWatchlistGroup = (id: number) => {
     return request.post<ResponseDTO<void>>('/stockWatchlist/group/delete', { id });
 };

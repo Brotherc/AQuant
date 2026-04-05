@@ -7,15 +7,35 @@
         v-for="group in groups" 
         :key="group.id" 
         class="custom-group-tag"
-        :class="{ active: activeGroupId === group.id }"
+        :class="{ active: activeGroupId === group.id, editing: editingGroupId === group.id }"
         @click="handleTabChange(group.id)"
+        @dblclick="startEditGroup(group)"
       >
-        <span class="tag-name">{{ group.name }}</span>
-        <close-outlined 
-          v-if="activeGroupId === group.id" 
-          class="delete-group-icon"
-          @click.stop="onDeleteGroup(group.id)" 
-        />
+        <template v-if="editingGroupId === group.id">
+          <a-input
+            ref="editInputRef"
+            v-model:value="editGroupName"
+            size="small"
+            class="edit-group-input"
+            @blur="submitEditGroup"
+            @keyup.enter="submitEditGroup"
+            @keyup.esc="cancelEditGroup"
+            @click.stop
+          />
+        </template>
+        <template v-else>
+          <span class="tag-name">{{ group.name }}</span>
+          <edit-outlined 
+            v-if="activeGroupId === group.id" 
+            class="edit-group-icon"
+            @click.stop="startEditGroup(group)" 
+          />
+          <close-outlined 
+            v-if="activeGroupId === group.id" 
+            class="delete-group-icon"
+            @click.stop="onDeleteGroup(group.id)" 
+          />
+        </template>
       </div>
       <div class="custom-group-tag add-btn" @click="showAddGroupModal">
         ＋
@@ -225,15 +245,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, nextTick } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import { CloseOutlined, PlusOutlined, CaretUpOutlined, CaretDownOutlined, SearchOutlined, EllipsisOutlined } from '@ant-design/icons-vue';
+import { CloseOutlined, PlusOutlined, CaretUpOutlined, CaretDownOutlined, SearchOutlined, EllipsisOutlined, EditOutlined } from '@ant-design/icons-vue';
 import MiniKlineChart from './components/MiniKlineChart.vue';
 import StockDetailView from './components/StockDetailView.vue';
 import { 
-  getWatchlistGroups, 
+  getWatchlistGroups,
   getWatchlistStocks, 
   createWatchlistGroup, 
+  updateWatchlistGroup,
   deleteWatchlistGroup, 
   addStockToWatchlist, 
   removeStockFromWatchlist,
@@ -262,6 +283,46 @@ const selectedStock = ref<WatchlistStockVO | null>(null);
 const openStockDetail = (stock: WatchlistStockVO) => {
   selectedStock.value = stock;
   detailVisible.value = true;
+};
+
+// 修改分组名称相关
+const editingGroupId = ref<number | null>(null);
+const editGroupName = ref('');
+const editInputRef = ref<any>(null);
+
+const startEditGroup = (group: WatchlistGroupVO) => {
+  if (activeGroupId.value !== group.id) return;
+  editingGroupId.value = group.id;
+  editGroupName.value = group.name;
+  nextTick(() => {
+    editInputRef.value?.focus();
+  });
+};
+
+const cancelEditGroup = () => {
+  editingGroupId.value = null;
+  editGroupName.value = '';
+};
+
+const submitEditGroup = async () => {
+  if (!editingGroupId.value) return;
+  const newName = editGroupName.value.trim();
+  const oldGroup = groups.value.find(g => g.id === editingGroupId.value);
+  
+  if (!newName || newName === oldGroup?.name) {
+    cancelEditGroup();
+    return;
+  }
+
+  try {
+    await updateWatchlistGroup({ id: editingGroupId.value, name: newName });
+    message.success('修改成功');
+    // 更新本地状态
+    if (oldGroup) oldGroup.name = newName;
+    cancelEditGroup();
+  } catch (error) {
+    console.error('Failed to update group name:', error);
+  }
 };
 
 // 修改分组相关
@@ -666,6 +727,33 @@ onMounted(() => {
 
 .delete-group-icon:hover {
   opacity: 1;
+}
+
+.edit-group-icon {
+  margin-left: 8px;
+  font-size: 13px;
+  color: inherit;
+  opacity: 0.6;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.edit-group-icon:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.custom-group-tag.editing {
+  padding: 0;
+  border-color: transparent;
+  background-color: transparent;
+}
+
+.edit-group-input {
+  width: 120px;
+  height: 28px;
+  font-size: 13px;
+  border-radius: 4px;
 }
 
 .custom-group-tag.add-btn {

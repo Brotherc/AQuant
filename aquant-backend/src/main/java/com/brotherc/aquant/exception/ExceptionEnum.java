@@ -15,7 +15,8 @@ public enum ExceptionEnum {
     STOCK_REFRESH_FREQUENT(1000103, "1分钟内请勿重复刷新"),
     STOCK_INDUSTRY_BOARD_UN_EXIST(1000104, "行业板块不存在"),
     STOCK_NOT_FOUND(1000105, "股票代码不存在"),
-    WATCHLIST_GROUP_NAME_DUPLICATE(1000106, "分组名称已存在");
+    WATCHLIST_GROUP_NAME_DUPLICATE(1000106, "分组名称已存在"),
+    WATCHLIST_GROUP_NOT_FOUND(1000107, "自选分组不存在");
 
     /**
      * 应用(1~2位)、服务(2位)、模块(2位)、异常(2位)

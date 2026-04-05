@@ -32,6 +32,13 @@ public class StockWatchlistController {
         return ResponseDTO.success();
     }
 
+    @Operation(summary = "修改自选分组名称")
+    @PostMapping("/group/update")
+    public ResponseDTO<Void> updateGroup(@RequestBody @Valid WatchlistGroupUpdateReqVO reqVO) {
+        watchlistService.updateGroup(reqVO);
+        return ResponseDTO.success();
+    }
+
     @Operation(summary = "删除自选分组")
     @PostMapping("/group/delete")
     public ResponseDTO<Void> deleteGroup(@RequestBody @Valid WatchlistIdReqVO reqVO) {
