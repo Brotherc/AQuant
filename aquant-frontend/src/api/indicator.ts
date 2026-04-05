@@ -241,3 +241,30 @@ export const getGrowthMetricsPage = (params: GrowthMetricsPageReqVO & { page: nu
 };
 
 
+
+export interface StockDividendDetail {
+    id: number;
+    stockCode: string;
+    stockName: string;
+    bonusShareTotalRatio: number;
+    bonusShareRatio: number;
+    transferShareRatio: number;
+    cashDividendRatio: number;
+    dividendYield: number;
+    earningsPerShare: number;
+    netAssetPerShare: number;
+    capitalReservePerShare: number;
+    undistributedProfitPerShare: number;
+    netProfitGrowthRate: number;
+    totalShares: number;
+    proposalAnnouncementDate: string;
+    recordDate: string;
+    exDividendDate: string;
+    latestAnnouncementDate: string;
+    planStatus: string;
+    reportDate: string;
+}
+
+export const getDividendDetailByCode = (params: { stockCode: string }) => {
+    return api.get<ResponseDTO<StockDividendDetail[]>>('/stockDividend/getDetailByCode', { params });
+};

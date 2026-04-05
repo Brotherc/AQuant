@@ -66,49 +66,57 @@
                 :key="stock.stockCode"
               >
                 <div class="draggable-wrapper">
-                  <a-card hoverable class="stock-card" size="small">
-                    <!-- 头部：代码与名称，移除操作 -->
-                    <div class="card-header">
-                      <div class="stock-info">
-                        <span class="stock-name">{{ stock.stockName }}</span>
-                        <span class="stock-code">{{ stock.stockCode }}</span>
+                      <a-card hoverable class="stock-card" size="small">
+                      <!-- 头部：代码与名称，移除操作 -->
+                      <div class="card-header">
+                        <div class="stock-info">
+                          <span class="stock-name">{{ stock.stockName }}</span>
+                          <span class="stock-code">{{ stock.stockCode }}</span>
+                        </div>
+                        <div @click.stop>
+                          <a-dropdown>
+                            <ellipsis-outlined class="more-icon" />
+                            <template #overlay>
+                              <a-menu>
+                                <a-menu-item @click="openStockDetail(stock)">
+                                  查看详情
+                                </a-menu-item>
+                                <a-menu-divider />
+                                <a-menu-item 
+                                  :disabled="isFirst(stock.stockCode)"
+                                  @click="handleMoveToTop(stock.stockCode)"
+                                >
+                                  移至最前
+                                </a-menu-item>
+                                <a-tooltip :title="sortKey !== 'default' ? '请先切换到默认排序以进行手动排序' : ''" placement="left">
+                                  <a-menu-item 
+                                    :disabled="sortKey !== 'default' || isFirst(stock.stockCode)"
+                                    @click="handleMove(stock.stockCode, 'up')"
+                                  >
+                                    往前移
+                                  </a-menu-item>
+                                </a-tooltip>
+                                <a-tooltip :title="sortKey !== 'default' ? '请先切换到默认排序以进行手动排序' : ''" placement="left">
+                                  <a-menu-item 
+                                    :disabled="sortKey !== 'default' || isLast(stock.stockCode)"
+                                    @click="handleMove(stock.stockCode, 'down')"
+                                  >
+                                    往后移
+                                  </a-menu-item>
+                                </a-tooltip>
+                                <a-menu-divider />
+                                <a-menu-item danger>
+                                  <div @click.stop>
+                                    <a-popconfirm title="确定移除该股票吗？" @confirm="handleRemoveStock(stock.stockCode)">
+                                      移除
+                                    </a-popconfirm>
+                                  </div>
+                                </a-menu-item>
+                              </a-menu>
+                            </template>
+                          </a-dropdown>
+                        </div>
                       </div>
-                      <a-dropdown>
-                        <ellipsis-outlined class="more-icon" />
-                        <template #overlay>
-                          <a-menu>
-                            <a-menu-item 
-                              :disabled="isFirst(stock.stockCode)"
-                              @click="handleMoveToTop(stock.stockCode)"
-                            >
-                              移至最前
-                            </a-menu-item>
-                            <a-tooltip :title="sortKey !== 'default' ? '请先切换到默认排序以进行手动排序' : ''" placement="left">
-                              <a-menu-item 
-                                :disabled="sortKey !== 'default' || isFirst(stock.stockCode)"
-                                @click="handleMove(stock.stockCode, 'up')"
-                              >
-                                往前移
-                              </a-menu-item>
-                            </a-tooltip>
-                            <a-tooltip :title="sortKey !== 'default' ? '请先切换到默认排序以进行手动排序' : ''" placement="left">
-                              <a-menu-item 
-                                :disabled="sortKey !== 'default' || isLast(stock.stockCode)"
-                                @click="handleMove(stock.stockCode, 'down')"
-                              >
-                                往后移
-                              </a-menu-item>
-                            </a-tooltip>
-                            <a-menu-divider />
-                            <a-menu-item danger>
-                              <a-popconfirm title="确定移除该股票吗？" @confirm="handleRemoveStock(stock.stockCode)">
-                                移除
-                              </a-popconfirm>
-                            </a-menu-item>
-                          </a-menu>
-                        </template>
-                      </a-dropdown>
-                    </div>
                     
                     <!-- 行情数据 -->
                     <div class="quote-info" :class="getPriceColorClass(stock.changePercent)">
@@ -185,6 +193,18 @@
         </a-form-item>
       </a-form>
     </a-modal>
+
+    <!-- 股票详情弹窗 -->
+    <a-modal 
+      v-model:visible="detailVisible" 
+      title="股票详情" 
+      :width="1000" 
+      :footer="null" 
+      centered
+      destroyOnClose
+    >
+      <StockDetailView v-if="selectedStock" :stock="selectedStock" />
+    </a-modal>
   </div>
 </template>
 
@@ -193,6 +213,7 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import { CloseOutlined, PlusOutlined, CaretUpOutlined, CaretDownOutlined, SearchOutlined, EllipsisOutlined } from '@ant-design/icons-vue';
 import MiniKlineChart from './components/MiniKlineChart.vue';
+import StockDetailView from './components/StockDetailView.vue';
 import { 
   getWatchlistGroups, 
   getWatchlistStocks, 
@@ -216,6 +237,15 @@ const newStockCode = ref('');
 const groupModalVisible = ref(false);
 const groupLoading = ref(false);
 const groupForm = reactive({ name: '' });
+
+// 股票详情相关
+const detailVisible = ref(false);
+const selectedStock = ref<WatchlistStockVO | null>(null);
+
+const openStockDetail = (stock: WatchlistStockVO) => {
+  selectedStock.value = stock;
+  detailVisible.value = true;
+};
 
 // 搜索与排序状态控制
 const searchQuery = ref<string>('');
