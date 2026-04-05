@@ -261,4 +261,69 @@ public class StockWatchlistService {
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public void moveStock(com.brotherc.aquant.model.vo.watchlist.WatchlistStockMoveReqVO reqVO) {
+        Long groupId = reqVO.getGroupId();
+        String stockCode = reqVO.getStockCode();
+        String action = reqVO.getAction();
+
+        // 获取当前分组下按 sortNo 降序排列的股票（即前端显示的顺序）
+        List<StockWatchlistStock> stocks = stockRepository.findByGroupIdOrderBySortNoDesc(groupId);
+        int index = -1;
+        for (int i = 0; i < stocks.size(); i++) {
+            if (stocks.get(i).getStockCode().equals(stockCode)) {
+                index = i;
+                break;
+            }
+        }
+
+        if (index == -1) return;
+
+        StockWatchlistStock current = stocks.get(index);
+
+        if ("TOP".equalsIgnoreCase(action)) {
+            if (index == 0) return;
+            // 获取当前最大的 sortNo
+            int maxSortNo = stocks.stream()
+                    .map(StockWatchlistStock::getSortNo)
+                    .filter(java.util.Objects::nonNull)
+                    .max(Integer::compareTo)
+                    .orElse(0);
+            current.setSortNo(maxSortNo + 1);
+            stockRepository.save(current);
+        } else if ("UP".equalsIgnoreCase(action)) {
+            if (index == 0) return;
+            // 往前移，即与上一个（sortNo 更大的）交换
+            StockWatchlistStock prev = stocks.get(index - 1);
+            int currentSort = current.getSortNo() != null ? current.getSortNo() : 0;
+            int prevSort = prev.getSortNo() != null ? prev.getSortNo() : 0;
+            
+            // 交换序号，如果序号相同，则强制让 current 比 prev 大 1
+            if (currentSort == prevSort) {
+                current.setSortNo(prevSort + 1);
+            } else {
+                current.setSortNo(prevSort);
+                prev.setSortNo(currentSort);
+                stockRepository.save(prev);
+            }
+            stockRepository.save(current);
+        } else if ("DOWN".equalsIgnoreCase(action)) {
+            if (index == stocks.size() - 1) return;
+            // 往后移，即与下一个（sortNo 更小的）交换
+            StockWatchlistStock next = stocks.get(index + 1);
+            int currentSort = current.getSortNo() != null ? current.getSortNo() : 0;
+            int nextSort = next.getSortNo() != null ? next.getSortNo() : 0;
+            
+            // 交换序号，如果序号相同，则强制让 current 比 next 小 1
+            if (currentSort == nextSort) {
+                current.setSortNo(nextSort - 1);
+            } else {
+                current.setSortNo(nextSort);
+                next.setSortNo(currentSort);
+                stockRepository.save(next);
+            }
+            stockRepository.save(current);
+        }
+    }
+
 }

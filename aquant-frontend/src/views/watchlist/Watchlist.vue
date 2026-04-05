@@ -77,6 +77,12 @@
                         <ellipsis-outlined class="more-icon" />
                         <template #overlay>
                           <a-menu>
+                            <a-menu-item 
+                              :disabled="isFirst(stock.stockCode)"
+                              @click="handleMoveToTop(stock.stockCode)"
+                            >
+                              移至最前
+                            </a-menu-item>
                             <a-tooltip :title="sortKey !== 'default' ? '请先切换到默认排序以进行手动排序' : ''" placement="left">
                               <a-menu-item 
                                 :disabled="sortKey !== 'default' || isFirst(stock.stockCode)"
@@ -194,7 +200,7 @@ import {
   deleteWatchlistGroup, 
   addStockToWatchlist, 
   removeStockFromWatchlist,
-  reorderWatchlistStocks,
+  moveWatchlistStock,
   type WatchlistGroupVO,
   type WatchlistStockVO
 } from '@/api/watchlist';
@@ -438,6 +444,8 @@ const handleMove = async (stockCode: string, direction: 'up' | 'down') => {
   const index = stocks.value.findIndex(s => s.stockCode === stockCode);
   if (index === -1) return;
   
+  const action = direction === 'up' ? 'UP' : 'DOWN';
+  
   const newStocks = [...stocks.value];
   if (direction === 'up' && index > 0) {
     const s1 = newStocks[index];
@@ -457,17 +465,46 @@ const handleMove = async (stockCode: string, direction: 'up' | 'down') => {
     return;
   }
   
-  const stockCodes = newStocks.map(s => s.stockCode);
+  await syncMove(stockCode, action, newStocks);
+};
+
+const handleMoveToTop = async (stockCode: string) => {
+  if (!activeGroupId.value) return;
+  
+  const index = stocks.value.findIndex(s => s.stockCode === stockCode);
+  if (index <= 0) return;
+  
+  const newStocks = [...stocks.value];
+  const [target] = newStocks.splice(index, 1);
+  if (target) {
+    newStocks.unshift(target);
+    await syncMove(stockCode, 'TOP', newStocks);
+  }
+};
+
+const syncMove = async (stockCode: string, action: 'UP' | 'DOWN' | 'TOP', newStocks: WatchlistStockVO[]) => {
+  if (!activeGroupId.value) return;
+  
   try {
-    const res = await reorderWatchlistStocks({
+    const res = await moveWatchlistStock({
       groupId: activeGroupId.value,
-      stockCodes
+      stockCode,
+      action
     });
     if (res.data.success) {
-      stocks.value = newStocks; // 乐观更新
+      // 始终更新底层数据，确保切换回默认排序时是正确的
+      stocks.value = newStocks;
+      
+      if (action === 'TOP' && sortKey.value !== 'default') {
+        message.success('已移至手动排序首位，切换到默认排序即可查看');
+      } else if (sortKey.value === 'default') {
+        // 默认排序下不需要额外提示
+      } else {
+        message.success('置顶排序更新成功');
+      }
     }
   } catch (error) {
-    console.error('Reorder failed:', error);
+    console.error('Move failed:', error);
     message.error('排序更新失败');
   }
 };

@@ -66,4 +66,11 @@ public class StockWatchlistController {
         return ResponseDTO.success();
     }
 
+    @Operation(summary = "股票移动操作(增量排序)")
+    @PostMapping("/stock/move")
+    public ResponseDTO<Void> moveStock(@RequestBody @Valid WatchlistStockMoveReqVO reqVO) {
+        watchlistService.moveStock(reqVO);
+        return ResponseDTO.success();
+    }
+
 }

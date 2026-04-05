@@ -42,6 +42,12 @@ export interface WatchlistStockReorderReqVO {
     stockCodes: string[];
 }
 
+export interface WatchlistStockMoveReqVO {
+    groupId: number;
+    stockCode: string;
+    action: 'UP' | 'DOWN' | 'TOP';
+}
+
 export const getWatchlistGroups = () => {
     return request.get<ResponseDTO<WatchlistGroupVO[]>>('/stockWatchlist/group/list');
 };
@@ -68,4 +74,8 @@ export const removeStockFromWatchlist = (groupId: number, stockCode: string) => 
 
 export const reorderWatchlistStocks = (data: WatchlistStockReorderReqVO) => {
     return request.post<ResponseDTO<void>>('/stockWatchlist/stock/reorder', data);
+};
+
+export const moveWatchlistStock = (data: WatchlistStockMoveReqVO) => {
+    return request.post<ResponseDTO<void>>('/stockWatchlist/stock/move', data);
 };
