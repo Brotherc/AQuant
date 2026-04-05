@@ -71,13 +71,16 @@
              <span style="color: #1890ff">排名</span>
           </template>
         </template>
-        <template #bodyCell="{ column, text }">
+        <template #bodyCell="{ column, text, record }">
           <template v-if="[
             'peg', 'peLastYearA', 'peTtm', 'peThisYE', 'peNextYE', 'peNext2YE',
             'psLastYA', 'psTtm', 'psThisYE', 'psNextYE', 'psNext2YE',
             'pbLastYA', 'pbMrq', 'pceLastYA', 'pceTtm', 'pcfLastYA', 'pcfTtm', 'evEbitdaLastYA'
           ].includes(column.dataIndex as string)">
             <span>{{ formatNumber(text) }}</span>
+          </template>
+          <template v-else-if="column.key === 'operation'">
+            <a @click="showAddWatchlist(record)">加入自选</a>
           </template>
         </template>
 
@@ -103,12 +106,32 @@
         </template>
       </a-table>
     </a-card>
+
+    <!-- 加入自选模态框 -->
+    <a-modal
+      v-model:visible="watchlistVisible"
+      title="加入自选"
+      @ok="handleConfirmAdd"
+      :confirmLoading="addLoading"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="选择分组">
+          <a-select v-model:value="targetGroupId" placeholder="请选择自选分组">
+            <a-select-option v-for="group in watchlistGroups" :key="group.id" :value="group.id">
+              {{ group.name }}
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, h } from 'vue';
 import { getValuationMetricsPage, type StockValuationMetrics, type ValuationMetricsPageReqVO } from '@/api/indicator';
+import { getWatchlistGroups, addStockToWatchlist, type WatchlistGroupVO } from '@/api/watchlist';
+import { message } from 'ant-design-vue';
 import { type TableProps } from 'ant-design-vue';
 
 const loading = ref(false);
@@ -168,11 +191,12 @@ const columns: TableProps['columns'] = [
     ]
   },
   {
-      title: 'EV/EBITDA',
-      children: [
-          { title: '去年实际', dataIndex: 'evEbitdaLastYA', width: 120 },
-      ]
+    title: 'EV/EBITDA',
+    children: [
+      { title: '去年实际', dataIndex: 'evEbitdaLastYA', width: 120 },
+    ]
   },
+  { title: '操作', key: 'operation', width: 100, fixed: 'right' },
 ];
 
 const getIndustryData = (record: StockValuationMetrics) => {
@@ -289,6 +313,42 @@ const fetchData = async () => {
   }
 };
 
+// Watchlist Modal
+const watchlistVisible = ref(false);
+const addLoading = ref(false);
+const targetGroupId = ref<number | undefined>(undefined);
+const selectedStockCode = ref('');
+const watchlistGroups = ref<WatchlistGroupVO[]>([]);
+
+const showAddWatchlist = (record: StockValuationMetrics) => {
+  selectedStockCode.value = record.stockCode;
+  targetGroupId.value = undefined;
+  watchlistVisible.value = true;
+};
+
+const handleConfirmAdd = async () => {
+  if (!targetGroupId.value) {
+    message.warning('请选择一个自选分组');
+    return;
+  }
+  
+  addLoading.value = true;
+  try {
+    const res = await addStockToWatchlist({
+      groupId: targetGroupId.value,
+      stockCode: selectedStockCode.value,
+    });
+    if (res.data.success) {
+      message.success('已成功加入自选');
+      watchlistVisible.value = false;
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    addLoading.value = false;
+  }
+};
+
 const handleSearch = () => {
   pagination.current = 1;
   fetchData();
@@ -316,8 +376,17 @@ const handleTableChange: TableProps['onChange'] = (pag: any, _filters: any, sort
   fetchData();
 };
 
-onMounted(() => {
+onMounted(async () => {
   fetchData();
+  // 加载自选分组
+  try {
+    const res = await getWatchlistGroups();
+    if (res.data.success) {
+      watchlistGroups.value = res.data.data;
+    }
+  } catch (error) {
+    console.error('加载自选分组失败:', error);
+  }
 });
 </script>
 

@@ -59,7 +59,10 @@
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'operation'">
-            <a @click="handleDetail(record)">详情</a>
+            <a-space>
+              <a @click="handleDetail(record)">详情</a>
+              <a @click="showAddWatchlist(record)">加入自选</a>
+            </a-space>
           </template>
         </template>
       </a-table>
@@ -81,13 +84,32 @@
       >
       </a-table>
     </a-modal>
+    
+    <!-- 加入自选模态框 -->
+    <a-modal
+      v-model:visible="watchlistVisible"
+      title="加入自选"
+      @ok="handleConfirmAdd"
+      :confirmLoading="addLoading"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="选择分组">
+          <a-select v-model:value="targetGroupId" placeholder="请选择自选分组">
+            <a-select-option v-for="group in watchlistGroups" :key="group.id" :value="group.id">
+              {{ group.name }}
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { getDividendPage, getDividendDetail, type StockDividendStatVO, type StockDividendStatPageReqVO, type StockDividendDetailVO } from '@/api/dividend';
-import { getWatchlistGroups, type WatchlistGroupVO } from '@/api/watchlist';
+import { getWatchlistGroups, addStockToWatchlist, type WatchlistGroupVO } from '@/api/watchlist';
+import { message } from 'ant-design-vue';
 import type { TableProps } from 'ant-design-vue';
 
 const loading = ref(false);
@@ -144,7 +166,7 @@ const columns: TableProps['columns'] = [
       return `${val} / ${avg}`;
     }
   },
-  { title: '操作', key: 'operation', width: 80, fixed: 'right' },
+  { title: '操作', key: 'operation', width: 150, fixed: 'right' },
 ];
 
 // Detail Modal
@@ -163,6 +185,41 @@ const detailColumns = [
   { title: '方案进度', dataIndex: 'planStatus', width: 150, customRender: ({ text }: any) => (text || '-') },
   { title: '报告期', dataIndex: 'reportDate', width: 110, customRender: ({ text }: any) => (text || '-') },
 ];
+
+// Watchlist Modal
+const watchlistVisible = ref(false);
+const addLoading = ref(false);
+const targetGroupId = ref<number | undefined>(undefined);
+const selectedStockCode = ref('');
+
+const showAddWatchlist = (record: StockDividendStatVO) => {
+  selectedStockCode.value = record.stockCode;
+  targetGroupId.value = undefined;
+  watchlistVisible.value = true;
+};
+
+const handleConfirmAdd = async () => {
+  if (!targetGroupId.value) {
+    message.warning('请选择一个自选分组');
+    return;
+  }
+  
+  addLoading.value = true;
+  try {
+    const res = await addStockToWatchlist({
+      groupId: targetGroupId.value,
+      stockCode: selectedStockCode.value,
+    });
+    if (res.data.success) {
+      message.success('已成功加入自选');
+      watchlistVisible.value = false;
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    addLoading.value = false;
+  }
+};
 
 const fetchData = async () => {
   loading.value = true;

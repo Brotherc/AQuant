@@ -62,7 +62,10 @@
             </span>
           </template>
           <template v-if="column.dataIndex === 'operation'">
-            <a @click="handleChart(record)">行情</a>
+            <a-space>
+              <a @click="handleChart(record)">行情</a>
+              <a @click="showAddWatchlist(record)">加入自选</a>
+            </a-space>
           </template>
         </template>
       </a-table>
@@ -73,12 +76,32 @@
       :stockCode="currentStockCode"
       :stockName="currentStockName"
     />
+
+    <!-- 加入自选模态框 -->
+    <a-modal
+      v-model:visible="watchlistVisible"
+      title="加入自选"
+      @ok="handleConfirmAdd"
+      :confirmLoading="addLoading"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="选择分组">
+          <a-select v-model:value="targetGroupId" placeholder="请选择自选分组">
+            <a-select-option v-for="group in watchlistGroups" :key="group.id" :value="group.id">
+              {{ group.name }}
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { getStockQuotePage, getStockDailyLatest, type StockQuoteVO, type StockQuotePageReqVO } from '@/api/stock';
+import { getWatchlistGroups, addStockToWatchlist, type WatchlistGroupVO } from '@/api/watchlist';
+import { message } from 'ant-design-vue';
 import StockHistoryChart from './components/StockHistoryChart.vue';
 import type { TableProps } from 'ant-design-vue';
 
@@ -127,7 +150,7 @@ const columns: TableProps['columns'] = [
   { title: '最高', dataIndex: 'highPrice', width: 100 },
   { title: '最低', dataIndex: 'lowPrice', width: 100 },
   { title: '时间', dataIndex: 'quoteTime', width: 150 },
-  { title: '操作', dataIndex: 'operation', fixed: 'right', width: 80 },
+  { title: '操作', dataIndex: 'operation', fixed: 'right', width: 150 },
 ];
 
 // 获取最新同步时间
@@ -210,6 +233,42 @@ const handleTableChange: TableProps['onChange'] = (pag: any, _filters: any, sort
   fetchData();
 };
 
+// Watchlist Modal
+const watchlistVisible = ref(false);
+const addLoading = ref(false);
+const targetGroupId = ref<number | undefined>(undefined);
+const selectedStockCode = ref('');
+const watchlistGroups = ref<WatchlistGroupVO[]>([]);
+
+const showAddWatchlist = (record: StockQuoteVO) => {
+  selectedStockCode.value = record.code;
+  targetGroupId.value = undefined;
+  watchlistVisible.value = true;
+};
+
+const handleConfirmAdd = async () => {
+  if (!targetGroupId.value) {
+    message.warning('请选择一个自选分组');
+    return;
+  }
+  
+  addLoading.value = true;
+  try {
+    const res = await addStockToWatchlist({
+      groupId: targetGroupId.value,
+      stockCode: selectedStockCode.value,
+    });
+    if (res.data.success) {
+      message.success('已成功加入自选');
+      watchlistVisible.value = false;
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    addLoading.value = false;
+  }
+};
+
 
 
 const handleChart = (record: StockQuoteVO) => {
@@ -218,8 +277,17 @@ const handleChart = (record: StockQuoteVO) => {
   chartVisible.value = true;
 };
 
-onMounted(() => {
+onMounted(async () => {
   fetchData();
   fetchRefreshTime();
+  // 加载自选分组
+  try {
+    const res = await getWatchlistGroups();
+    if (res.data.success) {
+      watchlistGroups.value = res.data.data;
+    }
+  } catch (error) {
+    console.error('加载自选分组失败:', error);
+  }
 });
 </script>
