@@ -9,6 +9,7 @@ import com.brotherc.aquant.model.vo.watchlist.WatchlistGroupReqVO;
 import com.brotherc.aquant.model.vo.watchlist.WatchlistGroupVO;
 import com.brotherc.aquant.model.vo.watchlist.WatchlistStockReqVO;
 import com.brotherc.aquant.model.vo.watchlist.WatchlistStockVO;
+import com.brotherc.aquant.model.vo.watchlist.WatchlistStockMoveGroupReqVO;
 import com.brotherc.aquant.repository.StockQuoteRepository;
 import com.brotherc.aquant.repository.StockWatchlistGroupRepository;
 import com.brotherc.aquant.repository.StockWatchlistStockRepository;
@@ -323,6 +324,28 @@ public class StockWatchlistService {
                 stockRepository.save(next);
             }
             stockRepository.save(current);
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void moveStockToGroup(WatchlistStockMoveGroupReqVO reqVO) {
+        String stockCode = reqVO.getStockCode();
+        Long fromGroupId = reqVO.getFromGroupId();
+        Long toGroupId = reqVO.getToGroupId();
+
+        if (fromGroupId.equals(toGroupId)) {
+            return;
+        }
+
+        // 1. 从源分组移除
+        stockRepository.deleteByGroupIdAndStockCode(fromGroupId, stockCode);
+
+        // 2. 添加到目标分组（如果不存在）
+        if (!stockRepository.existsByGroupIdAndStockCode(toGroupId, stockCode)) {
+            WatchlistStockReqVO addReq = new WatchlistStockReqVO();
+            addReq.setGroupId(toGroupId);
+            addReq.setStockCode(stockCode);
+            addStockToWatchlist(addReq);
         }
     }
 

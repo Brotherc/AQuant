@@ -73,4 +73,11 @@ public class StockWatchlistController {
         return ResponseDTO.success();
     }
 
+    @Operation(summary = "修改股票所属分组")
+    @PostMapping("/stock/moveGroup")
+    public ResponseDTO<Void> moveStockGroup(@RequestBody @Valid WatchlistStockMoveGroupReqVO reqVO) {
+        watchlistService.moveStockToGroup(reqVO);
+        return ResponseDTO.success();
+    }
+
 }

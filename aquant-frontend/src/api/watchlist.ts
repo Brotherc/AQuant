@@ -79,3 +79,13 @@ export const reorderWatchlistStocks = (data: WatchlistStockReorderReqVO) => {
 export const moveWatchlistStock = (data: WatchlistStockMoveReqVO) => {
     return request.post<ResponseDTO<void>>('/stockWatchlist/stock/move', data);
 };
+
+export interface WatchlistStockMoveGroupReqVO {
+    stockCode: string;
+    fromGroupId: number;
+    toGroupId: number;
+}
+
+export const moveWatchlistStockToGroup = (data: WatchlistStockMoveGroupReqVO) => {
+    return request.post<ResponseDTO<void>>('/stockWatchlist/stock/moveGroup', data);
+};

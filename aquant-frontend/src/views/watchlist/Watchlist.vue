@@ -105,6 +105,10 @@
                                   </a-menu-item>
                                 </a-tooltip>
                                 <a-menu-divider />
+                                <a-menu-item @click="showMoveGroupModal(stock)">
+                                  修改分组
+                                </a-menu-item>
+                                <a-menu-divider />
                                 <a-menu-item danger>
                                   <div @click.stop>
                                     <a-popconfirm title="确定移除该股票吗？" @confirm="handleRemoveStock(stock.stockCode)">
@@ -194,7 +198,6 @@
       </a-form>
     </a-modal>
 
-    <!-- 股票详情弹窗 -->
     <a-modal 
       v-model:visible="detailVisible" 
       title="股票详情" 
@@ -204,6 +207,19 @@
       destroyOnClose
     >
       <StockDetailView v-if="selectedStock" :stock="selectedStock" />
+    </a-modal>
+
+    <!-- 修改分组 Modal -->
+    <a-modal v-model:visible="moveGroupModalVisible" title="修改分组" @ok="handleExecuteMoveGroup" :confirmLoading="moveGroupLoading">
+      <div style="margin-bottom: 20px;">
+        <div style="margin-bottom: 8px; color: #8c8c8c;">将股票从当前分组移动到：</div>
+        <a-select v-model:value="targetGroupId" placeholder="请选择目标分组" style="width: 100%" size="large">
+          <a-select-option v-for="g in otherGroups" :key="g.id" :value="g.id">
+            {{ g.name }}
+          </a-select-option>
+        </a-select>
+        <div v-if="otherGroups.length === 0" style="color: #ff4d4f; margin-top: 8px; font-size: 12px;">暂无其他可迁入的分组</div>
+      </div>
     </a-modal>
   </div>
 </template>
@@ -222,6 +238,7 @@ import {
   addStockToWatchlist, 
   removeStockFromWatchlist,
   moveWatchlistStock,
+  moveWatchlistStockToGroup,
   type WatchlistGroupVO,
   type WatchlistStockVO
 } from '@/api/watchlist';
@@ -245,6 +262,47 @@ const selectedStock = ref<WatchlistStockVO | null>(null);
 const openStockDetail = (stock: WatchlistStockVO) => {
   selectedStock.value = stock;
   detailVisible.value = true;
+};
+
+// 修改分组相关
+const moveGroupModalVisible = ref(false);
+const moveGroupLoading = ref(false);
+const targetGroupId = ref<number>();
+const movingStockCode = ref('');
+
+const otherGroups = computed(() => {
+  return groups.value.filter(g => g.id !== activeGroupId.value);
+});
+
+const showMoveGroupModal = (stock: WatchlistStockVO) => {
+  movingStockCode.value = stock.stockCode;
+  targetGroupId.value = undefined;
+  moveGroupModalVisible.value = true;
+};
+
+const handleExecuteMoveGroup = async () => {
+  if (!targetGroupId.value) {
+    message.warning('请选择目标分组');
+    return;
+  }
+  moveGroupLoading.value = true;
+  try {
+    await moveWatchlistStockToGroup({
+      stockCode: movingStockCode.value,
+      fromGroupId: activeGroupId.value!,
+      toGroupId: targetGroupId.value
+    });
+    message.success('分组修改成功');
+    moveGroupModalVisible.value = false;
+    // 刷新当前分组列表
+    if (activeGroupId.value) {
+      await fetchStocks(activeGroupId.value);
+    }
+  } catch (error) {
+    console.error('Failed to move group:', error);
+  } finally {
+    moveGroupLoading.value = false;
+  }
 };
 
 // 搜索与排序状态控制
