@@ -73,9 +73,35 @@
                         <span class="stock-name">{{ stock.stockName }}</span>
                         <span class="stock-code">{{ stock.stockCode }}</span>
                       </div>
-                      <a-popconfirm title="确定移除该股票吗？" @confirm="handleRemoveStock(stock.stockCode)">
-                        <delete-outlined class="delete-icon" />
-                      </a-popconfirm>
+                      <a-dropdown>
+                        <ellipsis-outlined class="more-icon" />
+                        <template #overlay>
+                          <a-menu>
+                            <a-tooltip :title="sortKey !== 'default' ? '请先切换到默认排序以进行手动排序' : ''" placement="left">
+                              <a-menu-item 
+                                :disabled="sortKey !== 'default' || isFirst(stock.stockCode)"
+                                @click="handleMove(stock.stockCode, 'up')"
+                              >
+                                往前移
+                              </a-menu-item>
+                            </a-tooltip>
+                            <a-tooltip :title="sortKey !== 'default' ? '请先切换到默认排序以进行手动排序' : ''" placement="left">
+                              <a-menu-item 
+                                :disabled="sortKey !== 'default' || isLast(stock.stockCode)"
+                                @click="handleMove(stock.stockCode, 'down')"
+                              >
+                                往后移
+                              </a-menu-item>
+                            </a-tooltip>
+                            <a-menu-divider />
+                            <a-menu-item danger>
+                              <a-popconfirm title="确定移除该股票吗？" @confirm="handleRemoveStock(stock.stockCode)">
+                                移除
+                              </a-popconfirm>
+                            </a-menu-item>
+                          </a-menu>
+                        </template>
+                      </a-dropdown>
                     </div>
                     
                     <!-- 行情数据 -->
@@ -159,7 +185,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import { DeleteOutlined, CloseOutlined, PlusOutlined, CaretUpOutlined, CaretDownOutlined, SearchOutlined } from '@ant-design/icons-vue';
+import { CloseOutlined, PlusOutlined, CaretUpOutlined, CaretDownOutlined, SearchOutlined, EllipsisOutlined } from '@ant-design/icons-vue';
 import MiniKlineChart from './components/MiniKlineChart.vue';
 import { 
   getWatchlistGroups, 
@@ -168,6 +194,7 @@ import {
   deleteWatchlistGroup, 
   addStockToWatchlist, 
   removeStockFromWatchlist,
+  reorderWatchlistStocks,
   type WatchlistGroupVO,
   type WatchlistStockVO
 } from '@/api/watchlist';
@@ -397,6 +424,54 @@ const handleRemoveStock = async (stockCode: string) => {
   }
 };
 
+const isFirst = (stockCode: string) => {
+  return stocks.value.length > 0 && stocks.value[0]?.stockCode === stockCode;
+};
+
+const isLast = (stockCode: string) => {
+  return stocks.value.length > 0 && stocks.value[stocks.value.length - 1]?.stockCode === stockCode;
+};
+
+const handleMove = async (stockCode: string, direction: 'up' | 'down') => {
+  if (!activeGroupId.value) return;
+  
+  const index = stocks.value.findIndex(s => s.stockCode === stockCode);
+  if (index === -1) return;
+  
+  const newStocks = [...stocks.value];
+  if (direction === 'up' && index > 0) {
+    const s1 = newStocks[index];
+    const s2 = newStocks[index - 1];
+    if (s1 && s2) {
+      newStocks[index] = s2;
+      newStocks[index - 1] = s1;
+    }
+  } else if (direction === 'down' && index < newStocks.length - 1) {
+    const s1 = newStocks[index];
+    const s2 = newStocks[index + 1];
+    if (s1 && s2) {
+      newStocks[index] = s2;
+      newStocks[index + 1] = s1;
+    }
+  } else {
+    return;
+  }
+  
+  const stockCodes = newStocks.map(s => s.stockCode);
+  try {
+    const res = await reorderWatchlistStocks({
+      groupId: activeGroupId.value,
+      stockCodes
+    });
+    if (res.data.success) {
+      stocks.value = newStocks; // 乐观更新
+    }
+  } catch (error) {
+    console.error('Reorder failed:', error);
+    message.error('排序更新失败');
+  }
+};
+
 
 onMounted(() => {
   fetchGroups();
@@ -550,6 +625,20 @@ onMounted(() => {
 .stock-code {
   font-size: 12px;
   color: #888;
+}
+
+.more-icon {
+  font-size: 18px;
+  color: #888;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.more-icon:hover {
+  background-color: #f5f5f5;
+  color: #1677ff;
 }
 
 .delete-icon {
