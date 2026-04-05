@@ -60,6 +60,22 @@ const fetchHistory = async () => {
   }
 };
 
+const calculateMA = (dayCount: number, data: StockQuoteHistory[]) => {
+  const result = [];
+  for (let i = 0, len = data.length; i < len; i++) {
+    if (i < dayCount - 1) {
+      result.push('-');
+      continue;
+    }
+    let sum = 0;
+    for (let j = 0; j < dayCount; j++) {
+      sum += data[i - j]!.closePrice;
+    }
+    result.push(+(sum / dayCount).toFixed(2));
+  }
+  return result;
+};
+
 const renderChart = (data: StockQuoteHistory[]) => {
   if (!chartInstance) initChart();
   
@@ -71,6 +87,11 @@ const renderChart = (data: StockQuoteHistory[]) => {
     item.highPrice
   ]);
 
+  // 计算均线数据
+  const ma5 = calculateMA(5, data);
+  const ma10 = calculateMA(10, data);
+  const ma20 = calculateMA(20, data);
+
   const option = {
     animation: false,
     tooltip: { 
@@ -78,73 +99,83 @@ const renderChart = (data: StockQuoteHistory[]) => {
       trigger: 'axis',
       axisPointer: { type: 'none' },
       textStyle: { fontSize: 10 },
-      padding: 6,
+      padding: 8,
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      borderColor: '#eee',
+      borderWidth: 1,
+      extraCssText: 'z-index: 99; box-shadow: 0 2px 8px rgba(0,0,0,0.1);',
       formatter: function (params: any) {
-        const param = params[0];
-        const date = param.name;
-        // ECharts 的 candlestick 默认解析后 param.value 通常是 [时间, 开, 收, 低, 高]
-        const open = param.value[1];
-        const close = param.value[2];
-        const low = param.value[3];
-        const high = param.value[4];
-        
-        const color = close >= open ? '#ff4d4f' : '#52c41a';
-        return `
-          <div style="font-weight:bold;margin-bottom:4px;font-size:11px;">${date}</div>
-          <div style="color:${color};">收盘: ${close}</div>
-          <div>开盘: ${open}</div>
-          <div>最高: ${high}</div>
-          <div>最低: ${low}</div>
-        `;
+        let res = '';
+        let date = '';
+        params.forEach((param: any) => {
+          if (param.seriesType === 'candlestick') {
+            date = param.name;
+            const open = param.value[1];
+            const close = param.value[2];
+            const low = param.value[3];
+            const high = param.value[4];
+            const color = close >= open ? '#ff4d4f' : '#52c41a';
+            res += '<div style="font-weight:bold;margin-bottom:4px;font-size:12px;color:#333;">' + date + '</div>';
+            res += '<div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:2px;"><span>收盘:</span> <span style="color:' + color + ';font-weight:bold;">' + close + '</span></div>';
+            res += '<div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:2px;"><span>开盘:</span> <span>' + open + '</span></div>';
+            res += '<div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:2px;"><span>最高:</span> <span>' + high + '</span></div>';
+            res += '<div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:6px;"><span>最低:</span> <span>' + low + '</span></div>';
+          } else if (param.seriesType === 'line' && param.value !== '-') {
+            res += '<div style="display:flex;justify-content:space-between;gap:12px;font-size:10px;color:#666;">' +
+                      '<span>' + param.seriesName + ':</span> ' +
+                      '<span style="color:' + param.color + ';font-weight:500;">' + param.value + '</span>' +
+                    '</div>';
+          }
+        });
+        return '<div style="min-width:100px;">' + res + '</div>';
       }
     },
     dataZoom: [
       {
-        type: 'inside', // 支持鼠标中键滚轮缩放、触控板双指滑动以及拖拽平移
-        zoomLock: true, // 锁定缩放，仅允许平移
-        startValue: dates.length > 30 ? dates.length - 30 : 0, // 默认视图视野仍然锁定在最新 30 天
+        type: 'inside',
+        zoomLock: true,
+        startValue: dates.length > 30 ? dates.length - 30 : 0,
         endValue: dates.length > 0 ? dates.length - 1 : 0
       },
       {
-        type: 'slider', // 像窗口一样的可视区间滑块
+        type: 'slider',
         show: true,
-        height: 6, // 改得更加幼细
+        height: 6,
         bottom: 0,
         borderColor: 'transparent',
         backgroundColor: '#f5f5f5',
-        fillerColor: 'rgba(180, 180, 180, 0.4)', // 将滑块修改为柔和的浅灰色
-        showDetail: false, // 隐藏滑块上的冗余时间文字
-        zoomLock: true, // 锁定滑块大小，固定区间长度
-        showDataShadow: false, // 隐藏滑块内部自带的走势折线阴影，保持纯粹的浅灰外观
-        handleSize: 0, // 隐藏拖拽两侧的多余把手，因为已经被 lock，全靠鼠标拖拽中心
-        moveHandleSize: 0, // 隐藏顶部自带的指示符线段
+        fillerColor: 'rgba(180, 180, 180, 0.4)',
+        showDetail: false,
+        zoomLock: true,
+        showDataShadow: false,
+        handleSize: 0,
+        moveHandleSize: 0,
         startValue: dates.length > 30 ? dates.length - 30 : 0,
         endValue: dates.length > 0 ? dates.length - 1 : 0
       }
     ],
     grid: {
-      left: 5,
-      right: 5,
-      top: 5,
-      bottom: 24, // 为底部的滑块和时间轴留出额外空间
+      left: 10,
+      right: 10,
+      top: 10,
+      bottom: 24,
       containLabel: true
     },
     xAxis: {
       type: 'category',
       data: dates,
       show: true,
-      axisLine: { show: false },
+      axisLine: { lineStyle: { color: '#eee' } },
       axisTick: { show: false },
       axisLabel: {
         fontSize: 9,
         color: '#999',
         margin: 4,
-        interval: 4, // 减小间隔，让下方展示更多时间点
-        formatter: function (value: string) {
-          // 将 2026-04-03 截取为 2026-04（年-月）
+        interval: 'auto',
+        formatter: function (value: any) {
           if (value && value.includes('-')) {
             const parts = value.split('-');
-            if (parts.length === 3) return `${parts[0]}-${parts[1]}`;
+            if (parts.length === 3) return parts[1] + '-' + parts[2];
           }
           return value;
         }
@@ -154,24 +185,53 @@ const renderChart = (data: StockQuoteHistory[]) => {
       type: 'value',
       scale: true,
       show: true,
-      splitLine: { show: false }, // 不显示极繁碎的横向网格线
+      position: 'right',
+      splitLine: { lineStyle: { type: 'dashed', color: '#f5f5f5' } },
       axisLabel: {
         fontSize: 9,
-        color: '#999',
-        formatter: (val: number) => Math.round(val).toString() // 取整，不保留小数
+        color: '#ccc',
+        formatter: (val: number) => val.toFixed(1)
       }
     },
     series: [
       {
+        name: 'K线',
         type: 'candlestick',
         data: values,
         itemStyle: {
-          color: '#ff4d4f',      // 阳线 红色
-          color0: '#52c41a',     // 阴线 绿色
+          color: '#ff4d4f',
+          color0: '#52c41a',
           borderColor: '#ff4d4f',
           borderColor0: '#52c41a'
         },
-        barWidth: '60%' // 使蜡烛图在小卡片下也能看清楚
+        barWidth: '60%'
+      },
+      {
+        name: 'MA5',
+        type: 'line',
+        data: ma5,
+        smooth: true,
+        showSymbol: false,
+        lineStyle: { width: 1, color: '#e8b004' },
+        itemStyle: { color: '#e8b004' }
+      },
+      {
+        name: 'MA10',
+        type: 'line',
+        data: ma10,
+        smooth: true,
+        showSymbol: false,
+        lineStyle: { width: 1, color: '#e677fd' },
+        itemStyle: { color: '#e677fd' }
+      },
+      {
+        name: 'MA20',
+        type: 'line',
+        data: ma20,
+        smooth: true,
+        showSymbol: false,
+        lineStyle: { width: 1, color: '#1890ff' },
+        itemStyle: { color: '#1890ff' }
       }
     ]
   };
