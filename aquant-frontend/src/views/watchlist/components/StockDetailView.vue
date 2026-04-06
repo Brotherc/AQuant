@@ -34,16 +34,16 @@
     <div class="detail-body">
       <!-- Left: Expanded Chart -->
       <div class="chart-section">
-        <div class="chart-header">
-          <span class="section-title">技术走势</span>
-          <a-radio-group v-model:value="frequency" size="small">
-            <a-radio-button value="1d">日线</a-radio-button>
-            <a-radio-button value="1w">周线</a-radio-button>
-            <a-radio-button value="1M">月线</a-radio-button>
-            <a-radio-button value="1Q">季线</a-radio-button>
-            <a-radio-button value="1Y">年线</a-radio-button>
-          </a-radio-group>
-        </div>
+          <div class="chart-controls-left">
+            <span class="section-title">技术走势</span>
+            <a-radio-group v-model:value="frequency" size="small">
+              <a-radio-button value="1d">日线</a-radio-button>
+              <a-radio-button value="1w">周线</a-radio-button>
+              <a-radio-button value="1M">月线</a-radio-button>
+              <a-radio-button value="1Q">季线</a-radio-button>
+              <a-radio-button value="1Y">年线</a-radio-button>
+            </a-radio-group>
+          </div>
         <div class="chart-container" ref="chartContainer"></div>
       </div>
 
@@ -195,9 +195,20 @@ const renderChart = (data: StockQuoteHistory[]) => {
   const ma5 = calculateMA(5, data);
   const ma10 = calculateMA(10, data);
   const ma20 = calculateMA(20, data);
+  const ma60 = calculateMA(60, data);
+  const ma120 = calculateMA(120, data);
 
   const option = {
     animation: false,
+    legend: {
+      data: ['K线', 'MA5', 'MA10', 'MA20', 'MA60', 'MA120'],
+      inactiveColor: '#ccc',
+      textStyle: { color: '#8c8c8c', fontSize: 11 },
+      top: 0,
+      right: '6%',
+      itemWidth: 20,
+      itemHeight: 10
+    },
     tooltip: { 
       show: true,
       trigger: 'axis',
@@ -238,10 +249,11 @@ const renderChart = (data: StockQuoteHistory[]) => {
             res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;"><span>开盘:</span> <span>${open}</span></div>`;
             res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;"><span>最高:</span> <span style="color:#ff4d4f;">${high}</span></div>`;
             res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:10px;"><span>最低:</span> <span style="color:#52c41a;">${low}</span></div>`;
-          } else if (param.seriesType === 'line' && param.value !== '-') {
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;font-size:12px;color:#666;">
+          } else if (param.seriesType === 'line') {
+            const val = param.value === '-' || param.value === undefined ? '-' : param.value;
+            res += `<div style="display:flex;justify-content:space-between;gap:20px;font-size:11px;color:#666;margin-bottom:2px;">
                       <span>${param.seriesName}:</span> 
-                      <span style="color:${param.color};">${param.value}</span>
+                      <span style="color:${param.color};font-weight:500;">${val}</span>
                     </div>`;
           }
         });
@@ -287,7 +299,7 @@ const renderChart = (data: StockQuoteHistory[]) => {
     grid: {
       left: '3%',
       right: '6%',
-      top: '5%',
+      top: '10%',
       bottom: '15%',
       containLabel: true
     },
@@ -322,7 +334,8 @@ const renderChart = (data: StockQuoteHistory[]) => {
         data: ma5,
         smooth: true,
         showSymbol: false,
-        lineStyle: { width: 1, color: '#e8b004' }
+        lineStyle: { width: 1, color: '#e8b004' },
+        itemStyle: { color: '#e8b004' }
       },
       {
         name: 'MA10',
@@ -330,7 +343,8 @@ const renderChart = (data: StockQuoteHistory[]) => {
         data: ma10,
         smooth: true,
         showSymbol: false,
-        lineStyle: { width: 1, color: '#e677fd' }
+        lineStyle: { width: 1, color: '#e677fd' },
+        itemStyle: { color: '#e677fd' }
       },
       {
         name: 'MA20',
@@ -338,7 +352,26 @@ const renderChart = (data: StockQuoteHistory[]) => {
         data: ma20,
         smooth: true,
         showSymbol: false,
-        lineStyle: { width: 1, color: '#1890ff' }
+        lineStyle: { width: 1, color: '#1890ff' },
+        itemStyle: { color: '#1890ff' }
+      },
+      {
+        name: 'MA60',
+        type: 'line',
+        data: ma60,
+        smooth: true,
+        showSymbol: false,
+        lineStyle: { width: 1, color: '#52c41a' },
+        itemStyle: { color: '#52c41a' }
+      },
+      {
+        name: 'MA120',
+        type: 'line',
+        data: ma120,
+        smooth: true,
+        showSymbol: false,
+        lineStyle: { width: 1, color: '#8c8c8c' },
+        itemStyle: { color: '#8c8c8c' }
       }
     ]
   };
@@ -435,10 +468,10 @@ onUnmounted(() => {
   flex-direction: column;
 }
 
-.chart-header {
+.chart-controls-left {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 16px;
   margin-bottom: 12px;
 }
 
