@@ -21,7 +21,7 @@ public enum ExceptionEnum {
     AUTH_LOGIN_FAILED(1000201, "用户名或密码错误"),
     AUTH_ACCOUNT_DISABLED(1000202, "账号已被禁用"),
     AUTH_USERNAME_EXISTS(1000203, "用户名已存在"),
-    AUTH_TOKEN_INVALID(1000204, "Token 无效"),
+    AUTH_TOKEN_INVALID(1000204, "请先登录"),
     AUTH_USER_NOT_FOUND(1000205, "用户不存在");
 
     /**

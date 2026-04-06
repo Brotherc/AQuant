@@ -45,8 +45,11 @@ public class StockWatchlistService {
     private final StockDupontAnalysisRepository dupontAnalysisRepository;
     private final StockDividendRepository dividendRepository;
 
-    public List<WatchlistGroupVO> getAllGroups() {
-        List<StockWatchlistGroup> groups = groupRepository.findAllByOrderBySortNoAsc();
+    public List<WatchlistGroupVO> getAllGroups(Long userId) {
+        if (userId == null) {
+            return new ArrayList<>();
+        }
+        List<StockWatchlistGroup> groups = groupRepository.findAllByUserIdOrderBySortNoAsc(userId);
         return groups.stream().map(g -> {
             WatchlistGroupVO vo = new WatchlistGroupVO();
             vo.setId(g.getId());
@@ -56,15 +59,18 @@ public class StockWatchlistService {
         }).collect(Collectors.toList());
     }
 
-    public List<WatchlistStockVO> getStocksByGroupId(Long groupId) {
+    public List<WatchlistStockVO> getStocksByGroupId(Long groupId, Long userId) {
+        if (userId == null) {
+            return new ArrayList<>();
+        }
+        // 校验归属
+        groupRepository.findByIdAndUserId(groupId, userId)
+                .orElseThrow(() -> ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND.toException());
+
         List<StockWatchlistStock> watchlistStocks = stockRepository.findByGroupIdOrderBySortNoDesc(groupId);
         if (CollectionUtils.isEmpty(watchlistStocks)) {
             return new ArrayList<>();
         }
-
-        // 这里的 code 在仓库里可能带 sh/sz 前缀，也可能不带，需要根据 StockQuote 的实际情况处理
-        // 假设 StockQuote.code 是带前缀的，而 watchlist 存的 stockCode 是 6位代码，或者一致。
-        // 根据之前的代码 `o.getCode().substring(2)`，StockQuote.code 应该是带前缀的（如 sh600519）
 
         List<String> codes6 = watchlistStocks.stream().map(StockWatchlistStock::getStockCode)
                 .collect(Collectors.toList());
@@ -78,7 +84,6 @@ public class StockWatchlistService {
         }
 
         List<StockQuote> quotes = quoteRepository.findByCodeIn(candidates);
-        // 如果依然有漏掉的，再查询全部进行补全（兜底逻辑）
         if (quotes.size() < codes6.size()) {
             quotes = quoteRepository.findAll();
         }
@@ -89,7 +94,6 @@ public class StockWatchlistService {
                     return c.length() > 6 ? c.substring(c.length() - 6) : c;
                 }, q -> q, (a, b) -> a));
 
-        // 批量查询估值与杜邦数据
         List<StockValuationMetrics> valuationList = valuationMetricsRepository.findByStockCodeIn(candidates);
         Map<String, StockValuationMetrics> valuationMap = valuationList.stream()
                 .collect(Collectors.toMap(v -> {
@@ -160,17 +164,20 @@ public class StockWatchlistService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public StockWatchlistGroup createGroup(WatchlistGroupReqVO reqVO) {
-        if (groupRepository.existsByName(reqVO.getName())) {
+    public StockWatchlistGroup createGroup(WatchlistGroupReqVO reqVO, Long userId) {
+        if (userId == null) {
+            throw ExceptionEnum.AUTH_TOKEN_INVALID.toException();
+        }
+        if (groupRepository.existsByUserIdAndName(userId, reqVO.getName())) {
             throw new BusinessException(ExceptionEnum.WATCHLIST_GROUP_NAME_DUPLICATE);
         }
         StockWatchlistGroup group = new StockWatchlistGroup();
+        group.setUserId(userId);
         group.setName(reqVO.getName());
         group.setCreatedAt(LocalDateTime.now());
         group.setUpdatedAt(LocalDateTime.now());
 
-        // 自动计算排序号：当前最大值 + 1
-        Integer maxSort = groupRepository.findAll().stream()
+        Integer maxSort = groupRepository.findAllByUserIdOrderBySortNoAsc(userId).stream()
                 .map(StockWatchlistGroup::getSortNo)
                 .filter(java.util.Objects::nonNull)
                 .max(Integer::compareTo)
@@ -181,11 +188,14 @@ public class StockWatchlistService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void updateGroup(WatchlistGroupUpdateReqVO reqVO) {
-        StockWatchlistGroup group = groupRepository.findById(reqVO.getId())
+    public void updateGroup(WatchlistGroupUpdateReqVO reqVO, Long userId) {
+        if (userId == null) {
+            throw ExceptionEnum.AUTH_TOKEN_INVALID.toException();
+        }
+        StockWatchlistGroup group = groupRepository.findByIdAndUserId(reqVO.getId(), userId)
                 .orElseThrow(() -> new BusinessException(ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND));
 
-        if (!group.getName().equals(reqVO.getName()) && groupRepository.existsByName(reqVO.getName())) {
+        if (!group.getName().equals(reqVO.getName()) && groupRepository.existsByUserIdAndName(userId, reqVO.getName())) {
             throw new BusinessException(ExceptionEnum.WATCHLIST_GROUP_NAME_DUPLICATE);
         }
 
@@ -195,23 +205,30 @@ public class StockWatchlistService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void deleteGroup(Long groupId) {
+    public void deleteGroup(Long groupId, Long userId) {
+        if (userId == null) {
+            throw ExceptionEnum.AUTH_TOKEN_INVALID.toException();
+        }
+        groupRepository.findByIdAndUserId(groupId, userId)
+                .orElseThrow(() -> new BusinessException(ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND));
+
         groupRepository.deleteById(groupId);
         stockRepository.deleteByGroupId(groupId);
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void addStockToWatchlist(WatchlistStockReqVO reqVO) {
-        String inputCode = reqVO.getStockCode();
+    public void addStockToWatchlist(WatchlistStockReqVO reqVO, Long userId) {
+        if (userId == null) {
+            throw ExceptionEnum.AUTH_TOKEN_INVALID.toException();
+        }
+        // 校验分组所有人
+        groupRepository.findByIdAndUserId(reqVO.getGroupId(), userId)
+                .orElseThrow(() -> ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND.toException());
 
-        // 智能补全逻辑
+        String inputCode = reqVO.getStockCode();
         String standardizedCode = inputCode.length() > 6 ? inputCode.substring(inputCode.length() - 6) : inputCode;
 
-        StockQuote quote;
-        // 1. 尝试直接匹配（带或不带前缀）
-        quote = quoteRepository.findByCode(inputCode);
-
-        // 2. 如果没找到，尝试补全常见前缀并批量查询
+        StockQuote quote = quoteRepository.findByCode(inputCode);
         if (quote == null && inputCode.length() == 6) {
             List<String> candidates = List.of("sh" + inputCode, "sz" + inputCode, "bj" + inputCode);
             List<StockQuote> found = quoteRepository.findByCodeIn(candidates);
@@ -219,8 +236,6 @@ public class StockWatchlistService {
                 quote = found.get(0);
             }
         }
-
-        // 3. 否则查询全部股票进行后缀匹配（兜底逻辑）
         if (quote == null) {
             quote = quoteRepository.findAll().stream()
                     .filter(q -> q.getCode().endsWith(standardizedCode))
@@ -240,7 +255,6 @@ public class StockWatchlistService {
         ws.setStockCode(standardizedCode);
         ws.setCreatedAt(LocalDateTime.now());
 
-        // 自动计算排序号：取最大值 + 1，配合 Desc 排序即可实现最新添加在最前
         Integer maxSort = stockRepository.findByGroupIdOrderBySortNoDesc(reqVO.getGroupId()).stream()
                 .map(StockWatchlistStock::getSortNo)
                 .filter(java.util.Objects::nonNull)
@@ -252,12 +266,24 @@ public class StockWatchlistService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void removeStockFromWatchlist(Long groupId, String stockCode) {
+    public void removeStockFromWatchlist(Long groupId, String stockCode, Long userId) {
+        if (userId == null) {
+            throw ExceptionEnum.AUTH_TOKEN_INVALID.toException();
+        }
+        groupRepository.findByIdAndUserId(groupId, userId)
+                .orElseThrow(() -> ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND.toException());
+
         stockRepository.deleteByGroupIdAndStockCode(groupId, stockCode);
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void updateStockSort(com.brotherc.aquant.model.vo.watchlist.WatchlistStockReorderReqVO reqVO) {
+    public void updateStockSort(com.brotherc.aquant.model.vo.watchlist.WatchlistStockReorderReqVO reqVO, Long userId) {
+        if (userId == null) {
+            throw ExceptionEnum.AUTH_TOKEN_INVALID.toException();
+        }
+        groupRepository.findByIdAndUserId(reqVO.getGroupId(), userId)
+                .orElseThrow(() -> ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND.toException());
+
         Long groupId = reqVO.getGroupId();
         List<String> codes = reqVO.getStockCodes();
 
@@ -265,7 +291,6 @@ public class StockWatchlistService {
         Map<String, StockWatchlistStock> stockMap = stocks.stream()
                 .collect(Collectors.toMap(StockWatchlistStock::getStockCode, s -> s));
 
-        // 重新分配排序号：列表第一个排序号最大（目前是降序排列显示）
         int size = codes.size();
         for (int i = 0; i < size; i++) {
             String code = codes.get(i);
@@ -278,12 +303,17 @@ public class StockWatchlistService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void moveStock(com.brotherc.aquant.model.vo.watchlist.WatchlistStockMoveReqVO reqVO) {
+    public void moveStock(com.brotherc.aquant.model.vo.watchlist.WatchlistStockMoveReqVO reqVO, Long userId) {
+        if (userId == null) {
+            throw ExceptionEnum.AUTH_TOKEN_INVALID.toException();
+        }
+        groupRepository.findByIdAndUserId(reqVO.getGroupId(), userId)
+                .orElseThrow(() -> ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND.toException());
+
         Long groupId = reqVO.getGroupId();
         String stockCode = reqVO.getStockCode();
         String action = reqVO.getAction();
 
-        // 获取当前分组下按 sortNo 降序排列的股票（即前端显示的顺序）
         List<StockWatchlistStock> stocks = stockRepository.findByGroupIdOrderBySortNoDesc(groupId);
         int index = -1;
         for (int i = 0; i < stocks.size(); i++) {
@@ -292,14 +322,12 @@ public class StockWatchlistService {
                 break;
             }
         }
-
         if (index == -1) return;
 
         StockWatchlistStock current = stocks.get(index);
 
         if ("TOP".equalsIgnoreCase(action)) {
             if (index == 0) return;
-            // 获取当前最大的 sortNo
             int maxSortNo = stocks.stream()
                     .map(StockWatchlistStock::getSortNo)
                     .filter(java.util.Objects::nonNull)
@@ -309,12 +337,10 @@ public class StockWatchlistService {
             stockRepository.save(current);
         } else if ("UP".equalsIgnoreCase(action)) {
             if (index == 0) return;
-            // 往前移，即与上一个（sortNo 更大的）交换
             StockWatchlistStock prev = stocks.get(index - 1);
             int currentSort = current.getSortNo() != null ? current.getSortNo() : 0;
             int prevSort = prev.getSortNo() != null ? prev.getSortNo() : 0;
             
-            // 交换序号，如果序号相同，则强制让 current 比 prev 大 1
             if (currentSort == prevSort) {
                 current.setSortNo(prevSort + 1);
             } else {
@@ -325,12 +351,10 @@ public class StockWatchlistService {
             stockRepository.save(current);
         } else if ("DOWN".equalsIgnoreCase(action)) {
             if (index == stocks.size() - 1) return;
-            // 往后移，即与下一个（sortNo 更小的）交换
             StockWatchlistStock next = stocks.get(index + 1);
             int currentSort = current.getSortNo() != null ? current.getSortNo() : 0;
             int nextSort = next.getSortNo() != null ? next.getSortNo() : 0;
             
-            // 交换序号，如果序号相同，则强制让 current 比 next 小 1
             if (currentSort == nextSort) {
                 current.setSortNo(nextSort - 1);
             } else {
@@ -343,7 +367,16 @@ public class StockWatchlistService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void moveStockToGroup(WatchlistStockMoveGroupReqVO reqVO) {
+    public void moveStockToGroup(WatchlistStockMoveGroupReqVO reqVO, Long userId) {
+        if (userId == null) {
+            throw ExceptionEnum.AUTH_TOKEN_INVALID.toException();
+        }
+        // 校验两个分组归属
+        groupRepository.findByIdAndUserId(reqVO.getFromGroupId(), userId)
+                .orElseThrow(() -> ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND.toException());
+        groupRepository.findByIdAndUserId(reqVO.getToGroupId(), userId)
+                .orElseThrow(() -> ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND.toException());
+
         String stockCode = reqVO.getStockCode();
         Long fromGroupId = reqVO.getFromGroupId();
         Long toGroupId = reqVO.getToGroupId();
@@ -352,15 +385,13 @@ public class StockWatchlistService {
             return;
         }
 
-        // 1. 从源分组移除
         stockRepository.deleteByGroupIdAndStockCode(fromGroupId, stockCode);
 
-        // 2. 添加到目标分组（如果不存在）
         if (!stockRepository.existsByGroupIdAndStockCode(toGroupId, stockCode)) {
             WatchlistStockReqVO addReq = new WatchlistStockReqVO();
             addReq.setGroupId(toGroupId);
             addReq.setStockCode(stockCode);
-            addStockToWatchlist(addReq);
+            addStockToWatchlist(addReq, userId);
         }
     }
 

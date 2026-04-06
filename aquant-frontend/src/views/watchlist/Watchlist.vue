@@ -46,7 +46,7 @@
     <div class="watchlist-content" v-if="activeGroupId">
     
       <!-- 轻量级排序与搜索操作带 -->
-      <div class="control-bar">
+      <div class="control-bar" v-if="stocks.length > 0">
         <div class="search-box">
           <a-input 
             v-model:value="searchQuery" 
@@ -79,121 +79,129 @@
       </div>
 
       <a-spin :spinning="loading">
-            <a-row :gutter="[16, 16]" class="card-grid">
-              <a-col 
-                :xs="24" :sm="24" :md="12" :lg="8" :xl="6"
-                v-for="stock in sortedStocks" 
-                :key="stock.stockCode"
-              >
-                <div class="draggable-wrapper">
-                      <a-card hoverable class="stock-card" size="small">
-                      <!-- 头部：代码与名称，移除操作 -->
-                      <div class="card-header">
-                        <div class="stock-info">
-                          <span class="stock-name">{{ stock.stockName }}</span>
-                          <span class="stock-code">{{ stock.stockCode }}</span>
-                        </div>
-                        <div @click.stop>
-                          <a-dropdown>
-                            <ellipsis-outlined class="more-icon" />
-                            <template #overlay>
-                              <a-menu>
-                                <a-menu-item @click="openStockDetail(stock)">
-                                  查看详情
-                                </a-menu-item>
-                                <a-menu-divider />
-                                <a-menu-item 
-                                  :disabled="isFirst(stock.stockCode)"
-                                  @click="handleMoveToTop(stock.stockCode)"
-                                >
-                                  移至最前
-                                </a-menu-item>
-                                <a-tooltip :title="sortKey !== 'default' ? '请先切换到默认排序以进行手动排序' : ''" placement="left">
-                                  <a-menu-item 
-                                    :disabled="sortKey !== 'default' || isFirst(stock.stockCode)"
-                                    @click="handleMove(stock.stockCode, 'up')"
-                                  >
-                                    往前移
-                                  </a-menu-item>
-                                </a-tooltip>
-                                <a-tooltip :title="sortKey !== 'default' ? '请先切换到默认排序以进行手动排序' : ''" placement="left">
-                                  <a-menu-item 
-                                    :disabled="sortKey !== 'default' || isLast(stock.stockCode)"
-                                    @click="handleMove(stock.stockCode, 'down')"
-                                  >
-                                    往后移
-                                  </a-menu-item>
-                                </a-tooltip>
-                                <a-menu-divider />
-                                <a-menu-item @click="showMoveGroupModal(stock)">
-                                  修改分组
-                                </a-menu-item>
-                                <a-menu-divider />
-                                <a-menu-item danger>
-                                  <div @click.stop>
-                                    <a-popconfirm title="确定移除该股票吗？" @confirm="handleRemoveStock(stock.stockCode)">
-                                      移除
-                                    </a-popconfirm>
-                                  </div>
-                                </a-menu-item>
-                              </a-menu>
-                            </template>
-                          </a-dropdown>
-                        </div>
-                      </div>
-                    
-                    <!-- 行情数据 -->
-                    <div class="quote-info" :class="getPriceColorClass(stock.changePercent)">
-                      <div class="latest-price">{{ stock.latestPrice != null ? stock.latestPrice.toFixed(2) : '-' }}</div>
-                      <div class="change-percent">
-                        {{ stock.changePercent > 0 ? '+' : '' }}{{ stock.changePercent != null ? stock.changePercent.toFixed(2) + '%' : '-' }}
-                      </div>
-                    </div>
-                    
-                    <!-- 迷你K线 -->
-                    <div class="kline-box">
-                      <MiniKlineChart :stockCode="stock.stockCode" />
-                    </div>
-
-                    <!-- 基本面数据 -->
-                    <a-divider style="margin: 8px 0" />
-                    <div class="fundamentals">
-                      <div class="fund-item">
-                        <span class="label">PE</span>
-                        <span class="val">{{ stock.pe != null ? stock.pe.toFixed(2) : '-' }}</span>
-                      </div>
-                      <div class="fund-item">
-                        <span class="label">PEG</span>
-                        <span class="val">{{ stock.peg != null ? stock.peg.toFixed(2) : '-' }}</span>
-                      </div>
-                      <div class="fund-item">
-                        <span class="label">ROE</span>
-                        <span class="val">{{ stock.roe != null ? stock.roe.toFixed(2) + '%' : '-' }}</span>
-                      </div>
-                    </div>
-
-                    <!-- 分红数据 -->
-                    <template v-if="stock.recentDividends && stock.recentDividends.length > 0">
-                      <a-divider style="margin: 6px 0" dashed />
-                      <div class="dividends-wrap">
-                        <div v-for="(div, idx) in stock.recentDividends" :key="idx" class="dividend-row">
-                          <span class="div-date">{{ formatReportDate(div.proposalAnnouncementDate) }}</span>
-                          <span class="div-text">{{ formatDividend(div) }}</span>
-                        </div>
-                      </div>
-                    </template>
-                  </a-card>
+        <div v-if="stocks.length === 0 && !loading" class="empty-stocks-wrapper">
+          <a-empty description="该分组暂无股票" />
+        </div>
+        <a-row v-else :gutter="[16, 16]" class="card-grid">
+          <a-col 
+            :xs="24" :sm="24" :md="12" :lg="8" :xl="6"
+            v-for="stock in sortedStocks" 
+            :key="stock.stockCode"
+          >
+            <div class="draggable-wrapper">
+              <a-card hoverable class="stock-card" size="small">
+                <!-- 头部：代码与名称，移除操作 -->
+                <div class="card-header">
+                  <div class="stock-info">
+                    <span class="stock-name">{{ stock.stockName }}</span>
+                    <span class="stock-code">{{ stock.stockCode }}</span>
+                  </div>
+                  <div @click.stop>
+                    <a-dropdown>
+                      <ellipsis-outlined class="more-icon" />
+                      <template #overlay>
+                        <a-menu>
+                          <a-menu-item @click="openStockDetail(stock)">
+                            查看详情
+                          </a-menu-item>
+                          <a-menu-divider />
+                          <a-menu-item 
+                            :disabled="isFirst(stock.stockCode)"
+                            @click="handleMoveToTop(stock.stockCode)"
+                          >
+                            移至最前
+                          </a-menu-item>
+                          <a-tooltip :title="sortKey !== 'default' ? '请先切换到默认排序以进行手动排序' : ''" placement="left">
+                            <a-menu-item 
+                              :disabled="sortKey !== 'default' || isFirst(stock.stockCode)"
+                              @click="handleMove(stock.stockCode, 'up')"
+                            >
+                              往前移
+                            </a-menu-item>
+                          </a-tooltip>
+                          <a-tooltip :title="sortKey !== 'default' ? '请先切换到默认排序以进行手动排序' : ''" placement="left">
+                            <a-menu-item 
+                              :disabled="sortKey !== 'default' || isLast(stock.stockCode)"
+                              @click="handleMove(stock.stockCode, 'down')"
+                            >
+                              往后移
+                            </a-menu-item>
+                          </a-tooltip>
+                          <a-menu-divider />
+                          <a-menu-item @click="showMoveGroupModal(stock)">
+                            修改分组
+                          </a-menu-item>
+                          <a-menu-divider />
+                          <a-menu-item danger>
+                            <div @click.stop>
+                              <a-popconfirm title="确定移除该股票吗？" @confirm="handleRemoveStock(stock.stockCode)">
+                                移除
+                              </a-popconfirm>
+                            </div>
+                          </a-menu-item>
+                        </a-menu>
+                      </template>
+                    </a-dropdown>
+                  </div>
                 </div>
-              </a-col>
-              <!-- 添加股票的常驻卡片 -->
-              <a-col :xs="24" :sm="24" :md="12" :lg="8" :xl="6">
-                <a-card hoverable class="add-stock-card" size="small" @click="showAddStockModal">
-                  <plus-outlined class="add-icon" />
-                  <div class="add-text">添加股票</div>
-                </a-card>
-              </a-col>
-            </a-row>
-          </a-spin>
+              
+                <!-- 行情数据 -->
+                <div class="quote-info" :class="getPriceColorClass(stock.changePercent)">
+                  <div class="latest-price">{{ stock.latestPrice != null ? stock.latestPrice.toFixed(2) : '-' }}</div>
+                  <div class="change-percent">
+                    {{ stock.changePercent > 0 ? '+' : '' }}{{ stock.changePercent != null ? stock.changePercent.toFixed(2) + '%' : '-' }}
+                  </div>
+                </div>
+                
+                <!-- 迷你K线 -->
+                <div class="kline-box">
+                  <MiniKlineChart :stockCode="stock.stockCode" />
+                </div>
+
+                <!-- 基本面数据 -->
+                <a-divider style="margin: 8px 0" />
+                <div class="fundamentals">
+                  <div class="fund-item">
+                    <span class="label">PE</span>
+                    <span class="val">{{ stock.pe != null ? stock.pe.toFixed(2) : '-' }}</span>
+                  </div>
+                  <div class="fund-item">
+                    <span class="label">PEG</span>
+                    <span class="val">{{ stock.peg != null ? stock.peg.toFixed(2) : '-' }}</span>
+                  </div>
+                  <div class="fund-item">
+                    <span class="label">ROE</span>
+                    <span class="val">{{ stock.roe != null ? stock.roe.toFixed(2) + '%' : '-' }}</span>
+                  </div>
+                </div>
+
+                <!-- 分红数据 -->
+                <template v-if="stock.recentDividends && stock.recentDividends.length > 0">
+                  <a-divider style="margin: 6px 0" dashed />
+                  <div class="dividends-wrap">
+                    <div v-for="(div, idx) in stock.recentDividends" :key="idx" class="dividend-row">
+                      <span class="div-date">{{ formatReportDate(div.proposalAnnouncementDate) }}</span>
+                      <span class="div-text">{{ formatDividend(div) }}</span>
+                    </div>
+                  </div>
+                </template>
+              </a-card>
+            </div>
+          </a-col>
+          <!-- 添加股票的常驻卡片 -->
+          <a-col :xs="24" :sm="24" :md="12" :lg="8" :xl="6">
+            <a-card hoverable class="add-stock-card" size="small" @click="showAddStockModal">
+              <plus-outlined class="add-icon" />
+              <div class="add-text">添加股票</div>
+            </a-card>
+          </a-col>
+        </a-row>
+      </a-spin>
+    </div>
+
+    <!-- 整个页面没有任何分组时的空状态 -->
+    <div v-else-if="groups.length === 0 && !loading" class="full-empty-container">
+      <a-empty description="暂无自选数据" />
     </div>
 
     <!-- 新增股票 Modal -->
@@ -315,11 +323,13 @@ const submitEditGroup = async () => {
   }
 
   try {
-    await updateWatchlistGroup({ id: editingGroupId.value, name: newName });
-    message.success('修改成功');
-    // 更新本地状态
-    if (oldGroup) oldGroup.name = newName;
-    cancelEditGroup();
+    const res = await updateWatchlistGroup({ id: editingGroupId.value, name: newName });
+    if (res.data.success) {
+      message.success('修改成功');
+      // 更新本地状态
+      if (oldGroup) oldGroup.name = newName;
+      cancelEditGroup();
+    }
   } catch (error) {
     console.error('Failed to update group name:', error);
   }
@@ -348,16 +358,18 @@ const handleExecuteMoveGroup = async () => {
   }
   moveGroupLoading.value = true;
   try {
-    await moveWatchlistStockToGroup({
+    const res = await moveWatchlistStockToGroup({
       stockCode: movingStockCode.value,
       fromGroupId: activeGroupId.value!,
       toGroupId: targetGroupId.value
     });
-    message.success('分组修改成功');
-    moveGroupModalVisible.value = false;
-    // 刷新当前分组列表
-    if (activeGroupId.value) {
-      await fetchStocks(activeGroupId.value);
+    if (res.data.success) {
+      message.success('分组修改成功');
+      moveGroupModalVisible.value = false;
+      // 刷新当前分组列表
+      if (activeGroupId.value) {
+        await fetchStocks(activeGroupId.value);
+      }
     }
   } catch (error) {
     console.error('Failed to move group:', error);
@@ -517,8 +529,6 @@ const handleCreateGroup = async () => {
       message.success('创建成功');
       groupModalVisible.value = false;
       fetchGroups();
-    } else {
-      message.error(res.data.message || '创建失败');
     }
   } catch (error) {
     console.error(error);
@@ -654,7 +664,6 @@ const syncMove = async (stockCode: string, action: 'UP' | 'DOWN' | 'TOP', newSto
     }
   } catch (error) {
     console.error('Move failed:', error);
-    message.error('排序更新失败');
   }
 };
 
@@ -986,5 +995,22 @@ onMounted(() => {
 .control-bar .ctrl-item .anticon {
   margin-left: 2px;
   font-size: 11px;
+}
+
+/* 空状态样式 */
+.empty-stocks-wrapper {
+  padding: 80px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.full-empty-container {
+  padding: 120px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
 }
 </style>

@@ -18,6 +18,12 @@ public class StockWatchlistGroup {
     private Long id;
 
     /**
+     * 用户 ID
+     */
+    @Column(name = "user_id")
+    private Long userId;
+
+    /**
      * 分组名称
      */
     @Column(name = "name")
