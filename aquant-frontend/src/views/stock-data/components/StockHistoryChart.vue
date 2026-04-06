@@ -184,7 +184,7 @@ const renderChart = (data: StockQuoteHistory[]) => {
         bottom: 8,
         borderColor: 'transparent',
         backgroundColor: '#f5f5f5',
-        fillerColor: 'rgba(180, 180, 180, 0.4)', 
+        fillerColor: 'rgba(140, 140, 140, 0.4)', 
         showDetail: false, 
         zoomLock: true, 
         showDataShadow: false, 

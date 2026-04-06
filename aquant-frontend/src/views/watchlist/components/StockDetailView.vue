@@ -197,6 +197,7 @@ const renderChart = (data: StockQuoteHistory[]) => {
   const ma20 = calculateMA(20, data);
   const ma60 = calculateMA(60, data);
   const ma120 = calculateMA(120, data);
+  const volumes = data.map(item => item.volume);
 
   const option = {
     animation: false,
@@ -216,8 +217,8 @@ const renderChart = (data: StockQuoteHistory[]) => {
         type: 'cross', 
         lineStyle: { type: 'dashed', color: 'rgba(25, 144, 255, 0.4)' },
         label: {
-            backgroundColor: '#d9d9d9', // 再次调浅背景色（从 #bfbfbf 调至 #d9d9d9）
-            color: '#333', // 背景变浅，文字改为深色以保证对比度
+            backgroundColor: '#d9d9d9',
+            color: '#333',
             borderColor: '#d9d9d9',
             borderWidth: 1,
             padding: [4, 8],
@@ -249,6 +250,11 @@ const renderChart = (data: StockQuoteHistory[]) => {
             res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;"><span>开盘:</span> <span>${open}</span></div>`;
             res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;"><span>最高:</span> <span style="color:#ff4d4f;">${high}</span></div>`;
             res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:10px;"><span>最低:</span> <span style="color:#52c41a;">${low}</span></div>`;
+          } else if (param.seriesName === '成交量') {
+            res += `<div style="display:flex;justify-content:space-between;gap:20px;font-size:11px;color:#888;margin-bottom:4px;">
+                      <span>成交量:</span> 
+                      <span style="font-weight:500;">${param.value}</span>
+                    </div>`;
           } else if (param.seriesType === 'line') {
             const val = param.value === '-' || param.value === undefined ? '-' : param.value;
             res += `<div style="display:flex;justify-content:space-between;gap:20px;font-size:11px;color:#666;margin-bottom:2px;">
@@ -263,59 +269,78 @@ const renderChart = (data: StockQuoteHistory[]) => {
     dataZoom: [
       {
         type: 'inside',
+        xAxisIndex: [0, 1],
         start: 70,
         end: 100
       },
       {
         show: true,
         type: 'slider',
-        top: '90%',
-        height: 20,
+        xAxisIndex: [0, 1],
+        height: 6,
+        bottom: 8,
         start: 70,
         end: 100,
         borderColor: 'transparent',
         backgroundColor: '#f5f5f5',
-        fillerColor: 'rgba(140, 140, 140, 0.4)', // 再次加深填充不透明度
-        handleIcon: 'path://M-1.5,0.5c0-0.6,0.4-1,1-1h1c0.6,0,1,0.4,1,1v5c0,0.6-0.4,1-1,1h-1c-0.6,0-1-0.4-1-1V0.5z',
-        handleSize: '100%',
-        handleStyle: {
-          color: '#808080', // 调深手柄颜色
-          shadowBlur: 3,
-          shadowColor: 'rgba(0, 0, 0, 0.2)',
-          shadowOffsetX: 1,
-          shadowOffsetY: 1
-        },
-        dataBackground: {
-          lineStyle: { color: '#d9d9d9' },
-          areaStyle: { color: '#f0f0f0' }
-        },
-        selectedDataBackground: {
-          lineStyle: { color: '#8c8c8c' },
-          areaStyle: { color: '#d9d9d9' }
-        },
-        textStyle: { color: '#8c8c8c' }
+        fillerColor: 'rgba(140, 140, 140, 0.4)',
+        handleSize: 0,
+        moveHandleSize: 0,
+        showDetail: false,
+        showDataShadow: false,
+        zoomLock: true
       }
     ],
-    grid: {
-      left: '3%',
-      right: '6%',
-      top: '10%',
-      bottom: '15%',
-      containLabel: true
-    },
-    xAxis: {
-      type: 'category',
-      data: dates,
-      axisLine: { lineStyle: { color: '#eee' } },
-      axisLabel: { color: '#999' }
-    },
-    yAxis: {
-      type: 'value',
-      scale: true,
-      position: 'right',
-      splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } },
-      axisLabel: { color: '#999' }
-    },
+    grid: [
+      {
+        left: '3%',
+        right: '6%',
+        top: '10%',
+        height: '65%',
+        containLabel: true
+      },
+      {
+        left: '3%',
+        right: '6%',
+        top: '78%',
+        height: '12%',
+        containLabel: true
+      }
+    ],
+    xAxis: [
+      {
+        type: 'category',
+        data: dates,
+        axisLine: { lineStyle: { color: '#eee' } },
+        axisLabel: { color: '#999' }
+      },
+      {
+        type: 'category',
+        gridIndex: 1,
+        data: dates,
+        axisLine: { show: false },
+        axisLabel: { show: false },
+        axisTick: { show: false }
+      }
+    ],
+    yAxis: [
+      {
+        scale: true,
+        position: 'right',
+        splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } },
+        axisLabel: { color: '#999' }
+      },
+      {
+        scale: true,
+        gridIndex: 1,
+        splitNumber: 2,
+        position: 'right',
+        axisLine: { show: false },
+        axisLabel: { show: false },
+        axisTick: { show: false },
+        splitLine: { show: false }
+      }
+    ],
     series: [
       {
         name: 'K线',
@@ -372,6 +397,21 @@ const renderChart = (data: StockQuoteHistory[]) => {
         showSymbol: false,
         lineStyle: { width: 1, color: '#8c8c8c' },
         itemStyle: { color: '#8c8c8c' }
+      },
+      {
+        name: '成交量',
+        type: 'bar',
+        xAxisIndex: 1,
+        yAxisIndex: 1,
+        data: volumes,
+        itemStyle: {
+            color: (params: any) => {
+                const i = params.dataIndex;
+                const v = values[i];
+                if (!v || v.length < 2) return '#ff4d4f';
+                return v[1]! >= v[0]! ? '#ff4d4f' : '#52c41a';
+            }
+        }
       }
     ]
   };
