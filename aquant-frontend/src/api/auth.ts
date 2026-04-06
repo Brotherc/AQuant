@@ -25,6 +25,10 @@ export interface UserInfo {
     email: string;
 }
 
+export interface UpdateEmailReq {
+    email: string;
+}
+
 export function login(data: LoginReq) {
     return request.post<any>('/auth/login', data);
 }
@@ -35,4 +39,8 @@ export function register(data: RegisterReq) {
 
 export function getUserInfo() {
     return request.get<any>('/auth/userInfo');
+}
+
+export function updateEmail(data: UpdateEmailReq) {
+    return request.post<any>('/auth/updateEmail', data);
 }

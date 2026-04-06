@@ -82,6 +82,20 @@ public class AuthService implements CommandLineRunner {
     }
 
     /**
+     * 修改邮箱
+     */
+    public void updateEmail(Long userId, String newEmail) {
+        if (userId == null) {
+            throw ExceptionEnum.AUTH_TOKEN_INVALID.toException();
+        }
+        SysUser user = sysUserRepository.findById(userId)
+                .orElseThrow(() -> ExceptionEnum.AUTH_USER_NOT_FOUND.toException());
+
+        user.setEmail(newEmail);
+        sysUserRepository.save(user);
+    }
+
+    /**
      * 应用启动时初始化默认管理员账号
      */
     @Override

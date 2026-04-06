@@ -38,4 +38,14 @@ public class AuthController {
         String token = authHeader.substring(7);
         return ResponseDTO.success(authService.getUserInfo(token));
     }
+
+    @Operation(summary = "修改邮箱")
+    @PostMapping("/updateEmail")
+    public ResponseDTO<Void> updateEmail(
+            @RequestBody @Valid UpdateEmailReqVO reqVO,
+            @RequestAttribute(value = "userId", required = false) Long userId
+    ) {
+        authService.updateEmail(userId, reqVO.getEmail());
+        return ResponseDTO.success();
+    }
 }

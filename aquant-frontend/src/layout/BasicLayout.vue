@@ -99,6 +99,11 @@
             </div>
             <template #overlay>
               <a-menu>
+                <a-menu-item key="updateEmail" @click="showUpdateEmailModal">
+                  <mail-outlined />
+                  <span style="margin-left: 8px;">修改邮箱</span>
+                </a-menu-item>
+                <a-menu-divider />
                 <a-menu-item key="logout" @click="handleLogout">
                   <logout-outlined />
                   <span style="margin-left: 8px;">退出登录</span>
@@ -119,6 +124,21 @@
     <a-layout-footer class="c-footer">
       AQuant ©2025 Created by AQuant Team
     </a-layout-footer>
+
+    <!-- 修改邮箱 Modal -->
+    <a-modal
+      v-model:visible="emailModalVisible"
+      title="修改邮箱"
+      @ok="handleUpdateEmail"
+      :confirmLoading="emailLoading"
+      destroyOnClose
+    >
+      <a-form layout="vertical">
+        <a-form-item label="新邮箱地址" required>
+          <a-input v-model:value="emailForm.email" placeholder="请输入您的新邮箱" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </a-layout>
 </template>
 
@@ -132,8 +152,11 @@ import {
   PayCircleOutlined,
   HeartOutlined,
   LogoutOutlined,
-  LoginOutlined
+  LoginOutlined,
+  MailOutlined
 } from '@ant-design/icons-vue';
+import { message } from 'ant-design-vue';
+import { updateEmail } from '@/api/auth';
 
 const route = useRoute();
 const router = useRouter();
@@ -167,6 +190,42 @@ const handleLogout = () => {
   localStorage.removeItem('nickname');
   isLoggedIn.value = false;
   nickname.value = '用户';
+};
+
+// 修改邮箱相关
+const emailModalVisible = ref(false);
+const emailLoading = ref(false);
+const emailForm = ref({ email: '' });
+
+const showUpdateEmailModal = () => {
+  emailForm.value.email = '';
+  emailModalVisible.value = true;
+};
+
+const handleUpdateEmail = async () => {
+  if (!emailForm.value.email) {
+    message.warning('请输入邮箱地址');
+    return;
+  }
+  // 简单的正则校验
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailPattern.test(emailForm.value.email)) {
+    message.warning('请输入正确的邮箱格式');
+    return;
+  }
+
+  emailLoading.value = true;
+  try {
+    const res = await updateEmail(emailForm.value);
+    if (res.data.success) {
+      message.success('邮箱修改成功');
+      emailModalVisible.value = false;
+    }
+  } catch (error) {
+    console.error('Failed to update email:', error);
+  } finally {
+    emailLoading.value = false;
+  }
 };
 </script>
 
