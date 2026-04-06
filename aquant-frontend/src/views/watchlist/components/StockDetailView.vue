@@ -575,7 +575,7 @@ onUnmounted(() => {
 
 .div-date-col {
   font-size: 11px;
-  color: #bfbfbf;
+  color: #8c8c8c;
   font-family: 'DIN Alternate', sans-serif;
   min-width: 65px;
   flex-shrink: 0;
@@ -615,7 +615,7 @@ onUnmounted(() => {
 
 .div-badge.unified { 
   background: #f0f2f5; 
-  color: #595959; 
+  color: #434343; 
   border: 1px solid #d9d9d9; 
   padding: 1px 8px;
   font-weight: 600;
