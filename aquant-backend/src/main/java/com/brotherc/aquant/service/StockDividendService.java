@@ -112,24 +112,24 @@ public class StockDividendService {
             }
         }
 
-        List<StockDividend> list;
+        List<StockDividendProjection> list;
         if (recentYears != null) {
             LocalDate fromDate = LocalDate.now().minusYears(recentYears).withDayOfYear(1);
-            list = stockDividendRepository.findByLatestAnnouncementDateAfter(fromDate);
+            list = stockDividendRepository.findByLatestAnnouncementDateGreaterThanEqualProjectedBy(fromDate);
         } else {
-            list = stockDividendRepository.findAll();
+            list = stockDividendRepository.findAllProjectedBy();
         }
 
         // 按股票分组
-        Map<String, List<StockDividend>> group = list.stream()
-                .collect(Collectors.groupingBy(StockDividend::getStockCode));
+        Map<String, List<StockDividendProjection>> group = list.stream()
+                .collect(Collectors.groupingBy(StockDividendProjection::getStockCode));
 
         List<StockDividendStatVO> result = new ArrayList<>();
 
-        for (Map.Entry<String, List<StockDividend>> entry : group.entrySet()) {
+        for (Map.Entry<String, List<StockDividendProjection>> entry : group.entrySet()) {
 
             String stockCode = entry.getKey();
-            List<StockDividend> dividends = entry.getValue();
+            List<StockDividendProjection> dividends = entry.getValue();
             String stockName = dividends.get(0).getStockName();
 
             // 过滤股票代码和名称
@@ -153,7 +153,7 @@ public class StockDividendService {
 
             // 最近 N 年平均分红
             BigDecimal avg = dividends.stream()
-                    .map(StockDividend::getCashDividendRatio)
+                    .map(StockDividendProjection::getCashDividendRatio)
                     .filter(Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add)
                     .divide(
@@ -173,7 +173,7 @@ public class StockDividendService {
 
             BigDecimal latestYearDividend = dividends.stream()
                     .filter(d -> d.getLatestAnnouncementDate().getYear() == latestYear)
-                    .map(StockDividend::getCashDividendRatio)
+                    .map(StockDividendProjection::getCashDividendRatio)
                     .filter(Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 

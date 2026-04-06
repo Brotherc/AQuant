@@ -1,6 +1,7 @@
 package com.brotherc.aquant.repository;
 
 import com.brotherc.aquant.entity.StockDividend;
+import com.brotherc.aquant.model.projection.StockDividendProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,12 +15,17 @@ public interface StockDividendRepository extends JpaRepository<StockDividend, Lo
 
     void deleteByReportDate(String reportDate);
 
-    @Query("""
-                SELECT sd
-                FROM StockDividend sd
-                WHERE sd.latestAnnouncementDate >= :fromDate
-            """)
-    List<StockDividend> findByLatestAnnouncementDateAfter(@Param("fromDate") LocalDate fromDate);
+    @Query("select d.stockCode as stockCode, d.stockName as stockName, " +
+            "d.latestAnnouncementDate as latestAnnouncementDate, d.cashDividendRatio as cashDividendRatio, " +
+            "d.bonusShareRatio as bonusShareRatio, d.transferShareRatio as transferShareRatio " +
+            "from StockDividend d where d.latestAnnouncementDate >= :fromDate")
+    List<StockDividendProjection> findByLatestAnnouncementDateGreaterThanEqualProjectedBy(@Param("fromDate") LocalDate fromDate);
+
+    @Query("select d.stockCode as stockCode, d.stockName as stockName, " +
+            "d.latestAnnouncementDate as latestAnnouncementDate, d.cashDividendRatio as cashDividendRatio, " +
+            "d.bonusShareRatio as bonusShareRatio, d.transferShareRatio as transferShareRatio " +
+            "from StockDividend d")
+    List<StockDividendProjection> findAllProjectedBy();
 
     List<StockDividend> findByStockCodeOrderByLatestAnnouncementDateDesc(String stockCode);
 
