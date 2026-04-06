@@ -16,7 +16,13 @@ public enum ExceptionEnum {
     STOCK_INDUSTRY_BOARD_UN_EXIST(1000104, "行业板块不存在"),
     STOCK_NOT_FOUND(1000105, "股票代码不存在"),
     WATCHLIST_GROUP_NAME_DUPLICATE(1000106, "分组名称已存在"),
-    WATCHLIST_GROUP_NOT_FOUND(1000107, "自选分组不存在");
+    WATCHLIST_GROUP_NOT_FOUND(1000107, "自选分组不存在"),
+
+    AUTH_LOGIN_FAILED(1000201, "用户名或密码错误"),
+    AUTH_ACCOUNT_DISABLED(1000202, "账号已被禁用"),
+    AUTH_USERNAME_EXISTS(1000203, "用户名已存在"),
+    AUTH_TOKEN_INVALID(1000204, "Token 无效"),
+    AUTH_USER_NOT_FOUND(1000205, "用户不存在");
 
     /**
      * 应用(1~2位)、服务(2位)、模块(2位)、异常(2位)
@@ -28,8 +34,8 @@ public enum ExceptionEnum {
      */
     private final String msg;
 
-    public void throwException() {
-        throw new BusinessException(this);
+    public BusinessException toException() {
+        return new BusinessException(this);
     }
 
 }

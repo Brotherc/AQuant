@@ -10,9 +10,13 @@ const service = axios.create({
     }
 });
 
-// Request interceptor
+// Request interceptor - 自动附加 JWT Token
 service.interceptors.request.use(
     (config) => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
         return config;
     },
     (error) => {
@@ -29,13 +33,17 @@ service.interceptors.response.use(
         if (data && typeof data === 'object' && 'success' in data) {
             if (!data.success && data.code !== 0 && data.code !== 200) {
                 message.error(data.message || '系统异常');
-                // Optional: Reject promise handling if needed, but for now we just show error
-                // return Promise.reject(new Error(data.message || 'Error'));
             }
         }
         return response;
     },
     (error) => {
+        if (error.response?.status === 401) {
+            // Token 无效 → 静默清除，不打扰用户
+            localStorage.removeItem('token');
+            localStorage.removeItem('nickname');
+            return Promise.reject(error);
+        }
         console.error('Response Error:', error);
         message.error(error.message || '网络连接失败');
         return Promise.reject(error);

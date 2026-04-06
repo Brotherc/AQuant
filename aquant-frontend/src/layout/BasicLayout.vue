@@ -7,7 +7,7 @@
           <div class="logo">AQuant 量化</div>
         </div>
         
-        <!-- 右侧 Navigation 区 -->
+        <!-- 中间 Navigation 区 -->
         <div class="menu-box">
           <a-menu v-model:selectedKeys="selectedKeys" theme="light" mode="horizontal" class="c-menu">
             
@@ -80,6 +80,33 @@
 
           </a-menu>
         </div>
+
+        <!-- 右侧用户区 -->
+        <div class="user-box">
+          <!-- 未登录：显示登录按钮 -->
+          <div v-if="!isLoggedIn" class="login-trigger" @click="goLogin">
+            <login-outlined />
+            <span style="margin-left: 6px;">登录</span>
+          </div>
+
+          <!-- 已登录：显示用户头像 + 退出 -->
+          <a-dropdown v-else>
+            <div class="user-trigger">
+              <a-avatar size="small" style="background-color: #1890ff;">
+                {{ nickname.charAt(0) }}
+              </a-avatar>
+              <span class="user-nickname">{{ nickname }}</span>
+            </div>
+            <template #overlay>
+              <a-menu>
+                <a-menu-item key="logout" @click="handleLogout">
+                  <logout-outlined />
+                  <span style="margin-left: 8px;">退出登录</span>
+                </a-menu-item>
+              </a-menu>
+            </template>
+          </a-dropdown>
+        </div>
       </div>
     </a-layout-header>
 
@@ -97,17 +124,22 @@
 
 <script lang="ts" setup>
 import { ref, watch, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import {
   StockOutlined,
   LineChartOutlined,
   RadarChartOutlined,
   PayCircleOutlined,
-  HeartOutlined
+  HeartOutlined,
+  LogoutOutlined,
+  LoginOutlined
 } from '@ant-design/icons-vue';
 
 const route = useRoute();
+const router = useRouter();
 const selectedKeys = ref<string[]>([]);
+const isLoggedIn = ref(!!localStorage.getItem('token'));
+const nickname = ref(localStorage.getItem('nickname') || '用户');
 
 // 同步菜单状态
 const syncMenuState = () => {
@@ -117,17 +149,31 @@ const syncMenuState = () => {
 
 watch(() => route.path, () => {
   syncMenuState();
+  // 路由切换时刷新登录状态（登录完成后跳回来）
+  isLoggedIn.value = !!localStorage.getItem('token');
+  nickname.value = localStorage.getItem('nickname') || '用户';
 });
 
 onMounted(() => {
   syncMenuState();
 });
+
+const goLogin = () => {
+  router.push('/login');
+};
+
+const handleLogout = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('nickname');
+  isLoggedIn.value = false;
+  nickname.value = '用户';
+};
 </script>
 
 <style scoped>
 .c-end-layout {
   min-height: 100vh;
-  background: #f5f7fa; /* 清爽通透的 C 端底色 */
+  background: #f5f7fa;
 }
 
 /* 顶部玻璃态导航 */
@@ -145,7 +191,7 @@ onMounted(() => {
   justify-content: center;
 }
 
-/* 头部内容主轴，约束最大宽度 */
+/* 头部内容主轴 */
 .header-container {
   display: flex;
   align-items: center;
@@ -155,7 +201,6 @@ onMounted(() => {
   padding: 0 24px;
 }
 
-/* 拆分为独立的 flex 区块 */
 .logo-box {
   display: flex;
   align-items: center;
@@ -168,7 +213,6 @@ onMounted(() => {
   justify-content: flex-end;
 }
 
-/* C 端年轻化的 Logo */
 .logo {
   height: 64px;
   line-height: 64px;
@@ -179,7 +223,6 @@ onMounted(() => {
   letter-spacing: 1px;
 }
 
-/* 菜单去边框并靠右 */
 .c-menu {
   line-height: 64px;
   border-bottom: none;
@@ -189,18 +232,65 @@ onMounted(() => {
   font-size: 15px;
 }
 
-/* 消除 Ant Design 默认选中时过粗的底部线条 */
 :deep(.ant-menu-horizontal) {
   border-bottom: none !important;
 }
 
-/* 核心视窗，往下挪开 Header 的高度 */
+/* 用户信息区 */
+.user-box {
+  display: flex;
+  align-items: center;
+  margin-left: 24px;
+  flex-shrink: 0;
+}
+
+/* 未登录的"登录"文字 */
+.login-trigger {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 14px;
+  color: #000;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.login-trigger:hover {
+  color: #1890ff;
+}
+
+/* 已登录的用户区 */
+.user-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 4px;
+  margin: 16px 0;
+  transition: background 0.2s;
+}
+
+.user-trigger:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.user-nickname {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .c-content {
   margin-top: 64px; 
   padding: 24px 0;
 }
 
-/* 内容受控容器，不再全屏无脑延伸 */
 .content-container {
   max-width: 1400px;
   margin: 0 auto;
@@ -214,7 +304,7 @@ onMounted(() => {
   background: transparent;
   padding: 24px 0;
 }
-/* 菜单文字间距 */
+
 .nav-text {
   margin-left: 6px;
 }
