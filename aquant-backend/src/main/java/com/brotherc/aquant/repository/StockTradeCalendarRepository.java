@@ -9,4 +9,6 @@ public interface StockTradeCalendarRepository extends JpaRepository<StockTradeCa
 
     boolean existsByTradeDateAndMarket(String tradeDate, String market);
 
+    StockTradeCalendar findByTradeDate(String tradeDate);
+
 }
