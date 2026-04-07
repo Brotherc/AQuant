@@ -96,7 +96,12 @@
                     <span class="stock-name">{{ stock.stockName }}</span>
                     <span class="stock-code">{{ stock.stockCode }}</span>
                   </div>
-                  <div @click.stop>
+                  <div class="header-right">
+                    <bell-outlined 
+                      class="noti-icon" 
+                      title="消息提醒"
+                      @click.stop="openNotiModal(stock)" 
+                    />
                     <a-dropdown>
                       <ellipsis-outlined class="more-icon" />
                       <template #overlay>
@@ -249,13 +254,97 @@
         <div v-if="otherGroups.length === 0" style="color: #ff4d4f; margin-top: 8px; font-size: 12px;">暂无其他可迁入的分组</div>
       </div>
     </a-modal>
+
+    <!-- 预警设置 Modal -->
+    <a-modal
+      v-model:visible="notiModalVisible"
+      :title="`预警设置 - ${currentStockName}(${currentStockCode})`"
+      width="600px"
+      :footer="null"
+      destroyOnClose
+    >
+      <div v-if="notiLoading" style="text-align: center; padding: 20px;">
+        <a-spin />
+      </div>
+      <div v-else>
+        <div style="margin-bottom: 16px;">
+          <a-button type="primary" size="small" @click="handleAddNoti">
+            <template #prefix><plus-outlined /></template>
+            新增预警
+          </a-button>
+        </div>
+        
+        <a-list :data-source="notiList" bordered>
+          <template #renderItem="{ item, index }">
+            <a-list-item>
+              <div style="width: 100%;">
+                <a-row :gutter="12" align="middle">
+                  <a-col :span="6">
+                    <a-select v-model:value="item.type" style="width: 100%;" size="small">
+                      <a-select-option :value="1">价格预警</a-select-option>
+                      <a-select-option :value="2">双均线策略</a-select-option>
+                    </a-select>
+                  </a-col>
+                  
+                  <a-col :span="10">
+                    <div v-if="item.type === 1">
+                      <a-input-number 
+                        v-model:value="item.thresholdValue" 
+                        placeholder="触发价格" 
+                        style="width: 100%;" 
+                        size="small"
+                      />
+                    </div>
+                    <div v-else-if="item.type === 2">
+                      <a-input 
+                        v-model:value="item.params" 
+                        placeholder='{"maShort":5,"maLong":20}'
+                        style="width: 100%;" 
+                        size="small"
+                      />
+                    </div>
+                  </a-col>
+                  
+                  <a-col :span="4">
+                    <a-switch 
+                      v-model:checked="item.isEnabled" 
+                      :checkedValue="1" 
+                      :unCheckedValue="0" 
+                      size="small"
+                    />
+                  </a-col>
+                  
+                  <a-col :span="4" style="text-align: right;">
+                    <a-space>
+                      <a-button type="link" size="small" @click="handleSaveNoti(item)">保存</a-button>
+                      <a-popconfirm title="确定删除吗？" @confirm="handleDeleteNoti(item, index)">
+                        <a-button type="link" size="small" danger>删除</a-button>
+                      </a-popconfirm>
+                    </a-space>
+                  </a-col>
+                </a-row>
+              </div>
+            </a-list-item>
+          </template>
+        </a-list>
+      </div>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, nextTick } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import { CloseOutlined, PlusOutlined, CaretUpOutlined, CaretDownOutlined, SearchOutlined, EllipsisOutlined, EditOutlined } from '@ant-design/icons-vue';
+import { 
+  CloseOutlined, 
+  PlusOutlined, 
+  CaretUpOutlined, 
+  CaretDownOutlined, 
+  SearchOutlined, 
+  EllipsisOutlined, 
+  EditOutlined,
+  BellOutlined
+} from '@ant-design/icons-vue';
 import MiniKlineChart from './components/MiniKlineChart.vue';
 import StockDetailView from './components/StockDetailView.vue';
 import { 
@@ -271,6 +360,7 @@ import {
   type WatchlistGroupVO,
   type WatchlistStockVO
 } from '@/api/watchlist';
+import { getNotificationList, saveNotification, deleteNotification } from '@/api/notification';
 
 const groups = ref<WatchlistGroupVO[]>([]);
 const activeGroupId = ref<number>();
@@ -278,6 +368,7 @@ const stocks = ref<WatchlistStockVO[]>([]);
 const loading = ref(false);
 const addLoading = ref(false);
 const newStockCode = ref('');
+const currentStockCode = ref('');
 
 // Group Modal
 const groupModalVisible = ref(false);
@@ -668,12 +759,95 @@ const syncMove = async (stockCode: string, action: 'UP' | 'DOWN' | 'TOP', newSto
 };
 
 
+// --- 预警提醒相关 ---
+const notiModalVisible = ref(false);
+const notiLoading = ref(false);
+const notiList = ref<any[]>([]);
+const currentStockName = ref('');
+
+const openNotiModal = async (stock: any) => {
+  currentStockCode.value = stock.stockCode;
+  currentStockName.value = stock.stockName;
+  notiModalVisible.value = true;
+  notiLoading.value = true;
+  try {
+    const res = await getNotificationList(stock.stockCode);
+    notiList.value = res.data.data || [];
+  } catch (error) {
+    console.error('Fetch notification list failed:', error);
+  } finally {
+    notiLoading.value = false;
+  }
+};
+
+const handleAddNoti = () => {
+  notiList.value.push({
+    stockCode: currentStockCode.value,
+    type: 1,
+    thresholdValue: null,
+    params: '{"maShort":5,"maLong":20}',
+    isEnabled: 1
+  });
+};
+
+const handleSaveNoti = async (item: any) => {
+  if (item.type === 1 && !item.thresholdValue) {
+    message.warning('请输入预警价格');
+    return;
+  }
+  try {
+    const res = await saveNotification(item);
+    if (res.data.success) {
+      message.success('预警设置已保存');
+      // 重新拉取一次以获取新创建的 ID
+      const listRes = await getNotificationList(currentStockCode.value);
+      notiList.value = listRes.data.data;
+    }
+  } catch (error) {
+    console.error('Save notification failed:', error);
+  }
+};
+
+const handleDeleteNoti = async (item: any, index: number) => {
+  if (!item.id) {
+    notiList.value.splice(index, 1);
+    return;
+  }
+  try {
+    const res = await deleteNotification(item.id);
+    if (res.data.success) {
+      message.success('预警已删除');
+      notiList.value.splice(index, 1);
+    }
+  } catch (error) {
+    console.error('Delete notification failed:', error);
+  }
+};
+
 onMounted(() => {
   fetchGroups();
 });
 </script>
 
 <style scoped>
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.noti-icon {
+  font-size: 16px;
+  color: #8c8c8c;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.noti-icon:hover {
+  color: #1890ff;
+  transform: scale(1.1);
+}
+
 .watchlist-container {
   padding: 16px;
 }

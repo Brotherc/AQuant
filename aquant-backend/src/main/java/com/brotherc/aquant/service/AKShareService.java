@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -378,6 +379,39 @@ public class AKShareService {
             log.error("stock_board_industry_index_ths请求失败", e);
             throw new RuntimeException("stock_board_industry_index_ths请求失败");
         }
+    }
+
+    public StockIndividualInfoEm stockIndividualInfoEm(String symbol, BigDecimal timeout) {
+        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_individual_info_em")
+                .newBuilder()
+                .addQueryParameter("symbol", symbol);
+
+        if (timeout != null) {
+            builder.addQueryParameter("timeout", timeout.toPlainString());
+        }
+
+        Request request = new Request.Builder()
+                .url(builder.build())
+                .get()
+                .build();
+
+        List<Map<String, Object>> list;
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                log.info("失败响应: {}", response);
+                throw new RuntimeException("stock_individual_info_em请求失败");
+            }
+
+            list = objectMapper.readValue(response.body().string(), new TypeReference<>() {
+            });
+
+        } catch (IOException e) {
+            log.error("stock_individual_info_em请求失败", e);
+            throw new RuntimeException("stock_individual_info_em请求失败");
+        }
+
+        return new StockIndividualInfoEm(list);
     }
 
 }
