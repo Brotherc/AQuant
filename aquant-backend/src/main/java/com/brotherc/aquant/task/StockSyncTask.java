@@ -2,10 +2,12 @@ package com.brotherc.aquant.task;
 
 import com.brotherc.aquant.constant.StockSyncConstant;
 import com.brotherc.aquant.entity.StockSync;
+import com.brotherc.aquant.entity.StockTradeCalendar;
 import com.brotherc.aquant.model.dto.akshare.*;
 import com.brotherc.aquant.repository.StockIndustryBoardHistoryRepository;
 import com.brotherc.aquant.repository.StockQuoteHistoryRepository;
 import com.brotherc.aquant.repository.StockSyncRepository;
+import com.brotherc.aquant.repository.StockTradeCalendarRepository;
 import com.brotherc.aquant.service.AKShareService;
 import com.brotherc.aquant.service.StockSyncService;
 import com.brotherc.aquant.utils.StockHelper;
@@ -37,6 +39,7 @@ public class StockSyncTask {
     private final StockSyncRepository stockSyncRepository;
     private final StockQuoteHistoryRepository stockQuoteHistoryRepository;
     private final StockIndustryBoardHistoryRepository stockIndustryBoardHistoryRepository;
+    private final StockTradeCalendarRepository stockTradeCalendarRepository;
 
     /**
      * 项目完全启动后，异步执行一次
@@ -113,8 +116,12 @@ public class StockSyncTask {
             String maxTradeDate = stockQuoteHistoryRepository.findMaxTradeDate();
             LocalDate maxTradeLocalDate = LocalDate.parse(maxTradeDate);
             boolean isToday = maxTradeLocalDate.equals(LocalDate.now());
+
+            StockTradeCalendar calendar1 = stockTradeCalendarRepository.findByTradeDate(maxTradeLocalDate.plusDays(1).toString());
+            StockTradeCalendar calendar2 = stockTradeCalendarRepository.findByTradeDate(LocalDate.now().minusDays(1).toString());
+
             // 如果与今天日期一致，则同步最新的股票行情和股票历史行情
-            if (isToday || StockUtils.check(lastTimestamp) || StockUtils.isYesterday(lastTimestamp)) {
+            if (isToday || StockUtils.check(lastTimestamp) || StockUtils.isYesterday(lastTimestamp) || (calendar1 != null && calendar2 != null)) {
                 stockSyncService.stockQuote(stockZhASpots, stockSync, now);
                 return;
             }
