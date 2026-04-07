@@ -79,10 +79,7 @@
       </div>
 
       <a-spin :spinning="loading">
-        <div v-if="stocks.length === 0 && !loading" class="empty-stocks-wrapper">
-          <a-empty description="该分组暂无股票" />
-        </div>
-        <a-row v-else :gutter="[16, 16]" class="card-grid">
+        <a-row :gutter="[16, 16]" class="card-grid">
           <a-col 
             :xs="24" :sm="24" :md="12" :lg="8" :xl="6"
             v-for="stock in sortedStocks" 
