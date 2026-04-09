@@ -99,7 +99,7 @@
                       title="消息提醒"
                       @click.stop="openNotiModal(stock)" 
                     />
-                    <a-dropdown>
+                    <a-dropdown :trigger="['click']">
                       <ellipsis-outlined class="more-icon" />
                       <template #overlay>
                         <a-menu>
@@ -134,10 +134,14 @@
                             修改分组
                           </a-menu-item>
                           <a-menu-divider />
-                          <a-menu-item danger>
+                          <a-menu-item danger @click.stop>
                             <div @click.stop>
-                              <a-popconfirm title="确定移除该股票吗？" @confirm="handleRemoveStock(stock.stockCode)">
-                                移除
+                              <a-popconfirm 
+                                title="确定移除该股票吗？" 
+                                @confirm="handleRemoveStock(stock.stockCode)"
+                                placement="left"
+                              >
+                                <div style="margin: -5px -12px; padding: 5px 12px;">移除</div>
                               </a-popconfirm>
                             </div>
                           </a-menu-item>
