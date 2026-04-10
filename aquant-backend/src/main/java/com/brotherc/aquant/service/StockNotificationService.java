@@ -2,9 +2,11 @@ package com.brotherc.aquant.service;
 
 import com.brotherc.aquant.entity.StockNotification;
 import com.brotherc.aquant.entity.StockQuoteHistory;
+import com.brotherc.aquant.exception.BusinessException;
 import com.brotherc.aquant.enums.TradeSignal;
 import com.brotherc.aquant.exception.ExceptionEnum;
 import com.brotherc.aquant.model.enums.NotificationType;
+import com.brotherc.aquant.model.enums.PriceAlertCondition;
 import com.brotherc.aquant.model.vo.notification.StockNotificationReqVO;
 import com.brotherc.aquant.model.vo.notification.StockNotificationVO;
 import com.brotherc.aquant.repository.StockNotificationRepository;
@@ -24,6 +26,9 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 @Slf4j
 @Service
@@ -33,6 +38,8 @@ public class StockNotificationService {
     private final StockNotificationRepository notificationRepository;
     private final StockQuoteHistoryRepository stockQuoteHistoryRepository;
     private final ObjectMapper objectMapper;
+    private static final long OBSERVED_PRICE_TTL_MILLIS = 7L * 24 * 60 * 60 * 1000;
+    private final ConcurrentMap<Long, ObservedPrice> lastObservedPriceMap = new ConcurrentHashMap<>();
 
     /**
      * 获取用户指定股票的预警配置
@@ -64,10 +71,15 @@ public class StockNotificationService {
 
         notification.setType(reqVO.getType());
         notification.setThresholdValue(reqVO.getThresholdValue());
-        notification.setParams(reqVO.getParams());
+        if (NotificationType.PRICE.getType().equals(reqVO.getType())) {
+            notification.setParams(normalizePriceAlertParams(reqVO.getParams()));
+        } else {
+            notification.setParams(reqVO.getParams());
+        }
         notification.setIsEnabled(reqVO.getIsEnabled() != null ? reqVO.getIsEnabled() : 1);
 
-        notificationRepository.save(notification);
+        StockNotification saved = notificationRepository.save(notification);
+        clearLastObservedPrice(saved.getId());
     }
 
     /**
@@ -78,6 +90,7 @@ public class StockNotificationService {
         StockNotification notification = notificationRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> ExceptionEnum.SYS_CHECK_ERROR.toException());
         notificationRepository.delete(notification);
+        clearLastObservedPrice(notification.getId());
     }
 
     /**
@@ -87,6 +100,8 @@ public class StockNotificationService {
         if (activeNotifications == null || activeNotifications.isEmpty()) {
             return;
         }
+
+        pruneExpiredObservedPrices(System.currentTimeMillis());
 
         for (StockNotification config : activeNotifications) {
             try {
@@ -104,15 +119,36 @@ public class StockNotificationService {
     private void checkPriceAlert(StockNotification config, String stockName, BigDecimal latestPrice) {
         if (config.getThresholdValue() == null) return;
 
-        // 简单的价格到达判断
-        // 注意：为了避免重复，可以判断当前价格是否处于预警点附近，且今天还没发过
-        boolean triggered = latestPrice.compareTo(config.getThresholdValue()) >= 0; 
-        
-        // 此处逻辑可根据需求细化，如：向上突破、向下突破等
-        // 这里暂定为：只要价格高于设定的阈值就提醒，但限制频率（每24小时一次）
+        BigDecimal threshold = config.getThresholdValue();
+        PriceAlertCondition condition = parsePriceAlertCondition(config.getParams(), false);
+        if (condition == null) {
+            log.warn("Invalid price alert params for notification {}: {}", config.getId(), config.getParams());
+            return;
+        }
+
+        Long notificationId = config.getId();
+        if (notificationId == null) {
+            log.warn("Price alert notification without id, skip crossing detection for stock {}", config.getStockCode());
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        BigDecimal previousPrice = getObservedPrice(notificationId, now);
+        lastObservedPriceMap.put(notificationId, new ObservedPrice(latestPrice, now + OBSERVED_PRICE_TTL_MILLIS));
+        if (previousPrice == null) {
+            return;
+        }
+
+        boolean triggered;
+        if (PriceAlertCondition.DOWN == condition) {
+            triggered = previousPrice.compareTo(threshold) > 0 && latestPrice.compareTo(threshold) <= 0;
+        } else {
+            triggered = previousPrice.compareTo(threshold) < 0 && latestPrice.compareTo(threshold) >= 0;
+        }
+
         if (triggered && isCoolDownPassed(config)) {
-            sendNotify(config, String.format("【价格预警】%s(%s) 当前价 %s 已达到设定值 %s", 
-                stockName, config.getStockCode(), latestPrice, config.getThresholdValue()));
+            sendNotify(config, String.format("【价格预警】%s(%s) %s设定值 %s，当前价 %s", 
+                stockName, config.getStockCode(), condition.getDescription(), threshold, latestPrice));
             updateLastNotifyTime(config);
         }
     }
@@ -193,6 +229,68 @@ public class StockNotificationService {
         StockNotificationVO vo = new StockNotificationVO();
         BeanUtils.copyProperties(entity, vo);
         return vo;
+    }
+
+    private PriceAlertCondition parsePriceAlertCondition(String paramsText, boolean strict) {
+        if (paramsText == null || paramsText.isBlank()) {
+            return PriceAlertCondition.UP;
+        }
+
+        try {
+            JsonNode params = objectMapper.readTree(paramsText);
+            PriceAlertCondition condition = PriceAlertCondition.fromCode(params.path("condition").asText(null));
+            if (condition != null) {
+                return condition;
+            }
+        } catch (JsonProcessingException e) {
+            if (!strict) {
+                return null;
+            }
+        }
+
+        if (strict) {
+            throw new BusinessException(ExceptionEnum.STOCK_NOTIFICATION_PRICE_ALERT_PARAMS_ILLEGAL);
+        }
+        return null;
+    }
+
+    private String normalizePriceAlertParams(String paramsText) {
+        PriceAlertCondition condition = parsePriceAlertCondition(paramsText, true);
+        try {
+            return objectMapper.writeValueAsString(java.util.Map.of("condition", condition.name()));
+        } catch (JsonProcessingException e) {
+            throw new BusinessException(ExceptionEnum.STOCK_NOTIFICATION_PRICE_ALERT_PARAMS_ILLEGAL);
+        }
+    }
+
+    private void clearLastObservedPrice(Long notificationId) {
+        if (notificationId != null) {
+            lastObservedPriceMap.remove(notificationId);
+        }
+    }
+
+    private BigDecimal getObservedPrice(Long notificationId, long now) {
+        ObservedPrice observedPrice = lastObservedPriceMap.get(notificationId);
+        if (observedPrice == null) {
+            return null;
+        }
+        if (observedPrice.expiredAtMillis() <= now) {
+            lastObservedPriceMap.remove(notificationId, observedPrice);
+            return null;
+        }
+        return observedPrice.price();
+    }
+
+    private void pruneExpiredObservedPrices(long now) {
+        for (Map.Entry<Long, ObservedPrice> entry : lastObservedPriceMap.entrySet()) {
+            ObservedPrice observedPrice = entry.getValue();
+            if (observedPrice != null && observedPrice.expiredAtMillis() <= now) {
+                lastObservedPriceMap.remove(entry.getKey(), observedPrice);
+            }
+        }
+    }
+
+    private record ObservedPrice(BigDecimal price, long expiredAtMillis) {
     }
 
 }

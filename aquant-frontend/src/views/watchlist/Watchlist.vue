@@ -288,11 +288,15 @@
                   </a-col>
                   
                   <a-col :span="10">
-                    <div v-if="item.type === 1">
+                    <div v-if="item.type === 1" style="display: flex; gap: 4px;">
+                      <a-select v-model:value="item.condition" style="width: 110px;" size="small">
+                        <a-select-option value="UP">向上突破</a-select-option>
+                        <a-select-option value="DOWN">向下突破</a-select-option>
+                      </a-select>
                       <a-input-number 
                         v-model:value="item.thresholdValue" 
-                        placeholder="触发价格" 
-                        style="width: 100%;" 
+                        placeholder="触发价" 
+                        style="flex: 1;" 
                         size="small"
                       />
                     </div>
@@ -773,7 +777,18 @@ const openNotiModal = async (stock: any) => {
   notiLoading.value = true;
   try {
     const res = await getNotificationList(stock.stockCode);
-    notiList.value = res.data.data || [];
+    notiList.value = (res.data.data || []).map((item: any) => {
+      // 解析 params 以提取 condition (针对价格预警)
+      if (item.type === 1 && item.params) {
+        try {
+          const p = JSON.parse(item.params);
+          item.condition = p.condition || 'UP';
+        } catch (e) {
+          item.condition = 'UP';
+        }
+      }
+      return item;
+    });
   } catch (error) {
     console.error('Fetch notification list failed:', error);
   } finally {
@@ -786,7 +801,8 @@ const handleAddNoti = () => {
     stockCode: currentStockCode.value,
     type: 1,
     thresholdValue: null,
-    params: '{"maShort":5,"maLong":20}',
+    condition: 'UP',
+    params: '',
     isEnabled: 1
   });
 };
@@ -796,6 +812,12 @@ const handleSaveNoti = async (item: any) => {
     message.warning('请输入预警价格');
     return;
   }
+  
+  // 组装 params
+  if (item.type === 1) {
+    item.params = JSON.stringify({ condition: item.condition || 'UP' });
+  }
+
   try {
     const res = await saveNotification(item);
     if (res.data.success) {
