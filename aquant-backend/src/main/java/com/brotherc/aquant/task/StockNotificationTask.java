@@ -6,6 +6,7 @@ import com.brotherc.aquant.repository.StockNotificationRepository;
 import com.brotherc.aquant.service.AKShareService;
 import com.brotherc.aquant.service.StockNotificationService;
 import com.brotherc.aquant.utils.StockHelper;
+import com.brotherc.aquant.utils.StockUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -40,7 +41,7 @@ public class StockNotificationTask {
 
         // 2. 检查是否在交易时间段内
         // A股交易时间：09:30-11:30, 13:00-15:00
-        if (!isTradeTime(LocalTime.now())) {
+        if (!StockUtils.isTradeTime(LocalTime.now())) {
             return;
         }
 
@@ -71,11 +72,4 @@ public class StockNotificationTask {
         }
     }
 
-    private boolean isTradeTime(LocalTime now) {
-        // 上午 09:30 - 11:30
-        boolean morning = !now.isBefore(LocalTime.of(9, 30)) && !now.isAfter(LocalTime.of(11, 30));
-        // 下午 13:00 - 15:00
-        boolean afternoon = !now.isBefore(LocalTime.of(13, 0)) && !now.isAfter(LocalTime.of(15, 0));
-        return morning || afternoon;
-    }
 }

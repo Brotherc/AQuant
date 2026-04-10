@@ -122,4 +122,12 @@ public class StockUtils {
         return stockCode;
     }
 
+    public static boolean isTradeTime(LocalTime now) {
+        // 上午 09:30 - 11:30
+        boolean morning = !now.isBefore(LocalTime.of(9, 30)) && !now.isAfter(LocalTime.of(11, 30));
+        // 下午 13:00 - 15:00
+        boolean afternoon = !now.isBefore(LocalTime.of(13, 0)) && !now.isAfter(LocalTime.of(15, 0));
+        return morning || afternoon;
+    }
+
 }
