@@ -298,6 +298,9 @@
                         placeholder="触发价" 
                         style="flex: 1;" 
                         size="small"
+                        :min="0"
+                        :precision="2"
+                        :step="0.01"
                       />
                     </div>
                     <div v-else-if="item.type === 2">
