@@ -9,6 +9,7 @@ import com.brotherc.aquant.model.vo.notification.StockNotificationReqVO;
 import com.brotherc.aquant.model.vo.notification.StockNotificationVO;
 import com.brotherc.aquant.repository.StockNotificationRepository;
 import com.brotherc.aquant.repository.StockQuoteHistoryRepository;
+import com.brotherc.aquant.utils.StockUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -121,9 +122,10 @@ public class StockNotificationService {
             JsonNode params = objectMapper.readTree(config.getParams());
             int maShort = params.path("maShort").asInt(5);
             int maLong = params.path("maLong").asInt(20);
+            String historyCode = StockUtils.wrapExchangePrefix(config.getStockCode());
 
             int needDays = maLong + 1;
-            List<StockQuoteHistory> history = stockQuoteHistoryRepository.findLatestByCode(config.getStockCode(), needDays);
+            List<StockQuoteHistory> history = stockQuoteHistoryRepository.findLatestByCode(historyCode, needDays);
             
             if (history.size() < needDays) return;
 
