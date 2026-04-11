@@ -303,11 +303,23 @@
                         :step="0.01"
                       />
                     </div>
-                    <div v-else-if="item.type === 2">
-                      <a-input 
-                        v-model:value="item.params" 
-                        placeholder='{"maShort":5,"maLong":20}'
-                        style="width: 100%;" 
+                    <div v-else-if="item.type === 2" style="display: flex; gap: 8px; align-items: center;">
+                      <span style="font-size: 12px; color: #666; white-space: nowrap;">短线:</span>
+                      <a-input-number 
+                        v-model:value="item.maShort" 
+                        :min="2" 
+                        :precision="0"
+                        :step="1"
+                        style="width: 60px;" 
+                        size="small"
+                      />
+                      <span style="font-size: 12px; color: #666; white-space: nowrap;">长线:</span>
+                      <a-input-number 
+                        v-model:value="item.maLong" 
+                        :min="(item.maShort || 2) + 1" 
+                        :precision="0"
+                        :step="1"
+                        style="width: 60px;" 
                         size="small"
                       />
                     </div>
@@ -773,6 +785,36 @@ const notiLoading = ref(false);
 const notiList = ref<any[]>([]);
 const currentStockName = ref('');
 
+const processNotiList = (list: any[]) => {
+  return list.map((item: any) => {
+    if (item.params) {
+      try {
+        const p = JSON.parse(item.params);
+        if (item.type === 1) {
+          item.condition = p.condition || 'UP';
+        } else if (item.type === 2) {
+          item.maShort = p.maShort || 5;
+          item.maLong = p.maLong || 20;
+        }
+      } catch (e) {
+        if (item.type === 1) item.condition = 'UP';
+        else if (item.type === 2) {
+          item.maShort = 5;
+          item.maLong = 20;
+        }
+      }
+    } else {
+      // 无参数时的默认值
+      if (item.type === 1) item.condition = 'UP';
+      else if (item.type === 2) {
+        item.maShort = 5;
+        item.maLong = 20;
+      }
+    }
+    return item;
+  });
+};
+
 const openNotiModal = async (stock: any) => {
   currentStockCode.value = stock.stockCode;
   currentStockName.value = stock.stockName;
@@ -780,18 +822,7 @@ const openNotiModal = async (stock: any) => {
   notiLoading.value = true;
   try {
     const res = await getNotificationList(stock.stockCode);
-    notiList.value = (res.data.data || []).map((item: any) => {
-      // 解析 params 以提取 condition (针对价格预警)
-      if (item.type === 1 && item.params) {
-        try {
-          const p = JSON.parse(item.params);
-          item.condition = p.condition || 'UP';
-        } catch (e) {
-          item.condition = 'UP';
-        }
-      }
-      return item;
-    });
+    notiList.value = processNotiList(res.data.data || []);
   } catch (error) {
     console.error('Fetch notification list failed:', error);
   } finally {
@@ -802,32 +833,50 @@ const openNotiModal = async (stock: any) => {
 const handleAddNoti = () => {
   notiList.value.push({
     stockCode: currentStockCode.value,
-    type: 1,
+    type: 1, // 默认价格预警
     thresholdValue: null,
     condition: 'UP',
+    maShort: 5,
+    maLong: 20,
     params: '',
     isEnabled: 1
   });
 };
 
 const handleSaveNoti = async (item: any) => {
-  if (item.type === 1 && !item.thresholdValue) {
-    message.warning('请输入预警价格');
-    return;
+  if (item.type === 1) {
+    if (!item.thresholdValue && item.thresholdValue !== 0) {
+      message.warning('请输入预警价格');
+      return;
+    }
+  } else if (item.type === 2) {
+    if (!item.maShort || !item.maLong) {
+      message.warning('请完整填写均线周期');
+      return;
+    }
+    if (item.maShort >= item.maLong) {
+      message.warning('长线周期必须大于短线周期');
+      return;
+    }
   }
   
   // 组装 params
   if (item.type === 1) {
     item.params = JSON.stringify({ condition: item.condition || 'UP' });
+  } else if (item.type === 2) {
+    item.params = JSON.stringify({ 
+      maShort: Math.floor(item.maShort), 
+      maLong: Math.floor(item.maLong) 
+    });
   }
 
   try {
     const res = await saveNotification(item);
     if (res.data.success) {
       message.success('预警设置已保存');
-      // 重新拉取一次以获取新创建的 ID
+      // 重新拉取一次以获取新创建的 ID 并确保数据回显正确
       const listRes = await getNotificationList(currentStockCode.value);
-      notiList.value = listRes.data.data;
+      notiList.value = processNotiList(listRes.data.data || []);
     }
   } catch (error) {
     console.error('Save notification failed:', error);
