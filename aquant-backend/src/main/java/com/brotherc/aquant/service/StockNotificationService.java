@@ -78,8 +78,30 @@ public class StockNotificationService {
         }
         notification.setIsEnabled(reqVO.getIsEnabled() != null ? reqVO.getIsEnabled() : 1);
 
+        checkDuplicate(notification, userId);
+
         StockNotification saved = notificationRepository.save(notification);
         clearLastObservedPrice(saved.getId());
+    }
+
+    private void checkDuplicate(StockNotification notification, Long userId) {
+        List<StockNotification> existing = notificationRepository.findAllByUserIdAndStockCode(userId, notification.getStockCode());
+        for (StockNotification item : existing) {
+            // 排除自身（编辑情况）
+            if (notification.getId() != null && notification.getId().equals(item.getId())) {
+                continue;
+            }
+
+            boolean typeMatch = item.getType().equals(notification.getType());
+            boolean valueMatch = (item.getThresholdValue() == null && notification.getThresholdValue() == null)
+                    || (item.getThresholdValue() != null && item.getThresholdValue().compareTo(notification.getThresholdValue()) == 0);
+            boolean paramsMatch = (item.getParams() == null && notification.getParams() == null)
+                    || (item.getParams() != null && item.getParams().equals(notification.getParams()));
+
+            if (typeMatch && valueMatch && paramsMatch) {
+                throw ExceptionEnum.STOCK_NOTIFICATION_DUPLICATE.toException();
+            }
+        }
     }
 
     /**
