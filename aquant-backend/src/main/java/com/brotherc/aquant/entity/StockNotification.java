@@ -31,13 +31,13 @@ public class StockNotification {
     private String stockCode;
 
     /**
-     * 提醒类型 (1: 价格预警, 2: 双均线策略)
+     * 提醒类型 (1: 价格通知, 2: 双均线策略)
      */
     @Column(name = "type")
     private Integer type;
 
     /**
-     * 预警阈值价格
+     * 通知阈值价格
      */
     @Column(name = "threshold_value")
     private BigDecimal thresholdValue;

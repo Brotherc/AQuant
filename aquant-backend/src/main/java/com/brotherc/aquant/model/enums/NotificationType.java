@@ -7,7 +7,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum NotificationType {
 
-    PRICE(1, "价格预警"),
+    PRICE(1, "价格通知"),
     DUAL_MA(2, "双均线策略");
 
     private final Integer type;

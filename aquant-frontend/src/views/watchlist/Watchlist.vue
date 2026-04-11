@@ -256,10 +256,10 @@
       </div>
     </a-modal>
 
-    <!-- 预警设置 Modal -->
+    <!-- 通知设置 Modal -->
     <a-modal
       v-model:visible="notiModalVisible"
-      :title="`预警设置 - ${currentStockName}(${currentStockCode})`"
+      :title="`通知设置 - ${currentStockName}(${currentStockCode})`"
       width="600px"
       :footer="null"
       destroyOnClose
@@ -271,7 +271,7 @@
         <div style="margin-bottom: 16px;">
           <a-button type="primary" size="small" @click="handleAddNoti">
             <template #prefix><plus-outlined /></template>
-            新增预警
+            新增通知
           </a-button>
         </div>
         
@@ -282,7 +282,7 @@
                 <a-row :gutter="12" align="middle">
                   <a-col :span="6">
                     <a-select v-model:value="item.type" style="width: 100%;" size="small">
-                      <a-select-option :value="1">价格预警</a-select-option>
+                      <a-select-option :value="1">价格通知</a-select-option>
                       <a-select-option :value="2">双均线策略</a-select-option>
                     </a-select>
                   </a-col>
@@ -779,7 +779,7 @@ const syncMove = async (stockCode: string, action: 'UP' | 'DOWN' | 'TOP', newSto
 };
 
 
-// --- 预警提醒相关 ---
+// --- 通知提醒相关 ---
 const notiModalVisible = ref(false);
 const notiLoading = ref(false);
 const notiList = ref<any[]>([]);
@@ -833,7 +833,7 @@ const openNotiModal = async (stock: any) => {
 const handleAddNoti = () => {
   notiList.value.push({
     stockCode: currentStockCode.value,
-    type: 1, // 默认价格预警
+    type: 1, // 默认价格通知
     thresholdValue: null,
     condition: 'UP',
     maShort: 5,
@@ -846,7 +846,7 @@ const handleAddNoti = () => {
 const handleSaveNoti = async (item: any) => {
   if (item.type === 1) {
     if (!item.thresholdValue && item.thresholdValue !== 0) {
-      message.warning('请输入预警价格');
+      message.warning('请输入通知价格');
       return;
     }
   } else if (item.type === 2) {
@@ -873,7 +873,7 @@ const handleSaveNoti = async (item: any) => {
   try {
     const res = await saveNotification(item);
     if (res.data.success) {
-      message.success('预警设置已保存');
+      message.success('通知设置已保存');
       // 重新拉取一次以获取新创建的 ID 并确保数据回显正确
       const listRes = await getNotificationList(currentStockCode.value);
       notiList.value = processNotiList(listRes.data.data || []);
@@ -891,7 +891,7 @@ const handleDeleteNoti = async (item: any, index: number) => {
   try {
     const res = await deleteNotification(item.id);
     if (res.data.success) {
-      message.success('预警已删除');
+      message.success('通知已删除');
       notiList.value.splice(index, 1);
     }
   } catch (error) {

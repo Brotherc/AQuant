@@ -42,7 +42,7 @@ public class StockNotificationService {
     private final ConcurrentMap<Long, ObservedPrice> lastObservedPriceMap = new ConcurrentHashMap<>();
 
     /**
-     * 获取用户指定股票的预警配置
+     * 获取用户指定股票的通知配置
      */
     public List<StockNotificationVO> getByUserIdAndStockCode(Long userId, String stockCode) {
         return notificationRepository.findAllByUserIdAndStockCode(userId, stockCode).stream()
@@ -51,7 +51,7 @@ public class StockNotificationService {
     }
 
     /**
-     * 保存预警配置
+     * 保存通知配置
      */
     @Transactional(rollbackFor = Exception.class)
     public void save(StockNotificationReqVO reqVO, Long userId) {
@@ -105,7 +105,7 @@ public class StockNotificationService {
     }
 
     /**
-     * 删除预警配置
+     * 删除通知配置
      */
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long id, Long userId) {
@@ -116,7 +116,7 @@ public class StockNotificationService {
     }
 
     /**
-     * 检查并触发预警 (核心逻辑)
+     * 检查并触发通知 (核心逻辑)
      */
     public void checkAndNotify(String stockName, BigDecimal latestPrice, List<StockNotification> activeNotifications) {
         if (activeNotifications == null || activeNotifications.isEmpty()) {
@@ -169,7 +169,7 @@ public class StockNotificationService {
         }
 
         if (triggered && isCoolDownPassed(config)) {
-            sendNotify(config, String.format("【价格预警】%s(%s) %s设定值 %s，当前价 %s", 
+            sendNotify(config, String.format("【价格通知】%s(%s) %s设定值 %s，当前价 %s", 
                 stockName, config.getStockCode(), condition.getDescription(), threshold, latestPrice));
             updateLastNotifyTime(config);
         }
@@ -206,7 +206,7 @@ public class StockNotificationService {
             }
 
             if (signal != TradeSignal.HOLD && isCoolDownPassed(config)) {
-                sendNotify(config, String.format("【策略预警】%s(%s) 触发双均线(%d, %d) %s 信号，当前价 %s", 
+                sendNotify(config, String.format("【策略通知】%s(%s) 触发双均线(%d, %d) %s 信号，当前价 %s", 
                     stockName, config.getStockCode(), maShort, maLong, signal.name(), latestPrice));
                 updateLastNotifyTime(config);
             }
@@ -218,7 +218,7 @@ public class StockNotificationService {
 
     private boolean isCoolDownPassed(StockNotification config) {
         if (config.getLastNotifyAt() == null) return true;
-        // 简单频率限制：同一条预警24小时内只发一次
+        // 简单频率限制：同一条通知24小时内只发一次
         return config.getLastNotifyAt().plusHours(24).isBefore(LocalDateTime.now());
     }
 

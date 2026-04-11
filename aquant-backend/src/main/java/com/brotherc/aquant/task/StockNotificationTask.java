@@ -29,7 +29,7 @@ public class StockNotificationTask {
     private final StockHelper stockHelper;
 
     /**
-     * 股票预警轮询任务
+     * 股票通知轮询任务
      * 每5秒执行一次
      */
     @Scheduled(fixedRate = 5000)
@@ -45,7 +45,7 @@ public class StockNotificationTask {
             return;
         }
 
-        // 3. 批量获取所有开启了预警的配置并按股票代码分组
+        // 3. 批量获取所有开启了通知的配置并按股票代码分组
         List<StockNotification> allActiveNotifications = notificationRepository.findAllByIsEnabled(1);
         if (allActiveNotifications.isEmpty()) {
             return;
@@ -54,9 +54,9 @@ public class StockNotificationTask {
         Map<String, List<StockNotification>> notificationMap = allActiveNotifications.stream()
                 .collect(Collectors.groupingBy(StockNotification::getStockCode));
 
-        log.info("开始执行实时股票预警检测，活跃股票代码总数: {}", notificationMap.size());
+        log.info("开始执行实时股票通知检测，活跃股票代码总数: {}", notificationMap.size());
 
-        // 4. 遍历分组，获取实时行情并执行预警检查
+        // 4. 遍历分组，获取实时行情并执行通知检查
         for (Map.Entry<String, List<StockNotification>> entry : notificationMap.entrySet()) {
             String stockCode = entry.getKey();
             List<StockNotification> configs = entry.getValue();
@@ -67,7 +67,7 @@ public class StockNotificationTask {
                     notificationService.checkAndNotify(info.getStockName(), info.getLatest(), configs);
                 }
             } catch (Exception e) {
-                log.error("获取实时行情并检查预警失败 [{}]", stockCode, e);
+                log.error("获取实时行情并检查通知失败 [{}]", stockCode, e);
             }
         }
     }

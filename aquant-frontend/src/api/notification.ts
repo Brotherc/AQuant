@@ -4,7 +4,7 @@ import type { ResponseDTO } from './stock';
 export interface StockNotificationReq {
     id?: number;
     stockCode: string;
-    type: number; // 1: 价格预警, 2: 双均线策略
+    type: number; // 1: 价格通知, 2: 双均线策略
     thresholdValue?: number;
     params?: string;
     isEnabled?: number;
