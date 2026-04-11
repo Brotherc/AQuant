@@ -53,7 +53,7 @@ public class StockSyncTask {
     /**
      * 每天下午 5 点执行
      */
-    @Scheduled(cron = "0 0 17 * * ?")
+    @Scheduled(cron = "0 0 20 * * ?")
     public void scheduledTask() {
         syncStackDtaLatest();
     }
