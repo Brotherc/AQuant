@@ -1,6 +1,7 @@
 package com.brotherc.aquant.controller;
 
 import com.brotherc.aquant.model.dto.common.ResponseDTO;
+import com.brotherc.aquant.model.vo.notification.StockNotificationDeleteReqVO;
 import com.brotherc.aquant.model.vo.notification.StockNotificationReqVO;
 import com.brotherc.aquant.model.vo.notification.StockNotificationVO;
 import com.brotherc.aquant.service.StockNotificationService;
@@ -35,7 +36,7 @@ public class StockNotificationController {
 
     @Operation(summary = "删除提醒设置")
     @PostMapping("/delete")
-    public ResponseDTO<Void> delete(@RequestBody StockNotificationReqVO reqVO, @RequestAttribute(value = "userId", required = false) Long userId) {
+    public ResponseDTO<Void> delete(@RequestBody @Valid StockNotificationDeleteReqVO reqVO, @RequestAttribute(value = "userId", required = false) Long userId) {
         notificationService.delete(reqVO.getId(), userId);
         return ResponseDTO.success();
     }
