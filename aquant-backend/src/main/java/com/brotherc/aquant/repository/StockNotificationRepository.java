@@ -2,6 +2,7 @@ package com.brotherc.aquant.repository;
 
 import com.brotherc.aquant.entity.StockNotification;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -22,5 +23,10 @@ public interface StockNotificationRepository extends JpaRepository<StockNotifica
 
     @org.springframework.data.jpa.repository.Query("SELECT DISTINCT n.stockCode FROM StockNotification n WHERE n.isEnabled = 1")
     List<String> findActiveStockCodes();
+
+    @Query("SELECT COUNT(DISTINCT n.stockCode) FROM StockNotification n")
+    long countActiveStockCodes();
+
+    boolean existsByStockCode(String stockCode);
 
 }

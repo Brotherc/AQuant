@@ -43,3 +43,7 @@ druid:
     login-password: admin
 
 akshare-address: http://127.0.0.1:8080
+
+aquant:
+  stock:
+    max-notification-stock-count: 600

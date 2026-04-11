@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,11 +36,15 @@ import java.util.concurrent.ConcurrentMap;
 @RequiredArgsConstructor
 public class StockNotificationService {
 
+    private static final long OBSERVED_PRICE_TTL_MILLIS = 7L * 24 * 60 * 60 * 1000;
+    private final ConcurrentMap<Long, ObservedPrice> lastObservedPriceMap = new ConcurrentHashMap<>();
+
+    @Value("${aquant.stock.max-notification-stock-count:600}")
+    private Integer maxNotificationStockCount;
+
     private final StockNotificationRepository notificationRepository;
     private final StockQuoteHistoryRepository stockQuoteHistoryRepository;
     private final ObjectMapper objectMapper;
-    private static final long OBSERVED_PRICE_TTL_MILLIS = 7L * 24 * 60 * 60 * 1000;
-    private final ConcurrentMap<Long, ObservedPrice> lastObservedPriceMap = new ConcurrentHashMap<>();
 
     /**
      * 获取用户指定股票的通知配置
@@ -79,6 +84,7 @@ public class StockNotificationService {
         notification.setIsEnabled(reqVO.getIsEnabled() != null ? reqVO.getIsEnabled() : 1);
 
         checkDuplicate(notification, userId);
+        checkStockCountLimit(notification);
 
         StockNotification saved = notificationRepository.save(notification);
         clearLastObservedPrice(saved.getId());
@@ -100,6 +106,18 @@ public class StockNotificationService {
 
             if (typeMatch && valueMatch && paramsMatch) {
                 throw ExceptionEnum.STOCK_NOTIFICATION_DUPLICATE.toException();
+            }
+        }
+    }
+
+    private void checkStockCountLimit(StockNotification notification) {
+        String stockCode = notification.getStockCode();
+        // 如果该股票目前没有任何活跃通知，则保存后将成为一个新的监控股票
+        boolean isMonitored = notificationRepository.existsByStockCode(stockCode);
+        if (!isMonitored) {
+            long currentCount = notificationRepository.countActiveStockCodes();
+            if (currentCount >= maxNotificationStockCount) {
+                throw ExceptionEnum.STOCK_NOTIFICATION_STOCK_COUNT_LIMIT.toException();
             }
         }
     }
