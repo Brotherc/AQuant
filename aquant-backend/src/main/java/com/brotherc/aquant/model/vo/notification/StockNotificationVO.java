@@ -1,40 +1,37 @@
 package com.brotherc.aquant.model.vo.notification;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
+@Schema(description = "股票通知信息")
 public class StockNotificationVO {
 
+    @Schema(description = "通知 ID")
     private Long id;
 
+    @Schema(description = "股票代码")
     private String stockCode;
 
-    /**
-     * 提醒类型 (1: 价格预警, 2: 双均线策略)
-     */
+    @Schema(description = "提醒类型 (1: 价格, 2: 双均线策略)")
     private Integer type;
 
-    /**
-     * 预警阈值价格
-     */
+    @Schema(description = "价格通知阈值")
     private BigDecimal thresholdValue;
 
-    /**
-     * 策略参数 (JSON 格式)
-     */
+    @Schema(description = "策略参数 (JSON 格式)")
     private String params;
 
-    /**
-     * 是否启用 (1: 是, 0: 否)
-     */
+    @Schema(description = "是否启用 (1: 是, 0: 否)")
     private Integer isEnabled;
 
-    /**
-     * 上次提醒时间
-     */
+    @Schema(description = "通知策略 (1: 每日一次, 2: 持续重复)")
+    private Integer notifyStrategy;
+
+    @Schema(description = "上次提醒时间")
     private LocalDateTime lastNotifyAt;
 
     private LocalDateTime createdAt;

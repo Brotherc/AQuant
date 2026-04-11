@@ -49,6 +49,12 @@ public class StockNotification {
     private String params;
 
     /**
+     * 通知策略 (1: 每日一次, 2: 持续重复)
+     */
+    @Column(name = "notify_strategy")
+    private Integer notifyStrategy = 1;
+
+    /**
      * 是否启用 (1: 是, 0: 否)
      */
     @Column(name = "is_enabled")

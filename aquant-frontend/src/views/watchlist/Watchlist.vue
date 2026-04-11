@@ -260,7 +260,7 @@
     <a-modal
       v-model:visible="notiModalVisible"
       :title="`通知设置 - ${currentStockName}(${currentStockCode})`"
-      width="600px"
+      width="800px"
       :footer="null"
       destroyOnClose
     >
@@ -279,15 +279,15 @@
           <template #renderItem="{ item, index }">
             <a-list-item>
               <div style="width: 100%;">
-                <a-row :gutter="12" align="middle">
-                  <a-col :span="6">
+                <a-row :gutter="8" align="middle">
+                  <a-col :span="4">
                     <a-select v-model:value="item.type" style="width: 100%;" size="small">
-                      <a-select-option :value="1">价格通知</a-select-option>
+                      <a-select-option :value="1">价格</a-select-option>
                       <a-select-option :value="2">双均线策略</a-select-option>
                     </a-select>
                   </a-col>
                   
-                  <a-col :span="10">
+                  <a-col :span="7">
                     <div v-if="item.type === 1" style="display: flex; gap: 4px;">
                       <a-select v-model:value="item.condition" style="width: 110px;" size="small">
                         <a-select-option value="UP">向上突破</a-select-option>
@@ -295,37 +295,39 @@
                       </a-select>
                       <a-input-number 
                         v-model:value="item.thresholdValue" 
-                        placeholder="触发价" 
+                        placeholder="价格" 
                         style="flex: 1;" 
                         size="small"
                         :min="0"
                         :precision="2"
-                        :step="0.01"
                       />
                     </div>
-                    <div v-else-if="item.type === 2" style="display: flex; gap: 8px; align-items: center;">
-                      <span style="font-size: 12px; color: #666; white-space: nowrap;">短线:</span>
-                      <a-input-number 
-                        v-model:value="item.maShort" 
-                        :min="2" 
-                        :precision="0"
-                        :step="1"
-                        style="width: 60px;" 
-                        size="small"
-                      />
-                      <span style="font-size: 12px; color: #666; white-space: nowrap;">长线:</span>
-                      <a-input-number 
-                        v-model:value="item.maLong" 
-                        :min="(item.maShort || 2) + 1" 
-                        :precision="0"
-                        :step="1"
-                        style="width: 60px;" 
-                        size="small"
-                      />
+                    <div v-else-if="item.type === 2" style="display: flex; gap: 4px; align-items: center;">
+                      <span style="font-size: 11px; color: #999;">MA:</span>
+                      <a-input-number v-model:value="item.maShort" :min="2" style="width: 45px;" size="small" />
+                      <span style="font-size: 11px; color: #999;">/</span>
+                      <a-input-number v-model:value="item.maLong" :min="3" style="width: 45px;" size="small" />
+                    </div>
+                  </a-col>
+
+                  <a-col :span="7">
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <span style="font-size: 12px; color: #999; white-space: nowrap;">策略:</span>
+                      <a-tooltip placement="top" :overlayStyle="{ maxWidth: '400px' }">
+                        <template #title>
+                          <div>每日：触发通知后，今日不再重复报警</div>
+                          <div>重复：条件满足时持续报警，间隔1分钟</div>
+                        </template>
+                        <question-circle-outlined style="font-size: 12px; color: #ccc; cursor: help;" />
+                      </a-tooltip>
+                      <a-radio-group v-model:value="item.notifyStrategy" size="small" style="display: flex; flex-wrap: nowrap;">
+                        <a-radio :value="1" style="margin-right: 4px; font-size: 12px;">每日</a-radio>
+                        <a-radio :value="2" style="margin-right: 0; font-size: 12px;">重复</a-radio>
+                      </a-radio-group>
                     </div>
                   </a-col>
                   
-                  <a-col :span="4">
+                  <a-col :span="2" style="text-align: center;">
                     <a-switch 
                       v-model:checked="item.isEnabled" 
                       :checkedValue="1" 
@@ -335,10 +337,10 @@
                   </a-col>
                   
                   <a-col :span="4" style="text-align: right;">
-                    <a-space>
-                      <a-button type="link" size="small" @click="handleSaveNoti(item)">保存</a-button>
-                      <a-popconfirm title="确定删除吗？" @confirm="handleDeleteNoti(item, index)">
-                        <a-button type="link" size="small" danger>删除</a-button>
+                    <a-space :size="0">
+                      <a-button type="link" size="small" @click="handleSaveNoti(item)" style="padding: 0 4px;">保存</a-button>
+                      <a-popconfirm title="删除？" @confirm="handleDeleteNoti(item, index)">
+                        <a-button type="link" size="small" danger style="padding: 0 4px;">删除</a-button>
                       </a-popconfirm>
                     </a-space>
                   </a-col>
@@ -363,7 +365,8 @@ import {
   SearchOutlined, 
   EllipsisOutlined, 
   EditOutlined,
-  BellOutlined
+  BellOutlined,
+  QuestionCircleOutlined
 } from '@ant-design/icons-vue';
 import MiniKlineChart from './components/MiniKlineChart.vue';
 import StockDetailView from './components/StockDetailView.vue';
@@ -811,6 +814,7 @@ const processNotiList = (list: any[]) => {
         item.maLong = 20;
       }
     }
+    item.notifyStrategy = item.notifyStrategy || 1;
     return item;
   });
 };
@@ -839,7 +843,8 @@ const handleAddNoti = () => {
     maShort: 5,
     maLong: 20,
     params: '',
-    isEnabled: 1
+    isEnabled: 1,
+    notifyStrategy: 1
   });
 };
 

@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -82,6 +83,7 @@ public class StockNotificationService {
             notification.setParams(reqVO.getParams());
         }
         notification.setIsEnabled(reqVO.getIsEnabled() != null ? reqVO.getIsEnabled() : 1);
+        notification.setNotifyStrategy(reqVO.getNotifyStrategy() != null ? reqVO.getNotifyStrategy() : 1);
 
         checkDuplicate(notification, userId);
         checkStockCountLimit(notification);
@@ -175,7 +177,21 @@ public class StockNotificationService {
         long now = System.currentTimeMillis();
         BigDecimal previousPrice = getObservedPrice(notificationId, now);
         lastObservedPriceMap.put(notificationId, new ObservedPrice(latestPrice, now + OBSERVED_PRICE_TTL_MILLIS));
+
         if (previousPrice == null) {
+            // 初次观测校验：如果当前已满足条件且通过频率限制，则补发通知
+            boolean initialMet;
+            if (PriceAlertCondition.DOWN == condition) {
+                initialMet = latestPrice.compareTo(threshold) <= 0;
+            } else {
+                initialMet = latestPrice.compareTo(threshold) >= 0;
+            }
+
+            if (initialMet && isCoolDownPassed(config)) {
+                sendNotify(config, String.format("【价格通知】%s(%s) 当前价 %s 已%s设定值 %s (初次观测捕获)", 
+                    stockName, config.getStockCode(), latestPrice, condition.getDescription(), threshold));
+                updateLastNotifyTime(config);
+            }
             return;
         }
 
@@ -236,7 +252,17 @@ public class StockNotificationService {
 
     private boolean isCoolDownPassed(StockNotification config) {
         if (config.getLastNotifyAt() == null) return true;
-        // 简单频率限制：同一条通知24小时内只发一次
+
+        Integer strategy = config.getNotifyStrategy();
+        if (strategy == null || strategy == 1) {
+            // 每日一次：判断日期是否为今天
+            return !config.getLastNotifyAt().toLocalDate().isEqual(LocalDate.now());
+        } else if (strategy == 2) {
+            // 持续重复：1 分钟冷却
+            return config.getLastNotifyAt().plusMinutes(1).isBefore(LocalDateTime.now());
+        }
+
+        // 默认兜底：24 小时
         return config.getLastNotifyAt().plusHours(24).isBefore(LocalDateTime.now());
     }
 
