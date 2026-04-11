@@ -1,10 +1,10 @@
 package com.brotherc.aquant.task;
 
 import com.brotherc.aquant.entity.StockNotification;
-import com.brotherc.aquant.model.dto.akshare.StockIndividualInfoEm;
+import com.brotherc.aquant.model.dto.tencent.TencentStockQuote;
 import com.brotherc.aquant.repository.StockNotificationRepository;
-import com.brotherc.aquant.service.AKShareService;
 import com.brotherc.aquant.service.StockNotificationService;
+import com.brotherc.aquant.service.TencentFinanceService;
 import com.brotherc.aquant.utils.StockHelper;
 import com.brotherc.aquant.utils.StockUtils;
 import lombok.RequiredArgsConstructor;
@@ -25,8 +25,8 @@ public class StockNotificationTask {
 
     private final StockNotificationService notificationService;
     private final StockNotificationRepository notificationRepository;
-    private final AKShareService akShareService;
     private final StockHelper stockHelper;
+    private final TencentFinanceService tencentFinanceService;
 
     /**
      * 股票通知轮询任务
@@ -51,23 +51,32 @@ public class StockNotificationTask {
             return;
         }
 
+        // 提取所有唯一的股票代码并格式化为 sh/sz 格式
+        List<String> uniqueStockCodes = allActiveNotifications.stream()
+                .map(StockNotification::getStockCode)
+                .distinct()
+                .toList();
+
+        log.info("开始执行实时股票通知检测，活跃股票代码总数: {}", uniqueStockCodes.size());
+
+        // 4. 通过服务批量获取行情数据
+        Map<String, TencentStockQuote> quoteDataMap = tencentFinanceService.fetchBatchQuotes(uniqueStockCodes);
+
+        // 5. 按股票分组通知逻辑并检测
         Map<String, List<StockNotification>> notificationMap = allActiveNotifications.stream()
                 .collect(Collectors.groupingBy(StockNotification::getStockCode));
 
-        log.info("开始执行实时股票通知检测，活跃股票代码总数: {}", notificationMap.size());
-
-        // 4. 遍历分组，获取实时行情并执行通知检查
         for (Map.Entry<String, List<StockNotification>> entry : notificationMap.entrySet()) {
             String stockCode = entry.getKey();
             List<StockNotification> configs = entry.getValue();
-            try {
-                // 调用东财 EM 实时接口获取最新行情
-                StockIndividualInfoEm info = akShareService.stockIndividualInfoEm(stockCode, null);
-                if (info != null && info.getLatest() != null) {
-                    notificationService.checkAndNotify(info.getStockName(), info.getLatest(), configs);
+
+            TencentStockQuote data = quoteDataMap.get(stockCode);
+            if (data != null && data.getPrice() != null) {
+                try {
+                    notificationService.checkAndNotify(data.getName(), data.getPrice(), configs);
+                } catch (Exception e) {
+                    log.error("检测通知失败 [{}]", stockCode, e);
                 }
-            } catch (Exception e) {
-                log.error("获取实时行情并检查通知失败 [{}]", stockCode, e);
             }
         }
     }
