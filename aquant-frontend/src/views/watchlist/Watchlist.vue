@@ -260,7 +260,7 @@
     <a-modal
       v-model:visible="notiModalVisible"
       :title="`通知设置 - ${currentStockName}(${currentStockCode})`"
-      width="800px"
+      width="1200px"
       :footer="null"
       destroyOnClose
     >
@@ -269,78 +269,83 @@
       </div>
       <div v-else>
         <div style="margin-bottom: 16px;">
-          <a-button type="primary" size="small" @click="handleAddNoti">
+          <a-button type="primary" ghost size="small" @click="handleAddNoti">
             <template #prefix><plus-outlined /></template>
-            新增通知
+            新增
           </a-button>
         </div>
         
         <a-list :data-source="notiList" bordered>
           <template #renderItem="{ item, index }">
             <a-list-item>
-              <div style="width: 100%;">
-                <a-row :gutter="8" align="middle">
+              <div style="width: 100%; padding: 8px 0;">
+                <a-row :gutter="12" align="middle">
                   <a-col :span="4">
-                    <a-select v-model:value="item.type" style="width: 100%;" size="small">
+                    <a-select v-model:value="item.type" style="width: 100%;">
                       <a-select-option :value="1">价格</a-select-option>
                       <a-select-option :value="2">双均线策略</a-select-option>
                     </a-select>
                   </a-col>
                   
-                  <a-col :span="7">
-                    <div v-if="item.type === 1" style="display: flex; gap: 4px;">
-                      <a-select v-model:value="item.condition" style="width: 110px;" size="small">
+                  <a-col :span="10">
+                    <div v-if="item.type === 1" style="display: flex; gap: 8px;">
+                      <a-select v-model:value="item.condition" style="width: 110px;">
                         <a-select-option value="UP">向上突破</a-select-option>
                         <a-select-option value="DOWN">向下突破</a-select-option>
                       </a-select>
                       <a-input-number 
                         v-model:value="item.thresholdValue" 
                         placeholder="价格" 
-                        style="flex: 1;" 
-                        size="small"
+                        style="width: 120px;" 
                         :min="0"
                         :precision="2"
                       />
                     </div>
-                    <div v-else-if="item.type === 2" style="display: flex; gap: 4px; align-items: center;">
+                    <div v-else-if="item.type === 2" style="display: flex; gap: 8px; align-items: center;">
+                      <a-select v-model:value="item.condition" style="width: 110px;">
+                        <a-select-option value="UP">金叉(买入)</a-select-option>
+                        <a-select-option value="DOWN">死叉(卖出)</a-select-option>
+                      </a-select>
                       <span style="font-size: 11px; color: #999;">MA:</span>
-                      <a-input-number v-model:value="item.maShort" :min="2" style="width: 45px;" size="small" />
+                      <a-input-number v-model:value="item.maShort" :min="2" style="width: 100px;" />
                       <span style="font-size: 11px; color: #999;">/</span>
-                      <a-input-number v-model:value="item.maLong" :min="3" style="width: 45px;" size="small" />
+                      <a-input-number v-model:value="item.maLong" :min="3" style="width: 100px;" />
                     </div>
                   </a-col>
 
-                  <a-col :span="7">
-                    <div style="display: flex; align-items: center; gap: 4px;">
-                      <span style="font-size: 12px; color: #999; white-space: nowrap;">策略:</span>
+                  <a-col :span="4">
+                    <div style="display: flex; align-items: center; gap: 8px;">
                       <a-tooltip placement="top" :overlayStyle="{ maxWidth: '400px' }">
                         <template #title>
                           <div>每日：触发通知后，今日不再重复报警</div>
                           <div>重复：条件满足时持续报警，间隔1分钟</div>
                         </template>
-                        <question-circle-outlined style="font-size: 12px; color: #ccc; cursor: help;" />
+                        <span style="font-size: 12px; color: #999; white-space: nowrap; cursor: help; border-bottom: 1px dashed #ccc;">策略:</span>
+                        <question-circle-outlined style="font-size: 12px; color: #ccc; cursor: help; margin-left: 2px;" />
                       </a-tooltip>
-                      <a-radio-group v-model:value="item.notifyStrategy" size="small" style="display: flex; flex-wrap: nowrap;">
-                        <a-radio :value="1" style="margin-right: 4px; font-size: 12px;">每日</a-radio>
+                      <a-radio-group v-model:value="item.notifyStrategy" style="display: flex; flex-wrap: nowrap;">
+                        <a-radio :value="1" style="margin-right: 2px; font-size: 12px;">每日</a-radio>
                         <a-radio :value="2" style="margin-right: 0; font-size: 12px;">重复</a-radio>
                       </a-radio-group>
                     </div>
                   </a-col>
                   
-                  <a-col :span="2" style="text-align: center;">
+                  <a-col :span="3" style="text-align: center;">
                     <a-switch 
                       v-model:checked="item.isEnabled" 
                       :checkedValue="1" 
                       :unCheckedValue="0" 
-                      size="small"
+                      checked-children="启用"
+                      un-checked-children="停用"
+                      style="min-width: 60px;"
                     />
                   </a-col>
                   
-                  <a-col :span="4" style="text-align: right;">
+                  <a-col :span="3" style="text-align: right;">
                     <a-space :size="0">
-                      <a-button type="link" size="small" @click="handleSaveNoti(item)" style="padding: 0 4px;">保存</a-button>
+                      <a-button type="link" @click="handleSaveNoti(item)" style="padding: 0 4px;">保存</a-button>
                       <a-popconfirm title="删除？" @confirm="handleDeleteNoti(item, index)">
-                        <a-button type="link" size="small" danger style="padding: 0 4px;">删除</a-button>
+                        <a-button type="link" danger style="padding: 0 4px;">删除</a-button>
                       </a-popconfirm>
                     </a-space>
                   </a-col>
@@ -796,12 +801,14 @@ const processNotiList = (list: any[]) => {
         if (item.type === 1) {
           item.condition = p.condition || 'UP';
         } else if (item.type === 2) {
+          item.condition = p.condition || 'UP';
           item.maShort = p.maShort || 5;
           item.maLong = p.maLong || 20;
         }
       } catch (e) {
         if (item.type === 1) item.condition = 'UP';
         else if (item.type === 2) {
+          item.condition = 'UP';
           item.maShort = 5;
           item.maLong = 20;
         }
@@ -810,6 +817,7 @@ const processNotiList = (list: any[]) => {
       // 无参数时的默认值
       if (item.type === 1) item.condition = 'UP';
       else if (item.type === 2) {
+        item.condition = 'UP';
         item.maShort = 5;
         item.maLong = 20;
       }
@@ -870,6 +878,7 @@ const handleSaveNoti = async (item: any) => {
     item.params = JSON.stringify({ condition: item.condition || 'UP' });
   } else if (item.type === 2) {
     item.params = JSON.stringify({ 
+      condition: item.condition || 'UP',
       maShort: Math.floor(item.maShort), 
       maLong: Math.floor(item.maLong) 
     });

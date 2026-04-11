@@ -214,6 +214,7 @@ public class StockNotificationService {
             JsonNode params = objectMapper.readTree(config.getParams());
             int maShort = params.path("maShort").asInt(5);
             int maLong = params.path("maLong").asInt(20);
+            String condition = params.path("condition").asText("UP");
             String historyCode = StockUtils.wrapExchangePrefix(config.getStockCode());
 
             int needDays = maLong + 1;
@@ -234,9 +235,13 @@ public class StockNotificationService {
 
             TradeSignal signal = TradeSignal.HOLD;
             if (yesterdayShort.compareTo(yesterdayLong) <= 0 && todayShort.compareTo(todayLong) > 0) {
-                signal = TradeSignal.BUY;
+                if ("UP".equalsIgnoreCase(condition)) {
+                    signal = TradeSignal.BUY;
+                }
             } else if (yesterdayShort.compareTo(yesterdayLong) >= 0 && todayShort.compareTo(todayLong) < 0) {
-                signal = TradeSignal.SELL;
+                if ("DOWN".equalsIgnoreCase(condition)) {
+                    signal = TradeSignal.SELL;
+                }
             }
 
             if (signal != TradeSignal.HOLD && isCoolDownPassed(config)) {
