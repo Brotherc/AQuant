@@ -47,7 +47,7 @@
     
       <!-- 轻量级排序与搜索操作带 -->
       <div class="control-bar" v-if="stocks.length > 0">
-        <div class="search-box">
+        <div class="search-box" style="display: flex; align-items: center; gap: 16px;">
           <a-input 
             v-model:value="searchQuery" 
             placeholder="输入名称或代码搜索" 
@@ -59,6 +59,7 @@
               <search-outlined style="color: rgba(0, 0, 0, 0.45)" />
             </template>
           </a-input>
+          <a-checkbox v-model:checked="filterNoti">仅看有通知设置</a-checkbox>
         </div>
         <div class="sort-options">
           <span class="ctrl-label">排序：</span>
@@ -507,6 +508,7 @@ const handleExecuteMoveGroup = async () => {
 
 // 搜索与排序状态控制
 const searchQuery = ref<string>('');
+const filterNoti = ref<boolean>(false);
 const sortKey = ref<string>('default');
 const sortOrder = ref<'asc' | 'desc'>('desc');
 
@@ -533,6 +535,11 @@ const sortedStocks = computed(() => {
       (stock.stockName && stock.stockName.toLowerCase().includes(q)) || 
       (stock.stockCode && stock.stockCode.toLowerCase().includes(q))
     );
+  }
+
+  // 1.5 按是否有预警通知过滤
+  if (filterNoti.value) {
+    result = result.filter(stock => stock.hasNotification);
   }
 
   // 2. 本地实时排序
