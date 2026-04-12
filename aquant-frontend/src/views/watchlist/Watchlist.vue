@@ -268,8 +268,8 @@
         <a-spin />
       </div>
       <div v-else>
-        <div style="margin-bottom: 16px;">
-          <a-button type="primary" ghost size="small" @click="handleAddNoti">
+        <div style="margin-bottom: 16px; text-align: right;">
+          <a-button type="primary" ghost @click="handleAddNoti">
             <template #prefix><plus-outlined /></template>
             新增
           </a-button>
