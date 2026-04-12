@@ -32,6 +32,20 @@ spring:
       hibernate:
         format_sql: true
     database-platform: org.hibernate.dialect.MySQL8Dialect
+  mail:
+    host: smtp.qq.com # 请替换为您真实的 SMTP 服务器 (如 smtp.163.com)
+    username: your-email@qq.com # 请替换为您发件邮箱账号
+    password: your-smtp-auth-code # 请替换为发件邮箱对应的 SMTP 授权码（不是登录密码）
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          ssl:
+            enable: true
 
 
 # Druid \u76D1\u63A7\u9875\u9762\u914D\u7F6E

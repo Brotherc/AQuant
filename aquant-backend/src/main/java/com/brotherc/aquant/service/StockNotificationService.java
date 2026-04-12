@@ -2,6 +2,7 @@ package com.brotherc.aquant.service;
 
 import com.brotherc.aquant.entity.StockNotification;
 import com.brotherc.aquant.entity.StockQuoteHistory;
+import com.brotherc.aquant.entity.SysUser;
 import com.brotherc.aquant.exception.BusinessException;
 import com.brotherc.aquant.enums.TradeSignal;
 import com.brotherc.aquant.exception.ExceptionEnum;
@@ -11,6 +12,7 @@ import com.brotherc.aquant.model.vo.notification.StockNotificationReqVO;
 import com.brotherc.aquant.model.vo.notification.StockNotificationVO;
 import com.brotherc.aquant.repository.StockNotificationRepository;
 import com.brotherc.aquant.repository.StockQuoteHistoryRepository;
+import com.brotherc.aquant.repository.SysUserRepository;
 import com.brotherc.aquant.utils.StockUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -19,6 +21,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,8 +47,13 @@ public class StockNotificationService {
     @Value("${aquant.stock.max-notification-stock-count:600}")
     private Integer maxNotificationStockCount;
 
+    @Value("${spring.mail.username:}")
+    private String mailFrom;
+
     private final StockNotificationRepository notificationRepository;
     private final StockQuoteHistoryRepository stockQuoteHistoryRepository;
+    private final SysUserRepository sysUserRepository;
+    private final JavaMailSender mailSender;
     private final ObjectMapper objectMapper;
 
     /**
@@ -277,9 +286,24 @@ public class StockNotificationService {
     }
 
     private void sendNotify(StockNotification config, String content) {
-        // TODO: 真正的通知推送逻辑 (Websocket/Email/DingTalk)
-        // 目前仅打印日志或记录到通知表
         log.info(">>> [NOTIFY] UserID: {}, Content: {}", config.getUserId(), content);
+        try {
+            Long userId = config.getUserId();
+            SysUser user = sysUserRepository.findById(userId).orElse(null);
+            if (user != null && user.getEmail() != null && !user.getEmail().trim().isEmpty() && mailFrom != null && !mailFrom.isEmpty()) {
+                SimpleMailMessage message = new SimpleMailMessage();
+                message.setFrom(mailFrom);
+                message.setTo(user.getEmail());
+                message.setSubject("AQuant 股票预警通知 - " + config.getStockCode());
+                message.setText(content);
+                mailSender.send(message);
+                log.info("Successfully sent email notification to {}", user.getEmail());
+            } else {
+                log.warn("Cannot send email: User {} email is missing or spring.mail.username is not configured.", userId);
+            }
+        } catch (Exception e) {
+            log.error("Failed to send email notification for user {}: {}", config.getUserId(), e.getMessage());
+        }
     }
 
     private BigDecimal avg(List<StockQuoteHistory> list) {
