@@ -37,4 +37,7 @@ public class WatchlistStockVO {
     @Schema(description = "近期分红")
     private List<WatchlistDividendVO> recentDividends;
 
+    @Schema(description = "是否有通知配置")
+    private Boolean hasNotification;
+
 }

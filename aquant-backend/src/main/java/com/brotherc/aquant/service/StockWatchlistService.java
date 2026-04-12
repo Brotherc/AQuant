@@ -16,6 +16,7 @@ import com.brotherc.aquant.repository.StockWatchlistGroupRepository;
 import com.brotherc.aquant.repository.StockWatchlistStockRepository;
 import com.brotherc.aquant.repository.StockValuationMetricsRepository;
 import com.brotherc.aquant.repository.StockDupontAnalysisRepository;
+import com.brotherc.aquant.repository.StockNotificationRepository;
 import com.brotherc.aquant.entity.StockValuationMetrics;
 import com.brotherc.aquant.entity.StockDupontAnalysis;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +45,7 @@ public class StockWatchlistService {
     private final StockValuationMetricsRepository valuationMetricsRepository;
     private final StockDupontAnalysisRepository dupontAnalysisRepository;
     private final StockDividendRepository dividendRepository;
+    private final StockNotificationRepository notificationRepository;
 
     public List<WatchlistGroupVO> getAllGroups(Long userId) {
         if (userId == null) {
@@ -74,6 +76,8 @@ public class StockWatchlistService {
 
         List<String> codes6 = watchlistStocks.stream().map(StockWatchlistStock::getStockCode)
                 .collect(Collectors.toList());
+
+        List<String> notificationCodes = notificationRepository.findDistinctStockCodeByUserIdAndStockCodeIn(userId, codes6);
 
         // 智能补全并批量查询核心行情
         List<String> candidates = new ArrayList<>();
@@ -158,6 +162,7 @@ public class StockWatchlistService {
             }
             
             vo.setRecentDividends(dividendMap.get(ws.getStockCode()));
+            vo.setHasNotification(notificationCodes.contains(ws.getStockCode()));
             
             return vo;
         }).toList();

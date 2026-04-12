@@ -21,6 +21,9 @@ public interface StockNotificationRepository extends JpaRepository<StockNotifica
 
     Optional<StockNotification> findByIdAndUserId(Long id, Long userId);
 
+    @Query("SELECT DISTINCT n.stockCode FROM StockNotification n WHERE n.userId = :userId AND n.stockCode IN :stockCodes")
+    List<String> findDistinctStockCodeByUserIdAndStockCodeIn(Long userId, List<String> stockCodes);
+
     @org.springframework.data.jpa.repository.Query("SELECT DISTINCT n.stockCode FROM StockNotification n WHERE n.isEnabled = 1")
     List<String> findActiveStockCodes();
 

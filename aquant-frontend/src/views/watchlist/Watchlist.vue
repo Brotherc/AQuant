@@ -94,11 +94,18 @@
                     <span class="stock-code">{{ stock.stockCode }}</span>
                   </div>
                   <div class="header-right">
-                    <bell-outlined 
-                      class="noti-icon" 
-                      title="消息提醒"
-                      @click.stop="openNotiModal(stock)" 
-                    />
+                    <span @click.stop="openNotiModal(stock)" style="display: inline-flex; align-items: center; cursor: pointer; margin-right: 12px; font-size: 16px;">
+                      <bell-filled
+                        v-if="stock.hasNotification"
+                        style="color: #1890ff;"
+                        title="修改通知规则"
+                      />
+                      <bell-outlined 
+                        v-else
+                        class="noti-icon"
+                        title="新增消息提醒"
+                      />
+                    </span>
                     <a-dropdown :trigger="['click']">
                       <ellipsis-outlined class="more-icon" />
                       <template #overlay>
@@ -371,6 +378,7 @@ import {
   EllipsisOutlined, 
   EditOutlined,
   BellOutlined,
+  BellFilled,
   QuestionCircleOutlined
 } from '@ant-design/icons-vue';
 import MiniKlineChart from './components/MiniKlineChart.vue';
@@ -891,6 +899,10 @@ const handleSaveNoti = async (item: any) => {
       // 重新拉取一次以获取新创建的 ID 并确保数据回显正确
       const listRes = await getNotificationList(currentStockCode.value);
       notiList.value = processNotiList(listRes.data.data || []);
+      // 刷新列表以同步铃铛图标状态
+      if (activeGroupId.value) {
+        fetchStocks(activeGroupId.value);
+      }
     }
   } catch (error) {
     console.error('Save notification failed:', error);
@@ -907,6 +919,10 @@ const handleDeleteNoti = async (item: any, index: number) => {
     if (res.data.success) {
       message.success('通知已删除');
       notiList.value.splice(index, 1);
+      // 刷新列表以同步铃铛图标状态
+      if (activeGroupId.value) {
+        fetchStocks(activeGroupId.value);
+      }
     }
   } catch (error) {
     console.error('Delete notification failed:', error);
