@@ -1,5 +1,8 @@
 package com.brotherc.aquant.service;
 
+import com.brotherc.aquant.entity.StockQuote;
+import com.brotherc.aquant.exception.BusinessException;
+import com.brotherc.aquant.exception.ExceptionEnum;
 import com.brotherc.aquant.model.vo.strategy.DualMAReqVO;
 import com.brotherc.aquant.model.vo.strategy.DualMABacktestReqVO;
 import com.brotherc.aquant.model.vo.strategy.MomentumReqVO;
@@ -7,6 +10,7 @@ import com.brotherc.aquant.model.vo.strategy.MomentumBacktestReqVO;
 import com.brotherc.aquant.model.vo.strategy.StockTradeSignalVO;
 import com.brotherc.aquant.model.vo.strategy.StockTradeBacktestVO;
 import com.brotherc.aquant.repository.StockQuoteRepository;
+import com.brotherc.aquant.repository.StockWatchlistGroupRepository;
 import com.brotherc.aquant.strategy.DualMovingAverageStrategy;
 import com.brotherc.aquant.strategy.MomentumStrategy;
 import com.brotherc.aquant.repository.StockWatchlistStockRepository;
@@ -19,11 +23,10 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.math.BigDecimal;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -36,44 +39,48 @@ public class StockStrategyService {
     private final MomentumStrategy momentumStrategy;
     private final StockWatchlistStockRepository stockWatchlistStockRepository;
     private final StockQuoteRepository stockQuoteRepository;
+    private final StockWatchlistGroupRepository stockWatchlistGroupRepository;
 
-    public Page<StockTradeSignalVO> dualMA(DualMAReqVO reqVO, Pageable pageable) {
-        List<StockTradeSignalVO> list = dualMovingAverageStrategy.calculate(reqVO.getMaShort(), reqVO.getMaLong());
+    public Page<StockTradeSignalVO> dualMA(DualMAReqVO reqVO, Pageable pageable, Long userId) {
+        List<StockQuote> allStocks = stockQuoteRepository.findAll();
 
-        Stream<StockTradeSignalVO> stream = list.stream();
-
-        if (StringUtils.isNotBlank(reqVO.getSignal())) {
-            stream = stream.filter(vo -> reqVO.getSignal().equalsIgnoreCase(vo.getSignal()));
-        }
         if (StringUtils.isNotBlank(reqVO.getCode())) {
-            stream = stream.filter(vo -> reqVO.getCode().equalsIgnoreCase(vo.getCode()));
+            allStocks = allStocks.stream().filter(vo -> reqVO.getCode().equalsIgnoreCase(vo.getCode())).toList();
         }
 
-        // 自选分组过滤
         if (reqVO.getWatchlistGroupId() != null) {
-            java.util.Set<String> watchlistCodes = stockWatchlistStockRepository
+            stockWatchlistGroupRepository.findByIdAndUserId(reqVO.getWatchlistGroupId(), userId)
+                    .orElseThrow(() -> new BusinessException(ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND));
+            Set<String> watchlistCodes = stockWatchlistStockRepository
                     .findByGroupIdOrderBySortNoDesc(reqVO.getWatchlistGroupId())
                     .stream().map(StockWatchlistStock::getStockCode).collect(Collectors.toSet());
-            if (watchlistCodes.isEmpty()) {
+            if (CollectionUtils.isEmpty(watchlistCodes)) {
                 return new PageImpl<>(Collections.emptyList(), pageable, 0);
             }
-            stream = stream.filter(vo -> {
+            allStocks = allStocks.stream().filter(vo -> {
                 String c = vo.getCode();
                 String c6 = c.length() > 6 ? c.substring(c.length() - 6) : c;
                 return watchlistCodes.contains(c6);
-            });
+            }).toList();
         }
 
-        List<StockTradeSignalVO> filtered = stream.collect(Collectors.toList());
+        if (CollectionUtils.isEmpty(allStocks)) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
+
+        List<StockTradeSignalVO> list = dualMovingAverageStrategy.calculate(reqVO.getMaShort(), reqVO.getMaLong(), allStocks);
+
+        if (StringUtils.isNotBlank(reqVO.getSignal())) {
+            list = list.stream().filter(vo -> reqVO.getSignal().equalsIgnoreCase(vo.getSignal())).toList();
+        }
 
         Sort sort = pageable.getSort();
         if (sort.isSorted()) {
             Comparator<StockTradeSignalVO> comparator = buildComparator(sort);
-            filtered.sort(comparator);
+            list.sort(comparator);
         }
 
-        // 分页
-        int total = filtered.size();
+        int total = list.size();
         int pageSize = pageable.getPageSize();
         int currentPage = pageable.getPageNumber();
         int fromIndex = currentPage * pageSize;
@@ -84,7 +91,7 @@ public class StockStrategyService {
 
         int toIndex = Math.min(fromIndex + pageSize, total);
 
-        List<StockTradeSignalVO> pageContent = filtered.subList(fromIndex, toIndex);
+        List<StockTradeSignalVO> pageContent = list.subList(fromIndex, toIndex);
 
         return new PageImpl<>(pageContent, pageable, total);
     }
@@ -122,10 +129,9 @@ public class StockStrategyService {
         return result != null ? result : Comparator.comparing(StockTradeSignalVO::getCode);
     }
 
-    public Page<StockTradeBacktestVO> dualMABacktest(DualMABacktestReqVO reqVO, Pageable pageable) {
+    public Page<StockTradeBacktestVO> dualMABacktest(DualMABacktestReqVO reqVO, Pageable pageable, Long userId) {
         // Find latest stocks up front to filter targets
-        java.time.LocalDateTime maxTime = stockQuoteRepository.findMaxCreatedAt();
-        List<com.brotherc.aquant.entity.StockQuote> stocks = stockQuoteRepository.findByCreatedAt(maxTime);
+        List<com.brotherc.aquant.entity.StockQuote> stocks = stockQuoteRepository.findAll();
 
         Stream<com.brotherc.aquant.entity.StockQuote> stream = stocks.stream();
 
@@ -134,6 +140,8 @@ public class StockStrategyService {
         }
 
         if (reqVO.getWatchlistGroupId() != null) {
+            stockWatchlistGroupRepository.findByIdAndUserId(reqVO.getWatchlistGroupId(), userId)
+                    .orElseThrow(() -> new BusinessException(ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND));
             java.util.Set<String> watchlistCodes = stockWatchlistStockRepository
                     .findByGroupIdOrderBySortNoDesc(reqVO.getWatchlistGroupId())
                     .stream().map(StockWatchlistStock::getStockCode).collect(Collectors.toSet());
@@ -210,30 +218,42 @@ public class StockStrategyService {
 
     // ==================== 动量策略 ====================
 
-    public Page<StockTradeSignalVO> momentum(MomentumReqVO reqVO, Pageable pageable) {
-        List<StockTradeSignalVO> list = momentumStrategy.calculate(reqVO.getLookbackDays(), reqVO.getThreshold());
+    public Page<StockTradeSignalVO> momentum(MomentumReqVO reqVO, Pageable pageable, Long userId) {
+        List<StockQuote> allStocks = stockQuoteRepository.findAll();
 
-        Stream<StockTradeSignalVO> stream = list.stream();
+        Stream<StockQuote> quoteStream = allStocks.stream();
 
-        if (StringUtils.isNotBlank(reqVO.getSignal())) {
-            stream = stream.filter(vo -> reqVO.getSignal().equalsIgnoreCase(vo.getSignal()));
-        }
         if (StringUtils.isNotBlank(reqVO.getCode())) {
-            stream = stream.filter(vo -> reqVO.getCode().equalsIgnoreCase(vo.getCode()));
+            quoteStream = quoteStream.filter(vo -> reqVO.getCode().equalsIgnoreCase(vo.getCode()));
         }
 
         if (reqVO.getWatchlistGroupId() != null) {
+            stockWatchlistGroupRepository.findByIdAndUserId(reqVO.getWatchlistGroupId(), userId)
+                    .orElseThrow(() -> new BusinessException(ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND));
             java.util.Set<String> watchlistCodes = stockWatchlistStockRepository
                     .findByGroupIdOrderBySortNoDesc(reqVO.getWatchlistGroupId())
                     .stream().map(StockWatchlistStock::getStockCode).collect(Collectors.toSet());
             if (watchlistCodes.isEmpty()) {
                 return new PageImpl<>(Collections.emptyList(), pageable, 0);
             }
-            stream = stream.filter(vo -> {
+            quoteStream = quoteStream.filter(vo -> {
                 String c = vo.getCode();
                 String c6 = c.length() > 6 ? c.substring(c.length() - 6) : c;
                 return watchlistCodes.contains(c6);
             });
+        }
+
+        List<StockQuote> targetStocks = quoteStream.collect(Collectors.toList());
+        if (targetStocks.isEmpty()) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
+
+        List<StockTradeSignalVO> list = momentumStrategy.calculate(reqVO.getLookbackDays(), reqVO.getThreshold(), targetStocks);
+
+        Stream<StockTradeSignalVO> stream = list.stream();
+
+        if (StringUtils.isNotBlank(reqVO.getSignal())) {
+            stream = stream.filter(vo -> reqVO.getSignal().equalsIgnoreCase(vo.getSignal()));
         }
 
         List<StockTradeSignalVO> filtered = stream.collect(Collectors.toList());
@@ -288,18 +308,19 @@ public class StockStrategyService {
         return result != null ? result : Comparator.comparing(StockTradeSignalVO::getCode);
     }
 
-    public Page<StockTradeBacktestVO> momentumBacktest(MomentumBacktestReqVO reqVO, Pageable pageable) {
-        java.time.LocalDateTime maxTime = stockQuoteRepository.findMaxCreatedAt();
-        List<com.brotherc.aquant.entity.StockQuote> stocks = stockQuoteRepository.findByCreatedAt(maxTime);
+    public Page<StockTradeBacktestVO> momentumBacktest(MomentumBacktestReqVO reqVO, Pageable pageable, Long userId) {
+        List<StockQuote> stocks = stockQuoteRepository.findAll();
 
-        Stream<com.brotherc.aquant.entity.StockQuote> stream = stocks.stream();
+        Stream<StockQuote> stream = stocks.stream();
 
         if (StringUtils.isNotBlank(reqVO.getCode())) {
             stream = stream.filter(vo -> reqVO.getCode().equalsIgnoreCase(vo.getCode()));
         }
 
         if (reqVO.getWatchlistGroupId() != null) {
-            java.util.Set<String> watchlistCodes = stockWatchlistStockRepository
+            stockWatchlistGroupRepository.findByIdAndUserId(reqVO.getWatchlistGroupId(), userId)
+                    .orElseThrow(() -> new BusinessException(ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND));
+            Set<String> watchlistCodes = stockWatchlistStockRepository
                     .findByGroupIdOrderBySortNoDesc(reqVO.getWatchlistGroupId())
                     .stream().map(StockWatchlistStock::getStockCode).collect(Collectors.toSet());
             if (watchlistCodes.isEmpty()) {
@@ -312,7 +333,7 @@ public class StockStrategyService {
             });
         }
 
-        List<com.brotherc.aquant.entity.StockQuote> targetStocks = stream.collect(Collectors.toList());
+        List<StockQuote> targetStocks = stream.collect(Collectors.toList());
         if (targetStocks.isEmpty()) {
             return new PageImpl<>(Collections.emptyList(), pageable, 0);
         }

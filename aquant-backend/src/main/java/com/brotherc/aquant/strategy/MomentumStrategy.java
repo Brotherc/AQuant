@@ -12,16 +12,15 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class MomentumStrategy {
 
-    private final StockQuoteRepository stockQuoteRepository;
     private final StockQuoteHistoryRepository stockQuoteHistoryRepository;
 
     /**
@@ -31,30 +30,37 @@ public class MomentumStrategy {
      * @param threshold    信号阈值(%)
      * @return 信号列表
      */
-    public List<StockTradeSignalVO> calculate(int lookbackDays, BigDecimal threshold) {
+    public List<StockTradeSignalVO> calculate(int lookbackDays, BigDecimal threshold, List<StockQuote> stocks) {
         List<StockTradeSignalVO> result = new ArrayList<>();
 
-        LocalDateTime maxTime = stockQuoteRepository.findMaxCreatedAt();
-        List<StockQuote> stocks = stockQuoteRepository.findByCreatedAt(maxTime);
-
         int needDays = lookbackDays + 1;
+        List<String> recentDates = stockQuoteHistoryRepository.findRecentTradeDates(needDays);
 
-        for (StockQuote stock : stocks) {
-            String code = stock.getCode();
-            String name = stock.getName();
+        int batchSize = 500;
+        for (int b = 0; b < stocks.size(); b += batchSize) {
+            List<StockQuote> batch = stocks.subList(b, Math.min(stocks.size(), b + batchSize));
+            List<String> codes = batch.stream().map(StockQuote::getCode).toList();
+            
+            List<StockQuoteHistory> histories = stockQuoteHistoryRepository
+                    .findByTradeDateInAndCodeInOrderByTradeDateAsc(recentDates, codes);
+            Map<String, List<StockQuoteHistory>> historyMap = histories.stream()
+                    .collect(Collectors.groupingBy(StockQuoteHistory::getCode));
 
-            List<StockQuoteHistory> list = stockQuoteHistoryRepository.findLatestByCode(code, needDays);
+            for (StockQuote stock : batch) {
+                String code = stock.getCode();
+                String name = stock.getName();
 
-            if (list.size() < needDays) {
-                result.add(new StockTradeSignalVO(code, name, TradeSignal.HOLD.name(),
-                        stock.getLatestPrice(), stock.getPir(), null));
-                continue;
-            }
+                List<StockQuoteHistory> list = historyMap.getOrDefault(code, new ArrayList<>());
 
-            // 倒序转正序
-            Collections.reverse(list);
+                if (list.size() < needDays) {
+                    result.add(new StockTradeSignalVO(code, name, TradeSignal.HOLD.name(),
+                            stock.getLatestPrice(), stock.getPir(), null));
+                    continue;
+                }
 
-            BigDecimal todayClose = list.get(list.size() - 1).getClosePrice();
+                // 批次数据自带 ASC 排序，已无需逆序
+
+                BigDecimal todayClose = list.get(list.size() - 1).getClosePrice();
             BigDecimal pastClose = list.get(0).getClosePrice();
 
             if (pastClose == null || pastClose.compareTo(BigDecimal.ZERO) == 0 || todayClose == null) {
@@ -78,6 +84,7 @@ public class MomentumStrategy {
 
             result.add(new StockTradeSignalVO(code, name, signal.name(),
                     stock.getLatestPrice(), stock.getPir(), momentumValue));
+            }
         }
 
         return result;
@@ -89,21 +96,32 @@ public class MomentumStrategy {
     public List<StockTradeBacktestVO> backtest(int lookbackDays, int recentYears, List<StockQuote> stocks) {
         List<StockTradeBacktestVO> result = new ArrayList<>();
         int needDays = recentYears * 250 + lookbackDays;
+        List<String> recentDates = stockQuoteHistoryRepository.findRecentTradeDates(needDays);
 
-        for (StockQuote stock : stocks) {
-            String code = stock.getCode();
-            String name = stock.getName();
+        int batchSize = 500;
+        for (int b = 0; b < stocks.size(); b += batchSize) {
+            List<StockQuote> batch = stocks.subList(b, Math.min(stocks.size(), b + batchSize));
+            List<String> codes = batch.stream().map(StockQuote::getCode).toList();
+            
+            List<StockQuoteHistory> histories = stockQuoteHistoryRepository
+                    .findByTradeDateInAndCodeInOrderByTradeDateAsc(recentDates, codes);
+            Map<String, List<StockQuoteHistory>> historyMap = histories.stream()
+                    .collect(Collectors.groupingBy(StockQuoteHistory::getCode));
 
-            List<StockQuoteHistory> list = stockQuoteHistoryRepository.findLatestByCode(code, needDays);
+            for (StockQuote stock : batch) {
+                String code = stock.getCode();
+                String name = stock.getName();
 
-            if (list.size() <= lookbackDays) {
-                result.add(new StockTradeBacktestVO(code, name, BigDecimal.ZERO, 0,
-                        BigDecimal.ZERO, null, null, "样本不足",
-                        stock.getLatestPrice(), stock.getPir()));
-                continue;
-            }
+                List<StockQuoteHistory> list = historyMap.getOrDefault(code, new ArrayList<>());
 
-            Collections.reverse(list);
+                if (list.size() <= lookbackDays) {
+                    result.add(new StockTradeBacktestVO(code, name, BigDecimal.ZERO, 0,
+                            BigDecimal.ZERO, null, null, "样本不足",
+                            stock.getLatestPrice(), stock.getPir()));
+                    continue;
+                }
+
+                // 批次数据自带 ASC 排序，已无需逆序
 
             BigDecimal netValue = BigDecimal.ONE;
             boolean inPosition = false;
@@ -199,6 +217,7 @@ public class MomentumStrategy {
 
             result.add(new StockTradeBacktestVO(code, name, totalReturn, tradeCount, winRate,
                     tValue, pValue, reliability, stock.getLatestPrice(), stock.getPir()));
+            }
         }
 
         return result;
