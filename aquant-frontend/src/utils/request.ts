@@ -4,7 +4,7 @@ import { message } from 'ant-design-vue';
 // Create axios instance
 const service = axios.create({
     baseURL: '/api',
-    timeout: 10000,
+    timeout: 20000,
     paramsSerializer: {
         indexes: null
     }
