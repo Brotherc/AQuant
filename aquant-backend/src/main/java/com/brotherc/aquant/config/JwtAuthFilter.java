@@ -1,8 +1,11 @@
 package com.brotherc.aquant.config;
 
+import com.brotherc.aquant.exception.BusinessException;
+import com.brotherc.aquant.model.dto.common.ResponseDTO;
 import com.brotherc.aquant.utils.JwtUtils;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
@@ -21,19 +24,27 @@ public class JwtAuthFilter implements Filter {
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain chain)
             throws IOException, ServletException {
 
-        HttpServletRequest request = (HttpServletRequest) servletRequest;
+        try {
+            HttpServletRequest request = (HttpServletRequest) servletRequest;
 
-        // 尝试解析 Token，设置用户信息
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
-            if (JwtUtils.verifyToken(token) != null) {
-                request.setAttribute("userId", JwtUtils.getUserId(token));
-                request.setAttribute("username", JwtUtils.getUsername(token));
+            // 尝试解析 Token，设置用户信息
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String token = authHeader.substring(7);
+                if (JwtUtils.verifyToken(token) != null) {
+                    request.setAttribute("userId", JwtUtils.getUserId(token));
+                    request.setAttribute("username", JwtUtils.getUsername(token));
+                }
             }
-        }
 
-        // 始终放行
-        chain.doFilter(servletRequest, servletResponse);
+            // 始终放行
+            chain.doFilter(servletRequest, servletResponse);
+        } catch (BusinessException e) {
+            HttpServletResponse response = (HttpServletResponse) servletResponse;
+            response.setStatus(HttpServletResponse.SC_OK);
+            response.setContentType("application/json;charset=UTF-8");
+            ResponseDTO<?> errDTO = ResponseDTO.fail(e.getCode(), e.getMessage(), null);
+            response.getWriter().write(errDTO.toString());
+        }
     }
 }

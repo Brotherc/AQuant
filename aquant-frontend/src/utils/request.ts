@@ -32,6 +32,15 @@ service.interceptors.response.use(
         // Check for success field in ResponseDTO
         if (data && typeof data === 'object' && 'success' in data) {
             if (!data.success && data.code !== 0 && data.code !== 200) {
+                if (data.code === 1000206 || data.code === 1000204) {
+                    message.error(data.message || '登录状态已失效，请重新登录');
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('nickname');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                    return Promise.reject(new Error(data.message || '登录已失效'));
+                }
                 message.error(data.message || '系统异常');
             }
         }

@@ -25,7 +25,8 @@ public enum ExceptionEnum {
     AUTH_ACCOUNT_DISABLED(1000202, "账号已被禁用"),
     AUTH_USERNAME_EXISTS(1000203, "用户名已存在"),
     AUTH_TOKEN_INVALID(1000204, "请先登录"),
-    AUTH_USER_NOT_FOUND(1000205, "用户不存在");
+    AUTH_USER_NOT_FOUND(1000205, "用户不存在"),
+    AUTH_TOKEN_EXPIRED(1000206, "登录已过期，请重新登录");
 
     /**
      * 应用(1~2位)、服务(2位)、模块(2位)、异常(2位)
