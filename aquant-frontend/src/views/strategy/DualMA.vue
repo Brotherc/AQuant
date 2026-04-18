@@ -204,7 +204,7 @@ const columns = computed(() => {
     baseColumns.push({ title: '交易信号', dataIndex: 'signal', key: 'signal', width: 120 } as any);
   } else {
     baseColumns.push(
-      { title: '交易次数', dataIndex: 'tradeCount', key: 'tradeCount', sorter: true, width: 100 } as any,
+      { title: '交易次数', dataIndex: 'tradeCount', key: 'tradeCount', sorter: true, width: 120 } as any,
       { title: '胜率', dataIndex: 'winRate', key: 'winRate', sorter: true, width: 100 } as any,
       { title: '显著性(p)', dataIndex: 'pValue', key: 'pValue', sorter: true, width: 110 } as any,
       { title: '可靠度', dataIndex: 'reliability', key: 'reliability', width: 90 } as any,
