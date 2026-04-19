@@ -1,6 +1,7 @@
 package com.brotherc.aquant.repository;
 
 import com.brotherc.aquant.entity.StockQuoteHistory;
+import com.brotherc.aquant.repository.projection.StockQuoteHistoryProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -25,7 +26,7 @@ public interface StockQuoteHistoryRepository extends JpaRepository<StockQuoteHis
     @Query(value = "SELECT DISTINCT trade_date FROM stock_quote_history ORDER BY trade_date DESC LIMIT :limit", nativeQuery = true)
     List<String> findRecentTradeDates(@Param("limit") int limit);
 
-    List<StockQuoteHistory> findByTradeDateInAndCodeInOrderByTradeDateAsc(List<String> tradeDates, List<String> codeList);
+    List<StockQuoteHistoryProjection> findByTradeDateInAndCodeInOrderByTradeDateAsc(List<String> tradeDates, List<String> codeList);
 
     @Query("select max(s.tradeDate) from StockQuoteHistory s")
     String findMaxTradeDate();

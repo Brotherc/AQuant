@@ -1,7 +1,7 @@
 package com.brotherc.aquant.strategy;
 
 import com.brotherc.aquant.entity.StockQuote;
-import com.brotherc.aquant.entity.StockQuoteHistory;
+import com.brotherc.aquant.repository.projection.StockQuoteHistoryProjection;
 import com.brotherc.aquant.enums.TradeSignal;
 import com.brotherc.aquant.exception.BusinessException;
 import com.brotherc.aquant.exception.ExceptionEnum;
@@ -39,14 +39,14 @@ public class DualMovingAverageStrategy {
             List<StockQuote> batch = stocks.subList(b, Math.min(stocks.size(), b + batchSize));
             List<String> codes = batch.stream().map(StockQuote::getCode).toList();
 
-            List<StockQuoteHistory> histories = stockQuoteHistoryRepository.findByTradeDateInAndCodeInOrderByTradeDateAsc(recentDates, codes);
-            Map<String, List<StockQuoteHistory>> historyMap = histories.stream().collect(Collectors.groupingBy(StockQuoteHistory::getCode));
+            List<StockQuoteHistoryProjection> histories = stockQuoteHistoryRepository.findByTradeDateInAndCodeInOrderByTradeDateAsc(recentDates, codes);
+            Map<String, List<StockQuoteHistoryProjection>> historyMap = histories.stream().collect(Collectors.groupingBy(StockQuoteHistoryProjection::getCode));
 
             for (StockQuote stock : batch) {
                 String code = stock.getCode();
                 String name = stock.getName();
 
-                List<StockQuoteHistory> list = historyMap.getOrDefault(code, new ArrayList<>());
+                List<StockQuoteHistoryProjection> list = historyMap.getOrDefault(code, new ArrayList<>());
 
                 if (list.size() < needDays) {
                     StockTradeSignalVO stockTradeSignalVO = new StockTradeSignalVO(
@@ -101,16 +101,16 @@ public class DualMovingAverageStrategy {
             List<StockQuote> batch = stocks.subList(b, Math.min(stocks.size(), b + batchSize));
             List<String> codes = batch.stream().map(StockQuote::getCode).toList();
 
-            List<StockQuoteHistory> histories = stockQuoteHistoryRepository
+            List<StockQuoteHistoryProjection> histories = stockQuoteHistoryRepository
                     .findByTradeDateInAndCodeInOrderByTradeDateAsc(recentDates, codes);
-            Map<String, List<StockQuoteHistory>> historyMap = histories.stream()
-                    .collect(Collectors.groupingBy(StockQuoteHistory::getCode));
+            Map<String, List<StockQuoteHistoryProjection>> historyMap = histories.stream()
+                    .collect(Collectors.groupingBy(StockQuoteHistoryProjection::getCode));
 
             for (StockQuote stock : batch) {
                 String code = stock.getCode();
                 String name = stock.getName();
 
-                List<StockQuoteHistory> list = historyMap.getOrDefault(code, new ArrayList<>());
+                List<StockQuoteHistoryProjection> list = historyMap.getOrDefault(code, new ArrayList<>());
 
                 if (list.size() <= maLong) {
                     result.add(
@@ -222,9 +222,9 @@ public class DualMovingAverageStrategy {
         return result;
     }
 
-    private BigDecimal avg(List<StockQuoteHistory> list) {
+    private BigDecimal avg(List<StockQuoteHistoryProjection> list) {
         return list.stream()
-                .map(StockQuoteHistory::getClosePrice)
+                .map(StockQuoteHistoryProjection::getClosePrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .divide(BigDecimal.valueOf(list.size()), 4, RoundingMode.HALF_UP);
     }

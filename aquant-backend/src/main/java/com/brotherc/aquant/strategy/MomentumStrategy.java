@@ -1,7 +1,7 @@
 package com.brotherc.aquant.strategy;
 
 import com.brotherc.aquant.entity.StockQuote;
-import com.brotherc.aquant.entity.StockQuoteHistory;
+import com.brotherc.aquant.repository.projection.StockQuoteHistoryProjection;
 import com.brotherc.aquant.enums.TradeSignal;
 import com.brotherc.aquant.model.vo.strategy.StockTradeBacktestVO;
 import com.brotherc.aquant.model.vo.strategy.StockTradeSignalVO;
@@ -41,16 +41,16 @@ public class MomentumStrategy {
             List<StockQuote> batch = stocks.subList(b, Math.min(stocks.size(), b + batchSize));
             List<String> codes = batch.stream().map(StockQuote::getCode).toList();
             
-            List<StockQuoteHistory> histories = stockQuoteHistoryRepository
+            List<StockQuoteHistoryProjection> histories = stockQuoteHistoryRepository
                     .findByTradeDateInAndCodeInOrderByTradeDateAsc(recentDates, codes);
-            Map<String, List<StockQuoteHistory>> historyMap = histories.stream()
-                    .collect(Collectors.groupingBy(StockQuoteHistory::getCode));
+            Map<String, List<StockQuoteHistoryProjection>> historyMap = histories.stream()
+                    .collect(Collectors.groupingBy(StockQuoteHistoryProjection::getCode));
 
             for (StockQuote stock : batch) {
                 String code = stock.getCode();
                 String name = stock.getName();
 
-                List<StockQuoteHistory> list = historyMap.getOrDefault(code, new ArrayList<>());
+                List<StockQuoteHistoryProjection> list = historyMap.getOrDefault(code, new ArrayList<>());
 
                 if (list.size() < needDays) {
                     result.add(new StockTradeSignalVO(code, name, TradeSignal.HOLD.name(),
@@ -103,16 +103,16 @@ public class MomentumStrategy {
             List<StockQuote> batch = stocks.subList(b, Math.min(stocks.size(), b + batchSize));
             List<String> codes = batch.stream().map(StockQuote::getCode).toList();
             
-            List<StockQuoteHistory> histories = stockQuoteHistoryRepository
+            List<StockQuoteHistoryProjection> histories = stockQuoteHistoryRepository
                     .findByTradeDateInAndCodeInOrderByTradeDateAsc(recentDates, codes);
-            Map<String, List<StockQuoteHistory>> historyMap = histories.stream()
-                    .collect(Collectors.groupingBy(StockQuoteHistory::getCode));
+            Map<String, List<StockQuoteHistoryProjection>> historyMap = histories.stream()
+                    .collect(Collectors.groupingBy(StockQuoteHistoryProjection::getCode));
 
             for (StockQuote stock : batch) {
                 String code = stock.getCode();
                 String name = stock.getName();
 
-                List<StockQuoteHistory> list = historyMap.getOrDefault(code, new ArrayList<>());
+                List<StockQuoteHistoryProjection> list = historyMap.getOrDefault(code, new ArrayList<>());
 
                 if (list.size() <= lookbackDays) {
                     result.add(new StockTradeBacktestVO(code, name, BigDecimal.ZERO, 0,
