@@ -1,6 +1,7 @@
 package com.brotherc.aquant.model.vo.strategy;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
@@ -21,4 +22,9 @@ public class DualMAReqVO {
 
     @Schema(description = "自选分组ID")
     private Long watchlistGroupId;
+
+    @Schema(description = "所属市场(sh/sz/bj)")
+    @NotBlank(message = "市场条件不能为空")
+    private String market;
+
 }

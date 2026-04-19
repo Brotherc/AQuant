@@ -13,6 +13,13 @@
 
       <!-- Search Form -->
       <a-form layout="inline" :model="queryParams" @finish="handleSearch" style="margin-bottom: 24px; justify-content: flex-end;">
+        <a-form-item label="所属市场" required>
+          <a-select v-model:value="queryParams.market" style="width: 120px">
+            <a-select-option value="sh">沪市 (SH)</a-select-option>
+            <a-select-option value="sz">深市 (SZ)</a-select-option>
+            <a-select-option value="bj">北交所 (BJ)</a-select-option>
+          </a-select>
+        </a-form-item>
         <a-form-item label="股票代码">
           <a-input v-model:value="queryParams.code" placeholder="输入代码" allow-clear style="width: 120px" />
         </a-form-item>
@@ -166,6 +173,7 @@ const infoVisible = ref(false);
 const loading = ref(false);
 const dataSource = ref<any[]>([]);
 const queryParams = reactive<any>({
+  market: 'sh',
   code: '',
   lookbackDays: 20,
   threshold: 5,
@@ -245,6 +253,7 @@ const fetchData = async () => {
     if (analysisMode.value === 'signal') {
       const activeSortState = sortState.value.length > 0 ? sortState.value : ['momentumValue,desc'];
       const { data } = await getMomentumPage({
+        market: queryParams.market,
         code: queryParams.code,
         lookbackDays: queryParams.lookbackDays,
         threshold: queryParams.threshold,
@@ -258,6 +267,7 @@ const fetchData = async () => {
     } else {
       const activeSortState = sortState.value.length > 0 ? sortState.value : ['totalReturn,desc'];
       const { data } = await getMomentumBacktestPage({
+        market: queryParams.market,
         code: queryParams.code,
         lookbackDays: queryParams.lookbackDays,
         recentYears: queryParams.recentYears,

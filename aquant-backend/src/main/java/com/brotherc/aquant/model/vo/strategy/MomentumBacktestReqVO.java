@@ -1,6 +1,7 @@
 package com.brotherc.aquant.model.vo.strategy;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -21,4 +22,9 @@ public class MomentumBacktestReqVO {
     @Schema(description = "回测年数", defaultValue = "2")
     @NotNull(message = "回测年数不能为空")
     private Integer recentYears = 2;
+
+    @Schema(description = "所属市场(sh/sz/bj)")
+    @NotBlank(message = "市场条件不能为空")
+    private String market;
+
 }

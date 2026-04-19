@@ -49,6 +49,7 @@ export interface DualMAReqVO {
     maLong?: number;
     signal?: string;
     watchlistGroupId?: number;
+    market?: string;
 }
 
 export interface StockTradeSignalVO {
@@ -66,6 +67,7 @@ export interface DualMABacktestReqVO {
     maLong?: number;
     watchlistGroupId?: number;
     recentYears?: number;
+    market?: string;
 }
 
 export interface StockTradeBacktestVO {
@@ -135,6 +137,7 @@ export interface MomentumReqVO {
     threshold?: number;
     signal?: string;
     watchlistGroupId?: number;
+    market?: string;
 }
 
 export interface MomentumBacktestReqVO {
@@ -142,6 +145,7 @@ export interface MomentumBacktestReqVO {
     lookbackDays?: number;
     watchlistGroupId?: number;
     recentYears?: number;
+    market?: string;
 }
 
 export const getMomentumPage = (params: MomentumReqVO & { page: number; size: number; sort?: string[] }) => {

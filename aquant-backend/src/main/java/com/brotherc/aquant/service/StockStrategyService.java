@@ -57,7 +57,7 @@ public class StockStrategyService {
         }
 
         if (StringUtils.isBlank(reqVO.getSignal())) {
-            Specification<StockQuote> stockQuoteSpecification = buildStockQuoteSpec(reqVO.getCode(), watchlistCodes);
+            Specification<StockQuote> stockQuoteSpecification = buildStockQuoteSpec(reqVO.getCode(), watchlistCodes, reqVO.getMarket());
             Page<StockQuote> pagedStocks = stockQuoteRepository.findAll(stockQuoteSpecification, pageable);
             if (pagedStocks.isEmpty()) {
                 return new PageImpl<>(Collections.emptyList(), pageable, 0);
@@ -70,6 +70,11 @@ public class StockStrategyService {
 
         List<StockQuote> allStocks = stockQuoteRepository.findAll();
         Stream<StockQuote> quoteStream = allStocks.stream();
+
+        if (StringUtils.isNotBlank(reqVO.getMarket())) {
+            final String market = reqVO.getMarket().toLowerCase();
+            quoteStream = quoteStream.filter(vo -> vo.getCode() != null && vo.getCode().toLowerCase().startsWith(market));
+        }
 
         if (StringUtils.isNotBlank(reqVO.getCode())) {
             quoteStream = quoteStream.filter(vo -> reqVO.getCode().equalsIgnoreCase(vo.getCode()));
@@ -162,7 +167,7 @@ public class StockStrategyService {
 
         boolean earlyPaginate = !hasStrategySortFields(pageable.getSort());
         if (earlyPaginate) {
-            Page<StockQuote> pagedStocks = stockQuoteRepository.findAll(buildStockQuoteSpec(reqVO.getCode(), watchlistCodes), pageable);
+            Page<StockQuote> pagedStocks = stockQuoteRepository.findAll(buildStockQuoteSpec(reqVO.getCode(), watchlistCodes, reqVO.getMarket()), pageable);
             if (pagedStocks.isEmpty()) {
                 return new PageImpl<>(Collections.emptyList(), pageable, 0);
             }
@@ -173,6 +178,11 @@ public class StockStrategyService {
 
         List<StockQuote> stocks = stockQuoteRepository.findAll();
         Stream<StockQuote> stream = stocks.stream();
+
+        if (StringUtils.isNotBlank(reqVO.getMarket())) {
+            final String market = reqVO.getMarket().toLowerCase();
+            stream = stream.filter(vo -> vo.getCode() != null && vo.getCode().toLowerCase().startsWith(market));
+        }
 
         if (StringUtils.isNotBlank(reqVO.getCode())) {
             stream = stream.filter(vo -> reqVO.getCode().equalsIgnoreCase(vo.getCode()));
@@ -276,7 +286,7 @@ public class StockStrategyService {
 
         boolean earlyPaginate = StringUtils.isBlank(reqVO.getSignal()) && !hasStrategySortFields(pageable.getSort());
         if (earlyPaginate) {
-            Page<StockQuote> pagedStocks = stockQuoteRepository.findAll(buildStockQuoteSpec(reqVO.getCode(), watchlistCodes), pageable);
+            Page<StockQuote> pagedStocks = stockQuoteRepository.findAll(buildStockQuoteSpec(reqVO.getCode(), watchlistCodes, reqVO.getMarket()), pageable);
             if (pagedStocks.isEmpty()) {
                 return new PageImpl<>(Collections.emptyList(), pageable, 0);
             }
@@ -286,6 +296,11 @@ public class StockStrategyService {
 
         List<StockQuote> allStocks = stockQuoteRepository.findAll();
         Stream<StockQuote> quoteStream = allStocks.stream();
+
+        if (StringUtils.isNotBlank(reqVO.getMarket())) {
+            final String market = reqVO.getMarket().toLowerCase();
+            quoteStream = quoteStream.filter(vo -> vo.getCode() != null && vo.getCode().toLowerCase().startsWith(market));
+        }
 
         if (StringUtils.isNotBlank(reqVO.getCode())) {
             quoteStream = quoteStream.filter(vo -> reqVO.getCode().equalsIgnoreCase(vo.getCode()));
@@ -376,7 +391,7 @@ public class StockStrategyService {
 
         boolean earlyPaginate = !hasStrategySortFields(pageable.getSort());
         if (earlyPaginate) {
-            Page<StockQuote> pagedStocks = stockQuoteRepository.findAll(buildStockQuoteSpec(reqVO.getCode(), watchlistCodes), pageable);
+            Page<StockQuote> pagedStocks = stockQuoteRepository.findAll(buildStockQuoteSpec(reqVO.getCode(), watchlistCodes, reqVO.getMarket()), pageable);
             if (pagedStocks.isEmpty()) {
                 return new PageImpl<>(Collections.emptyList(), pageable, 0);
             }
@@ -387,6 +402,11 @@ public class StockStrategyService {
 
         List<StockQuote> stocks = stockQuoteRepository.findAll();
         Stream<StockQuote> stream = stocks.stream();
+
+        if (StringUtils.isNotBlank(reqVO.getMarket())) {
+            final String market = reqVO.getMarket().toLowerCase();
+            stream = stream.filter(vo -> vo.getCode() != null && vo.getCode().toLowerCase().startsWith(market));
+        }
 
         if (StringUtils.isNotBlank(reqVO.getCode())) {
             stream = stream.filter(vo -> reqVO.getCode().equalsIgnoreCase(vo.getCode()));
@@ -440,9 +460,12 @@ public class StockStrategyService {
         return false;
     }
 
-    private Specification<StockQuote> buildStockQuoteSpec(String code, Set<String> watchlistCodes) {
+    private Specification<StockQuote> buildStockQuoteSpec(String code, Set<String> watchlistCodes, String market) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
+            if (StringUtils.isNotBlank(market)) {
+                predicates.add(cb.like(cb.lower(root.get("code")), market.toLowerCase() + "%"));
+            }
             if (StringUtils.isNotBlank(code)) {
                 predicates.add(cb.equal(root.get("code"), code));
             }
