@@ -21,9 +21,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.*;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -91,9 +89,10 @@ public class StockSyncTask {
             return;
         }
 
+        LocalDate latestTradeDay = stockHelper.latestTradeDayFallback(LocalDate.now());
+
         // 如果今天是周末或者是节假日，并且上次同步时间是在最近一个交易日的3点之后，则不执行数据同步，退出
         if (!stockHelper.isTradeDay(LocalDate.now())) {
-            LocalDate latestTradeDay = stockHelper.latestTradeDayFallback(LocalDate.now());
             long latestTradeDay3pmMillis = latestTradeDay.atTime(15, 0, 0)
                     .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
 
@@ -120,8 +119,15 @@ public class StockSyncTask {
             StockTradeCalendar calendar1 = stockTradeCalendarRepository.findByTradeDate(maxTradeLocalDate.plusDays(1).toString());
             StockTradeCalendar calendar2 = stockTradeCalendarRepository.findByTradeDate(LocalDate.now().minusDays(1).toString());
 
+            LocalTime lastSyncLocalTime = Instant.ofEpochMilli(lastTimestamp).atZone(ZoneId.systemDefault()).toLocalDateTime().toLocalTime();
+
             // 如果与今天日期一致，则同步最新的股票行情和股票历史行情
-            if (isToday || StockUtils.check(lastTimestamp) || StockUtils.isYesterday(lastTimestamp) || (calendar1 != null && calendar2 != null)) {
+            if (isToday ||
+                    StockUtils.check(lastTimestamp) ||
+                    StockUtils.isYesterday(lastTimestamp) ||
+                    (calendar1 != null && calendar2 != null) ||
+                    !lastSyncLocalTime.isBefore(LocalTime.of(15, 0)) && maxTradeLocalDate.plusDays(1).equals(latestTradeDay)
+            ) {
                 stockSyncService.stockQuote(stockZhASpots, stockSync, now);
                 return;
             }
