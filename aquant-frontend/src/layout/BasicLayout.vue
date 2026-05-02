@@ -12,7 +12,7 @@
           <a-menu v-model:selectedKeys="selectedKeys" theme="light" mode="horizontal" class="c-menu">
             
             <!-- Watchlist -->
-            <a-sub-menu key="/watchlist">
+            <a-sub-menu key="/watchlist" popupClassName="top-nav-popup top-nav-popup-compact">
               <template #title>
                 <heart-outlined />
                 <span class="nav-text">自选股票</span>
@@ -23,7 +23,7 @@
             </a-sub-menu>
 
             <!-- Base Data (Merged) -->
-            <a-sub-menu key="/data">
+            <a-sub-menu key="/data" popupClassName="top-nav-popup top-nav-popup-compact">
               <template #title>
                 <stock-outlined />
                 <span class="nav-text">股票数据</span>
@@ -37,7 +37,7 @@
             </a-sub-menu>
 
             <!-- Indicators -->
-            <a-sub-menu key="/indicators">
+            <a-sub-menu key="/indicators" popupClassName="top-nav-popup">
               <template #title>
                 <line-chart-outlined />
                 <span class="nav-text">股票指标</span>
@@ -54,7 +54,7 @@
             </a-sub-menu>
 
             <!-- Dividend Data -->
-            <a-sub-menu key="/dividend">
+            <a-sub-menu key="/dividend" popupClassName="top-nav-popup top-nav-popup-compact">
               <template #title>
                 <pay-circle-outlined />
                 <span class="nav-text">分红数据</span>
@@ -65,7 +65,7 @@
             </a-sub-menu>
             
             <!-- Strategy -->
-            <a-sub-menu key="/strategy">
+            <a-sub-menu key="/strategy" popupClassName="top-nav-popup top-nav-popup-compact">
               <template #title>
                 <radar-chart-outlined />
                 <span class="nav-text">量化策略</span>
@@ -368,5 +368,20 @@ const handleUpdateEmail = async () => {
 
 .nav-text {
   margin-left: 6px;
+}
+</style>
+
+<style>
+.top-nav-popup.ant-menu-submenu-popup > .ant-menu {
+  min-width: 132px;
+}
+
+.top-nav-popup-compact.ant-menu-submenu-popup > .ant-menu {
+  min-width: 112px;
+}
+
+.top-nav-popup.ant-menu-submenu-popup .ant-menu-item,
+.top-nav-popup.ant-menu-submenu-popup .ant-menu-submenu-title {
+  padding-inline: 14px !important;
 }
 </style>
