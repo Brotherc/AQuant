@@ -148,6 +148,7 @@
         :data-source="dataSource"
         :loading="loading"
         :pagination="pagination"
+        :scroll="{ x: tableScrollX }"
         @change="handleTableChange"
         row-key="id"
       >
@@ -277,14 +278,14 @@ const sortState = ref<string[]>([]);
 
 const columns = computed(() => {
   const baseColumns = [
-    { title: '股票代码', dataIndex: 'code', key: 'code' },
-    { title: '股票名称', dataIndex: 'name', key: 'name' },
-    { title: '最新价', dataIndex: 'latestPrice', key: 'latestPrice', sorter: true, showSorterTooltip: false },
-    { title: '价格区间', dataIndex: 'pir', key: 'pir', sorter: true, showSorterTooltip: false },
+    { title: '股票代码', dataIndex: 'code', key: 'code', width: 120 } as any,
+    { title: '股票名称', dataIndex: 'name', key: 'name', width: 140 } as any,
+    { title: '最新价', dataIndex: 'latestPrice', key: 'latestPrice', sorter: true, showSorterTooltip: false, width: 110 } as any,
+    { title: '价格区间', dataIndex: 'pir', key: 'pir', sorter: true, showSorterTooltip: false, width: 110 } as any,
   ];
 
   if (analysisMode.value === 'signal') {
-    baseColumns.push({ title: '交易信号', dataIndex: 'signal', key: 'signal', width: 120 } as any);
+    baseColumns.push({ title: '交易信号', dataIndex: 'signal', key: 'signal', width: 100 } as any);
   } else {
     baseColumns.push(
       { title: '交易次数', dataIndex: 'tradeCount', key: 'tradeCount', sorter: true, width: 120 } as any,
@@ -306,6 +307,8 @@ const columns = computed(() => {
   baseColumns.push({ title: '操作', key: 'operation', width: 100 } as any);
   return baseColumns;
 });
+
+const tableScrollX = computed(() => analysisMode.value === 'backtest' ? 1150 : 740);
 
 // 信号类型映射
 const getSignalLabel = (signal: string) => {

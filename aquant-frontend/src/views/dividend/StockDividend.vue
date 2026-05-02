@@ -47,6 +47,7 @@
         :data-source="dataSource"
         :pagination="pagination"
         :loading="loading"
+        :scroll="{ x: 1460 }"
         @change="handleTableChange"
         row-key="stockCode"
       >
@@ -129,12 +130,12 @@ const sortState = ref<string[]>(['avgDividend,desc']);
 
 const columns: TableProps['columns'] = [
   { title: '股票代码', dataIndex: 'stockCode', key: 'stockCode', width: 100 },
-  { title: '股票名称', dataIndex: 'stockName', key: 'stockName', width: 120 },
-  { title: '最新价', dataIndex: 'latestPrice', key: 'latestPrice', sorter: true, width: 100 },
+  { title: '股票名称', dataIndex: 'stockName', key: 'stockName', width: 160 },
+  { title: '最新价', dataIndex: 'latestPrice', key: 'latestPrice', sorter: true, width: 110 },
   { title: '平均分红', dataIndex: 'avgDividend', key: 'avgDividend', sorter: true, defaultSortOrder: 'descend', width: 160, customRender: ({ text }: any) => (text ? `10派${text}` : '-') },
   { title: '最近一年分红', dataIndex: 'latestYearDividend', key: 'latestYearDividend', sorter: true, width: 160, customRender: ({ text }: any) => (text ? `10派${text}` : '-') },
   { title: '最近一年转股', dataIndex: 'latestYearTransfer', key: 'latestYearTransfer', sorter: true, width: 160, customRender: ({ text }: any) => (text ? `10转${text}` : '-') },
-  { title: 'PEG', dataIndex: 'peg', key: 'peg', sorter: true, width: 100, customRender: ({ text }: any) => (text != null ? text.toFixed(2) : '-') },
+  { title: 'PEG', dataIndex: 'peg', key: 'peg', sorter: true, width: 110, customRender: ({ text }: any) => (text != null ? text.toFixed(2) : '-') },
   { 
     title: 'PE(TTM) / 行业均值', 
     dataIndex: 'pe', 
