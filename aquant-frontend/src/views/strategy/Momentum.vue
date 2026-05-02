@@ -17,7 +17,18 @@
       </div>
 
       <!-- Search Form -->
-      <a-form layout="inline" :model="queryParams" @finish="handleSearch" style="margin-bottom: 24px; justify-content: flex-end;">
+      <div ref="searchFormWrapperRef">
+      <a-form
+        class="strategy-search-form"
+        layout="inline"
+        :model="queryParams"
+        @finish="handleSearch"
+        :style="{
+          marginBottom: '24px',
+          justifyContent: analysisMode === 'backtest' ? 'flex-start' : 'flex-end',
+          rowGap: '12px'
+        }"
+      >
         <a-form-item label="所属市场" required>
           <a-select v-model:value="queryParams.market" style="width: 120px">
             <a-select-option value="sh">沪市 (SH)</a-select-option>
@@ -73,10 +84,14 @@
             </a-select-option>
           </a-select>
         </a-form-item>
-        <a-form-item>
+        <a-form-item
+          class="strategy-search-form-submit"
+          :class="{ 'strategy-search-form-submit--wrapped': analysisMode === 'backtest' && backtestSubmitWrapped }"
+        >
           <a-button type="primary" html-type="submit">查询</a-button>
         </a-form-item>
       </a-form>
+      </div>
 
       <!-- Data Table -->
       <a-table
@@ -173,7 +188,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, reactive, onMounted, computed } from 'vue';
+import { ref, reactive, onMounted, onBeforeUnmount, computed, nextTick } from 'vue';
 import { getMomentumPage, getMomentumBacktestPage, type StockTradeSignalVO } from '@/api/stock';
 import { getWatchlistGroups, type WatchlistGroupVO } from '@/api/watchlist';
 import StockHistoryChart from '@/views/stock-data/components/StockHistoryChart.vue';
@@ -181,6 +196,9 @@ import { InfoCircleOutlined } from '@ant-design/icons-vue';
 
 const analysisMode = ref('signal');
 const infoVisible = ref(false);
+const searchFormWrapperRef = ref<HTMLElement>();
+const backtestSubmitWrapped = ref(false);
+let searchFormResizeObserver: ResizeObserver | null = null;
 
 const loading = ref(false);
 const dataSource = ref<any[]>([]);
@@ -268,6 +286,33 @@ const formatDateTime = (value?: string) => {
   return value.replace('T', ' ').slice(0, 19);
 };
 
+const updateBacktestSubmitWrapped = () => {
+  nextTick(() => {
+    if (analysisMode.value !== 'backtest') {
+      backtestSubmitWrapped.value = false;
+      return;
+    }
+
+    const formEl = searchFormWrapperRef.value?.querySelector('.strategy-search-form') as HTMLElement | null;
+    const submitEl = formEl?.querySelector('.strategy-search-form-submit') as HTMLElement | null;
+    if (!formEl || !submitEl) {
+      backtestSubmitWrapped.value = false;
+      return;
+    }
+
+    const itemElements = Array.from(formEl.children).filter(
+      (element): element is HTMLElement => element instanceof HTMLElement && element.classList.contains('ant-form-item')
+    );
+    if (itemElements.length === 0) {
+      backtestSubmitWrapped.value = false;
+      return;
+    }
+
+    const firstRowTop = Math.min(...itemElements.map((element) => element.offsetTop));
+    backtestSubmitWrapped.value = submitEl.offsetTop > firstRowTop;
+  });
+};
+
 const fetchData = async () => {
   loading.value = true;
   try {
@@ -322,6 +367,7 @@ const handleModeChange = () => {
   if (analysisMode.value !== 'backtest') {
     backtestLastTime.value = undefined;
   }
+  updateBacktestSubmitWrapped();
   fetchData();
 };
 
@@ -351,6 +397,13 @@ const handleChart = (record: StockTradeSignalVO) => {
 };
 
 onMounted(async () => {
+  if (searchFormWrapperRef.value && typeof ResizeObserver !== 'undefined') {
+    searchFormResizeObserver = new ResizeObserver(() => {
+      updateBacktestSubmitWrapped();
+    });
+    searchFormResizeObserver.observe(searchFormWrapperRef.value);
+  }
+  updateBacktestSubmitWrapped();
   fetchData();
   try {
     const res = await getWatchlistGroups();
@@ -361,11 +414,25 @@ onMounted(async () => {
     console.error('加载自选分组失败:', error);
   }
 });
+
+onBeforeUnmount(() => {
+  searchFormResizeObserver?.disconnect();
+});
 </script>
 
 <style scoped>
 .momentum-container {
   padding: 0;
+}
+
+.strategy-search-form-submit--wrapped {
+  flex: 0 0 100%;
+  margin-inline-end: 0;
+}
+
+.strategy-search-form-submit--wrapped :deep(.ant-form-item-control-input-content) {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .strategy-info h3 {

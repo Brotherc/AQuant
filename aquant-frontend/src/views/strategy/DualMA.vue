@@ -17,19 +17,26 @@
       </div>
 
       <!-- Search Form -->
-      <a-form layout="inline" :model="queryParams" @finish="handleSearch" style="margin-bottom: 24px; justify-content: flex-end;">
+      <a-form
+        v-if="analysisMode === 'signal'"
+        class="strategy-search-form strategy-search-form--signal"
+        layout="inline"
+        :model="queryParams"
+        @finish="handleSearch"
+        style="margin-bottom: 24px; justify-content: flex-start; row-gap: 16px;"
+      >
         <a-form-item label="所属市场" required>
-          <a-select v-model:value="queryParams.market" style="width: 120px">
+          <a-select v-model:value="queryParams.market" style="width: 110px">
             <a-select-option value="sh">沪市 (SH)</a-select-option>
             <a-select-option value="sz">深市 (SZ)</a-select-option>
             <a-select-option value="bj">北交所 (BJ)</a-select-option>
           </a-select>
         </a-form-item>
         <a-form-item label="股票代码">
-          <a-input v-model:value="queryParams.code" placeholder="输入代码" allow-clear style="width: 120px" />
+          <a-input v-model:value="queryParams.code" placeholder="输入代码" allow-clear style="width: 110px" />
         </a-form-item>
         <a-form-item label="短期均线">
-          <a-select v-model:value="queryParams.maShort" style="width: 100px">
+          <a-select v-model:value="queryParams.maShort" style="width: 80px">
             <a-select-option :value="5">5天</a-select-option>
             <a-select-option :value="10">10天</a-select-option>
             <a-select-option :value="20">20天</a-select-option>
@@ -39,7 +46,7 @@
           </a-select>
         </a-form-item>
         <a-form-item label="长期均线">
-          <a-select v-model:value="queryParams.maLong" style="width: 100px">
+          <a-select v-model:value="queryParams.maLong" style="width: 80px">
             <a-select-option :value="5">5天</a-select-option>
             <a-select-option :value="10">10天</a-select-option>
             <a-select-option :value="20">20天</a-select-option>
@@ -55,23 +62,8 @@
             <a-select-option value="HOLD">无</a-select-option>
           </a-select>
         </a-form-item>
-        <a-form-item label="回测年数" v-if="analysisMode === 'backtest'">
-          <a-select v-model:value="queryParams.recentYears" style="width: 100px">
-            <a-select-option :value="1">近 1 年</a-select-option>
-            <a-select-option :value="2">近 2 年</a-select-option>
-            <a-select-option :value="3">近 3 年</a-select-option>
-            <a-select-option :value="5">近 5 年</a-select-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item label="可靠度" v-if="analysisMode === 'backtest'">
-          <a-select v-model:value="queryParams.reliability" placeholder="全部" allow-clear style="width: 120px">
-            <a-select-option v-for="option in reliabilityOptions" :key="option" :value="option">
-              {{ option }}
-            </a-select-option>
-          </a-select>
-        </a-form-item>
         <a-form-item label="自选分组">
-          <a-select v-model:value="queryParams.watchlistGroupId" placeholder="全部" allow-clear style="width: 150px">
+          <a-select v-model:value="queryParams.watchlistGroupId" placeholder="全部" allow-clear style="width: 135px">
             <a-select-option v-for="group in watchlistGroups" :key="group.id" :value="group.id">
               {{ group.name }}
             </a-select-option>
@@ -80,6 +72,74 @@
         <a-form-item>
           <a-button type="primary" html-type="submit">查询</a-button>
         </a-form-item>
+      </a-form>
+
+      <a-form
+        v-else
+        class="strategy-search-form strategy-search-form--backtest"
+        layout="inline"
+        :model="queryParams"
+        @finish="handleSearch"
+      >
+        <div class="strategy-search-form-row">
+          <a-form-item label="所属市场" required>
+            <a-select v-model:value="queryParams.market" style="width: 125px">
+              <a-select-option value="sh">沪市 (SH)</a-select-option>
+              <a-select-option value="sz">深市 (SZ)</a-select-option>
+              <a-select-option value="bj">北交所 (BJ)</a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item label="股票代码">
+            <a-input v-model:value="queryParams.code" placeholder="输入代码" allow-clear style="width: 125px" />
+          </a-form-item>
+          <a-form-item label="自选分组">
+            <a-select v-model:value="queryParams.watchlistGroupId" placeholder="全部" allow-clear style="width: 155px">
+              <a-select-option v-for="group in watchlistGroups" :key="group.id" :value="group.id">
+                {{ group.name }}
+              </a-select-option>
+            </a-select>
+          </a-form-item>
+        </div>
+        <div class="strategy-search-form-row strategy-search-form-row--second">
+          <a-form-item label="短期均线">
+            <a-select v-model:value="queryParams.maShort" style="width: 95px">
+              <a-select-option :value="5">5天</a-select-option>
+              <a-select-option :value="10">10天</a-select-option>
+              <a-select-option :value="20">20天</a-select-option>
+              <a-select-option :value="30">30天</a-select-option>
+              <a-select-option :value="60">60天</a-select-option>
+              <a-select-option :value="120">120天</a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item label="长期均线">
+            <a-select v-model:value="queryParams.maLong" style="width: 95px">
+              <a-select-option :value="5">5天</a-select-option>
+              <a-select-option :value="10">10天</a-select-option>
+              <a-select-option :value="20">20天</a-select-option>
+              <a-select-option :value="30">30天</a-select-option>
+              <a-select-option :value="60">60天</a-select-option>
+              <a-select-option :value="120">120天</a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item label="回测年数">
+          <a-select v-model:value="queryParams.recentYears" style="width: 110px">
+            <a-select-option :value="1">近 1 年</a-select-option>
+            <a-select-option :value="2">近 2 年</a-select-option>
+            <a-select-option :value="3">近 3 年</a-select-option>
+            <a-select-option :value="5">近 5 年</a-select-option>
+          </a-select>
+        </a-form-item>
+          <a-form-item label="可靠度">
+          <a-select v-model:value="queryParams.reliability" placeholder="全部" allow-clear style="width: 120px">
+            <a-select-option v-for="option in reliabilityOptions" :key="option" :value="option">
+              {{ option }}
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+          <a-form-item class="strategy-search-form-submit">
+            <a-button type="primary" html-type="submit">查询</a-button>
+          </a-form-item>
+        </div>
       </a-form>
 
       <!-- Data Table -->
@@ -363,6 +423,44 @@ onMounted(async () => {
 <style scoped>
 .dual-ma-container {
   padding: 0;
+}
+
+.strategy-search-form--backtest {
+  margin-bottom: 24px;
+}
+
+.strategy-search-form--signal :deep(.ant-form-item) {
+  margin-inline-end: 18px;
+}
+
+.strategy-search-form-row {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 24px;
+  row-gap: 12px;
+}
+
+.strategy-search-form--backtest :deep(.ant-form-item) {
+  margin-inline-end: 0;
+  margin-bottom: 0;
+}
+
+.strategy-search-form-row + .strategy-search-form-row {
+  margin-top: 12px;
+}
+
+.strategy-search-form-row--second {
+  align-items: flex-start;
+}
+
+.strategy-search-form--backtest .strategy-search-form-submit {
+  margin-inline-start: auto;
+  margin-inline-end: 0;
+}
+
+.strategy-search-form--backtest .strategy-search-form-submit :deep(.ant-form-item-control-input-content) {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .strategy-info h3 {
