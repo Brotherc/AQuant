@@ -58,6 +58,7 @@ const financeSites = [
   createSite('Investing.com 中文站', 'https://cn.investing.com', '全球市场行情、宏观数据与投资工具'),
   createSite('ValueCell', 'https://github.com/ValueCell-ai/valuecell', '面向金融应用的社区驱动型多智能体平台', 'https://github.com/fluidicon.png'),
   createSite('Kronos', 'https://github.com/shiyu-coder/Kronos', '面向金融市场语言的基础模型', 'https://github.com/fluidicon.png'),
+  createSite('TradingAgents', 'https://github.com/TauricResearch/TradingAgents', '多智能体大语言模型金融交易框架', 'https://github.com/fluidicon.png'),
   createSite('大盘云图', 'https://52etf.site', '大盘云图 - A股热力图')
 ];
 
