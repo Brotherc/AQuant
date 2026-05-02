@@ -1,50 +1,43 @@
 <template>
   <div>
     <a-card style="margin-bottom: 24px">
-      <a-form :model="searchParams" @finish="handleSearch">
-        <a-row :gutter="16">
-          <a-col :xs="24" :sm="12" :md="8" :lg="6" :xl="4">
-            <a-form-item label="代码">
-              <a-input v-model:value="searchParams.stockCode" placeholder="股票代码" allow-clear />
-            </a-form-item>
-          </a-col>
-          <a-col :xs="24" :sm="12" :md="8" :lg="6" :xl="4">
-            <a-form-item label="名称">
-              <a-input v-model:value="searchParams.stockName" placeholder="股票名称" allow-clear />
-            </a-form-item>
-          </a-col>
-          <a-col :xs="24" :sm="12" :md="8" :lg="6" :xl="4">
-            <a-form-item label="近N年">
-              <a-input-number v-model:value="searchParams.recentYears" placeholder="3" style="width: 100%" :min="1" />
-            </a-form-item>
-          </a-col>
-          <a-col :xs="24" :sm="12" :md="8" :lg="6" :xl="4">
-            <a-form-item label="最低分红">
-              <a-input-number v-model:value="searchParams.minAvgDividend" placeholder="0" style="width: 100%" :min="0" :step="0.01" />
-            </a-form-item>
-          </a-col>
-          <a-col :xs="24" :sm="12" :md="8" :lg="6" :xl="4">
-            <a-form-item label="自选分组">
-              <a-select v-model:value="searchParams.watchlistGroupId" placeholder="全部" style="width: 100%" allow-clear>
-                <a-select-option v-for="group in watchlistGroups" :key="group.id" :value="group.id">
-                  {{ group.name }}
-                </a-select-option>
-              </a-select>
-            </a-form-item>
-          </a-col>
-          <a-col :xs="24" :sm="12" :md="8" :lg="6" :xl="4">
-            <a-form-item label="PEG">
-              <a-select v-model:value="searchParams.pegRange" placeholder="全部" style="width: 100%" allow-clear>
-                <a-select-option value="1">0 - 0.5</a-select-option>
-                <a-select-option value="2">0.5 - 1.0</a-select-option>
-              </a-select>
-            </a-form-item>
-          </a-col>
-          <a-col :span="24" style="text-align: right; margin-top: 8px">
+      <a-form
+        :model="searchParams"
+        @finish="handleSearch"
+        layout="inline"
+        class="dividend-search-form"
+      >
+        <a-form-item label="代码">
+          <a-input v-model:value="searchParams.stockCode" placeholder="股票代码" allow-clear style="width: 120px" />
+        </a-form-item>
+        <a-form-item label="名称">
+          <a-input v-model:value="searchParams.stockName" placeholder="股票名称" allow-clear style="width: 136px" />
+        </a-form-item>
+        <a-form-item label="近N年">
+          <a-input-number v-model:value="searchParams.recentYears" placeholder="3" style="width: 80px" :min="1" />
+        </a-form-item>
+        <a-form-item label="最低分红">
+          <a-input-number v-model:value="searchParams.minAvgDividend" placeholder="0" style="width: 118px" :min="0" :step="0.01" />
+        </a-form-item>
+        <a-form-item label="自选分组">
+          <a-select v-model:value="searchParams.watchlistGroupId" placeholder="全部" style="width: 136px" allow-clear>
+            <a-select-option v-for="group in watchlistGroups" :key="group.id" :value="group.id">
+              {{ group.name }}
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item label="PEG">
+          <a-select v-model:value="searchParams.pegRange" placeholder="全部" style="width: 118px" allow-clear>
+            <a-select-option value="1">0 - 0.5</a-select-option>
+            <a-select-option value="2">0.5 - 1.0</a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item class="dividend-search-form-actions">
+          <a-space>
             <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
-            <a-button style="margin-left: 8px" @click="resetSearch">重置</a-button>
-          </a-col>
-        </a-row>
+            <a-button @click="resetSearch">重置</a-button>
+          </a-space>
+        </a-form-item>
       </a-form>
     </a-card>
 
@@ -300,3 +293,14 @@ onMounted(async () => {
   }
 });
 </script>
+
+<style scoped>
+.dividend-search-form {
+  row-gap: 16px;
+}
+
+.dividend-search-form-actions {
+  margin-inline-start: auto;
+  margin-inline-end: 0;
+}
+</style>
