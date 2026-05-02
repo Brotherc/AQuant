@@ -27,6 +27,9 @@ public class DualMABacktestReqVO {
     @NotNull(message = "回测年数不能为空")
     private Integer recentYears = 1;
 
+    @Schema(description = "可靠度")
+    private String reliability;
+
     @Schema(description = "所属市场(sh/sz/bj)")
     @NotBlank(message = "市场条件不能为空")
     private String market;

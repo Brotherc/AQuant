@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -42,5 +43,8 @@ public class StockTradeBacktestVO {
 
     @Schema(description = "价格区间(近一年)")
     private BigDecimal pir;
+
+    @Schema(description = "最后时间")
+    private LocalDateTime lastTime;
 
 }

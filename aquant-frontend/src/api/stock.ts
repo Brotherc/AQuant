@@ -68,6 +68,7 @@ export interface DualMABacktestReqVO {
     watchlistGroupId?: number;
     recentYears?: number;
     market?: string;
+    reliability?: string;
 }
 
 export interface StockTradeBacktestVO {
@@ -81,6 +82,7 @@ export interface StockTradeBacktestVO {
     reliability?: string;
     latestPrice?: number;
     pir?: number;
+    lastTime?: string;
 }
 
 export interface StockQuotePageReqVO {
@@ -146,6 +148,7 @@ export interface MomentumBacktestReqVO {
     watchlistGroupId?: number;
     recentYears?: number;
     market?: string;
+    reliability?: string;
 }
 
 export const getMomentumPage = (params: MomentumReqVO & { page: number; size: number; sort?: string[] }) => {

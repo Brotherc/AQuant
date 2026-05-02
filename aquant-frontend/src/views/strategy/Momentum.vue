@@ -2,10 +2,15 @@
   <div class="momentum-container">
     <a-card :bordered="false">
       <div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
-        <a-radio-group v-model:value="analysisMode" button-style="solid" @change="handleModeChange">
-          <a-radio-button value="signal">实时信号</a-radio-button>
-          <a-radio-button value="backtest">历史回测</a-radio-button>
-        </a-radio-group>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <a-radio-group v-model:value="analysisMode" button-style="solid" @change="handleModeChange">
+            <a-radio-button value="signal">实时信号</a-radio-button>
+            <a-radio-button value="backtest">历史回测</a-radio-button>
+          </a-radio-group>
+          <span v-if="analysisMode === 'backtest'" style="color: #666; font-size: 13px;">
+            最后时间：{{ formatDateTime(backtestLastTime) }}
+          </span>
+        </div>
         <a-button type="link" @click="infoVisible = true">
           <info-circle-outlined /> 了解动量策略
         </a-button>
@@ -52,6 +57,13 @@
             <a-select-option :value="2">近 2 年</a-select-option>
             <a-select-option :value="3">近 3 年</a-select-option>
             <a-select-option :value="5">近 5 年</a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item label="可靠度" v-if="analysisMode === 'backtest'">
+          <a-select v-model:value="queryParams.reliability" placeholder="全部" allow-clear style="width: 120px">
+            <a-select-option v-for="option in reliabilityOptions" :key="option" :value="option">
+              {{ option }}
+            </a-select-option>
           </a-select>
         </a-form-item>
         <a-form-item label="自选分组">
@@ -172,6 +184,8 @@ const infoVisible = ref(false);
 
 const loading = ref(false);
 const dataSource = ref<any[]>([]);
+const backtestLastTime = ref<string>();
+const reliabilityOptions = ['高', '中', '低', '低(方差0)', '样本不足'];
 const queryParams = reactive<any>({
   market: 'sh',
   code: '',
@@ -180,6 +194,7 @@ const queryParams = reactive<any>({
   signal: undefined,
   watchlistGroupId: undefined,
   recentYears: 2,
+  reliability: undefined,
 });
 
 const watchlistGroups = ref<WatchlistGroupVO[]>([]);
@@ -246,6 +261,13 @@ const getSignalLabel = (signal: string) => {
   return map[signal] || { text: signal, color: 'default' };
 };
 
+const formatDateTime = (value?: string) => {
+  if (!value) {
+    return '-';
+  }
+  return value.replace('T', ' ').slice(0, 19);
+};
+
 const fetchData = async () => {
   loading.value = true;
   try {
@@ -271,6 +293,7 @@ const fetchData = async () => {
         code: queryParams.code,
         lookbackDays: queryParams.lookbackDays,
         recentYears: queryParams.recentYears,
+        reliability: queryParams.reliability,
         watchlistGroupId: queryParams.watchlistGroupId,
         page: pagination.current - 1,
         size: pagination.pageSize,
@@ -282,6 +305,9 @@ const fetchData = async () => {
     if (responseData.success || responseData.code === 0) {
       dataSource.value = responseData.data.content;
       pagination.total = responseData.data.totalElements;
+      backtestLastTime.value = analysisMode.value === 'backtest'
+        ? responseData.data.content.find((item: any) => item.lastTime)?.lastTime
+        : undefined;
     }
   } catch (error) {
     console.error(error);
@@ -293,6 +319,9 @@ const fetchData = async () => {
 const handleModeChange = () => {
   pagination.current = 1;
   sortState.value = [];
+  if (analysisMode.value !== 'backtest') {
+    backtestLastTime.value = undefined;
+  }
   fetchData();
 };
 

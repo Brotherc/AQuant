@@ -117,7 +117,7 @@ public class MomentumStrategy {
                 if (list.size() <= lookbackDays) {
                     result.add(new StockTradeBacktestVO(code, name, BigDecimal.ZERO, 0,
                             BigDecimal.ZERO, null, null, "样本不足",
-                            stock.getLatestPrice(), stock.getPir()));
+                            stock.getLatestPrice(), stock.getPir(), stock.getCreatedAt()));
                     continue;
                 }
 
@@ -216,7 +216,7 @@ public class MomentumStrategy {
             }
 
             result.add(new StockTradeBacktestVO(code, name, totalReturn, tradeCount, winRate,
-                    tValue, pValue, reliability, stock.getLatestPrice(), stock.getPir()));
+                    tValue, pValue, reliability, stock.getLatestPrice(), stock.getPir(), stock.getCreatedAt()));
             }
         }
 

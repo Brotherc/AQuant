@@ -42,6 +42,7 @@ public class StockStrategyService {
     private final StockWatchlistStockRepository stockWatchlistStockRepository;
     private final StockQuoteRepository stockQuoteRepository;
     private final StockWatchlistGroupRepository stockWatchlistGroupRepository;
+    private final StockStrategySnapshotService stockStrategySnapshotService;
 
     public Page<StockTradeSignalVO> dualMA(DualMAReqVO reqVO, Pageable pageable, Long userId) {
         Set<String> watchlistCodes = null;
@@ -165,7 +166,21 @@ public class StockStrategyService {
             }
         }
 
-        boolean earlyPaginate = !hasStrategySortFields(pageable.getSort());
+        Page<StockTradeBacktestVO> snapshotPage = stockStrategySnapshotService
+                .queryDualMABacktestSnapshot(reqVO, pageable, watchlistCodes);
+        if (snapshotPage != null) {
+            return snapshotPage;
+        }
+
+        return dualMABacktestOnline(reqVO, pageable, watchlistCodes);
+    }
+
+    private Page<StockTradeBacktestVO> dualMABacktestOnline(
+            DualMABacktestReqVO reqVO,
+            Pageable pageable,
+            Set<String> watchlistCodes
+    ) {
+        boolean earlyPaginate = StringUtils.isBlank(reqVO.getReliability()) && !hasStrategySortFields(pageable.getSort());
         if (earlyPaginate) {
             Page<StockQuote> pagedStocks = stockQuoteRepository.findAll(buildStockQuoteSpec(reqVO.getCode(), watchlistCodes, reqVO.getMarket()), pageable);
             if (pagedStocks.isEmpty()) {
@@ -176,34 +191,21 @@ public class StockStrategyService {
             return new PageImpl<>(pagedList, pageable, pagedStocks.getTotalElements());
         }
 
-        List<StockQuote> stocks = stockQuoteRepository.findAll();
-        Stream<StockQuote> stream = stocks.stream();
-
-        if (StringUtils.isNotBlank(reqVO.getMarket())) {
-            final String market = reqVO.getMarket().toLowerCase();
-            stream = stream.filter(vo -> vo.getCode() != null && vo.getCode().toLowerCase().startsWith(market));
-        }
-
-        if (StringUtils.isNotBlank(reqVO.getCode())) {
-            stream = stream.filter(vo -> reqVO.getCode().equalsIgnoreCase(vo.getCode()));
-        }
-
-        if (watchlistCodes != null) {
-            final java.util.Set<String> wc = watchlistCodes;
-            stream = stream.filter(vo -> {
-                String c = vo.getCode();
-                String c6 = c.length() > 6 ? c.substring(c.length() - 6) : c;
-                return wc.contains(c6);
-            });
-        }
-
-        List<StockQuote> targetStocks = stream.collect(Collectors.toList());
+        List<StockQuote> targetStocks = stockQuoteRepository.findAll(
+                buildStockQuoteSpec(reqVO.getCode(), watchlistCodes, reqVO.getMarket())
+        );
         if (targetStocks.isEmpty()) {
             return new PageImpl<>(Collections.emptyList(), pageable, 0);
         }
 
         List<StockTradeBacktestVO> result = dualMovingAverageStrategy.backtest(
                 reqVO.getMaShort(), reqVO.getMaLong(), reqVO.getRecentYears(), targetStocks);
+
+        if (StringUtils.isNotBlank(reqVO.getReliability())) {
+            result = result.stream()
+                    .filter(vo -> reqVO.getReliability().equals(vo.getReliability()))
+                    .collect(Collectors.toList());
+        }
 
         Sort sort = pageable.getSort();
         if (sort.isSorted()) {
@@ -389,7 +391,7 @@ public class StockStrategyService {
             }
         }
 
-        boolean earlyPaginate = !hasStrategySortFields(pageable.getSort());
+        boolean earlyPaginate = StringUtils.isBlank(reqVO.getReliability()) && !hasStrategySortFields(pageable.getSort());
         if (earlyPaginate) {
             Page<StockQuote> pagedStocks = stockQuoteRepository.findAll(buildStockQuoteSpec(reqVO.getCode(), watchlistCodes, reqVO.getMarket()), pageable);
             if (pagedStocks.isEmpty()) {
@@ -428,6 +430,12 @@ public class StockStrategyService {
 
         List<StockTradeBacktestVO> result = momentumStrategy.backtest(
                 reqVO.getLookbackDays(), reqVO.getRecentYears(), targetStocks);
+
+        if (StringUtils.isNotBlank(reqVO.getReliability())) {
+            result = result.stream()
+                    .filter(vo -> reqVO.getReliability().equals(vo.getReliability()))
+                    .collect(Collectors.toList());
+        }
 
         Sort sort = pageable.getSort();
         if (sort.isSorted()) {

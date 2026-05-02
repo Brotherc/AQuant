@@ -8,6 +8,7 @@ import com.brotherc.aquant.model.dto.akshare.*;
 import com.brotherc.aquant.repository.*;
 import com.brotherc.aquant.service.AKShareService;
 import com.brotherc.aquant.service.StockQuoteService;
+import com.brotherc.aquant.service.StockStrategySnapshotService;
 import com.brotherc.aquant.service.StockSyncService;
 import com.brotherc.aquant.utils.StockHelper;
 import com.brotherc.aquant.utils.StockUtils;
@@ -34,6 +35,7 @@ public class StockSyncTask {
     private final AKShareService aKShareService;
     private final StockQuoteService stockQuoteService;
     private final StockSyncService stockSyncService;
+    private final StockStrategySnapshotService stockStrategySnapshotService;
     private final StockSyncRepository stockSyncRepository;
     private final StockQuoteRepository stockQuoteRepository;
     private final StockQuoteHistoryRepository stockQuoteHistoryRepository;
@@ -48,6 +50,7 @@ public class StockSyncTask {
     public void onApplicationReady() {
         syncStackDtaLatest();
         clearDelistedStockData();
+        stockStrategySnapshotService.refreshDualMaBacktestSnapshots();
     }
 
     /**
@@ -64,6 +67,14 @@ public class StockSyncTask {
     @Scheduled(cron = "0 10 20 * * ?")
     public void scheduledClearDelistedStockData() {
         clearDelistedStockData();
+    }
+
+    /**
+     * 每天晚间生成双均线回测快照
+     */
+    @Scheduled(cron = "0 0 21 * * ?")
+    public void scheduledRefreshDualMaBacktestSnapshots() {
+        stockStrategySnapshotService.refreshDualMaBacktestSnapshots();
     }
 
     private void syncStackDtaLatest() {
