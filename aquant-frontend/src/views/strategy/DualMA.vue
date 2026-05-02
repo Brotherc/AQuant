@@ -390,13 +390,14 @@ const handleSearch = () => {
 };
 
 const handleTableChange = (pag: any, _filters: any, sorter: any) => {
-  pagination.current = pag.current;
   pagination.pageSize = pag.pageSize;
   
   if (sorter.field && sorter.order) {
+    pagination.current = 1;
     const order = sorter.order === 'ascend' ? 'asc' : 'desc';
     sortState.value = [`${sorter.field},${order}`];
   } else {
+    pagination.current = pag.current;
     sortState.value = [];
   }
 

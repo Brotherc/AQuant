@@ -17,13 +17,20 @@ import com.brotherc.aquant.repository.projection.StockQuoteHistoryProjection;
 import com.brotherc.aquant.strategy.DualMovingAverageStrategy;
 import com.brotherc.aquant.strategy.MomentumStrategy;
 import com.brotherc.aquant.utils.StockHelper;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.math3.stat.inference.TTest;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -82,7 +89,13 @@ public class StockStrategySnapshotService {
             return null;
         }
 
-        return dualMaSnapshotRepository.findAll(buildDualMaSnapshotSpec(batchNo, market, reqVO, watchlistCodes), pageable)
+        Sort sort = pageable != null ? pageable.getSort() : Sort.unsorted();
+        Pageable queryPageable = buildSnapshotQueryPageable(pageable, sort);
+
+        return dualMaSnapshotRepository.findAll(
+                        buildDualMaSnapshotSpec(batchNo, market, reqVO, watchlistCodes, sort),
+                        queryPageable
+                )
                 .map(this::toVO);
     }
 
@@ -107,8 +120,11 @@ public class StockStrategySnapshotService {
             return null;
         }
 
+        Sort sort = pageable != null ? pageable.getSort() : Sort.unsorted();
+        Pageable queryPageable = buildSnapshotQueryPageable(pageable, sort);
+
         return momentumSnapshotRepository.findAll(
-                buildMomentumSnapshotSpec(batchNo, market, reqVO, watchlistCodes), pageable
+                buildMomentumSnapshotSpec(batchNo, market, reqVO, watchlistCodes, sort), queryPageable
         ).map(this::toVO);
     }
 
@@ -390,7 +406,8 @@ public class StockStrategySnapshotService {
             Long batchNo,
             String market,
             DualMABacktestReqVO reqVO,
-            Set<String> watchlistCodes
+            Set<String> watchlistCodes,
+            Sort sort
     ) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -416,6 +433,7 @@ public class StockStrategySnapshotService {
                 predicates.add(cb.or(orPredicates.toArray(new Predicate[0])));
             }
 
+            applyCustomSnapshotOrdering(root, query, cb, sort);
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
@@ -424,7 +442,8 @@ public class StockStrategySnapshotService {
             Long batchNo,
             String market,
             MomentumBacktestReqVO reqVO,
-            Set<String> watchlistCodes
+            Set<String> watchlistCodes,
+            Sort sort
     ) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -449,7 +468,79 @@ public class StockStrategySnapshotService {
                 predicates.add(cb.or(orPredicates.toArray(new Predicate[0])));
             }
 
+            applyCustomSnapshotOrdering(root, query, cb, sort);
             return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+
+    private <T> void applyCustomSnapshotOrdering(
+            Root<T> root,
+            CriteriaQuery<?> query,
+            CriteriaBuilder cb,
+            Sort sort
+    ) {
+        if (!requiresCustomPValueOrdering(sort)) {
+            return;
+        }
+
+        List<Order> orders = new ArrayList<>();
+        for (Sort.Order sortOrder : sort) {
+            String property = mapSnapshotSortProperty(sortOrder.getProperty());
+            if (property == null) {
+                continue;
+            }
+
+            if ("pValue".equals(property)) {
+                Expression<Integer> nullRank = cb.<Integer>selectCase()
+                        .when(cb.isNull(root.get("pValue")), 1)
+                        .otherwise(0);
+                orders.add(cb.asc(nullRank));
+                orders.add(sortOrder.getDirection() == Sort.Direction.DESC
+                        ? cb.desc(root.get("pValue"))
+                        : cb.asc(root.get("pValue")));
+            } else {
+                orders.add(sortOrder.getDirection() == Sort.Direction.DESC
+                        ? cb.desc(root.get(property))
+                        : cb.asc(root.get(property)));
+            }
+        }
+
+        if (!orders.isEmpty()) {
+            query.orderBy(orders);
+        }
+    }
+
+    private boolean requiresCustomPValueOrdering(Sort sort) {
+        if (sort == null || sort.isUnsorted()) {
+            return false;
+        }
+        for (Sort.Order order : sort) {
+            if ("pValue".equals(order.getProperty())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Pageable buildSnapshotQueryPageable(Pageable pageable, Sort sort) {
+        if (!requiresCustomPValueOrdering(sort)) {
+            return pageable;
+        }
+        if (pageable == null) {
+            return PageRequest.of(0, 20);
+        }
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+    }
+
+    private String mapSnapshotSortProperty(String property) {
+        if (StringUtils.isBlank(property)) {
+            return null;
+        }
+        return switch (property) {
+            case "code", "name", "totalReturn", "tradeCount", "winRate",
+                    "pValue", "latestPrice", "pir", "reliability" -> property;
+            case "lastTime" -> "createdAt";
+            default -> null;
         };
     }
 

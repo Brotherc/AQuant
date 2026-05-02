@@ -231,6 +231,7 @@ public class StockStrategyService {
 
         for (Sort.Order order : sort) {
             Comparator<StockTradeBacktestVO> comparator = null;
+            boolean reverse = order.getDirection() == Sort.Direction.DESC;
             if ("code".equals(order.getProperty())) {
                 comparator = Comparator.comparing(StockTradeBacktestVO::getCode);
             } else if ("name".equals(order.getProperty())) {
@@ -250,7 +251,8 @@ public class StockStrategyService {
             } else if ("pValue".equals(order.getProperty())) {
                 comparator = Comparator.comparing(
                         StockTradeBacktestVO::getPValue,
-                        Comparator.nullsLast(Double::compareTo));
+                        reverse ? Comparator.nullsLast(Comparator.reverseOrder()) : Comparator.nullsLast(Double::compareTo));
+                reverse = false;
             } else if ("latestPrice".equals(order.getProperty())) {
                 comparator = Comparator.comparing(
                         StockTradeBacktestVO::getLatestPrice,
@@ -261,7 +263,7 @@ public class StockStrategyService {
                 continue;
             }
 
-            if (order.getDirection() == Sort.Direction.DESC) {
+            if (reverse) {
                 comparator = comparator.reversed();
             }
 
