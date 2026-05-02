@@ -391,6 +391,12 @@ public class StockStrategyService {
             }
         }
 
+        Page<StockTradeBacktestVO> snapshotPage = stockStrategySnapshotService
+                .queryMomentumBacktestSnapshot(reqVO, pageable, watchlistCodes);
+        if (snapshotPage != null) {
+            return snapshotPage;
+        }
+
         boolean earlyPaginate = StringUtils.isBlank(reqVO.getReliability()) && !hasStrategySortFields(pageable.getSort());
         if (earlyPaginate) {
             Page<StockQuote> pagedStocks = stockQuoteRepository.findAll(buildStockQuoteSpec(reqVO.getCode(), watchlistCodes, reqVO.getMarket()), pageable);

@@ -51,6 +51,7 @@ public class StockSyncTask {
         syncStackDtaLatest();
         clearDelistedStockData();
         stockStrategySnapshotService.refreshDualMaBacktestSnapshots();
+        stockStrategySnapshotService.refreshMomentumBacktestSnapshots();
     }
 
     /**
@@ -75,6 +76,7 @@ public class StockSyncTask {
     @Scheduled(cron = "0 0 21 * * ?")
     public void scheduledRefreshDualMaBacktestSnapshots() {
         stockStrategySnapshotService.refreshDualMaBacktestSnapshots();
+        stockStrategySnapshotService.refreshMomentumBacktestSnapshots();
     }
 
     private void syncStackDtaLatest() {

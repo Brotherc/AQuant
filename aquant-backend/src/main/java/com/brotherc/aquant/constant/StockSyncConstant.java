@@ -14,4 +14,7 @@ public class StockSyncConstant {
     public static final String STOCK_STRATEGY_DUAL_MA_BACKTEST_SNAPSHOT_LATEST =
             "stock_strategy_dual_ma_backtest_snapshot_latest";
 
+    public static final String STOCK_STRATEGY_MOMENTUM_BACKTEST_SNAPSHOT_LATEST =
+            "stock_strategy_momentum_backtest_snapshot_latest";
+
 }

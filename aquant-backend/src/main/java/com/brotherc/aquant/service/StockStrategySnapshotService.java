@@ -3,15 +3,19 @@ package com.brotherc.aquant.service;
 import com.brotherc.aquant.constant.StockSyncConstant;
 import com.brotherc.aquant.entity.StockQuote;
 import com.brotherc.aquant.entity.StockStrategyDualMaBacktestSnapshot;
+import com.brotherc.aquant.entity.StockStrategyMomentumBacktestSnapshot;
 import com.brotherc.aquant.entity.StockSync;
 import com.brotherc.aquant.model.vo.strategy.DualMABacktestReqVO;
+import com.brotherc.aquant.model.vo.strategy.MomentumBacktestReqVO;
 import com.brotherc.aquant.model.vo.strategy.StockTradeBacktestVO;
 import com.brotherc.aquant.repository.StockQuoteHistoryRepository;
 import com.brotherc.aquant.repository.StockQuoteRepository;
 import com.brotherc.aquant.repository.StockStrategyDualMaBacktestSnapshotRepository;
+import com.brotherc.aquant.repository.StockStrategyMomentumBacktestSnapshotRepository;
 import com.brotherc.aquant.repository.StockSyncRepository;
 import com.brotherc.aquant.repository.projection.StockQuoteHistoryProjection;
 import com.brotherc.aquant.strategy.DualMovingAverageStrategy;
+import com.brotherc.aquant.strategy.MomentumStrategy;
 import com.brotherc.aquant.utils.StockHelper;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -40,18 +44,22 @@ public class StockStrategySnapshotService {
 
     private static final String[] PRESET_MARKETS = {"sh", "sz", "bj"};
     private static final int[] PRESET_MA_OPTIONS = {5, 10, 20, 30, 60, 120};
+    private static final int[] PRESET_MOMENTUM_LOOKBACK_DAY_OPTIONS = {10, 20, 60, 120};
     private static final int[] PRESET_RECENT_YEARS = {1, 2, 3, 5};
     private static final int SNAPSHOT_BATCH_SIZE = 200;
     private static final int MAX_NEED_DAYS = 5 * 250 + 120;
 
     private final DualMovingAverageStrategy dualMovingAverageStrategy;
+    private final MomentumStrategy momentumStrategy;
     private final StockQuoteRepository stockQuoteRepository;
     private final StockQuoteHistoryRepository stockQuoteHistoryRepository;
     private final StockSyncRepository stockSyncRepository;
-    private final StockStrategyDualMaBacktestSnapshotRepository snapshotRepository;
+    private final StockStrategyDualMaBacktestSnapshotRepository dualMaSnapshotRepository;
+    private final StockStrategyMomentumBacktestSnapshotRepository momentumSnapshotRepository;
     private final StockHelper stockHelper;
 
-    private final AtomicBoolean refreshing = new AtomicBoolean(false);
+    private final AtomicBoolean dualMaRefreshing = new AtomicBoolean(false);
+    private final AtomicBoolean momentumRefreshing = new AtomicBoolean(false);
 
     public Page<StockTradeBacktestVO> queryDualMABacktestSnapshot(
             DualMABacktestReqVO reqVO,
@@ -68,14 +76,40 @@ public class StockStrategySnapshotService {
             return null;
         }
 
-        if (!snapshotRepository.existsByBatchNoAndMarketAndMaShortAndMaLongAndRecentYears(
+        if (!dualMaSnapshotRepository.existsByBatchNoAndMarketAndMaShortAndMaLongAndRecentYears(
                 batchNo, market, reqVO.getMaShort(), reqVO.getMaLong(), reqVO.getRecentYears()
         )) {
             return null;
         }
 
-        return snapshotRepository.findAll(buildSnapshotSpec(batchNo, market, reqVO, watchlistCodes), pageable)
+        return dualMaSnapshotRepository.findAll(buildDualMaSnapshotSpec(batchNo, market, reqVO, watchlistCodes), pageable)
                 .map(this::toVO);
+    }
+
+    public Page<StockTradeBacktestVO> queryMomentumBacktestSnapshot(
+            MomentumBacktestReqVO reqVO,
+            Pageable pageable,
+            Set<String> watchlistCodes
+    ) {
+        String market = normalizeMarket(reqVO.getMarket());
+        if (!isMomentumPresetRequest(reqVO)) {
+            return null;
+        }
+
+        Long batchNo = getMomentumLatestBatchNo();
+        if (batchNo == null) {
+            return null;
+        }
+
+        if (!momentumSnapshotRepository.existsByBatchNoAndMarketAndLookbackDaysAndRecentYears(
+                batchNo, market, reqVO.getLookbackDays(), reqVO.getRecentYears()
+        )) {
+            return null;
+        }
+
+        return momentumSnapshotRepository.findAll(
+                buildMomentumSnapshotSpec(batchNo, market, reqVO, watchlistCodes), pageable
+        ).map(this::toVO);
     }
 
     public boolean isPresetRequest(DualMABacktestReqVO reqVO) {
@@ -86,15 +120,24 @@ public class StockStrategySnapshotService {
                 && isPresetRecentYears(reqVO.getRecentYears());
     }
 
+    public boolean isMomentumPresetRequest(MomentumBacktestReqVO reqVO) {
+        return isPresetMarket(reqVO.getMarket())
+                && isPresetMomentumLookbackDays(reqVO.getLookbackDays())
+                && isPresetRecentYears(reqVO.getRecentYears());
+    }
+
     public void refreshDualMaBacktestSnapshots() {
-        if (!refreshing.compareAndSet(false, true)) {
+        if (!dualMaRefreshing.compareAndSet(false, true)) {
             log.info("双均线回测快照任务已在执行中，本次跳过");
             return;
         }
 
         long batchNo = System.currentTimeMillis();
         try {
-            if (shouldSkipRefreshDualMaBacktestSnapshots()) {
+            if (shouldSkipRefreshSnapshots(
+                    StockSyncConstant.STOCK_STRATEGY_DUAL_MA_BACKTEST_SNAPSHOT_LATEST,
+                    "双均线回测快照"
+            )) {
                 return;
             }
 
@@ -105,20 +148,61 @@ public class StockStrategySnapshotService {
             }
 
             for (String market : PRESET_MARKETS) {
-                refreshMarketSnapshots(batchNo, market, recentDates);
+                refreshDualMaMarketSnapshots(batchNo, market, recentDates);
             }
 
-            activateLatestBatch(batchNo);
-            cleanupOldBatches(batchNo);
+            activateLatestBatch(
+                    batchNo,
+                    StockSyncConstant.STOCK_STRATEGY_DUAL_MA_BACKTEST_SNAPSHOT_LATEST
+            );
+            dualMaSnapshotRepository.deleteByBatchNoNot(batchNo);
             log.info("双均线回测快照生成完成，batchNo={}", batchNo);
         } catch (Exception e) {
             log.error("双均线回测快照生成失败，batchNo={}", batchNo, e);
         } finally {
-            refreshing.set(false);
+            dualMaRefreshing.set(false);
         }
     }
 
-    private void refreshMarketSnapshots(Long batchNo, String market, List<String> recentDates) {
+    public void refreshMomentumBacktestSnapshots() {
+        if (!momentumRefreshing.compareAndSet(false, true)) {
+            log.info("动量回测快照任务已在执行中，本次跳过");
+            return;
+        }
+
+        long batchNo = System.currentTimeMillis();
+        try {
+            if (shouldSkipRefreshSnapshots(
+                    StockSyncConstant.STOCK_STRATEGY_MOMENTUM_BACKTEST_SNAPSHOT_LATEST,
+                    "动量回测快照"
+            )) {
+                return;
+            }
+
+            List<String> recentDates = stockQuoteHistoryRepository.findRecentTradeDates(MAX_NEED_DAYS);
+            if (CollectionUtils.isEmpty(recentDates)) {
+                log.warn("动量回测快照生成跳过，历史行情为空");
+                return;
+            }
+
+            for (String market : PRESET_MARKETS) {
+                refreshMomentumMarketSnapshots(batchNo, market, recentDates);
+            }
+
+            activateLatestBatch(
+                    batchNo,
+                    StockSyncConstant.STOCK_STRATEGY_MOMENTUM_BACKTEST_SNAPSHOT_LATEST
+            );
+            momentumSnapshotRepository.deleteByBatchNoNot(batchNo);
+            log.info("动量回测快照生成完成，batchNo={}", batchNo);
+        } catch (Exception e) {
+            log.error("动量回测快照生成失败，batchNo={}", batchNo, e);
+        } finally {
+            momentumRefreshing.set(false);
+        }
+    }
+
+    private void refreshDualMaMarketSnapshots(Long batchNo, String market, List<String> recentDates) {
         List<StockQuote> stocks = stockQuoteRepository.findByCodeStartingWithIgnoreCase(market);
         if (CollectionUtils.isEmpty(stocks)) {
             log.info("市场 {} 无股票数据，跳过双均线回测快照", market);
@@ -166,8 +250,54 @@ public class StockStrategySnapshotService {
                 }
             }
 
-            snapshotRepository.saveAll(snapshots);
+            dualMaSnapshotRepository.saveAll(snapshots);
             log.info("双均线回测快照已生成，market={}, batchNo={}, progress={}/{}", market, batchNo,
+                    Math.min(b + SNAPSHOT_BATCH_SIZE, stocks.size()), stocks.size());
+        }
+    }
+
+    private void refreshMomentumMarketSnapshots(Long batchNo, String market, List<String> recentDates) {
+        List<StockQuote> stocks = stockQuoteRepository.findByCodeStartingWithIgnoreCase(market);
+        if (CollectionUtils.isEmpty(stocks)) {
+            log.info("市场 {} 无股票数据，跳过动量回测快照", market);
+            return;
+        }
+
+        for (int b = 0; b < stocks.size(); b += SNAPSHOT_BATCH_SIZE) {
+            List<StockQuote> batch = stocks.subList(b, Math.min(stocks.size(), b + SNAPSHOT_BATCH_SIZE));
+            List<String> codes = batch.stream().map(StockQuote::getCode).toList();
+            List<StockQuoteHistoryProjection> histories = stockQuoteHistoryRepository
+                    .findByTradeDateInAndCodeInOrderByTradeDateAsc(recentDates, codes);
+
+            var historyMap = momentumStrategy.groupHistoriesByCode(histories);
+            List<StockStrategyMomentumBacktestSnapshot> snapshots = new ArrayList<>();
+            TTest tTest = new TTest();
+
+            for (StockQuote stock : batch) {
+                List<StockQuoteHistoryProjection> stockHistories = historyMap.getOrDefault(stock.getCode(), Collections.emptyList());
+                BigDecimal[] closePrices = momentumStrategy.extractClosePrices(stockHistories);
+
+                for (int recentYears : PRESET_RECENT_YEARS) {
+                    for (int lookbackDays : PRESET_MOMENTUM_LOOKBACK_DAY_OPTIONS) {
+                        StockTradeBacktestVO vo = momentumStrategy.backtestSingle(
+                                stock, closePrices, lookbackDays, recentYears, tTest
+                        );
+                        snapshots.add(toSnapshot(batchNo, market, lookbackDays, recentYears, vo));
+                    }
+                }
+            }
+
+            for (StockStrategyMomentumBacktestSnapshot snapshot : snapshots) {
+                if ((snapshot.getTValue() != null && !Double.isFinite(snapshot.getTValue()))
+                        || (snapshot.getPValue() != null && !Double.isFinite(snapshot.getPValue()))) {
+                    log.warn("invalid momentum snapshot: market={}, code={}, lookbackDays={}, recentYears={}, tValue={}, pValue={}",
+                            snapshot.getMarket(), snapshot.getCode(), snapshot.getLookbackDays(),
+                            snapshot.getRecentYears(), snapshot.getTValue(), snapshot.getPValue());
+                }
+            }
+
+            momentumSnapshotRepository.saveAll(snapshots);
+            log.info("动量回测快照已生成，market={}, batchNo={}, progress={}/{}", market, batchNo,
                     Math.min(b + SNAPSHOT_BATCH_SIZE, stocks.size()), stocks.size());
         }
     }
@@ -215,7 +345,48 @@ public class StockStrategySnapshotService {
         );
     }
 
-    private Specification<StockStrategyDualMaBacktestSnapshot> buildSnapshotSpec(
+    private StockStrategyMomentumBacktestSnapshot toSnapshot(
+            Long batchNo,
+            String market,
+            int lookbackDays,
+            int recentYears,
+            StockTradeBacktestVO vo
+    ) {
+        StockStrategyMomentumBacktestSnapshot snapshot = new StockStrategyMomentumBacktestSnapshot();
+        snapshot.setBatchNo(batchNo);
+        snapshot.setMarket(market);
+        snapshot.setCode(vo.getCode());
+        snapshot.setName(vo.getName());
+        snapshot.setLookbackDays(lookbackDays);
+        snapshot.setRecentYears(recentYears);
+        snapshot.setTotalReturn(vo.getTotalReturn());
+        snapshot.setTradeCount(vo.getTradeCount());
+        snapshot.setWinRate(vo.getWinRate());
+        snapshot.setTValue(normalizeFinite(vo.getTValue()));
+        snapshot.setPValue(normalizeFinite(vo.getPValue()));
+        snapshot.setReliability(vo.getReliability());
+        snapshot.setLatestPrice(vo.getLatestPrice());
+        snapshot.setPir(vo.getPir());
+        return snapshot;
+    }
+
+    private StockTradeBacktestVO toVO(StockStrategyMomentumBacktestSnapshot snapshot) {
+        return new StockTradeBacktestVO(
+                snapshot.getCode(),
+                snapshot.getName(),
+                snapshot.getTotalReturn(),
+                snapshot.getTradeCount(),
+                snapshot.getWinRate(),
+                snapshot.getTValue(),
+                snapshot.getPValue(),
+                snapshot.getReliability(),
+                snapshot.getLatestPrice(),
+                snapshot.getPir(),
+                snapshot.getCreatedAt()
+        );
+    }
+
+    private Specification<StockStrategyDualMaBacktestSnapshot> buildDualMaSnapshotSpec(
             Long batchNo,
             String market,
             DualMABacktestReqVO reqVO,
@@ -249,8 +420,49 @@ public class StockStrategySnapshotService {
         };
     }
 
-    private Long getLatestBatchNo() {
+    private Specification<StockStrategyMomentumBacktestSnapshot> buildMomentumSnapshotSpec(
+            Long batchNo,
+            String market,
+            MomentumBacktestReqVO reqVO,
+            Set<String> watchlistCodes
+    ) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.equal(root.get("batchNo"), batchNo));
+            predicates.add(cb.equal(root.get("market"), market));
+            predicates.add(cb.equal(root.get("lookbackDays"), reqVO.getLookbackDays()));
+            predicates.add(cb.equal(root.get("recentYears"), reqVO.getRecentYears()));
+
+            if (StringUtils.isNotBlank(reqVO.getCode())) {
+                predicates.add(cb.equal(root.get("code"), reqVO.getCode()));
+            }
+
+            if (StringUtils.isNotBlank(reqVO.getReliability())) {
+                predicates.add(cb.equal(root.get("reliability"), reqVO.getReliability()));
+            }
+
+            if (watchlistCodes != null) {
+                List<Predicate> orPredicates = new ArrayList<>();
+                for (String watchlistCode : watchlistCodes) {
+                    orPredicates.add(cb.like(root.get("code"), "%" + watchlistCode));
+                }
+                predicates.add(cb.or(orPredicates.toArray(new Predicate[0])));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+
+    private Long getDualMaLatestBatchNo() {
         return getSyncTimestamp(StockSyncConstant.STOCK_STRATEGY_DUAL_MA_BACKTEST_SNAPSHOT_LATEST);
+    }
+
+    private Long getMomentumLatestBatchNo() {
+        return getSyncTimestamp(StockSyncConstant.STOCK_STRATEGY_MOMENTUM_BACKTEST_SNAPSHOT_LATEST);
+    }
+
+    private Long getLatestBatchNo() {
+        return getDualMaLatestBatchNo();
     }
 
     private boolean isPresetMarket(String market) {
@@ -301,21 +513,29 @@ public class StockStrategySnapshotService {
         return false;
     }
 
-    protected void activateLatestBatch(Long batchNo) {
-        StockSync stockSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_STRATEGY_DUAL_MA_BACKTEST_SNAPSHOT_LATEST);
+    private boolean isPresetMomentumLookbackDays(Integer lookbackDays) {
+        if (lookbackDays == null) {
+            return false;
+        }
+        for (int preset : PRESET_MOMENTUM_LOOKBACK_DAY_OPTIONS) {
+            if (preset == lookbackDays) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    protected void activateLatestBatch(Long batchNo, String syncName) {
+        StockSync stockSync = stockSyncRepository.findByName(syncName);
         if (stockSync == null) {
             stockSync = new StockSync();
-            stockSync.setName(StockSyncConstant.STOCK_STRATEGY_DUAL_MA_BACKTEST_SNAPSHOT_LATEST);
+            stockSync.setName(syncName);
         }
         stockSync.setValue(String.valueOf(batchNo));
         stockSyncRepository.save(stockSync);
     }
 
-    protected void cleanupOldBatches(Long batchNo) {
-        snapshotRepository.deleteByBatchNoNot(batchNo);
-    }
-
-    private boolean shouldSkipRefreshDualMaBacktestSnapshots() {
+    private boolean shouldSkipRefreshSnapshots(String latestSnapshotSyncName, String snapshotLabel) {
         Long stockDailyLatest = getSyncTimestamp(StockSyncConstant.STOCK_DAILY_LATEST);
         if (stockDailyLatest == null) {
             return false;
@@ -328,13 +548,13 @@ public class StockStrategySnapshotService {
             return false;
         }
 
-        Long latestBatchNo = getLatestBatchNo();
+        Long latestBatchNo = getSyncTimestamp(latestSnapshotSyncName);
         if (latestBatchNo == null || latestBatchNo < stockDailyLatest) {
             return false;
         }
 
-        log.info("双均线回测快照已覆盖最近交易日收盘数据，跳过生成。latestTradeDay={}, stockDailyLatest={}, latestBatchNo={}",
-                latestTradeDay, stockDailyLatest, latestBatchNo);
+        log.info("{}已覆盖最近交易日收盘数据，跳过生成。latestTradeDay={}, stockDailyLatest={}, latestBatchNo={}",
+                snapshotLabel, latestTradeDay, stockDailyLatest, latestBatchNo);
         return true;
     }
 
