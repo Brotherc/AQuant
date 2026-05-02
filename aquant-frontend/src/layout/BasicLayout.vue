@@ -117,6 +117,13 @@
 
     <a-layout-content class="c-content">
       <div class="content-container">
+        <div v-if="currentRouteMeta" class="page-context">
+          <a-breadcrumb class="page-breadcrumb">
+            <a-breadcrumb-item>{{ currentRouteMeta.parent }}</a-breadcrumb-item>
+            <a-breadcrumb-item>{{ currentRouteMeta.child }}</a-breadcrumb-item>
+          </a-breadcrumb>
+          <div class="page-title">{{ currentRouteMeta.child }}</div>
+        </div>
         <router-view />
       </div>
     </a-layout-content>
@@ -143,7 +150,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, watch, onMounted } from 'vue';
+import { computed, ref, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   StockOutlined,
@@ -163,6 +170,20 @@ const router = useRouter();
 const selectedKeys = ref<string[]>([]);
 const isLoggedIn = ref(!!localStorage.getItem('token'));
 const nickname = ref(localStorage.getItem('nickname') || '用户');
+
+const routeMetaMap: Record<string, { parent: string; child: string }> = {
+  '/watchlist/index': { parent: '自选股票', child: '我的自选' },
+  '/stock-data/index': { parent: '股票数据', child: '股票详情' },
+  '/board/index': { parent: '股票数据', child: '行业板块' },
+  '/indicators/dupont': { parent: '股票指标', child: '杜邦分析' },
+  '/indicators/growth': { parent: '股票指标', child: '行业成长性指标' },
+  '/indicators/valuation': { parent: '股票指标', child: '估值指标' },
+  '/dividend/index': { parent: '分红数据', child: '分红数据' },
+  '/strategy/dual-ma': { parent: '量化策略', child: '双均线策略' },
+  '/strategy/momentum': { parent: '量化策略', child: '动量策略' },
+};
+
+const currentRouteMeta = computed(() => routeMetaMap[route.path]);
 
 // 同步菜单状态
 const syncMenuState = () => {
@@ -357,6 +378,24 @@ const handleUpdateEmail = async () => {
   margin: 0 auto;
   padding: 0 24px;
   min-height: calc(100vh - 64px - 70px);
+}
+
+.page-context {
+  margin-bottom: 20px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(24, 144, 255, 0.08), rgba(24, 144, 255, 0.02));
+  border: 1px solid rgba(24, 144, 255, 0.12);
+}
+
+.page-breadcrumb {
+  margin-bottom: 8px;
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f1f1f;
 }
 
 .c-footer {
