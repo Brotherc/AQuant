@@ -95,6 +95,7 @@
 
       <!-- Data Table -->
       <a-table
+        :key="analysisMode"
         :columns="columns"
         :data-source="dataSource"
         :loading="loading"
@@ -233,6 +234,17 @@ const currentStockName = ref('');
 
 // 排序状态
 const sortState = ref<string[]>([]);
+const momentumBacktestSortFields = new Set([
+  'code',
+  'name',
+  'latestPrice',
+  'pir',
+  'tradeCount',
+  'winRate',
+  'pValue',
+  'reliability',
+  'totalReturn'
+]);
 
 const columns = computed(() => {
   const baseColumns = [
@@ -286,6 +298,19 @@ const formatDateTime = (value?: string) => {
   return value.replace('T', ' ').slice(0, 19);
 };
 
+const normalizeBacktestSortState = (sorts: string[]) => {
+  if (!Array.isArray(sorts) || sorts.length === 0) {
+    return ['totalReturn,desc'];
+  }
+
+  const normalized = sorts.filter((sortItem) => {
+    const [field] = sortItem.split(',');
+    return momentumBacktestSortFields.has(field);
+  });
+
+  return normalized.length > 0 ? normalized : ['totalReturn,desc'];
+};
+
 const updateBacktestSubmitWrapped = () => {
   nextTick(() => {
     if (analysisMode.value !== 'backtest') {
@@ -332,7 +357,7 @@ const fetchData = async () => {
       });
       responseData = data;
     } else {
-      const activeSortState = sortState.value.length > 0 ? sortState.value : ['totalReturn,desc'];
+      const activeSortState = normalizeBacktestSortState(sortState.value);
       const { data } = await getMomentumBacktestPage({
         market: queryParams.market,
         code: queryParams.code,
@@ -363,7 +388,7 @@ const fetchData = async () => {
 
 const handleModeChange = () => {
   pagination.current = 1;
-  sortState.value = [];
+  sortState.value = analysisMode.value === 'backtest' ? ['totalReturn,desc'] : [];
   if (analysisMode.value !== 'backtest') {
     backtestLastTime.value = undefined;
   }
@@ -382,9 +407,12 @@ const handleTableChange = (pag: any, _filters: any, sorter: any) => {
   
   if (sorter.field && sorter.order) {
     const order = sorter.order === 'ascend' ? 'asc' : 'desc';
-    sortState.value = [`${sorter.field},${order}`];
+    const nextSortState = [`${sorter.field},${order}`];
+    sortState.value = analysisMode.value === 'backtest'
+      ? normalizeBacktestSortState(nextSortState)
+      : nextSortState;
   } else {
-    sortState.value = [];
+    sortState.value = analysisMode.value === 'backtest' ? ['totalReturn,desc'] : [];
   }
 
   fetchData();
