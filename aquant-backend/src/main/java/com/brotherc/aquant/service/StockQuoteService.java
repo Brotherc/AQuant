@@ -4,6 +4,7 @@ import com.brotherc.aquant.entity.StockQuote;
 import com.brotherc.aquant.model.dto.akshare.StockZhASpot;
 import com.brotherc.aquant.model.vo.stockquote.StockQuotePageReqVO;
 import com.brotherc.aquant.model.vo.stockquote.StockQuoteVO;
+import com.brotherc.aquant.repository.StockQuoteHistoryRepository;
 import com.brotherc.aquant.repository.StockQuoteRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ import java.util.stream.Collectors;
 public class StockQuoteService {
 
     private final StockQuoteRepository stockQuoteRepository;
+    private final StockQuoteHistoryRepository stockQuoteHistoryRepository;
 
     @Transactional(rollbackFor = Exception.class)
     public List<StockQuote> save(List<StockZhASpot> stockZhASpotList, LocalDateTime now) {
@@ -131,6 +133,13 @@ public class StockQuoteService {
             BeanUtils.copyProperties(o, vo);
             return vo;
         });
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteQuoteAndHistoryByCodes(List<String> codes) {
+        long historyDeleted = stockQuoteHistoryRepository.deleteByCodeIn(codes);
+        long quoteDeleted = stockQuoteRepository.deleteByCodeIn(codes);
+        log.info("已清理退市股票数据，股票数: {}, stock_quote 删除: {}, stock_quote_history 删除: {}", codes.size(), quoteDeleted, historyDeleted);
     }
 
 }

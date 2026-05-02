@@ -1,14 +1,13 @@
 package com.brotherc.aquant.task;
 
 import com.brotherc.aquant.constant.StockSyncConstant;
+import com.brotherc.aquant.entity.StockQuote;
 import com.brotherc.aquant.entity.StockSync;
 import com.brotherc.aquant.entity.StockTradeCalendar;
 import com.brotherc.aquant.model.dto.akshare.*;
-import com.brotherc.aquant.repository.StockIndustryBoardHistoryRepository;
-import com.brotherc.aquant.repository.StockQuoteHistoryRepository;
-import com.brotherc.aquant.repository.StockSyncRepository;
-import com.brotherc.aquant.repository.StockTradeCalendarRepository;
+import com.brotherc.aquant.repository.*;
 import com.brotherc.aquant.service.AKShareService;
+import com.brotherc.aquant.service.StockQuoteService;
 import com.brotherc.aquant.service.StockSyncService;
 import com.brotherc.aquant.utils.StockHelper;
 import com.brotherc.aquant.utils.StockUtils;
@@ -33,8 +32,10 @@ public class StockSyncTask {
 
     private final StockHelper stockHelper;
     private final AKShareService aKShareService;
+    private final StockQuoteService stockQuoteService;
     private final StockSyncService stockSyncService;
     private final StockSyncRepository stockSyncRepository;
+    private final StockQuoteRepository stockQuoteRepository;
     private final StockQuoteHistoryRepository stockQuoteHistoryRepository;
     private final StockIndustryBoardHistoryRepository stockIndustryBoardHistoryRepository;
     private final StockTradeCalendarRepository stockTradeCalendarRepository;
@@ -46,6 +47,7 @@ public class StockSyncTask {
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
         syncStackDtaLatest();
+        clearDelistedStockData();
     }
 
     /**
@@ -54,6 +56,14 @@ public class StockSyncTask {
     @Scheduled(cron = "0 0 20 * * ?")
     public void scheduledTask() {
         syncStackDtaLatest();
+    }
+
+    /**
+     * 每天晚间清理一次退市股票数据
+     */
+    @Scheduled(cron = "0 10 20 * * ?")
+    public void scheduledClearDelistedStockData() {
+        clearDelistedStockData();
     }
 
     private void syncStackDtaLatest() {
@@ -245,5 +255,27 @@ public class StockSyncTask {
         }
     }
 
-}
+    /**
+     * 清理 stock_quote 和 stock_quote_history 中已经退市的股票数据
+     */
+    public void clearDelistedStockData() {
+        List<StockQuote> delistedStocks = stockQuoteRepository.findByNameContaining("退市");
+        if (CollectionUtils.isEmpty(delistedStocks)) {
+            log.info("未发现退市股票数据，无需清理");
+            return;
+        }
 
+        List<String> codes = delistedStocks.stream()
+                .map(StockQuote::getCode)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (CollectionUtils.isEmpty(codes)) {
+            log.info("退市股票缺少可清理的代码，无需删除");
+            return;
+        }
+
+        stockQuoteService.deleteQuoteAndHistoryByCodes(codes);
+    }
+
+}

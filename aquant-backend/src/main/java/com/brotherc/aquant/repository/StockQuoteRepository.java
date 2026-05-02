@@ -24,4 +24,8 @@ public interface StockQuoteRepository extends JpaRepository<StockQuote, Long>, J
 
     StockQuote findByCode(String code);
 
+    List<StockQuote> findByNameContaining(String name);
+
+    long deleteByCodeIn(List<String> codeList);
+
 }

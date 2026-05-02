@@ -31,4 +31,6 @@ public interface StockQuoteHistoryRepository extends JpaRepository<StockQuoteHis
     @Query("select max(s.tradeDate) from StockQuoteHistory s")
     String findMaxTradeDate();
 
+    long deleteByCodeIn(List<String> codeList);
+
 }
