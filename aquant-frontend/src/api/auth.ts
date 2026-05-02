@@ -29,6 +29,16 @@ export interface UpdateEmailReq {
     email: string;
 }
 
+export interface SendResetCodeReq {
+    email: string;
+}
+
+export interface ResetPasswordReq {
+    email: string;
+    code: string;
+    newPassword: string;
+}
+
 export function login(data: LoginReq) {
     return request.post<any>('/auth/login', data);
 }
@@ -43,4 +53,12 @@ export function getUserInfo() {
 
 export function updateEmail(data: UpdateEmailReq) {
     return request.post<any>('/auth/updateEmail', data);
+}
+
+export function sendResetCode(data: SendResetCodeReq) {
+    return request.post<any>('/auth/password/sendResetCode', data);
+}
+
+export function resetPassword(data: ResetPasswordReq) {
+    return request.post<any>('/auth/password/reset', data);
 }

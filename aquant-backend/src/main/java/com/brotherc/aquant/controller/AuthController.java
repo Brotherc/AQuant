@@ -48,4 +48,19 @@ public class AuthController {
         authService.updateEmail(userId, reqVO.getEmail());
         return ResponseDTO.success();
     }
+
+    @Operation(summary = "发送找回密码验证码")
+    @PostMapping("/password/sendResetCode")
+    public ResponseDTO<Void> sendResetCode(@RequestBody @Valid SendResetCodeReqVO reqVO) {
+        authService.sendResetPasswordCode(reqVO.getEmail());
+        return ResponseDTO.success();
+    }
+
+    @Operation(summary = "通过邮箱重置密码")
+    @PostMapping("/password/reset")
+    public ResponseDTO<Void> resetPassword(@RequestBody @Valid ResetPasswordReqVO reqVO) {
+        authService.resetPasswordByEmail(reqVO);
+        return ResponseDTO.success();
+    }
+
 }

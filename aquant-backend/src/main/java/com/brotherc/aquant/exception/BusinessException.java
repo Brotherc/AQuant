@@ -12,6 +12,12 @@ public class BusinessException extends RuntimeException {
         this.msg = exceptionEnum.getMsg();
     }
 
+    public BusinessException(ExceptionEnum exceptionEnum, Throwable cause) {
+        super(exceptionEnum.getMsg(), cause);
+        this.code = exceptionEnum.getCode();
+        this.msg = exceptionEnum.getMsg();
+    }
+
     public Integer getCode() {
         return code;
     }

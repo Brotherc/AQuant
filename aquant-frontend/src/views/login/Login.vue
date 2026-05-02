@@ -65,23 +65,89 @@
                 登录
               </a-button>
             </a-form-item>
+            <div class="form-extra">
+              <a-button type="link" class="forget-btn" @click="openResetModal">
+                忘记密码
+              </a-button>
+            </div>
           </a-form>
         </div>
       </div>
     </div>
+
+    <a-modal
+      v-model:open="resetModalVisible"
+      title="邮箱找回密码"
+      :confirm-loading="resetLoading"
+      @ok="handleResetPassword"
+      @cancel="handleResetModalCancel"
+      destroyOnClose
+    >
+      <a-form layout="vertical">
+        <a-form-item label="邮箱" required>
+          <a-input
+            v-model:value="resetForm.email"
+            placeholder="请输入已绑定的邮箱"
+            size="large"
+          />
+        </a-form-item>
+        <a-form-item label="验证码" required>
+          <div class="verify-row">
+            <a-input
+              v-model:value="resetForm.code"
+              placeholder="请输入邮箱验证码"
+              size="large"
+            />
+            <a-button
+              size="large"
+              :loading="sendCodeLoading"
+              :disabled="countdown > 0"
+              @click="handleSendCode"
+            >
+              {{ countdown > 0 ? `${countdown}s后重发` : '发送验证码' }}
+            </a-button>
+          </div>
+        </a-form-item>
+        <a-form-item label="新密码" required>
+          <a-input-password
+            v-model:value="resetForm.newPassword"
+            placeholder="请输入新密码"
+            size="large"
+          />
+        </a-form-item>
+        <a-form-item label="确认新密码" required>
+          <a-input-password
+            v-model:value="resetForm.confirmPassword"
+            placeholder="请再次输入新密码"
+            size="large"
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, h } from 'vue';
+import { onBeforeUnmount, ref, h } from 'vue';
 import { useRouter } from 'vue-router';
 import { message } from 'ant-design-vue';
 import { UserOutlined, LockOutlined, LineChartOutlined, StockOutlined, BellOutlined, ExperimentOutlined } from '@ant-design/icons-vue';
-import { login } from '@/api/auth';
+import { login, resetPassword, sendResetCode } from '@/api/auth';
 
 const router = useRouter();
 const loading = ref(false);
 const loginForm = ref({ username: '', password: '' });
+const resetModalVisible = ref(false);
+const sendCodeLoading = ref(false);
+const resetLoading = ref(false);
+const countdown = ref(0);
+const resetForm = ref({
+  email: '',
+  code: '',
+  newPassword: '',
+  confirmPassword: '',
+});
+let countdownTimer: number | null = null;
 
 const handleLogin = async () => {
   loading.value = true;
@@ -100,6 +166,113 @@ const handleLogin = async () => {
     loading.value = false;
   }
 };
+
+const openResetModal = () => {
+  resetForm.value = {
+    email: '',
+    code: '',
+    newPassword: '',
+    confirmPassword: '',
+  };
+  countdown.value = 0;
+  clearCountdown();
+  resetModalVisible.value = true;
+};
+
+const handleResetModalCancel = () => {
+  resetModalVisible.value = false;
+  clearCountdown();
+};
+
+const clearCountdown = () => {
+  if (countdownTimer !== null) {
+    window.clearInterval(countdownTimer);
+    countdownTimer = null;
+  }
+};
+
+const startCountdown = () => {
+  countdown.value = 60;
+  clearCountdown();
+  countdownTimer = window.setInterval(() => {
+    if (countdown.value <= 1) {
+      countdown.value = 0;
+      clearCountdown();
+      return;
+    }
+    countdown.value -= 1;
+  }, 1000);
+};
+
+const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+const handleSendCode = async () => {
+  resetForm.value.email = resetForm.value.email.trim();
+  if (!resetForm.value.email) {
+    message.warning('请输入邮箱地址');
+    return;
+  }
+  if (!validateEmail(resetForm.value.email)) {
+    message.warning('请输入正确的邮箱格式');
+    return;
+  }
+
+  sendCodeLoading.value = true;
+  try {
+    const res = await sendResetCode({ email: resetForm.value.email });
+    if (res.data.success) {
+      message.success('验证码已发送，请查收邮箱');
+      startCountdown();
+    }
+  } catch (e) {
+    // handled by interceptor
+  } finally {
+    sendCodeLoading.value = false;
+  }
+};
+
+const handleResetPassword = async () => {
+  resetForm.value.email = resetForm.value.email.trim();
+  resetForm.value.code = resetForm.value.code.trim();
+  if (!resetForm.value.email || !validateEmail(resetForm.value.email)) {
+    message.warning('请输入正确的邮箱地址');
+    return;
+  }
+  if (!resetForm.value.code) {
+    message.warning('请输入验证码');
+    return;
+  }
+  if (!resetForm.value.newPassword || resetForm.value.newPassword.length < 6) {
+    message.warning('新密码至少6位');
+    return;
+  }
+  if (resetForm.value.newPassword !== resetForm.value.confirmPassword) {
+    message.warning('两次输入的新密码不一致');
+    return;
+  }
+
+  resetLoading.value = true;
+  try {
+    const res = await resetPassword({
+      email: resetForm.value.email,
+      code: resetForm.value.code,
+      newPassword: resetForm.value.newPassword,
+    });
+    if (res.data.success) {
+      message.success('密码重置成功，请使用新密码登录');
+      resetModalVisible.value = false;
+      clearCountdown();
+    }
+  } catch (e) {
+    // handled by interceptor
+  } finally {
+    resetLoading.value = false;
+  }
+};
+
+onBeforeUnmount(() => {
+  clearCountdown();
+});
 </script>
 
 <style scoped>
@@ -201,6 +374,15 @@ const handleLogin = async () => {
   margin-top: 8px;
 }
 
+.form-extra {
+  margin-top: -6px;
+  text-align: right;
+}
+
+.forget-btn {
+  padding-right: 0;
+}
+
 .submit-btn {
   margin-top: 8px;
   height: 44px;
@@ -208,6 +390,12 @@ const handleLogin = async () => {
   font-weight: 600;
   border-radius: 8px;
   letter-spacing: 2px;
+}
+
+.verify-row {
+  display: grid;
+  grid-template-columns: 1fr 128px;
+  gap: 12px;
 }
 
 :deep(.ant-input-affix-wrapper) {
@@ -228,6 +416,10 @@ const handleLogin = async () => {
   .brand-desc,
   .brand-features {
     display: none;
+  }
+
+  .verify-row {
+    grid-template-columns: 1fr;
   }
 }
 </style>

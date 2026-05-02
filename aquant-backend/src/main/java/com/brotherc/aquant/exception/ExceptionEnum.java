@@ -26,7 +26,14 @@ public enum ExceptionEnum {
     AUTH_USERNAME_EXISTS(1000203, "用户名已存在"),
     AUTH_TOKEN_INVALID(1000204, "请先登录"),
     AUTH_USER_NOT_FOUND(1000205, "用户不存在"),
-    AUTH_TOKEN_EXPIRED(1000206, "登录已过期，请重新登录");
+    AUTH_TOKEN_EXPIRED(1000206, "登录已过期，请重新登录"),
+    AUTH_EMAIL_NOT_FOUND(1000207, "该邮箱未绑定账号"),
+    AUTH_RESET_CODE_INVALID(1000208, "验证码不正确"),
+    AUTH_RESET_CODE_EXPIRED(1000209, "验证码已过期"),
+    AUTH_RESET_CODE_SEND_TOO_FREQUENT(1000210, "验证码发送过于频繁，请稍后再试"),
+    AUTH_MAIL_NOT_CONFIGURED(1000211, "邮件服务未配置"),
+    AUTH_RESET_PASSWORD_SAME_AS_OLD(1000212, "新密码不能与原密码相同"),
+    AUTH_RESET_CODE_SEND_FAILED(1000213, "验证码发送失败，请稍后重试");
 
     /**
      * 应用(1~2位)、服务(2位)、模块(2位)、异常(2位)
@@ -40,6 +47,10 @@ public enum ExceptionEnum {
 
     public BusinessException toException() {
         return new BusinessException(this);
+    }
+
+    public BusinessException toException(Throwable cause) {
+        return new BusinessException(this, cause);
     }
 
 }

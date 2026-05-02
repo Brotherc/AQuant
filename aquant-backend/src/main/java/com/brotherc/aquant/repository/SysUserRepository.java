@@ -13,4 +13,6 @@ public interface SysUserRepository extends JpaRepository<SysUser, Long> {
 
     boolean existsByUsername(String username);
 
+    Optional<SysUser> findByEmail(String email);
+
 }
