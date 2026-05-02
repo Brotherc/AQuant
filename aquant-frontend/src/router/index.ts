@@ -96,6 +96,17 @@ const router = createRouter({
                             component: () => import('@/views/strategy/Momentum.vue')
                         }
                     ]
+                },
+                {
+                    path: 'finance-sites',
+                    name: 'FinanceSitesRoot',
+                    children: [
+                        {
+                            path: 'index',
+                            name: 'FinanceSites',
+                            component: () => import('@/views/finance-sites/FinanceSites.vue')
+                        }
+                    ]
                 }
             ]
         }

@@ -78,6 +78,16 @@
               </a-menu-item>
             </a-sub-menu>
 
+            <a-sub-menu key="/finance-sites" popupClassName="top-nav-popup top-nav-popup-compact">
+              <template #title>
+                <global-outlined />
+                <span class="nav-text">投资工具</span>
+              </template>
+              <a-menu-item key="/finance-sites/index">
+                <router-link to="/finance-sites/index">常用网站</router-link>
+              </a-menu-item>
+            </a-sub-menu>
+
           </a-menu>
         </div>
 
@@ -157,6 +167,7 @@ import {
   LineChartOutlined,
   RadarChartOutlined,
   PayCircleOutlined,
+  GlobalOutlined,
   HeartOutlined,
   LogoutOutlined,
   LoginOutlined,
@@ -181,6 +192,7 @@ const routeMetaMap: Record<string, { parent: string; child: string }> = {
   '/dividend/index': { parent: '分红数据', child: '分红数据' },
   '/strategy/dual-ma': { parent: '量化策略', child: '双均线策略' },
   '/strategy/momentum': { parent: '量化策略', child: '动量策略' },
+  '/finance-sites/index': { parent: '投资工具', child: '常用网站' },
 };
 
 const currentRouteMeta = computed(() => routeMetaMap[route.path]);
