@@ -25,7 +25,7 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 @Service
 @RequiredArgsConstructor
-public class AuthService implements CommandLineRunner {
+public class AuthService {
 
     private static final int RESET_CODE_EXPIRE_MINUTES = 10;
     private static final int RESET_CODE_RESEND_INTERVAL_SECONDS = 60;
@@ -194,22 +194,6 @@ public class AuthService implements CommandLineRunner {
         }
         String normalizedEmail = email.trim();
         return normalizedEmail.isEmpty() ? null : normalizedEmail;
-    }
-
-    /**
-     * 应用启动时初始化默认管理员账号
-     */
-    @Override
-    public void run(String... args) {
-        if (!sysUserRepository.existsByUsername("admin")) {
-            SysUser admin = new SysUser();
-            admin.setUsername("admin");
-            admin.setPassword(BCrypt.withDefaults().hashToString(12, "admin123".toCharArray()));
-            admin.setNickname("管理员");
-            admin.setStatus(1);
-            sysUserRepository.save(admin);
-            System.out.println("[AQuant] 默认管理员账号已创建: admin / admin123");
-        }
     }
 
     private record ResetPasswordCodeCache(
