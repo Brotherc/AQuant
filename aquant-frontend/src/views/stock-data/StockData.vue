@@ -13,7 +13,12 @@
         </div>
 
         <!-- 右侧：原有查询条件 -->
-        <a-form layout="inline" :model="searchParams" @finish="handleSearch">
+        <a-form
+          layout="inline"
+          :model="searchParams"
+          @finish="handleSearch"
+          class="stock-data-search-form"
+        >
           <a-form-item label="股票代码">
             <a-input v-model:value="searchParams.code" placeholder="输入代码" allow-clear style="width: 140px" />
           </a-form-item>
@@ -291,3 +296,9 @@ onMounted(async () => {
   }
 });
 </script>
+
+<style scoped>
+.stock-data-search-form {
+  row-gap: 16px;
+}
+</style>

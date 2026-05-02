@@ -2,7 +2,12 @@
   <div class="dupont-analysis-container">
     <!-- Search Form -->
     <a-card style="margin-bottom: 24px">
-      <a-form layout="inline" :model="searchParams" @finish="handleSearch">
+      <a-form
+        layout="inline"
+        :model="searchParams"
+        @finish="handleSearch"
+        class="dupont-search-form"
+      >
         <a-form-item label="股票代码">
           <a-input v-model:value="searchParams.stockCode" placeholder="输入代码" allow-clear style="width: 120px" />
         </a-form-item>
@@ -347,6 +352,10 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.dupont-search-form {
+    row-gap: 16px;
+}
+
 .dupont-analysis-container :deep(.ant-table-cell) {
     white-space: nowrap;
 }
@@ -368,5 +377,4 @@ onMounted(async () => {
     border: none !important;
 }
 </style>
-
 

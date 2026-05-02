@@ -2,7 +2,12 @@
   <div class="growth-metrics-container">
     <!-- Search Form -->
     <a-card style="margin-bottom: 24px">
-      <a-form layout="inline" :model="searchParams" @finish="handleSearch">
+      <a-form
+        layout="inline"
+        :model="searchParams"
+        @finish="handleSearch"
+        class="growth-search-form"
+      >
         <a-form-item label="代码">
           <a-input v-model:value="searchParams.stockCode" placeholder="代码/名称" allow-clear style="width: 120px" />
         </a-form-item>
@@ -358,6 +363,10 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.growth-search-form {
+    row-gap: 16px;
+}
+
 .growth-metrics-container :deep(.ant-table-cell) {
     white-space: nowrap;
 }
@@ -378,4 +387,3 @@ onMounted(async () => {
     border: none !important;
 }
 </style>
-
