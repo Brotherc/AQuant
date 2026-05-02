@@ -263,6 +263,7 @@ const handleUpdateEmail = async () => {
 .logo-box {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .menu-box {
@@ -280,6 +281,7 @@ const handleUpdateEmail = async () => {
   font-weight: 800;
   cursor: pointer;
   letter-spacing: 1px;
+  white-space: nowrap;
 }
 
 .c-menu {
