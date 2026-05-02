@@ -2,54 +2,52 @@
   <div class="valuation-metrics-container">
     <!-- Search Form -->
     <a-card style="margin-bottom: 24px">
-      <a-form :model="searchParams" @finish="handleSearch">
-        <a-row :gutter="16">
-          <a-col :xs="24" :sm="12" :md="8" :lg="6" :xl="4">
-            <a-form-item label="代码">
-              <a-input v-model:value="searchParams.stockCode" placeholder="代码/名称" allow-clear />
-            </a-form-item>
-          </a-col>
-          <a-col :xs="24" :sm="12" :md="8" :lg="6" :xl="4">
-            <a-form-item label="PEG">
-              <div style="display: flex; align-items: center; gap: 8px">
-                <a-input-number v-model:value="searchParams.pegMin" placeholder="最小" style="width: 100%" />
-                <span>-</span>
-                <a-input-number v-model:value="searchParams.pegMax" placeholder="最大" style="width: 100%" />
-              </div>
-            </a-form-item>
-          </a-col>
-          <a-col :xs="24" :sm="12" :md="8" :lg="6" :xl="4">
-            <a-form-item label="PE(TTM)">
-              <div style="display: flex; align-items: center; gap: 8px">
-                <a-input-number v-model:value="searchParams.peTtmMin" placeholder="最小" style="width: 100%" />
-                <span>-</span>
-                <a-input-number v-model:value="searchParams.peTtmMax" placeholder="最大" style="width: 100%" />
-              </div>
-            </a-form-item>
-          </a-col>
-          <a-col :xs="24" :sm="12" :md="8" :lg="6" :xl="4">
-            <a-form-item label="PS(TTM)">
-              <div style="display: flex; align-items: center; gap: 8px">
-                  <a-input-number v-model:value="searchParams.psTtmMin" placeholder="最小" style="width: 100%" />
-                  <span>-</span>
-                  <a-input-number v-model:value="searchParams.psTtmMax" placeholder="最大" style="width: 100%" />
-              </div>
-            </a-form-item>
-          </a-col>
-          <a-col :xs="24" :sm="12" :md="8" :lg="6" :xl="4">
-            <a-form-item label="PB(MRQ)">
-              <div style="display: flex; align-items: center; gap: 8px">
-                  <a-input-number v-model:value="searchParams.pbMrqMin" placeholder="最小" style="width: 100%" />
-                  <span>-</span>
-                  <a-input-number v-model:value="searchParams.pbMrqMax" placeholder="最大" style="width: 100%" />
-              </div>
-            </a-form-item>
-          </a-col>
-          <a-col :span="24" style="text-align: right; margin-top: 8px">
-            <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
-            <a-button style="margin-left: 8px" @click="resetSearch">重置</a-button>
-          </a-col>
-        </a-row>
+      <a-form
+        :model="searchParams"
+        @finish="handleSearch"
+        layout="inline"
+        class="valuation-search-form"
+      >
+        <a-form-item label="代码">
+          <a-input
+            v-model:value="searchParams.stockCode"
+            placeholder="代码/名称"
+            allow-clear
+            style="width: 110px"
+          />
+        </a-form-item>
+        <a-form-item label="PEG">
+          <div class="range-input-group">
+            <a-input-number v-model:value="searchParams.pegMin" placeholder="最小" style="width: 70px" />
+            <span>-</span>
+            <a-input-number v-model:value="searchParams.pegMax" placeholder="最大" style="width: 70px" />
+          </div>
+        </a-form-item>
+        <a-form-item label="PE(TTM)">
+          <div class="range-input-group">
+            <a-input-number v-model:value="searchParams.peTtmMin" placeholder="最小" style="width: 70px" />
+            <span>-</span>
+            <a-input-number v-model:value="searchParams.peTtmMax" placeholder="最大" style="width: 70px" />
+          </div>
+        </a-form-item>
+        <a-form-item label="PS(TTM)">
+          <div class="range-input-group">
+            <a-input-number v-model:value="searchParams.psTtmMin" placeholder="最小" style="width: 70px" />
+            <span>-</span>
+            <a-input-number v-model:value="searchParams.psTtmMax" placeholder="最大" style="width: 70px" />
+          </div>
+        </a-form-item>
+        <a-form-item label="PB(MRQ)">
+          <div class="range-input-group">
+            <a-input-number v-model:value="searchParams.pbMrqMin" placeholder="最小" style="width: 70px" />
+            <span>-</span>
+            <a-input-number v-model:value="searchParams.pbMrqMax" placeholder="最大" style="width: 70px" />
+          </div>
+        </a-form-item>
+        <a-form-item>
+          <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
+          <a-button style="margin-left: 8px" @click="resetSearch">重置</a-button>
+        </a-form-item>
       </a-form>
     </a-card>
 
@@ -391,6 +389,16 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.valuation-search-form {
+    row-gap: 16px;
+}
+
+.range-input-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .valuation-metrics-container :deep(.ant-table-cell) {
     white-space: nowrap;
 }
@@ -412,4 +420,3 @@ onMounted(async () => {
     border: none !important;
 }
 </style>
-
