@@ -25,19 +25,19 @@
         @finish="handleSearch"
         :style="{
           marginBottom: '24px',
-          justifyContent: analysisMode === 'backtest' ? 'flex-start' : 'flex-end',
+          justifyContent: 'flex-start',
           rowGap: '12px'
         }"
       >
         <a-form-item label="所属市场" required>
-          <a-select v-model:value="queryParams.market" style="width: 120px">
+          <a-select v-model:value="queryParams.market" style="width: 110px">
             <a-select-option value="sh">沪市 (SH)</a-select-option>
             <a-select-option value="sz">深市 (SZ)</a-select-option>
             <a-select-option value="bj">北交所 (BJ)</a-select-option>
           </a-select>
         </a-form-item>
         <a-form-item label="股票代码">
-          <a-input v-model:value="queryParams.code" placeholder="输入代码" allow-clear style="width: 120px" />
+          <a-input v-model:value="queryParams.code" placeholder="输入代码" allow-clear style="width: 110px" />
         </a-form-item>
         <a-form-item label="回望天数">
           <a-select v-model:value="queryParams.lookbackDays" style="width: 100px">
