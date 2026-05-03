@@ -2,7 +2,7 @@
   <div class="article-list-container">
     <a-card :bordered="false">
       <!-- 标题和操作栏 -->
-      <div class="header-section">
+      <div class="header-section" :class="{ 'justify-end': !isMyArticles }">
         <a-button v-if="isMyArticles" type="primary" @click="handleCreate">
           <template #icon><PlusOutlined /></template>
           创建文章
@@ -339,6 +339,10 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
+}
+
+.header-section.justify-end {
+  justify-content: flex-end;
 }
 
 .article-list :deep(.ant-list-item) {
