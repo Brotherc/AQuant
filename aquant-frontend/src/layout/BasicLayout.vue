@@ -10,117 +10,64 @@
         <!-- 中间 Navigation 区 -->
         <div class="menu-box">
           <a-menu v-model:selectedKeys="selectedKeys" theme="light" mode="horizontal" class="c-menu">
-            
-            <!-- Watchlist -->
-            <a-sub-menu key="/watchlist" popupClassName="top-nav-popup top-nav-popup-compact">
+            <a-sub-menu
+              v-for="group in navigationGroups"
+              :key="group.key"
+              :popupClassName="group.popupClassName"
+            >
               <template #title>
-                <heart-outlined />
-                <span class="nav-text">自选股票</span>
+                <component :is="group.icon" />
+                <span class="nav-text">{{ group.title }}</span>
               </template>
-              <a-menu-item key="/watchlist/index">
-                <router-link to="/watchlist/index">我的自选</router-link>
+              <a-menu-item
+                v-for="child in group.children"
+                :key="child.key"
+                @click="handleNavigate(child.key)"
+              >
+                {{ child.label }}
               </a-menu-item>
             </a-sub-menu>
-
-            <!-- Base Data (Merged) -->
-            <a-sub-menu key="/data" popupClassName="top-nav-popup top-nav-popup-compact">
-              <template #title>
-                <stock-outlined />
-                <span class="nav-text">股票数据</span>
-              </template>
-              <a-menu-item key="/stock-data/index">
-                <router-link to="/stock-data/index">股票详情</router-link>
-              </a-menu-item>
-              <a-menu-item key="/board/index">
-                <router-link to="/board/index">行业板块</router-link>
-              </a-menu-item>
-            </a-sub-menu>
-
-            <!-- Indicators -->
-            <a-sub-menu key="/indicators" popupClassName="top-nav-popup">
-              <template #title>
-                <line-chart-outlined />
-                <span class="nav-text">股票指标</span>
-              </template>
-              <a-menu-item key="/indicators/dupont">
-                <router-link to="/indicators/dupont">杜邦分析</router-link>
-              </a-menu-item>
-              <a-menu-item key="/indicators/growth">
-                <router-link to="/indicators/growth">行业成长性指标</router-link>
-              </a-menu-item>
-              <a-menu-item key="/indicators/valuation">
-                <router-link to="/indicators/valuation">估值指标</router-link>
-              </a-menu-item>
-            </a-sub-menu>
-
-            <!-- Dividend Data -->
-            <a-sub-menu key="/dividend" popupClassName="top-nav-popup top-nav-popup-compact">
-              <template #title>
-                <pay-circle-outlined />
-                <span class="nav-text">分红数据</span>
-              </template>
-              <a-menu-item key="/dividend/index">
-                <router-link to="/dividend/index">分红数据</router-link>
-              </a-menu-item>
-            </a-sub-menu>
-            
-            <!-- Strategy -->
-            <a-sub-menu key="/strategy" popupClassName="top-nav-popup top-nav-popup-compact">
-              <template #title>
-                <radar-chart-outlined />
-                <span class="nav-text">量化策略</span>
-              </template>
-              <a-menu-item key="/strategy/dual-ma">
-                <router-link to="/strategy/dual-ma">双均线策略</router-link>
-              </a-menu-item>
-              <a-menu-item key="/strategy/momentum">
-                <router-link to="/strategy/momentum">动量策略</router-link>
-              </a-menu-item>
-            </a-sub-menu>
-
-            <a-sub-menu key="/finance-sites" popupClassName="top-nav-popup top-nav-popup-compact">
-              <template #title>
-                <global-outlined />
-                <span class="nav-text">投资工具</span>
-              </template>
-              <a-menu-item key="/finance-sites/index">
-                <router-link to="/finance-sites/index">常用网站</router-link>
-              </a-menu-item>
-            </a-sub-menu>
-
           </a-menu>
         </div>
 
-        <!-- 右侧用户区 -->
-        <div class="user-box">
-          <!-- 未登录：显示登录按钮 -->
-          <div v-if="!isLoggedIn" class="login-trigger" @click="goLogin">
-            <login-outlined />
-            <span style="margin-left: 6px;">登录</span>
-          </div>
-
-          <!-- 已登录：显示用户头像 + 退出 -->
-          <a-dropdown v-else>
-            <div class="user-trigger">
-              <a-avatar size="small" style="background-color: #1890ff;">
-                {{ nickname.charAt(0) }}
-              </a-avatar>
-              <span class="user-nickname">{{ nickname }}</span>
-            </div>
-            <template #overlay>
-              <a-menu>
-                <a-menu-item key="updateEmail" @click="showUpdateEmailModal">
-                  <mail-outlined />
-                  <span style="margin-left: 8px;">修改邮箱</span>
-                </a-menu-item>
-                <a-menu-divider />
-                <a-menu-item key="logout" @click="handleLogout">
-                  <logout-outlined />
-                  <span style="margin-left: 8px;">退出登录</span>
-                </a-menu-item>
-              </a-menu>
+        <div class="header-actions">
+          <a-button type="text" class="mobile-nav-trigger" @click="openNavDrawer">
+            <template #icon>
+              <menu-outlined />
             </template>
-          </a-dropdown>
+          </a-button>
+
+          <!-- 右侧用户区 -->
+          <div class="user-box">
+          <!-- 未登录：显示登录按钮 -->
+            <div v-if="!isLoggedIn" class="login-trigger" @click="goLogin">
+              <login-outlined />
+              <span style="margin-left: 6px;">登录</span>
+            </div>
+
+            <!-- 已登录：显示用户头像 + 退出 -->
+            <a-dropdown v-else>
+              <div class="user-trigger">
+                <a-avatar size="small" style="background-color: #1890ff;">
+                  {{ nickname.charAt(0) }}
+                </a-avatar>
+                <span class="user-nickname">{{ nickname }}</span>
+              </div>
+              <template #overlay>
+                <a-menu>
+                  <a-menu-item key="updateEmail" @click="showUpdateEmailModal">
+                    <mail-outlined />
+                    <span style="margin-left: 8px;">修改邮箱</span>
+                  </a-menu-item>
+                  <a-menu-divider />
+                  <a-menu-item key="logout" @click="handleLogout">
+                    <logout-outlined />
+                    <span style="margin-left: 8px;">退出登录</span>
+                  </a-menu-item>
+                </a-menu>
+              </template>
+            </a-dropdown>
+          </div>
         </div>
       </div>
     </a-layout-header>
@@ -156,6 +103,36 @@
         </a-form-item>
       </a-form>
     </a-modal>
+
+    <a-drawer
+      v-model:visible="navDrawerVisible"
+      placement="right"
+      title="导航菜单"
+      width="320"
+      class="mobile-nav-drawer"
+    >
+      <a-menu
+        mode="inline"
+        :selectedKeys="selectedKeys"
+        v-model:openKeys="drawerOpenKeys"
+      >
+        <a-sub-menu v-for="group in navigationGroups" :key="group.key">
+          <template #title>
+            <span class="mobile-nav-title">
+              <component :is="group.icon" />
+              <span>{{ group.title }}</span>
+            </span>
+          </template>
+          <a-menu-item
+            v-for="child in group.children"
+            :key="child.key"
+            @click="handleDrawerNavigate(child.key)"
+          >
+            {{ child.label }}
+          </a-menu-item>
+        </a-sub-menu>
+      </a-menu>
+    </a-drawer>
   </a-layout>
 </template>
 
@@ -171,40 +148,109 @@ import {
   HeartOutlined,
   LogoutOutlined,
   LoginOutlined,
-  MailOutlined
+  MailOutlined,
+  MenuOutlined
 } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
 import { updateEmail } from '@/api/auth';
+
+type NavigationChild = {
+  key: string;
+  label: string;
+};
+
+type NavigationGroup = {
+  key: string;
+  title: string;
+  icon: any;
+  popupClassName: string;
+  children: NavigationChild[];
+};
 
 const route = useRoute();
 const router = useRouter();
 const selectedKeys = ref<string[]>([]);
 const isLoggedIn = ref(!!localStorage.getItem('token'));
 const nickname = ref(localStorage.getItem('nickname') || '用户');
+const navDrawerVisible = ref(false);
+const drawerOpenKeys = ref<string[]>([]);
 
-const routeMetaMap: Record<string, { parent: string; child: string }> = {
-  '/watchlist/index': { parent: '自选股票', child: '我的自选' },
-  '/stock-data/index': { parent: '股票数据', child: '股票详情' },
-  '/board/index': { parent: '股票数据', child: '行业板块' },
-  '/indicators/dupont': { parent: '股票指标', child: '杜邦分析' },
-  '/indicators/growth': { parent: '股票指标', child: '行业成长性指标' },
-  '/indicators/valuation': { parent: '股票指标', child: '估值指标' },
-  '/dividend/index': { parent: '分红数据', child: '分红数据' },
-  '/strategy/dual-ma': { parent: '量化策略', child: '双均线策略' },
-  '/strategy/momentum': { parent: '量化策略', child: '动量策略' },
-  '/finance-sites/index': { parent: '投资工具', child: '常用网站' },
-};
+const navigationGroups: NavigationGroup[] = [
+  {
+    key: '/watchlist',
+    title: '自选股票',
+    icon: HeartOutlined,
+    popupClassName: 'top-nav-popup top-nav-popup-compact',
+    children: [{ key: '/watchlist/index', label: '我的自选' }]
+  },
+  {
+    key: '/data',
+    title: '股票数据',
+    icon: StockOutlined,
+    popupClassName: 'top-nav-popup top-nav-popup-compact',
+    children: [
+      { key: '/stock-data/index', label: '股票详情' },
+      { key: '/board/index', label: '行业板块' }
+    ]
+  },
+  {
+    key: '/indicators',
+    title: '股票指标',
+    icon: LineChartOutlined,
+    popupClassName: 'top-nav-popup',
+    children: [
+      { key: '/indicators/dupont', label: '杜邦分析' },
+      { key: '/indicators/growth', label: '行业成长性指标' },
+      { key: '/indicators/valuation', label: '估值指标' }
+    ]
+  },
+  {
+    key: '/dividend',
+    title: '分红数据',
+    icon: PayCircleOutlined,
+    popupClassName: 'top-nav-popup top-nav-popup-compact',
+    children: [{ key: '/dividend/index', label: '分红数据' }]
+  },
+  {
+    key: '/strategy',
+    title: '量化策略',
+    icon: RadarChartOutlined,
+    popupClassName: 'top-nav-popup top-nav-popup-compact',
+    children: [
+      { key: '/strategy/dual-ma', label: '双均线策略' },
+      { key: '/strategy/momentum', label: '动量策略' }
+    ]
+  },
+  {
+    key: '/finance-sites',
+    title: '投资工具',
+    icon: GlobalOutlined,
+    popupClassName: 'top-nav-popup top-nav-popup-compact',
+    children: [{ key: '/finance-sites/index', label: '常用网站' }]
+  }
+];
 
-const currentRouteMeta = computed(() => routeMetaMap[route.path]);
+const currentRouteMeta = computed(() => {
+  for (const group of navigationGroups) {
+    const child = group.children.find((item) => item.key === route.path);
+    if (child) {
+      return { parent: group.title, child: child.label };
+    }
+  }
+  return undefined;
+});
 
 // 同步菜单状态
 const syncMenuState = () => {
   const path = route.path;
   selectedKeys.value = [path];
+  const activeGroup = navigationGroups.find((group) => group.children.some((child) => child.key === path));
+  drawerOpenKeys.value = activeGroup ? [activeGroup.key] : [];
 };
 
 watch(() => route.path, () => {
   syncMenuState();
+  navDrawerVisible.value = false;
   // 路由切换时刷新登录状态（登录完成后跳回来）
   isLoggedIn.value = !!localStorage.getItem('token');
   nickname.value = localStorage.getItem('nickname') || '用户';
@@ -216,6 +262,22 @@ onMounted(() => {
 
 const goLogin = () => {
   router.push('/login');
+};
+
+const handleNavigate = (path: string) => {
+  if (route.path !== path) {
+    router.push(path);
+  }
+};
+
+const handleDrawerNavigate = (path: string) => {
+  navDrawerVisible.value = false;
+  handleNavigate(path);
+};
+
+const openNavDrawer = () => {
+  syncMenuState();
+  navDrawerVisible.value = true;
 };
 
 const handleLogout = () => {
@@ -306,6 +368,13 @@ const handleUpdateEmail = async () => {
   justify-content: flex-end;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  margin-left: 24px;
+  flex-shrink: 0;
+}
+
 .logo {
   height: 64px;
   line-height: 64px;
@@ -330,11 +399,15 @@ const handleUpdateEmail = async () => {
   border-bottom: none !important;
 }
 
+.mobile-nav-trigger {
+  display: none;
+  margin-right: 8px;
+}
+
 /* 用户信息区 */
 .user-box {
   display: flex;
   align-items: center;
-  margin-left: 24px;
   flex-shrink: 0;
 }
 
@@ -420,6 +493,28 @@ const handleUpdateEmail = async () => {
 .nav-text {
   margin-left: 6px;
 }
+
+@media (max-width: 1180px) {
+  .header-container {
+    padding: 0 16px;
+  }
+
+  .menu-box {
+    display: none;
+  }
+
+  .mobile-nav-trigger {
+    display: inline-flex;
+  }
+
+  .header-actions {
+    margin-left: auto;
+  }
+
+  .user-nickname {
+    display: none;
+  }
+}
 </style>
 
 <style>
@@ -434,5 +529,19 @@ const handleUpdateEmail = async () => {
 .top-nav-popup.ant-menu-submenu-popup .ant-menu-item,
 .top-nav-popup.ant-menu-submenu-popup .ant-menu-submenu-title {
   padding-inline: 14px !important;
+}
+
+.mobile-nav-drawer .ant-drawer-body {
+  padding: 12px 0;
+}
+
+.mobile-nav-drawer .ant-menu {
+  border-inline-end: none !important;
+}
+
+.mobile-nav-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 </style>
