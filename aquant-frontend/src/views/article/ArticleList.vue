@@ -24,11 +24,11 @@
       >
         <template #renderItem="{ item }">
           <a-list-item>
-            <a-list-item-meta>
+            <a-list-item-meta @click="handleView(item.id)" class="clickable-meta">
               <template #title>
-                <a @click="handleView(item.id)" class="article-title">
+                <span class="article-title">
                   {{ item.title }}
-                </a>
+                </span>
               </template>
               <template #description>
                 <!-- 显示摘要 -->
@@ -37,7 +37,7 @@
                 </div>
                 <!-- 元数据信息 -->
                 <a-space :size="16" class="article-meta">
-                  <span>
+                  <span v-if="!isMyArticles">
                     <UserOutlined />
                     {{ item.authorUsername }}
                   </span>
@@ -354,18 +354,16 @@ onUnmounted(() => {
   background-color: #fafafa;
 }
 
+.clickable-meta {
+  cursor: pointer;
+}
+
 .article-title {
   font-size: 16px;
   font-weight: 600;
-  color: #1890ff;
-  cursor: pointer;
-  transition: color 0.3s;
+  color: #262626;
   word-break: break-word;
   overflow-wrap: break-word;
-}
-
-.article-title:hover {
-  color: #40a9ff;
 }
 
 :deep(.ant-list-item-meta-description) {

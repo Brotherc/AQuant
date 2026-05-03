@@ -215,6 +215,9 @@ onMounted(() => {
   line-height: 1.4;
   margin-bottom: 16px;
   color: #262626;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .article-meta {
@@ -231,6 +234,11 @@ onMounted(() => {
   font-size: 16px;
   line-height: 1.8;
   color: #262626;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 /* Tiptap 内容样式 */
@@ -239,6 +247,9 @@ onMounted(() => {
   font-weight: 700;
   margin: 0.67em 0;
   line-height: 1.3;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .article-text :deep(h2) {
@@ -246,6 +257,9 @@ onMounted(() => {
   font-weight: 600;
   margin: 0.75em 0;
   line-height: 1.4;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .article-text :deep(h3) {
@@ -253,11 +267,17 @@ onMounted(() => {
   font-weight: 600;
   margin: 0.83em 0;
   line-height: 1.5;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .article-text :deep(p) {
   margin: 1em 0;
   line-height: 1.8;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .article-text :deep(ul),
@@ -285,6 +305,9 @@ onMounted(() => {
   border-radius: 8px;
   overflow-x: auto;
   margin: 1em 0;
+  max-width: 100%;
+  word-wrap: normal;
+  white-space: pre-wrap;
 }
 
 .article-text :deep(pre code) {
@@ -292,6 +315,8 @@ onMounted(() => {
   padding: 0;
   color: inherit;
   font-size: 0.9em;
+  word-wrap: normal;
+  white-space: pre-wrap;
 }
 
 .article-text :deep(blockquote) {
@@ -300,11 +325,17 @@ onMounted(() => {
   margin: 1em 0;
   color: #595959;
   font-style: italic;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .article-text :deep(a) {
   color: #1890ff;
   text-decoration: underline;
+  word-wrap: break-word;
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 .article-text :deep(a:hover) {
