@@ -1240,8 +1240,11 @@ onMounted(() => {
 /* 排序与搜索控制器样式 */
 .control-bar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
+  row-gap: 10px;
   margin-bottom: 12px;
   font-size: 13px;
   color: #888;
@@ -1250,23 +1253,39 @@ onMounted(() => {
 .search-box {
   display: flex;
   align-items: center;
+  flex: 0 1 auto;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .sort-options {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
+  flex: 1 1 480px;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  padding-bottom: 2px;
 }
 
 .control-bar .ctrl-label {
   margin-right: 8px;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .control-bar .ctrl-item {
   display: inline-flex;
   align-items: center;
+  flex: 0 0 auto;
+  min-width: fit-content;
   margin-left: 16px;
   cursor: pointer;
   transition: color 0.2s;
+  white-space: nowrap;
 }
 
 .control-bar .ctrl-item:hover {
