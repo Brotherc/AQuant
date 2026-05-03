@@ -33,7 +33,18 @@ public enum ExceptionEnum {
     AUTH_RESET_CODE_SEND_TOO_FREQUENT(1000210, "验证码发送过于频繁，请稍后再试"),
     AUTH_MAIL_NOT_CONFIGURED(1000211, "邮件服务未配置"),
     AUTH_RESET_PASSWORD_SAME_AS_OLD(1000212, "新密码不能与原密码相同"),
-    AUTH_RESET_CODE_SEND_FAILED(1000213, "验证码发送失败，请稍后重试");
+    AUTH_RESET_CODE_SEND_FAILED(1000213, "验证码发送失败，请稍后重试"),
+
+    ARTICLE_NOT_FOUND(1000301, "文章不存在"),
+    ARTICLE_ACCESS_DENIED(1000302, "无权访问该文章"),
+    ARTICLE_TITLE_EMPTY(1000303, "文章标题不能为空"),
+    ARTICLE_TITLE_TOO_LONG(1000304, "文章标题不能超过200字符"),
+    ARTICLE_CONTENT_EMPTY(1000305, "文章内容不能为空"),
+    ARTICLE_CONTENT_TOO_LONG(1000306, "文章内容不能超过50000字符"),
+    ARTICLE_INVALID_VISIBILITY(1000307, "无效的可见性设置，只能是public或private"),
+    ARTICLE_UPDATE_DENIED(1000308, "只有作者可以修改文章"),
+    ARTICLE_DELETE_DENIED(1000309, "只有作者可以删除文章"),
+    ARTICLE_AUTH_REQUIRED(1000310, "该操作需要登录");
 
     /**
      * 应用(1~2位)、服务(2位)、模块(2位)、异常(2位)

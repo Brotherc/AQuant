@@ -107,6 +107,39 @@ const router = createRouter({
                             component: () => import('@/views/finance-sites/FinanceSites.vue')
                         }
                     ]
+                },
+                {
+                    path: 'article',
+                    name: 'ArticleRoot',
+                    children: [
+                        {
+                            path: 'public',
+                            name: 'PublicArticles',
+                            component: () => import('@/views/article/ArticleList.vue'),
+                            props: { isMyArticles: false }
+                        },
+                        {
+                            path: 'my',
+                            name: 'MyArticles',
+                            component: () => import('@/views/article/ArticleList.vue'),
+                            props: { isMyArticles: true }
+                        },
+                        {
+                            path: 'detail/:id',
+                            name: 'ArticleDetail',
+                            component: () => import('@/views/article/ArticleDetail.vue')
+                        },
+                        {
+                            path: 'create',
+                            name: 'ArticleCreate',
+                            component: () => import('@/views/article/ArticleEdit.vue')
+                        },
+                        {
+                            path: 'edit/:id',
+                            name: 'ArticleEdit',
+                            component: () => import('@/views/article/ArticleEdit.vue')
+                        }
+                    ]
                 }
             ]
         }

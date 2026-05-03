@@ -149,7 +149,8 @@ import {
   LogoutOutlined,
   LoginOutlined,
   MailOutlined,
-  MenuOutlined
+  MenuOutlined,
+  FileTextOutlined
 } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
 import { updateEmail } from '@/api/auth';
@@ -227,6 +228,16 @@ const navigationGroups: NavigationGroup[] = [
     icon: GlobalOutlined,
     popupClassName: 'top-nav-popup top-nav-popup-compact',
     children: [{ key: '/finance-sites/index', label: '常用网站' }]
+  },
+  {
+    key: '/article',
+    title: '投资社区',
+    icon: FileTextOutlined,
+    popupClassName: 'top-nav-popup top-nav-popup-compact',
+    children: [
+      { key: '/article/public', label: '广场' },
+      { key: '/article/my', label: '我的笔记' }
+    ]
   }
 ];
 
