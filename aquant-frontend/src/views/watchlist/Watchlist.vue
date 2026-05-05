@@ -2,43 +2,50 @@
   <div class="watchlist-container">
     <!-- 分组导航标签 -->
     <div class="group-tags-header">
-      <div class="group-label">自选分组：</div>
-      <div 
-        v-for="group in groups" 
-        :key="group.id" 
-        class="custom-group-tag"
-        :class="{ active: activeGroupId === group.id, editing: editingGroupId === group.id }"
-        @click="handleTabChange(group.id)"
-        @dblclick="startEditGroup(group)"
-      >
-        <template v-if="editingGroupId === group.id">
-          <a-input
-            ref="editInputRef"
-            v-model:value="editGroupName"
-            size="small"
-            class="edit-group-input"
-            @blur="submitEditGroup"
-            @keyup.enter="submitEditGroup"
-            @keyup.esc="cancelEditGroup"
-            @click.stop
-          />
-        </template>
-        <template v-else>
-          <span class="tag-name">{{ group.name }}</span>
-          <edit-outlined 
-            v-if="activeGroupId === group.id" 
-            class="edit-group-icon"
-            @click.stop="startEditGroup(group)" 
-          />
-          <close-outlined 
-            v-if="activeGroupId === group.id" 
-            class="delete-group-icon"
-            @click.stop="onDeleteGroup(group.id)" 
-          />
-        </template>
+      <div class="group-tags-left">
+        <div class="group-label">自选分组：</div>
+        <div 
+          v-for="group in groups" 
+          :key="group.id" 
+          class="custom-group-tag"
+          :class="{ active: activeGroupId === group.id, editing: editingGroupId === group.id }"
+          @click="handleTabChange(group.id)"
+          @dblclick="startEditGroup(group)"
+        >
+          <template v-if="editingGroupId === group.id">
+            <a-input
+              ref="editInputRef"
+              v-model:value="editGroupName"
+              size="small"
+              class="edit-group-input"
+              @blur="submitEditGroup"
+              @keyup.enter="submitEditGroup"
+              @keyup.esc="cancelEditGroup"
+              @click.stop
+            />
+          </template>
+          <template v-else>
+            <span class="tag-name">{{ group.name }}</span>
+            <div class="tag-actions">
+              <edit-outlined 
+                v-if="activeGroupId === group.id" 
+                class="edit-group-icon"
+                @click.stop="startEditGroup(group)" 
+              />
+              <close-outlined 
+                v-if="activeGroupId === group.id" 
+                class="delete-group-icon"
+                @click.stop="onDeleteGroup(group.id)" 
+              />
+            </div>
+          </template>
+        </div>
       </div>
-      <div class="custom-group-tag add-btn" @click="showAddGroupModal">
-        ＋
+      <div class="group-tags-right">
+        <div class="custom-group-tag add-btn" @click="showAddGroupModal">
+          <plus-outlined style="font-size: 12px;" />
+          <span>新建分组</span>
+        </div>
       </div>
     </div>
 
@@ -47,16 +54,17 @@
     
       <!-- 轻量级排序与搜索操作带 -->
       <div class="control-bar" v-if="stocks.length > 0">
-        <div class="search-box" style="display: flex; align-items: center; gap: 16px;">
+        <div class="search-box" style="display: flex; align-items: center; gap: 12px;">
           <a-input 
             v-model:value="searchQuery" 
             placeholder="输入名称或代码搜索" 
             allowClear 
             size="small"
-            style="width: 200px; border-radius: 4px;"
+            class="watchlist-search-input"
+            style="width: 230px;"
           >
             <template #prefix>
-              <search-outlined style="color: rgba(0, 0, 0, 0.45)" />
+              <search-outlined />
             </template>
           </a-input>
           <a-checkbox v-model:checked="filterNoti">仅看有通知设置</a-checkbox>
@@ -98,7 +106,7 @@
                     <span @click.stop="openNotiModal(stock)" style="display: inline-flex; align-items: center; cursor: pointer; margin-right: 12px; font-size: 16px;">
                       <bell-filled
                         v-if="stock.hasNotification"
-                        style="color: #1890ff;"
+                        style="color: rgba(255, 255, 255, 0.9);"
                         title="修改通知规则"
                       />
                       <bell-outlined 
@@ -277,8 +285,8 @@
       </div>
       <div v-else>
         <div style="margin-bottom: 16px; text-align: right;">
-          <a-button type="primary" ghost @click="handleAddNoti">
-            <template #prefix><plus-outlined /></template>
+          <a-button type="default" @click="handleAddNoti">
+            <template #icon><plus-outlined /></template>
             新增
           </a-button>
         </div>
@@ -328,7 +336,7 @@
                           <div>每日：触发通知后，今日不再重复报警</div>
                           <div>重复：条件满足时持续报警，间隔1分钟</div>
                         </template>
-                        <span style="font-size: 12px; color: #999; white-space: nowrap; cursor: help; border-bottom: 1px dashed #ccc;">策略:</span>
+                        <span style="font-size: 12px; color: #999; white-space: nowrap; cursor: help;">策略:</span>
                         <question-circle-outlined style="font-size: 12px; color: #ccc; cursor: help; margin-left: 2px;" />
                       </a-tooltip>
                       <a-radio-group v-model:value="item.notifyStrategy" style="display: flex; flex-wrap: nowrap;">
@@ -340,6 +348,7 @@
                   
                   <a-col :span="3" style="text-align: center;">
                     <a-switch 
+                      class="notification-enable-switch"
                       v-model:checked="item.isEnabled" 
                       :checkedValue="1" 
                       :unCheckedValue="0" 
@@ -380,7 +389,8 @@ import {
   EditOutlined,
   BellOutlined,
   BellFilled,
-  QuestionCircleOutlined
+  QuestionCircleOutlined,
+  CloseCircleFilled
 } from '@ant-design/icons-vue';
 import MiniKlineChart from './components/MiniKlineChart.vue';
 import StockDetailView from './components/StockDetailView.vue';
@@ -942,6 +952,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* ========================================
+   Watchlist - Apple Design 深色模式
+   ======================================== */
+
 .header-right {
   display: flex;
   align-items: center;
@@ -950,65 +964,93 @@ onMounted(() => {
 
 .noti-icon {
   font-size: 16px;
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-base) var(--transition-timing);
 }
 
 .noti-icon:hover {
-  color: #1890ff;
+  color: var(--color-accent);
   transform: scale(1.1);
 }
 
 .watchlist-container {
-  padding: 16px;
+  padding: 0;
+  max-width: 100%;
+  margin: 0 auto;
 }
+
+/* ========================================
+   分组标签 - Segmented Control 风格
+   ======================================== */
 
 .group-tags-header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  margin-bottom: 24px;
-  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-xl);
+  gap: var(--spacing-sm);
+  background: rgba(255, 255, 255, 0.04);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+}
+
+.group-tags-left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex: 1;
+}
+
+.group-tags-right {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
 }
 
 .group-label {
-  font-size: 16px;
-  font-weight: 500;
-  color: #111;
-  margin-right: 8px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  margin-right: var(--spacing-sm);
+  letter-spacing: 0.3px;
 }
 
 .custom-group-tag {
-  font-size: 13px;
-  padding: 4px 12px;
+  font-size: var(--font-size-sm);
+  padding: 6px 14px;
   cursor: pointer;
-  border-radius: 6px;
-  border: 1px solid #d9d9d9;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
   display: flex;
   align-items: center;
-  transition: all 0.2s ease;
-  color: #111;
-  background-color: #fff;
+  gap: 0;
+  transition: all var(--transition-base) var(--transition-timing);
+  color: var(--color-text-secondary);
+  background-color: transparent;
   user-select: none;
+  font-weight: var(--font-weight-medium);
 }
 
 .custom-group-tag:hover {
-  background-color: #fafafa;
-  border-color: #1677ff;
-  color: #1677ff;
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-hover);
 }
 
 .custom-group-tag.active {
-  background-color: #fff;
-  border-color: #1677ff;
-  color: #1677ff;
+  background-color: rgba(255, 255, 255, 0.15);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .custom-group-tag.active:hover {
-  background-color: #f5f5f5;
-  border-color: #4096ff;
-  color: #4096ff;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .delete-group-icon {
@@ -1016,7 +1058,7 @@ onMounted(() => {
   font-size: 12px;
   color: inherit;
   opacity: 0.8;
-  transition: opacity 0.2s;
+  transition: opacity var(--transition-fast);
   cursor: pointer;
 }
 
@@ -1024,12 +1066,23 @@ onMounted(() => {
   opacity: 1;
 }
 
+.custom-group-tag .tag-name {
+  margin-right: 16px !important;
+}
+
+.custom-group-tag .tag-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px !important;
+  margin-left: auto;
+}
+
 .edit-group-icon {
-  margin-left: 8px;
+  margin-left: 0;
   font-size: 13px;
   color: inherit;
-  opacity: 0.6;
-  transition: all 0.2s;
+  opacity: 0.7;
+  transition: all var(--transition-fast);
   cursor: pointer;
 }
 
@@ -1040,27 +1093,42 @@ onMounted(() => {
 
 .custom-group-tag.editing {
   padding: 0;
-  border-color: transparent;
   background-color: transparent;
 }
 
 .edit-group-input {
   width: 120px;
-  height: 28px;
-  font-size: 13px;
-  border-radius: 4px;
+  height: 32px;
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-md);
 }
 
 .custom-group-tag.add-btn {
-  color: #888;
-  padding: 4px 10px;
-  border: 1px dashed #d9d9d9;
+  color: var(--color-text-primary);
+  padding: 6px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 14px;
+  font-weight: var(--font-weight-semibold);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .custom-group-tag.add-btn:hover {
-  color: #1677ff;
-  border-color: #1677ff;
-  background-color: #fafafa;
+  color: var(--color-text-primary);
+  border-color: var(--color-border-hover);
+  background-color: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+/* ========================================
+   卡片网格 - Apple 风格间距
+   ======================================== */
+
+.card-grid {
+  margin-bottom: var(--spacing-lg);
 }
 
 .draggable-wrapper {
@@ -1072,182 +1140,239 @@ onMounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  background: var(--color-bg-elevated) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-sm) !important;
+  transition: all var(--transition-base) var(--transition-timing) !important;
+  padding: 18px !important;
+}
+
+.stock-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover) !important;
+  border-color: var(--color-border-hover) !important;
 }
 
 .add-stock-card {
   height: 100%;
-  min-height: 180px;
+  min-height: 200px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  border: 1px dashed #d9d9d9 !important;
-  background-color: transparent;
+  border: 1px dashed var(--color-border) !important;
+  background-color: transparent !important;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all var(--transition-base) var(--transition-timing);
+  border-radius: var(--radius-xl) !important;
 }
 
 .add-stock-card:hover {
-  border-color: #1677ff !important;
-  background-color: #f0f5ff;
+  border-color: var(--color-accent) !important;
+  background-color: var(--color-accent-light) !important;
+  transform: translateY(-2px);
 }
 
 .add-stock-card:hover .add-icon,
 .add-stock-card:hover .add-text {
-  color: #1677ff;
+  color: var(--color-accent);
 }
 
 .add-icon {
   font-size: 32px;
-  color: #bfbfbf;
+  color: var(--color-text-tertiary);
   margin-bottom: 12px;
-  transition: all 0.3s;
+  transition: all var(--transition-base);
 }
 
 .add-text {
-  font-size: 15px;
-  color: #888;
-  font-weight: 500;
-  transition: all 0.3s;
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+  transition: all var(--transition-base);
 }
+
+/* ========================================
+   股票卡片内容
+   ======================================== */
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .stock-info {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 8px;
 }
 
 .stock-name {
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  letter-spacing: -0.2px;
 }
 
 .stock-code {
-  font-size: 12px;
-  color: #888;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+  font-weight: 600;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  letter-spacing: 0.5px;
 }
 
 .more-icon {
   font-size: 18px;
-  color: #888;
+  color: var(--color-text-tertiary);
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  transition: all 0.2s;
+  padding: 6px;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
 }
 
 .more-icon:hover {
-  background-color: #f5f5f5;
-  color: #1677ff;
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-primary);
 }
 
 .delete-icon {
-  color: #ff4d4f;
+  color: var(--color-error);
   cursor: pointer;
-  opacity: 0.6;
-  transition: opacity 0.2s;
+  opacity: 0.7;
+  transition: opacity var(--transition-fast);
 }
 
 .delete-icon:hover {
   opacity: 1;
 }
 
+/* ========================================
+   行情数据 - Apple 柔和色彩
+   ======================================== */
+
 .quote-info {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .latest-price {
-  font-size: 20px;
-  font-weight: bold;
+  font-size: 24px;
+  font-weight: var(--font-weight-semibold);
+  font-family: var(--font-family-mono);
+  letter-spacing: -0.5px;
 }
 
 .change-percent {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  font-family: var(--font-family-mono);
 }
 
 .up {
-  color: #ff4d4f;
+  color: var(--color-error);
 }
 
 .down {
-  color: #52c41a;
+  color: var(--color-success);
 }
 
 .neutral {
-  color: #333;
+  color: var(--color-text-secondary);
 }
 
 .kline-box {
   flex-grow: 1;
   min-height: 100px;
+  margin-bottom: 12px;
 }
+
+/* ========================================
+   基本面数据 - 弱化显示
+   ======================================== */
 
 .fundamentals {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
+  padding-top: 12px;
+  border-top: 1px solid var(--color-divider);
 }
 
 .fund-item {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 4px;
 }
 
 .fund-item .label {
-  color: #888;
-  margin-bottom: 2px;
+  color: var(--color-text-tertiary);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .fund-item .val {
-  color: #333;
-  font-weight: 500;
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-semibold);
+  font-family: var(--font-family-mono);
 }
 
+/* ========================================
+   分红信息 - 减少饱和度
+   ======================================== */
+
 .dividends-wrap {
-  margin-top: 4px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--color-divider);
 }
 
 .dividend-row {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
-  color: #666;
-  margin-bottom: 2px;
+  font-size: var(--font-size-xs);
+  margin-bottom: 4px;
 }
 
 .div-date {
-  color: #999;
+  color: var(--color-text-tertiary);
+  font-family: var(--font-family-mono);
 }
 
 .div-text {
-  color: #d46b08; /* 橙色高亮分红信息 */
-  font-weight: 500;
+  color: var(--color-error);
+  font-weight: var(--font-weight-medium);
+  opacity: 0.9;
 }
 
-/* 排序与搜索控制器样式 */
+/* ========================================
+   排序与搜索控制器
+   ======================================== */
+
 .control-bar {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
-  row-gap: 10px;
+  gap: var(--spacing-md);
+  row-gap: 12px;
   margin-bottom: 12px;
-  font-size: 13px;
-  color: #888;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  background: transparent;
+  padding: 12px 0;
+  border-radius: var(--radius-lg);
 }
 
 .search-box {
@@ -1261,7 +1386,7 @@ onMounted(() => {
 .sort-options {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: flex-end;
   flex: 1 1 480px;
   max-width: 100%;
   min-width: 0;
@@ -1269,12 +1394,15 @@ onMounted(() => {
   overflow-y: hidden;
   white-space: nowrap;
   padding-bottom: 2px;
+  margin-left: auto;
 }
 
 .control-bar .ctrl-label {
-  margin-right: 8px;
+  margin-right: var(--spacing-sm);
   white-space: nowrap;
   flex: 0 0 auto;
+  color: var(--color-text-tertiary);
+  font-weight: var(--font-weight-medium);
 }
 
 .control-bar .ctrl-item {
@@ -1282,19 +1410,24 @@ onMounted(() => {
   align-items: center;
   flex: 0 0 auto;
   min-width: fit-content;
-  margin-left: 16px;
+  margin-left: var(--spacing-md);
   cursor: pointer;
-  transition: color 0.2s;
+  transition: color var(--transition-fast);
   white-space: nowrap;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-weight-medium);
 }
 
 .control-bar .ctrl-item:hover {
-  color: #333;
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .control-bar .ctrl-item.active {
-  color: #1890ff; /* 激活项采用焦点色 */
-  font-weight: 500;
+  color: var(--color-accent);
+  font-weight: var(--font-weight-semibold);
+  background: var(--color-accent-light);
 }
 
 .control-bar .ctrl-item .anticon {
@@ -1302,7 +1435,10 @@ onMounted(() => {
   font-size: 11px;
 }
 
-/* 空状态样式 */
+/* ========================================
+   空状态样式
+   ======================================== */
+
 .empty-stocks-wrapper {
   padding: 80px 0;
   display: flex;
@@ -1317,5 +1453,107 @@ onMounted(() => {
   justify-content: center;
   align-items: center;
   width: 100%;
+}
+
+/* ========================================
+   搜索框样式 - 完全禁用 hover 效果
+   ======================================== */
+
+.watchlist-search-input.ant-input-affix-wrapper,
+.watchlist-search-input.ant-input-affix-wrapper:hover,
+.watchlist-search-input.ant-input-affix-wrapper:focus,
+.watchlist-search-input.ant-input-affix-wrapper-focused,
+.watchlist-search-input.ant-input-affix-wrapper-focused:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  box-shadow: none !important;
+  border-radius: 10px !important;
+}
+
+.watchlist-search-input :deep(.ant-input),
+.watchlist-search-input :deep(.ant-input:hover),
+.watchlist-search-input :deep(.ant-input:focus) {
+  background: transparent !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: none !important;
+}
+
+.watchlist-search-input :deep(.ant-input::placeholder) {
+  color: var(--color-text-tertiary) !important;
+}
+
+.watchlist-search-input :deep(.ant-input-prefix),
+.watchlist-search-input :deep(.anticon-search) {
+  color: var(--color-text-tertiary) !important;
+}
+
+.watchlist-search-input :deep(.ant-input-suffix),
+.watchlist-search-input :deep(.ant-input-clear-icon) {
+  color: var(--color-text-tertiary) !important;
+}
+
+.watchlist-search-input :deep(.ant-input-clear-icon:hover) {
+  color: var(--color-text-secondary) !important;
+}
+
+.notification-enable-switch :deep(.ant-switch-inner-checked),
+.notification-enable-switch :deep(.ant-switch-inner-unchecked) {
+  color: inherit;
+}
+
+/* ========================================
+   通知设置 Modal - 控件对齐
+   ======================================== */
+
+/* 确保所有输入控件垂直居中对齐 */
+:deep(.ant-list-item .ant-row) {
+  align-items: center !important;
+}
+
+/* Select 下拉框对齐 */
+:deep(.ant-list-item .ant-select) {
+  display: flex;
+  align-items: center;
+}
+
+:deep(.ant-list-item .ant-select-selector) {
+  display: flex;
+  align-items: center;
+  height: 32px;
+}
+
+/* InputNumber 对齐 */
+:deep(.ant-list-item .ant-input-number) {
+  height: 32px;
+  display: flex;
+  align-items: center;
+}
+
+:deep(.ant-list-item .ant-input-number-input) {
+  height: 30px;
+}
+
+/* Radio Group 对齐 */
+:deep(.ant-list-item .ant-radio-group) {
+  display: flex;
+  align-items: center;
+}
+
+:deep(.ant-list-item .ant-radio-wrapper) {
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+
+/* Switch 开关对齐 */
+:deep(.ant-list-item .ant-switch) {
+  vertical-align: middle;
+}
+
+/* 按钮对齐 */
+:deep(.ant-list-item .ant-btn-link) {
+  height: auto;
+  line-height: 1;
+  padding: 4px 8px;
 }
 </style>

@@ -338,31 +338,31 @@ const handleUpdateEmail = async () => {
 <style scoped>
 .c-end-layout {
   min-height: 100vh;
-  background: #f5f7fa;
+  background: var(--color-bg-primary);
 }
 
-/* 顶部玻璃态导航 */
+/* 顶部导航 - Apple Style */
 .c-header {
   position: fixed;
   top: 0;
   width: 100%;
   height: 64px;
   z-index: 1000;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: saturate(180%) blur(20px);
+  background: var(--color-bg-header);
+  border-bottom: 1px solid var(--color-divider);
   padding: 0;
-  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.04);
+  box-shadow: none;
   display: flex;
   justify-content: center;
 }
 
-/* 头部内容主轴 */
+/* 头部内容主轴 - 全宽布局 */
 .header-container {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  max-width: 1400px;
+  max-width: 100%;
   padding: 0 24px;
 }
 
@@ -389,11 +389,11 @@ const handleUpdateEmail = async () => {
 .logo {
   height: 64px;
   line-height: 64px;
-  color: #1890ff;
-  font-size: 22px;
-  font-weight: 800;
+  color: var(--color-text-primary);
+  font-size: 20px;
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
-  letter-spacing: 1px;
+  letter-spacing: -0.5px;
   white-space: nowrap;
 }
 
@@ -403,7 +403,57 @@ const handleUpdateEmail = async () => {
   background: transparent;
   flex: 1;
   justify-content: flex-end;
-  font-size: 15px;
+  font-size: 14px;
+}
+
+.c-menu :deep(.ant-menu-submenu) {
+  margin: 0 2px;
+  padding: 0 10px;
+}
+
+.c-menu :deep(.ant-menu-item) {
+  color: var(--color-text-secondary);
+  border-bottom: 2px solid transparent;
+  transition: all var(--transition-base) var(--transition-timing);
+  margin: 0;
+  padding: 0 20px;
+}
+
+.c-menu :deep(.ant-menu-item:hover) {
+  color: var(--color-text-primary);
+  background: transparent;
+}
+
+.c-menu :deep(.ant-menu-item-selected) {
+  color: var(--color-text-primary);
+  background: transparent;
+  border-bottom-color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.c-menu :deep(.ant-menu-submenu-title) {
+  color: var(--color-text-secondary);
+  transition: all var(--transition-base) var(--transition-timing);
+  padding: 0 !important;
+}
+
+.c-menu :deep(.ant-menu-submenu-title:hover) {
+  color: var(--color-text-primary);
+  background: transparent;
+}
+
+.c-menu :deep(.ant-menu-submenu-selected .ant-menu-submenu-title) {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.c-menu :deep(.ant-menu-submenu-title .anticon) {
+  margin-right: 4px;
+  font-size: 14px;
+}
+
+.nav-text {
+  margin-left: 0;
 }
 
 :deep(.ant-menu-horizontal) {
@@ -413,6 +463,11 @@ const handleUpdateEmail = async () => {
 .mobile-nav-trigger {
   display: none;
   margin-right: 8px;
+  color: var(--color-text-secondary);
+}
+
+.mobile-nav-trigger:hover {
+  color: var(--color-text-primary);
 }
 
 /* 用户信息区 */
@@ -427,14 +482,17 @@ const handleUpdateEmail = async () => {
   display: flex;
   align-items: center;
   cursor: pointer;
-  font-size: 14px;
-  color: #000;
-  font-weight: 500;
-  transition: color 0.2s;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-base) var(--transition-timing);
 }
 
 .login-trigger:hover {
-  color: #1890ff;
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 /* 已登录的用户区 */
@@ -443,21 +501,21 @@ const handleUpdateEmail = async () => {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  height: 32px;
-  padding: 0 10px;
-  border-radius: 4px;
-  margin: 16px 0;
-  transition: background 0.2s;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  margin: 14px 0;
+  transition: all var(--transition-base) var(--transition-timing);
 }
 
 .user-trigger:hover {
-  background: rgba(0, 0, 0, 0.04);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .user-nickname {
-  font-size: 14px;
-  color: #333;
-  font-weight: 500;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
   max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -466,47 +524,63 @@ const handleUpdateEmail = async () => {
 
 .c-content {
   margin-top: 64px; 
-  padding: 24px 0;
+  padding: 32px 0;
+  background: var(--color-bg-primary);
 }
 
 .content-container {
-  max-width: 1400px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 0 24px;
   min-height: calc(100vh - 64px - 70px);
 }
 
 .page-context {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   padding: 16px 20px;
-  border-radius: 12px;
-  background: linear-gradient(180deg, rgba(24, 144, 255, 0.08), rgba(24, 144, 255, 0.02));
-  border: 1px solid rgba(24, 144, 255, 0.12);
+  border-radius: var(--radius-lg);
+  background: transparent;
+  border: none;
 }
 
 .page-breadcrumb {
   margin-bottom: 8px;
 }
 
+.page-breadcrumb :deep(.ant-breadcrumb-link) {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.page-breadcrumb :deep(.ant-breadcrumb-link:hover) {
+  color: var(--color-text-primary);
+}
+
 .page-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1f1f1f;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  letter-spacing: -0.5px;
 }
 
 .c-footer {
   text-align: center;
-  color: #a0a0a0;
+  color: var(--color-text-tertiary);
   background: transparent;
   padding: 24px 0;
+  font-size: var(--font-size-xs);
 }
 
 .nav-text {
-  margin-left: 6px;
+  margin-left: 0;
 }
 
 @media (max-width: 1180px) {
   .header-container {
+    padding: 0 16px;
+  }
+
+  .content-container {
     padding: 0 16px;
   }
 

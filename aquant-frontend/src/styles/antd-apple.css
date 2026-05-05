@@ -1,0 +1,885 @@
+/* ========================================
+   Ant Design Vue - 专业金融终端深色主题
+   极简灰白配色 - 数据优先设计
+   ======================================== */
+
+/* ========================================
+   Card 卡片组件 - Professional Style
+   ======================================== */
+
+.ant-card {
+  background: var(--color-bg-secondary) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-sm) !important;
+  transition: all var(--transition-base) var(--transition-timing);
+}
+
+.ant-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover) !important;
+  border-color: var(--color-border-hover) !important;
+}
+
+.ant-card-head {
+  background: transparent !important;
+  border-bottom: 1px solid var(--color-divider) !important;
+  color: var(--color-text-primary) !important;
+  padding: 16px 20px;
+}
+
+.ant-card-head-title {
+  color: var(--color-text-primary) !important;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-lg);
+}
+
+.ant-card-body {
+  color: var(--color-text-primary) !important;
+  padding: 20px;
+}
+
+/* ========================================
+   Table 表格组件 - Professional Style
+   ======================================== */
+
+.ant-table {
+  background: transparent !important;
+  color: var(--color-text-primary) !important;
+  font-size: var(--font-size-sm);
+}
+
+.ant-table-wrapper {
+  background: transparent !important;
+}
+
+.ant-table-thead > tr > th {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-bottom: 1px solid var(--color-divider) !important;
+  color: var(--color-text-secondary) !important;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 16px;
+}
+
+.ant-table-thead > tr > th::before {
+  display: none !important;
+}
+
+.ant-table-tbody > tr {
+  background: transparent !important;
+  transition: background var(--transition-fast);
+}
+
+.ant-table-tbody > tr:hover > td {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+.ant-table-tbody > tr > td {
+  border-bottom: 1px solid var(--color-divider) !important;
+  color: var(--color-text-primary) !important;
+  padding: 14px 16px;
+}
+
+/* ========================================
+   Button 按钮组件 - Professional Style
+   ======================================== */
+
+.ant-btn {
+  border-radius: var(--radius-md) !important;
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-base) var(--transition-timing);
+  height: auto;
+  padding: 8px 16px;
+}
+
+/* Default Button */
+.ant-btn-default {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.ant-btn-default:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: var(--color-border-hover) !important;
+  color: var(--color-text-primary) !important;
+}
+
+/* Primary Button - Gray/White */
+.ant-btn-primary {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.9) !important;
+  color: #111318 !important;
+  box-shadow: none;
+  font-weight: var(--font-weight-semibold);
+}
+
+.ant-btn-primary:hover {
+  background: #ffffff !important;
+  border-color: #ffffff !important;
+  color: #111318 !important;
+}
+
+.ant-btn-primary:active {
+  background: var(--color-accent) !important;
+  border-color: var(--color-accent) !important;
+  color: #111318 !important;
+}
+
+/* Text Button */
+.ant-btn-text {
+  color: var(--color-text-secondary) !important;
+}
+
+.ant-btn-text:hover {
+  color: var(--color-accent) !important;
+  background: var(--color-accent-light) !important;
+}
+
+/* Link Button */
+.ant-btn-link {
+  color: var(--color-accent) !important;
+}
+
+.ant-btn-link:hover {
+  color: var(--color-accent-hover) !important;
+}
+
+/* ========================================
+   Input 输入框组件 - Professional Style
+   ======================================== */
+
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-input-affix-wrapper > input.ant-input {
+  background: transparent !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-primary) !important;
+  border-radius: var(--radius-md) !important;
+  transition: none !important;
+  font-size: var(--font-size-sm);
+  padding: 4px 8px !important;
+}
+
+.ant-input-affix-wrapper {
+  padding: 4px 11px !important;
+}
+
+.ant-input:hover,
+.ant-input-affix-wrapper:hover,
+.ant-input-affix-wrapper:hover > input.ant-input {
+  border-color: var(--color-border) !important;
+  background: transparent !important;
+}
+
+.ant-input:focus,
+.ant-input-affix-wrapper:focus,
+.ant-input-affix-wrapper-focused,
+.ant-input-affix-wrapper-focused > input.ant-input {
+  border-color: var(--color-border) !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.ant-input::placeholder,
+.ant-input-affix-wrapper input::placeholder {
+  color: var(--color-text-tertiary) !important;
+  opacity: 1 !important;
+}
+
+.ant-input-prefix,
+.ant-input-prefix .anticon {
+  color: var(--color-text-tertiary) !important;
+  margin-right: 8px !important;
+}
+
+.ant-input-suffix,
+.ant-input-suffix .anticon {
+  color: var(--color-text-tertiary) !important;
+  margin-left: 8px !important;
+}
+
+.ant-input-clear-icon,
+.ant-input-clear-icon .anticon {
+  color: var(--color-text-tertiary) !important;
+}
+
+.ant-input-clear-icon:hover,
+.ant-input-clear-icon:hover .anticon {
+  color: var(--color-text-secondary) !important;
+}
+
+/* Input Number */
+.ant-input-number {
+  background: transparent !important;
+  border-color: var(--color-border) !important;
+  border-radius: var(--radius-md) !important;
+  transition: none !important;
+  padding: 4px 8px !important;
+}
+
+.ant-input-number:hover {
+  border-color: var(--color-border) !important;
+  background: transparent !important;
+}
+
+.ant-input-number:focus,
+.ant-input-number-focused {
+  border-color: var(--color-border) !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.ant-input-number-input {
+  background: transparent !important;
+  color: var(--color-text-primary) !important;
+  padding: 0 !important;
+}
+
+/* InputNumber 右侧按钮 - 深色调整 */
+.ant-input-number-handler-wrap {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-left-color: var(--color-border) !important;
+}
+
+.ant-input-number-handler {
+  border-color: var(--color-border) !important;
+}
+
+.ant-input-number-handler:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.ant-input-number-handler-up-inner,
+.ant-input-number-handler-down-inner {
+  color: var(--color-text-secondary) !important;
+}
+
+.ant-input-number-handler:hover .ant-input-number-handler-up-inner,
+.ant-input-number-handler:hover .ant-input-number-handler-down-inner {
+  color: var(--color-text-primary) !important;
+}
+
+/* ========================================
+   Select 下拉选择组件 - Apple Style
+   ======================================== */
+
+.ant-select-selector {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-primary) !important;
+  border-radius: var(--radius-md) !important;
+}
+
+.ant-select:hover .ant-select-selector {
+  border-color: var(--color-border-hover) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.ant-select-focused .ant-select-selector {
+  border-color: var(--color-accent) !important;
+  box-shadow: 0 0 0 3px var(--color-accent-light) !important;
+}
+
+/* 修复：下拉框展开时选中项文字颜色 */
+.ant-select-open .ant-select-selection-item {
+  color: var(--color-text-primary) !important;
+}
+
+.ant-select-selection-item {
+  color: var(--color-text-primary) !important;
+}
+
+.ant-select-selection-placeholder {
+  color: var(--color-text-tertiary) !important;
+}
+
+.ant-select-arrow {
+  color: var(--color-text-tertiary) !important;
+}
+
+.ant-select-dropdown {
+  background: var(--color-bg-secondary) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-lg) !important;
+  border-radius: var(--radius-lg) !important;
+}
+
+.ant-select-item {
+  color: var(--color-text-primary) !important;
+  border-radius: var(--radius-sm);
+  margin: 2px 4px;
+}
+
+.ant-select-item-option-selected {
+  background: var(--color-accent-light) !important;
+  color: var(--color-accent) !important;
+  font-weight: var(--font-weight-medium);
+}
+
+.ant-select-item-option-active {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* ========================================
+   Modal 模态框组件 - Apple Style
+   ======================================== */
+
+.ant-modal-mask {
+  background-color: rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: blur(2px);
+}
+
+.ant-modal-content {
+  background: var(--color-bg-secondary) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-xl) !important;
+  border-radius: var(--radius-xl) !important;
+}
+
+.ant-modal-header {
+  background: transparent !important;
+  border-bottom: 1px solid var(--color-divider) !important;
+  padding: 20px 24px;
+}
+
+.ant-modal-title {
+  color: var(--color-text-primary) !important;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-xl);
+}
+
+.ant-modal-body {
+  color: var(--color-text-primary) !important;
+  padding: 24px;
+}
+
+.ant-modal-footer {
+  border-top: 1px solid var(--color-divider) !important;
+  padding: 16px 24px;
+  background: transparent !important;
+}
+
+.ant-modal-close {
+  color: var(--color-text-secondary) !important;
+}
+
+.ant-modal-close:hover {
+  color: var(--color-text-primary) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Modal.confirm 确认对话框样式 */
+.ant-modal-confirm .ant-modal-body {
+  padding: 24px !important;
+}
+
+.ant-modal-confirm-title {
+  color: var(--color-text-primary) !important;
+  font-weight: var(--font-weight-semibold) !important;
+  font-size: var(--font-size-lg) !important;
+}
+
+.ant-modal-confirm-content {
+  color: var(--color-text-secondary) !important;
+  font-size: var(--font-size-base) !important;
+  margin-top: 8px !important;
+}
+
+.ant-modal-confirm-btns {
+  margin-top: 24px !important;
+}
+
+.ant-modal-confirm-btns .ant-btn {
+  margin-left: 12px !important;
+}
+
+/* 确认对话框的警告图标 */
+.ant-modal-confirm-warning .anticon {
+  color: #F59E0B !important;
+}
+
+.ant-modal-confirm-error .anticon {
+  color: var(--color-error) !important;
+}
+
+.ant-modal-confirm-info .anticon {
+  color: var(--color-accent) !important;
+}
+
+.ant-modal-confirm-success .anticon {
+  color: var(--color-success) !important;
+}
+
+/* ========================================
+   Popconfirm 气泡确认框 - Apple Style
+   ======================================== */
+
+.ant-popover-inner {
+  background: var(--color-bg-secondary) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-lg) !important;
+  border-radius: var(--radius-lg) !important;
+}
+
+.ant-popover-inner-content {
+  color: var(--color-text-primary) !important;
+}
+
+.ant-popover-message {
+  color: var(--color-text-primary) !important;
+}
+
+.ant-popover-message-title {
+  color: var(--color-text-primary) !important;
+  font-size: var(--font-size-base) !important;
+  font-weight: var(--font-weight-medium) !important;
+}
+
+.ant-popconfirm-message > .ant-popconfirm-message-text {
+  color: var(--color-text-primary) !important;
+}
+
+.ant-popconfirm-message-title {
+  color: var(--color-text-primary) !important;
+}
+
+.ant-popover-buttons {
+  margin-top: 12px !important;
+}
+
+.ant-popover-arrow {
+  display: none !important;
+}
+
+/* Popconfirm 图标颜色 */
+.ant-popconfirm .anticon-exclamation-circle {
+  color: #F59E0B !important;
+}
+
+/* Popconfirm 按钮样式 */
+.ant-popconfirm .ant-btn {
+  font-weight: var(--font-weight-medium) !important;
+}
+
+/* ========================================
+   Pagination 分页组件 - Apple Style
+   ======================================== */
+
+.ant-pagination-item {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: var(--color-border) !important;
+  border-radius: var(--radius-md) !important;
+}
+
+.ant-pagination-item a {
+  color: var(--color-text-primary) !important;
+}
+
+.ant-pagination-item:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: var(--color-border-hover) !important;
+}
+
+.ant-pagination-item-active {
+  background: var(--color-accent) !important;
+  border-color: var(--color-accent) !important;
+}
+
+.ant-pagination-item-active a {
+  color: #ffffff !important;
+}
+
+/* ========================================
+   Menu 菜单组件 - Professional Style
+   ======================================== */
+
+.ant-menu {
+  background: transparent !important;
+  color: var(--color-text-primary) !important;
+  border: none !important;
+}
+
+.ant-menu-item {
+  color: var(--color-text-secondary) !important;
+  border-radius: var(--radius-md);
+  margin: 2px 0;
+}
+
+.ant-menu-item:hover {
+  color: var(--color-text-primary) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+.ant-menu-item-selected {
+  color: var(--color-text-primary) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  font-weight: var(--font-weight-semibold) !important;
+}
+
+.ant-menu-submenu-title {
+  color: var(--color-text-secondary) !important;
+  border-radius: var(--radius-md);
+}
+
+.ant-menu-submenu-title:hover {
+  color: var(--color-text-primary) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+.ant-menu-submenu-selected > .ant-menu-submenu-title {
+  color: var(--color-text-primary) !important;
+  font-weight: var(--font-weight-semibold) !important;
+}
+
+/* 顶部横向菜单特殊样式 */
+.ant-menu-horizontal {
+  border-bottom: none !important;
+}
+
+.ant-menu-horizontal > .ant-menu-item::after,
+.ant-menu-horizontal > .ant-menu-submenu::after {
+  border-bottom: 2px solid transparent !important;
+  transition: border-color var(--transition-base) !important;
+}
+
+.ant-menu-horizontal > .ant-menu-item-selected::after,
+.ant-menu-horizontal > .ant-menu-submenu-selected::after {
+  border-bottom-color: var(--color-text-primary) !important;
+}
+
+.ant-menu-horizontal > .ant-menu-item:hover::after,
+.ant-menu-horizontal > .ant-menu-submenu:hover::after {
+  border-bottom-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* 去掉一级菜单 hover 背景 - 使用更强的选择器 */
+.ant-menu.ant-menu-horizontal > .ant-menu-item:hover,
+.ant-menu.ant-menu-horizontal > .ant-menu-submenu:hover,
+.ant-menu.ant-menu-horizontal > .ant-menu-submenu-open,
+.ant-menu.ant-menu-horizontal > .ant-menu-submenu > .ant-menu-submenu-title:hover {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.ant-menu.ant-menu-horizontal > .ant-menu-item-selected,
+.ant-menu.ant-menu-horizontal > .ant-menu-submenu-selected {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* ========================================
+   Breadcrumb 面包屑组件 - Professional Style
+   ======================================== */
+
+.ant-breadcrumb {
+  color: var(--color-text-secondary) !important;
+  font-size: var(--font-size-sm);
+}
+
+.ant-breadcrumb a {
+  color: var(--color-text-secondary) !important;
+  transition: color var(--transition-fast);
+}
+
+.ant-breadcrumb a:hover {
+  color: var(--color-text-primary) !important;
+}
+
+.ant-breadcrumb-separator {
+  color: var(--color-text-tertiary) !important;
+}
+
+/* ========================================
+   Divider 分割线组件 - Apple Style
+   ======================================== */
+
+.ant-divider {
+  border-color: var(--color-divider) !important;
+}
+
+.ant-divider-inner-text {
+  color: var(--color-text-secondary) !important;
+}
+
+/* ========================================
+   Message & Notification 消息提示 - Apple Style
+   ======================================== */
+
+.ant-message-notice-content {
+  background: var(--color-bg-secondary) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-lg) !important;
+  border-radius: var(--radius-lg) !important;
+  color: var(--color-text-primary) !important;
+  padding: 12px 16px;
+}
+
+.ant-notification-notice {
+  background: var(--color-bg-secondary) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-lg) !important;
+  border-radius: var(--radius-lg) !important;
+}
+
+/* ========================================
+   Spin 加载组件 - Apple Style
+   ======================================== */
+
+.ant-spin-dot-item {
+  background-color: var(--color-accent) !important;
+}
+
+/* ========================================
+   Dropdown 下拉菜单 - Apple Style
+   ======================================== */
+
+.ant-dropdown-menu {
+  background: var(--color-bg-secondary) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-lg) !important;
+  border-radius: var(--radius-lg) !important;
+  padding: 4px;
+}
+
+.ant-dropdown-menu-item {
+  color: var(--color-text-primary) !important;
+  border-radius: var(--radius-sm);
+  margin: 2px 0;
+}
+
+.ant-dropdown-menu-item:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ========================================
+   Form 表单组件 - Apple Style
+   ======================================== */
+
+.ant-form-item-label > label {
+  color: var(--color-text-secondary) !important;
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+}
+
+.ant-form-item-label > label.ant-form-item-required:not(.ant-form-item-required-mark-optional)::before {
+  color: var(--color-error) !important;
+}
+
+.ant-form-item-explain-error {
+  color: var(--color-error) !important;
+  font-size: var(--font-size-xs);
+}
+
+/* ========================================
+   Checkbox 复选框组件 - Apple Style
+   ======================================== */
+
+.ant-checkbox-wrapper {
+  color: var(--color-text-primary) !important;
+  font-size: var(--font-size-sm);
+}
+
+.ant-checkbox-wrapper:hover .ant-checkbox-inner {
+  border-color: var(--color-border-hover) !important;
+}
+
+.ant-checkbox-inner {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  border-color: var(--color-border) !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+.ant-checkbox-checked .ant-checkbox-inner {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.ant-checkbox-checked .ant-checkbox-inner::after {
+  border-color: #111318 !important;
+}
+
+.ant-checkbox-checked::after {
+  border-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.ant-checkbox-wrapper + span {
+  color: var(--color-text-primary) !important;
+}
+
+/* ========================================
+   Radio 单选框组件 - Apple Style
+   ======================================== */
+
+.ant-radio-wrapper {
+  color: var(--color-text-primary) !important;
+  font-size: var(--font-size-sm);
+}
+
+.ant-radio-inner {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  border-color: var(--color-border) !important;
+}
+
+.ant-radio-checked .ant-radio-inner {
+  border-color: var(--color-accent) !important;
+}
+
+.ant-radio-inner::after {
+  background-color: var(--color-accent) !important;
+}
+
+.ant-radio-wrapper:hover .ant-radio-inner {
+  border-color: var(--color-border-hover) !important;
+}
+
+/* ========================================
+   Radio Button 单选按钮组件 - Apple Style
+   ======================================== */
+
+.ant-radio-button-wrapper {
+  background: transparent !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-secondary) !important;
+  font-size: var(--font-size-xs);
+  transition: all var(--transition-fast);
+}
+
+.ant-radio-button-wrapper:hover {
+  color: var(--color-text-primary) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.ant-radio-button-wrapper-checked {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: var(--color-text-primary) !important;
+  font-weight: var(--font-weight-medium);
+}
+
+.ant-radio-button-wrapper-checked:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.ant-radio-button-wrapper:first-child {
+  border-left-color: var(--color-border) !important;
+}
+
+.ant-radio-button-wrapper::before {
+  background-color: var(--color-border) !important;
+}
+
+/* ========================================
+   List 列表组件 - Apple Style
+   ======================================== */
+
+.ant-list {
+  color: var(--color-text-primary) !important;
+}
+
+.ant-list-bordered {
+  border-color: var(--color-border) !important;
+}
+
+.ant-list-item {
+  border-bottom-color: var(--color-divider) !important;
+  padding: 16px 0;
+}
+
+.ant-list-item-meta-title {
+  color: var(--color-text-primary) !important;
+  font-weight: var(--font-weight-medium);
+}
+
+.ant-list-item-meta-description {
+  color: var(--color-text-secondary) !important;
+}
+
+/* ========================================
+   Empty 空状态 - Apple Style
+   ======================================== */
+
+.ant-empty-description {
+  color: var(--color-text-tertiary) !important;
+  font-size: var(--font-size-sm);
+}
+
+.ant-empty-image svg {
+  opacity: 0.3 !important;
+}
+
+.ant-empty-normal {
+  color: var(--color-text-tertiary) !important;
+}
+
+/* ========================================
+   Switch 开关组件 - Professional Dark Theme
+   参考 GitHub Dark / VS Code Dark 风格
+   ======================================== */
+
+/* 未选中状态 - 深灰色低调 */
+.ant-switch {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.ant-switch:hover:not(.ant-switch-disabled) {
+  background: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* 选中状态 - 白色/浅灰色 */
+.ant-switch-checked {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.ant-switch-checked:hover:not(.ant-switch-disabled) {
+  background: #ffffff !important;
+  border-color: #ffffff !important;
+}
+
+/* 开关按钮 */
+.ant-switch-handle {
+  background-color: transparent !important;
+}
+
+.ant-switch-checked .ant-switch-handle {
+  background-color: transparent !important;
+}
+
+.ant-switch-handle::before {
+  background-color: #ffffff !important;
+}
+
+.ant-switch-checked .ant-switch-handle::before {
+  background-color: #1a1f2e !important;
+}
+
+/* 内部文字颜色 */
+.ant-switch-inner {
+  color: rgba(255, 255, 255, 0.88) !important;
+}
+
+.ant-switch-inner-checked,
+.ant-switch-inner-unchecked {
+  color: inherit !important;
+}
+
+.ant-switch-checked .ant-switch-inner {
+  color: #111827 !important;
+}
+
+/* 加载状态 */
+.ant-switch-loading-icon {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.ant-switch-checked .ant-switch-loading-icon {
+  color: #1a1f2e !important;
+}

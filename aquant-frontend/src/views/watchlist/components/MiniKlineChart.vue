@@ -98,12 +98,12 @@ const renderChart = (data: StockQuoteHistory[]) => {
       show: true,
       trigger: 'axis',
       axisPointer: { type: 'none' },
-      textStyle: { fontSize: 10 },
+      textStyle: { fontSize: 10, color: '#e5e7eb' },
       padding: 8,
-      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-      borderColor: '#eee',
+      backgroundColor: 'rgba(45, 49, 62, 0.95)',
+      borderColor: 'rgba(255, 255, 255, 0.15)',
       borderWidth: 1,
-      extraCssText: 'z-index: 99; box-shadow: 0 2px 8px rgba(0,0,0,0.1);',
+      extraCssText: 'z-index: 99; box-shadow: 0 4px 12px rgba(0,0,0,0.3);',
       formatter: function (params: any) {
         let res = '';
         let date = '';
@@ -114,14 +114,14 @@ const renderChart = (data: StockQuoteHistory[]) => {
             const close = param.value[2];
             const low = param.value[3];
             const high = param.value[4];
-            const color = close >= open ? '#ff4d4f' : '#52c41a';
-            res += '<div style="font-weight:bold;margin-bottom:4px;font-size:12px;color:#333;">' + date + '</div>';
-            res += '<div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:2px;"><span>收盘:</span> <span style="color:' + color + ';font-weight:bold;">' + close + '</span></div>';
-            res += '<div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:2px;"><span>开盘:</span> <span>' + open + '</span></div>';
-            res += '<div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:2px;"><span>最高:</span> <span>' + high + '</span></div>';
-            res += '<div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:6px;"><span>最低:</span> <span>' + low + '</span></div>';
+            const color = close >= open ? '#EF4444' : '#10B981';
+            res += '<div style="font-weight:bold;margin-bottom:4px;font-size:12px;color:#e5e7eb;">' + date + '</div>';
+            res += '<div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:2px;color:#d1d5db;"><span>收盘:</span> <span style="color:' + color + ';font-weight:bold;">' + close + '</span></div>';
+            res += '<div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:2px;color:#d1d5db;"><span>开盘:</span> <span>' + open + '</span></div>';
+            res += '<div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:2px;color:#d1d5db;"><span>最高:</span> <span>' + high + '</span></div>';
+            res += '<div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:6px;color:#d1d5db;"><span>最低:</span> <span>' + low + '</span></div>';
           } else if (param.seriesType === 'line' && param.value !== '-') {
-            res += '<div style="display:flex;justify-content:space-between;gap:12px;font-size:10px;color:#666;">' +
+            res += '<div style="display:flex;justify-content:space-between;gap:12px;font-size:10px;color:#9ca3af;">' +
                       '<span>' + param.seriesName + ':</span> ' +
                       '<span style="color:' + param.color + ';font-weight:500;">' + param.value + '</span>' +
                     '</div>';
@@ -143,8 +143,8 @@ const renderChart = (data: StockQuoteHistory[]) => {
         height: 6,
         bottom: 0,
         borderColor: 'transparent',
-        backgroundColor: '#f5f5f5',
-        fillerColor: 'rgba(180, 180, 180, 0.4)',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        fillerColor: 'rgba(255, 255, 255, 0.15)',
         showDetail: false,
         zoomLock: true,
         showDataShadow: false,
@@ -186,7 +186,7 @@ const renderChart = (data: StockQuoteHistory[]) => {
       scale: true,
       show: true,
       position: 'right',
-      splitLine: { lineStyle: { type: 'dashed', color: '#f5f5f5' } },
+      splitLine: { lineStyle: { type: 'dashed', color: 'rgba(255, 255, 255, 0.08)' } },
       axisLabel: {
         fontSize: 9,
         color: '#ccc',
@@ -199,10 +199,10 @@ const renderChart = (data: StockQuoteHistory[]) => {
         type: 'candlestick',
         data: values,
         itemStyle: {
-          color: '#ff4d4f',
-          color0: '#52c41a',
-          borderColor: '#ff4d4f',
-          borderColor0: '#52c41a'
+          color: '#EF4444',
+          color0: '#10B981',
+          borderColor: '#EF4444',
+          borderColor0: '#10B981'
         },
         barWidth: '60%'
       },

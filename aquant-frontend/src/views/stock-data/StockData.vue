@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="stock-data-container">
     
     <!-- 搜索表单与工具栏 -->
     <a-card style="margin-bottom: 16px">
@@ -7,7 +7,7 @@
         <!-- 左侧：刷新操作 -->
         <div style="display: flex; align-items: center">
           <a-button @click="handleRefresh" :loading="refreshLoading">刷新</a-button>
-          <span v-if="lastRefreshTime" style="margin-left: 12px; color: #666; font-size: 14px">
+          <span v-if="lastRefreshTime" class="refresh-time">
             最后同步时间：{{ lastRefreshTime }}
           </span>
         </div>
@@ -56,14 +56,17 @@
         :scroll="{ x: 1800 }" 
       >
         <template #bodyCell="{ column, record }">
+          <template v-if="column.dataIndex === 'code'">
+            <span class="stock-code">{{ record.code }}</span>
+          </template>
           <template v-if="column.dataIndex === 'changePercent'">
-            <span :style="{ color: record.changePercent > 0 ? 'red' : record.changePercent < 0 ? 'green' : 'inherit' }">
-              {{ record.changePercent }}%
+            <span :class="['change-value', record.changePercent > 0 ? 'price-up' : record.changePercent < 0 ? 'price-down' : '']">
+              {{ record.changePercent > 0 ? '+' : '' }}{{ record.changePercent }}%
             </span>
           </template>
            <template v-if="column.dataIndex === 'changeAmount'">
-            <span :style="{ color: record.changeAmount > 0 ? 'red' : record.changeAmount < 0 ? 'green' : 'inherit' }">
-              {{ record.changeAmount }}
+            <span :class="['change-value', record.changeAmount > 0 ? 'price-up' : record.changeAmount < 0 ? 'price-down' : '']">
+              {{ record.changeAmount > 0 ? '+' : '' }}{{ record.changeAmount }}
             </span>
           </template>
           <template v-if="column.dataIndex === 'operation'">
@@ -298,7 +301,38 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* ========================================
+   Stock Data - Apple Design 深色模式
+   ======================================== */
+
+.stock-data-container {
+  padding: 0;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
 .stock-data-search-form {
-  row-gap: 16px;
+  row-gap: var(--spacing-md);
+}
+
+.refresh-time {
+  margin-left: 12px;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-family-mono);
+}
+
+.stock-code {
+  font-family: var(--font-family-mono);
+  color: var(--color-accent);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.3px;
+}
+
+.change-value {
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family-mono);
 }
 </style>
