@@ -14,21 +14,21 @@
         <a-form-item label="EPS 3年复合">
           <div style="display: flex; align-items: center; gap: 8px">
             <a-input-number v-model:value="searchParams.epsGrowth3yCagrMin" placeholder="最小" style="width: 80px" />
-            <span>-</span>
+            <span style="color: var(--color-text-secondary)">~</span>
             <a-input-number v-model:value="searchParams.epsGrowth3yCagrMax" placeholder="最大" style="width: 80px" />
           </div>
         </a-form-item>
         <a-form-item label="营收增长(TTM)">
           <div style="display: flex; align-items: center; gap: 8px">
             <a-input-number v-model:value="searchParams.revenueGrowthTtmMin" placeholder="最小" style="width: 80px" />
-            <span>-</span>
+            <span style="color: var(--color-text-secondary)">~</span>
             <a-input-number v-model:value="searchParams.revenueGrowthTtmMax" placeholder="最大" style="width: 80px" />
           </div>
         </a-form-item>
         <a-form-item label="净利增长(TTM)">
             <div style="display: flex; align-items: center; gap: 8px">
                 <a-input-number v-model:value="searchParams.netProfitGrowthTtmMin" placeholder="最小" style="width: 80px" />
-                <span>-</span>
+                <span style="color: var(--color-text-secondary)">~</span>
                 <a-input-number v-model:value="searchParams.netProfitGrowthTtmMax" placeholder="最大" style="width: 80px" />
             </div>
         </a-form-item>
@@ -49,12 +49,11 @@
         @change="handleTableChange"
         row-key="id"
         :scroll="{ x: 2600 }"
-        size="middle"
         :expandable="{ columnWidth: 50 }"
       >
         <template #headerCell="{ column }">
           <template v-if="column.dataIndex === 'epsGrowth3yCagrRank'">
-             <span style="color: #1890ff">排名</span>
+             <span style="color: var(--color-text-secondary)">排名</span>
           </template>
         </template>
         <template #bodyCell="{ column, text, record }">

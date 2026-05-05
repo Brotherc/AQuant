@@ -38,8 +38,8 @@
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.dataIndex === 'changePercent' || column.dataIndex === 'leadingStockChangePercent'">
-            <span :style="{ color: record[column.dataIndex] > 0 ? 'red' : record[column.dataIndex] < 0 ? 'green' : 'inherit' }">
-              {{ record[column.dataIndex] }}%
+            <span :class="['change-value', record[column.dataIndex] > 0 ? 'price-up' : record[column.dataIndex] < 0 ? 'price-down' : '']">
+              {{ record[column.dataIndex] > 0 ? '+' : '' }}{{ record[column.dataIndex] }}%
             </span>
           </template>
            <template v-if="column.dataIndex === 'changeAmount'">

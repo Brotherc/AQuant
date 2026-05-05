@@ -14,7 +14,7 @@
         <a-form-item label="ROE-3年平均">
           <div style="display: flex; align-items: center; gap: 8px">
             <a-input-number v-model:value="searchParams.roe3yAvgMin" placeholder="最小" style="width: 80px" />
-            <span>-</span>
+            <span style="color: var(--color-text-secondary)">~</span>
             <a-input-number v-model:value="searchParams.roe3yAvgMax" placeholder="最大" style="width: 80px" />
           </div>
         </a-form-item>
@@ -38,13 +38,12 @@
         @change="handleTableChange"
         row-key="id"
         :scroll="{ x: 2000 }"
-        size="middle"
         :expandable="{ columnWidth: 50 }"
       >
 
         <template #headerCell="{ column }">
           <template v-if="column.dataIndex === 'roe3yAvgRank'">
-             <span style="color: #1890ff">排名</span>
+             <span style="color: var(--color-text-secondary)">排名</span>
           </template>
         </template>
         <template #bodyCell="{ column, text, record }">

@@ -29,7 +29,7 @@
             <a-input-group compact>
               <a-input-number v-model:value="searchParams.latestPriceMin" placeholder="最小" style="width: 80px; text-align: center" :min="0" />
               <a-input
-                style="width: 30px; border-left: 0; pointer-events: none; background-color: #fff"
+                style="width: 30px; border: none; pointer-events: none; background: transparent; text-align: center"
                 placeholder="~"
                 disabled
               />
@@ -318,7 +318,7 @@ onMounted(async () => {
 .refresh-time {
   margin-left: 12px;
   color: var(--color-text-tertiary);
-  font-size: var(--font-size-xs);
+  font-size: 14px;
   font-family: var(--font-family-mono);
 }
 
@@ -333,6 +333,5 @@ onMounted(async () => {
 .change-value {
   font-weight: var(--font-weight-semibold);
   font-size: var(--font-size-sm);
-  font-family: var(--font-family-mono);
 }
 </style>

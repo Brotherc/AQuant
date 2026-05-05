@@ -19,28 +19,28 @@
         <a-form-item label="PEG">
           <div class="range-input-group">
             <a-input-number v-model:value="searchParams.pegMin" placeholder="最小" style="width: 70px" />
-            <span>-</span>
+            <span style="color: var(--color-text-secondary)">~</span>
             <a-input-number v-model:value="searchParams.pegMax" placeholder="最大" style="width: 70px" />
           </div>
         </a-form-item>
         <a-form-item label="PE(TTM)">
           <div class="range-input-group">
             <a-input-number v-model:value="searchParams.peTtmMin" placeholder="最小" style="width: 70px" />
-            <span>-</span>
+            <span style="color: var(--color-text-secondary)">~</span>
             <a-input-number v-model:value="searchParams.peTtmMax" placeholder="最大" style="width: 70px" />
           </div>
         </a-form-item>
         <a-form-item label="PS(TTM)">
           <div class="range-input-group">
             <a-input-number v-model:value="searchParams.psTtmMin" placeholder="最小" style="width: 70px" />
-            <span>-</span>
+            <span style="color: var(--color-text-secondary)">~</span>
             <a-input-number v-model:value="searchParams.psTtmMax" placeholder="最大" style="width: 70px" />
           </div>
         </a-form-item>
         <a-form-item label="PB(MRQ)">
           <div class="range-input-group">
             <a-input-number v-model:value="searchParams.pbMrqMin" placeholder="最小" style="width: 70px" />
-            <span>-</span>
+            <span style="color: var(--color-text-secondary)">~</span>
             <a-input-number v-model:value="searchParams.pbMrqMax" placeholder="最大" style="width: 70px" />
           </div>
         </a-form-item>
@@ -61,12 +61,11 @@
         @change="handleTableChange"
         row-key="id"
         :scroll="{ x: 2200 }"
-        size="middle"
         :expandable="{ columnWidth: 50 }"
       >
         <template #headerCell="{ column }">
           <template v-if="column.dataIndex === 'pegRank'">
-             <span style="color: #1890ff">排名</span>
+             <span style="color: var(--color-text-secondary)">排名</span>
           </template>
         </template>
         <template #bodyCell="{ column, text, record }">
