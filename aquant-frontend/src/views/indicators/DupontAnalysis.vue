@@ -37,7 +37,7 @@
         :pagination="pagination"
         @change="handleTableChange"
         row-key="id"
-        :scroll="{ x: 2000 }"
+        :scroll="{ x: 1730 }"
         :expandable="{ columnWidth: 50 }"
       >
 
@@ -66,26 +66,31 @@
 
         <!-- 展开行：行业对比数据 -->
         <template #expandedRowRender="{ record }">
-          <a-table
-            :columns="getSubColumns()"
-            :data-source="getIndustryData(record)"
-            :pagination="false"
-            size="small"
-            :show-header="false"
-            row-key="key"
-          >
-            <template #bodyCell="{ column, text, index }">
-              <template v-if="column.dataIndex === 'stockName'">
-                <span style="color: #8c8c8c">{{ index === 0 ? '行业平均' : '行业中值' }}</span>
-              </template>
-              <template v-else-if="['roe3yAvg', 'roeLastYA', 'roeLast2yA', 'roeLast3yA', 'netMargin3yAvg', 'netMarginLastYA', 'netMarginLast2yA', 'netMarginLast3yA'].includes(column.dataIndex as string)">
-                <span>{{ text != null ? text + '%' : '-' }}</span>
-              </template>
-              <template v-else-if="['assetTurnover3yAvg', 'assetTurnoverLastYA', 'assetTurnoverLast2yA', 'assetTurnoverLast3yA', 'equityMultiplier3yAvg', 'equityMultiplierLastYA', 'equityMultiplierLast2yA', 'equityMultiplierLast3yA'].includes(column.dataIndex as string)">
-                <span>{{ text != null ? text : '-' }}</span>
-              </template>
-            </template>
-          </a-table>
+          <div class="industry-compare-panel dupont-industry-panel">
+            <div v-for="row in getIndustryRows(record)" :key="row.key" class="industry-compare-row">
+              <span class="industry-compare-cell"></span>
+              <span class="industry-compare-cell"></span>
+              <span class="industry-compare-cell"></span>
+              <span class="industry-compare-cell industry-compare-label">{{ row.label }}</span>
+              <span class="industry-compare-cell">{{ formatPercent(row.roe3yAvg) }}</span>
+              <span class="industry-compare-cell">{{ formatPercent(row.roeLast3yA) }}</span>
+              <span class="industry-compare-cell">{{ formatPercent(row.roeLast2yA) }}</span>
+              <span class="industry-compare-cell">{{ formatPercent(row.roeLastYA) }}</span>
+              <span class="industry-compare-cell">{{ formatPercent(row.netMargin3yAvg) }}</span>
+              <span class="industry-compare-cell">{{ formatPercent(row.netMarginLast3yA) }}</span>
+              <span class="industry-compare-cell">{{ formatPercent(row.netMarginLast2yA) }}</span>
+              <span class="industry-compare-cell">{{ formatPercent(row.netMarginLastYA) }}</span>
+              <span class="industry-compare-cell">{{ formatValue(row.assetTurnover3yAvg) }}</span>
+              <span class="industry-compare-cell">{{ formatValue(row.assetTurnoverLast3yA) }}</span>
+              <span class="industry-compare-cell">{{ formatValue(row.assetTurnoverLast2yA) }}</span>
+              <span class="industry-compare-cell">{{ formatValue(row.assetTurnoverLastYA) }}</span>
+              <span class="industry-compare-cell">{{ formatValue(row.equityMultiplier3yAvg) }}</span>
+              <span class="industry-compare-cell">{{ formatValue(row.equityMultiplierLast3yA) }}</span>
+              <span class="industry-compare-cell">{{ formatValue(row.equityMultiplierLast2yA) }}</span>
+              <span class="industry-compare-cell">{{ formatValue(row.equityMultiplierLastYA) }}</span>
+              <span class="industry-compare-cell"></span>
+            </div>
+          </div>
         </template>
       </a-table>
     </a-card>
@@ -111,7 +116,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, h } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import { getDupontAnalysisPage, type StockDupontAnalysis, type DupontAnalysisPageReqVO } from '@/api/indicator';
 import { getWatchlistGroups, addStockToWatchlist, type WatchlistGroupVO } from '@/api/watchlist';
 import { message } from 'ant-design-vue';
@@ -119,6 +124,9 @@ import { type TableProps } from 'ant-design-vue';
 
 const loading = ref(false);
 const dataSource = ref<StockDupontAnalysis[]>([]);
+
+const formatPercent = (val: any) => val != null ? `${val}%` : '-';
+const formatValue = (val: any) => val != null ? val : '-';
 
 const columns: TableProps['columns'] = [
   { title: '排名', dataIndex: 'roe3yAvgRank', sorter: true, width: 120 },
@@ -161,14 +169,15 @@ const columns: TableProps['columns'] = [
       { title: '25A', dataIndex: 'equityMultiplierLastYA', width: 90 },
     ]
   },
-  { title: '操作', key: 'operation', width: 100, fixed: 'right' },
+  { title: '操作', key: 'operation', width: 100 },
 ];
 
 // 获取子列表数据
-const getIndustryData = (record: StockDupontAnalysis) => {
+const getIndustryRows = (record: StockDupontAnalysis) => {
   return [
     {
       key: 'avg',
+      label: '行业平均',
       roe3yAvg: record.roe3yAvgIndustryAvg,
       roeLastYA: record.roeLastYAIndustryAvg,
       roeLast2yA: record.roeLast2yAIndustryAvg,
@@ -188,6 +197,7 @@ const getIndustryData = (record: StockDupontAnalysis) => {
     },
     {
       key: 'med',
+      label: '行业中值',
       roe3yAvg: record.roe3yAvgIndustryMed,
       roeLastYA: record.roeLastYAIndustryMed,
       roeLast2yA: record.roeLast2yAIndustryMed,
@@ -206,31 +216,6 @@ const getIndustryData = (record: StockDupontAnalysis) => {
       equityMultiplierLast3yA: record.equityMultiplierLast3yAIndustryMed,
     }
   ];
-};
-
-// 递归处理子列（对齐）
-const getSubColumns = () => {
-    const mapCols = (cols: any[]): any[] => {
-        return cols.map(col => {
-            const newCol = { ...col };
-            if (newCol.children) {
-                newCol.children = mapCols(newCol.children);
-            } else {
-                // 处理前三列（固定列）
-                if (newCol.dataIndex === 'roe3yAvgRank' || newCol.dataIndex === 'stockCode') {
-                    newCol.customRender = () => '';
-                } else if (newCol.dataIndex === 'stockName') {
-                    newCol.customRender = ({ index }: any) => index === 0 ? h('span', { style: 'color: #8c8c8c' }, '行业平均') : h('span', { style: 'color: #8c8c8c' }, '行业中值');
-                }
-                
-                delete newCol.sorter;
-            }
-            // 移除 fixed，跟随外层表格水平滚动
-            delete newCol.fixed;
-            return newCol;
-        });
-    };
-    return mapCols(columns as any[]);
 };
 
 
@@ -359,21 +344,48 @@ onMounted(async () => {
     white-space: nowrap;
 }
 
-.dupont-analysis-container :deep(.ant-table-expanded-row-fixed) {
+.dupont-analysis-container :deep(.ant-table-expanded-row > td) {
+    background: rgba(255, 255, 255, 0.02) !important;
     padding: 0 !important;
 }
 
-.dupont-analysis-container :deep(.ant-table-expanded-row) .ant-table-cell {
-    background-color: #fafafa !important;
+.dupont-analysis-container :deep(.ant-table-expanded-row-fixed) {
+    padding: 0 !important;
+    position: static !important;
+    width: max-content !important;
+    min-width: 100% !important;
+    overflow: visible !important;
 }
 
-/* 移除内层表格边框，使其看起来像主表行 */
-.dupont-analysis-container :deep(.ant-table-expanded-row) .ant-table {
-    background: transparent;
+.industry-compare-panel {
+    overflow: visible;
+    background: rgba(255, 255, 255, 0.02);
 }
 
-.dupont-analysis-container :deep(.ant-table-expanded-row) .ant-table-content {
-    border: none !important;
+.industry-compare-row {
+    display: grid;
+    align-items: center;
+    min-height: 36px;
+    color: var(--color-text-primary);
 }
+
+.dupont-industry-panel .industry-compare-row {
+    grid-template-columns: 50px 120px 100px 220px repeat(4, 110px 90px 90px 90px) 100px;
+    min-width: 1730px;
+}
+
+.industry-compare-row + .industry-compare-row {
+    background: rgba(255, 255, 255, 0.01);
+}
+
+.industry-compare-cell {
+    padding: 0 16px;
+    line-height: 36px;
+    white-space: nowrap;
+}
+
+.industry-compare-label {
+    color: var(--color-text-secondary) !important;
+}
+
 </style>
-

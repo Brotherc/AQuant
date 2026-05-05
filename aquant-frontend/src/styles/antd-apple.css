@@ -109,6 +109,39 @@
   color: #10B981 !important;
 }
 
+/* 表格展开按钮 - 深色主题 */
+.ant-table-row-expand-icon {
+  color: var(--color-text-secondary) !important;
+  border-color: var(--color-border) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+.ant-table-row-expand-icon:hover {
+  color: var(--color-text-primary) !important;
+  border-color: var(--color-border-hover) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.ant-table-row-expand-icon::before,
+.ant-table-row-expand-icon::after {
+  background-color: var(--color-text-secondary) !important;
+}
+
+.ant-table-row-expand-icon:hover::before,
+.ant-table-row-expand-icon:hover::after {
+  background-color: var(--color-text-primary) !important;
+}
+
+/* 表格展开行 - 深色主题 */
+.ant-table-expanded-row > td {
+  background: var(--color-bg-secondary) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.ant-table-expanded-row:hover > td {
+  background: var(--color-bg-secondary) !important;
+}
+
 .ant-table-tbody > tr:last-child > td {
   border-bottom: none !important;
 }
@@ -859,6 +892,45 @@
 }
 
 .ant-dropdown-menu-item:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ========================================
+   Drawer 抽屉组件 - Apple Style
+   ======================================== */
+
+.ant-drawer-content-wrapper {
+  box-shadow: var(--shadow-xl) !important;
+}
+
+.ant-drawer-content {
+  background: var(--color-bg-primary) !important;
+}
+
+.ant-drawer-header {
+  background: var(--color-bg-secondary) !important;
+  border-bottom: 1px solid var(--color-divider) !important;
+  padding: 16px 24px;
+}
+
+.ant-drawer-title {
+  color: var(--color-text-primary) !important;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-lg);
+}
+
+.ant-drawer-body {
+  background: var(--color-bg-primary) !important;
+  color: var(--color-text-primary) !important;
+  padding: 24px;
+}
+
+.ant-drawer-close {
+  color: var(--color-text-secondary) !important;
+}
+
+.ant-drawer-close:hover {
+  color: var(--color-text-primary) !important;
   background: rgba(255, 255, 255, 0.08) !important;
 }
 

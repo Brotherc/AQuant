@@ -48,8 +48,8 @@
             <!-- 已登录：显示用户头像 + 退出 -->
             <a-dropdown v-else>
               <div class="user-trigger">
-                <a-avatar size="small" style="background-color: #1890ff;">
-                  {{ nickname.charAt(0) }}
+                <a-avatar size="small" style="background-color: rgba(255, 255, 255, 0.1);">
+                  <template #icon><user-outlined /></template>
                 </a-avatar>
                 <span class="user-nickname">{{ nickname }}</span>
               </div>

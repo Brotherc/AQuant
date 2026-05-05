@@ -123,22 +123,22 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
         type: 'cross', 
         lineStyle: { type: 'dashed', color: 'rgba(25, 144, 255, 0.4)' },
         label: {
-            backgroundColor: '#d9d9d9',
-            color: '#333',
-            borderColor: '#d9d9d9',
+            backgroundColor: 'rgba(45, 49, 62, 0.95)',
+            color: '#e5e7eb',
+            borderColor: 'rgba(255, 255, 255, 0.15)',
             borderWidth: 1,
             padding: [4, 8],
             fontSize: 11,
-            shadowBlur: 2,
-            shadowColor: 'rgba(0,0,0,0.1)',
+            shadowBlur: 4,
+            shadowColor: 'rgba(0,0,0,0.3)',
             borderRadius: 2
         }
       },
-      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-      borderColor: '#eee',
+      backgroundColor: 'rgba(45, 49, 62, 0.95)',
+      borderColor: 'rgba(255, 255, 255, 0.15)',
       borderWidth: 1,
       padding: 10,
-      textStyle: { fontSize: 11, color: '#666' },
+      textStyle: { fontSize: 11, color: '#e5e7eb' },
       formatter: function (params: any) {
         let res = '';
         let date = '';
@@ -149,14 +149,14 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
             const close = param.value[2];
             const low = param.value[3];
             const high = param.value[4];
-            const color = close >= open ? '#ff4d4f' : '#52c41a';
-            res += `<div style="font-weight:bold;margin-bottom:6px;font-size:13px;color:#333;">${date}</div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:2px;"><span>收盘:</span> <span style="color:${color};font-weight:bold;">${close}</span></div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:2px;"><span>开盘:</span> <span>${open}</span></div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:2px;"><span>最高:</span> <span style="color:#ff4d4f;">${high}</span></div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:6px;"><span>最低:</span> <span style="color:#52c41a;">${low}</span></div>`;
+            const color = close >= open ? '#EF4444' : '#10B981';
+            res += `<div style="font-weight:bold;margin-bottom:6px;font-size:13px;color:#e5e7eb;">${date}</div>`;
+            res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:2px;"><span style="color:#d1d5db;">收盘:</span> <span style="color:${color};font-weight:bold;">${close}</span></div>`;
+            res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:2px;"><span style="color:#d1d5db;">开盘:</span> <span style="color:#e5e7eb;">${open}</span></div>`;
+            res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:2px;"><span style="color:#d1d5db;">最高:</span> <span style="color:#EF4444;">${high}</span></div>`;
+            res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:6px;"><span style="color:#d1d5db;">最低:</span> <span style="color:#10B981;">${low}</span></div>`;
           } else if (param.seriesType === 'bar') {
-            res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:6px;color:#888;"><span>成交量:</span> <span>${param.value}</span></div>`;
+            res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:6px;"><span style="color:#9ca3af;">成交量:</span> <span style="color:#9ca3af;">${param.value}</span></div>`;
           } else if (param.seriesType === 'line') {
             const val = param.value === '-' || param.value === undefined ? '-' : param.value;
             res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:1px;">
@@ -258,10 +258,10 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
         type: 'candlestick',
         data: values,
         itemStyle: {
-          color: '#ff4d4f',      // 阳线 红色
-          color0: '#52c41a',     // 阴线 绿色
-          borderColor: '#ff4d4f',
-          borderColor0: '#52c41a'
+          color: '#EF4444',      // 阳线 红色
+          color0: '#10B981',     // 阴线 绿色
+          borderColor: '#EF4444',
+          borderColor0: '#10B981'
         },
         barWidth: '60%'
       },
@@ -320,8 +320,8 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
             color: (params: any) => {
                 const i = params.dataIndex;
                 const v = values[i];
-                if (!v || v.length < 2) return '#ff4d4f';
-                return v[1]! >= v[0]! ? '#ff4d4f' : '#52c41a';
+                if (!v || v.length < 2) return '#EF4444';
+                return v[1]! >= v[0]! ? '#EF4444' : '#10B981';
             }
         }
       }

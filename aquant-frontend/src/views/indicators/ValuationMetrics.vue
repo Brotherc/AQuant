@@ -60,7 +60,7 @@
         :pagination="pagination"
         @change="handleTableChange"
         row-key="id"
-        :scroll="{ x: 2200 }"
+        :scroll="{ x: 2410 }"
         :expandable="{ columnWidth: 50 }"
       >
         <template #headerCell="{ column }">
@@ -83,23 +83,33 @@
 
         <!-- 展开行：行业对比数据 -->
         <template #expandedRowRender="{ record }">
-          <a-table
-            :columns="getSubColumns()"
-            :data-source="getIndustryData(record)"
-            :pagination="false"
-            size="small"
-            :show-header="false"
-            row-key="key"
-          >
-            <template #bodyCell="{ column, text, index }">
-              <template v-if="column.dataIndex === 'stockName'">
-                <span style="color: #8c8c8c">{{ index === 0 ? '行业平均' : '行业中值' }}</span>
-              </template>
-              <template v-else>
-                <span>{{ formatNumber(text) }}</span>
-              </template>
-            </template>
-          </a-table>
+          <div class="industry-compare-panel valuation-industry-panel">
+            <div v-for="row in getIndustryRows(record)" :key="row.key" class="industry-compare-row">
+              <span class="industry-compare-cell"></span>
+              <span class="industry-compare-cell"></span>
+              <span class="industry-compare-cell"></span>
+              <span class="industry-compare-cell industry-compare-label">{{ row.label }}</span>
+              <span class="industry-compare-cell">{{ formatNumber(row.peg) }}</span>
+              <span class="industry-compare-cell">{{ formatNumber(row.peLastYearA) }}</span>
+              <span class="industry-compare-cell">{{ formatNumber(row.peTtm) }}</span>
+              <span class="industry-compare-cell">{{ formatNumber(row.peThisYE) }}</span>
+              <span class="industry-compare-cell">{{ formatNumber(row.peNextYE) }}</span>
+              <span class="industry-compare-cell">{{ formatNumber(row.peNext2YE) }}</span>
+              <span class="industry-compare-cell">{{ formatNumber(row.psLastYA) }}</span>
+              <span class="industry-compare-cell">{{ formatNumber(row.psTtm) }}</span>
+              <span class="industry-compare-cell">{{ formatNumber(row.psThisYE) }}</span>
+              <span class="industry-compare-cell">{{ formatNumber(row.psNextYE) }}</span>
+              <span class="industry-compare-cell">{{ formatNumber(row.psNext2YE) }}</span>
+              <span class="industry-compare-cell">{{ formatNumber(row.pbLastYA) }}</span>
+              <span class="industry-compare-cell">{{ formatNumber(row.pbMrq) }}</span>
+              <span class="industry-compare-cell">{{ formatNumber(row.pceLastYA) }}</span>
+              <span class="industry-compare-cell">{{ formatNumber(row.pceTtm) }}</span>
+              <span class="industry-compare-cell">{{ formatNumber(row.pcfLastYA) }}</span>
+              <span class="industry-compare-cell">{{ formatNumber(row.pcfTtm) }}</span>
+              <span class="industry-compare-cell">{{ formatNumber(row.evEbitdaLastYA) }}</span>
+              <span class="industry-compare-cell"></span>
+            </div>
+          </div>
         </template>
       </a-table>
     </a-card>
@@ -125,7 +135,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, h } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import { getValuationMetricsPage, type StockValuationMetrics, type ValuationMetricsPageReqVO } from '@/api/indicator';
 import { getWatchlistGroups, addStockToWatchlist, type WatchlistGroupVO } from '@/api/watchlist';
 import { message } from 'ant-design-vue';
@@ -193,13 +203,14 @@ const columns: TableProps['columns'] = [
       { title: '去年实际', dataIndex: 'evEbitdaLastYA', width: 120 },
     ]
   },
-  { title: '操作', key: 'operation', width: 100, fixed: 'right' },
+  { title: '操作', key: 'operation', width: 100 },
 ];
 
-const getIndustryData = (record: StockValuationMetrics) => {
+const getIndustryRows = (record: StockValuationMetrics) => {
   return [
     {
       key: 'avg',
+      label: '行业平均',
       peg: record.pegIndustryAvg,
       peLastYearA: record.peLastYearIndustryAvg,
       peTtm: record.peTtmIndustryAvg,
@@ -221,6 +232,7 @@ const getIndustryData = (record: StockValuationMetrics) => {
     },
     {
       key: 'med',
+      label: '行业中值',
       peg: record.pegIndustryMed,
       peLastYearA: record.peLastYearIndustryMed,
       peTtm: record.peTtmIndustryMed,
@@ -241,29 +253,6 @@ const getIndustryData = (record: StockValuationMetrics) => {
       evEbitdaLastYA: record.evEbitdaLastYAIndustryMed,
     }
   ];
-};
-
-
-const getSubColumns = () => {
-    const mapCols = (cols: any[]): any[] => {
-        return cols.map(col => {
-            const newCol = { ...col };
-            if (newCol.children) {
-                newCol.children = mapCols(newCol.children);
-            } else {
-                if (['pegRank', 'stockCode'].includes(newCol.dataIndex)) {
-                    newCol.customRender = () => '';
-                } else if (newCol.dataIndex === 'stockName') {
-                    newCol.customRender = ({ index }: any) => index === 0 ? h('span', { style: 'color: #8c8c8c' }, '行业平均') : h('span', { style: 'color: #8c8c8c' }, '行业中值');
-                }
-                delete newCol.sorter;
-            }
-            // 移除 fixed，跟随外层表格水平滚动
-            delete newCol.fixed;
-            return newCol;
-        });
-    };
-    return mapCols(columns as any[]);
 };
 
 const searchParams = reactive<ValuationMetricsPageReqVO>({
@@ -402,20 +391,48 @@ onMounted(async () => {
     white-space: nowrap;
 }
 
-.valuation-metrics-container :deep(.ant-table-expanded-row-fixed) {
+.valuation-metrics-container :deep(.ant-table-expanded-row > td) {
+    background: rgba(255, 255, 255, 0.02) !important;
     padding: 0 !important;
 }
 
-.valuation-metrics-container :deep(.ant-table-expanded-row) .ant-table-cell {
-    background-color: #fafafa !important;
-    text-align: left !important;
+.valuation-metrics-container :deep(.ant-table-expanded-row-fixed) {
+    padding: 0 !important;
+    position: static !important;
+    width: max-content !important;
+    min-width: 100% !important;
+    overflow: visible !important;
 }
 
-.valuation-metrics-container :deep(.ant-table-expanded-row) .ant-table {
-    background: transparent;
+.industry-compare-panel {
+    overflow: visible;
+    background: rgba(255, 255, 255, 0.02);
 }
 
-.valuation-metrics-container :deep(.ant-table-expanded-row) .ant-table-content {
-    border: none !important;
+.industry-compare-row {
+    display: grid;
+    align-items: center;
+    min-height: 36px;
+    color: var(--color-text-primary);
 }
+
+.valuation-industry-panel .industry-compare-row {
+    grid-template-columns: 50px 120px 100px 220px 100px repeat(5, 100px) repeat(5, 100px) repeat(2, 100px) repeat(2, 100px) repeat(2, 100px) 120px 100px;
+    min-width: 2410px;
+}
+
+.industry-compare-row + .industry-compare-row {
+    background: rgba(255, 255, 255, 0.01);
+}
+
+.industry-compare-cell {
+    padding: 0 16px;
+    line-height: 36px;
+    white-space: nowrap;
+}
+
+.industry-compare-label {
+    color: var(--color-text-secondary) !important;
+}
+
 </style>
