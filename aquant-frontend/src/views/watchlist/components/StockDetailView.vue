@@ -203,8 +203,8 @@ const renderChart = (data: StockQuoteHistory[]) => {
     animation: false,
     legend: {
       data: ['K线', 'MA5', 'MA10', 'MA20', 'MA60', 'MA120'],
-      inactiveColor: '#ccc',
-      textStyle: { color: '#8c8c8c', fontSize: 11 },
+      inactiveColor: 'rgba(255, 255, 255, 0.3)',
+      textStyle: { color: 'var(--color-text-secondary)', fontSize: 11 },
       top: 0,
       right: '6%',
       itemWidth: 20,
@@ -215,25 +215,26 @@ const renderChart = (data: StockQuoteHistory[]) => {
       trigger: 'axis',
       axisPointer: { 
         type: 'cross', 
-        lineStyle: { type: 'dashed', color: 'rgba(25, 144, 255, 0.4)' },
+        lineStyle: { type: 'dashed', color: 'rgba(229, 231, 235, 0.4)' },
         label: {
-            backgroundColor: '#d9d9d9',
-            color: '#333',
-            borderColor: '#d9d9d9',
+            backgroundColor: 'rgba(45, 49, 62, 0.95)',
+            color: '#e5e7eb',
+            borderColor: 'rgba(255, 255, 255, 0.15)',
             borderWidth: 1,
             padding: [4, 8],
             fontSize: 11,
-            shadowBlur: 2,
-            shadowColor: 'rgba(0,0,0,0.1)',
-            borderRadius: 2
+            shadowBlur: 4,
+            shadowColor: 'rgba(0,0,0,0.3)',
+            borderRadius: 4
         }
       },
-      backgroundColor: 'rgba(255, 255, 255, 0.98)',
-      borderColor: '#eee',
+      backgroundColor: 'rgba(45, 49, 62, 0.95)',
+      borderColor: 'rgba(255, 255, 255, 0.15)',
       borderWidth: 1,
       padding: 12,
-      shadowBlur: 10,
-      shadowColor: 'rgba(0,0,0,0.1)',
+      textStyle: { color: '#e5e7eb' },
+      shadowBlur: 12,
+      shadowColor: 'rgba(0,0,0,0.3)',
       formatter: function (params: any) {
         let res = '';
         let date = '';
@@ -244,20 +245,20 @@ const renderChart = (data: StockQuoteHistory[]) => {
             const close = param.value[2];
             const low = param.value[3];
             const high = param.value[4];
-            const color = close >= open ? '#ff4d4f' : '#52c41a';
-            res += `<div style="font-weight:bold;margin-bottom:8px;font-size:14px;color:#333;">${date}</div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;"><span>收盘:</span> <span style="color:${color};font-weight:bold;">${close}</span></div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;"><span>开盘:</span> <span>${open}</span></div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;"><span>最高:</span> <span style="color:#ff4d4f;">${high}</span></div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:10px;"><span>最低:</span> <span style="color:#52c41a;">${low}</span></div>`;
+            const color = close >= open ? '#EF4444' : '#10B981';
+            res += `<div style="font-weight:bold;margin-bottom:8px;font-size:14px;color:#e5e7eb;">${date}</div>`;
+            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;color:#d1d5db;"><span>收盘:</span> <span style="color:${color};font-weight:bold;">${close}</span></div>`;
+            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;color:#d1d5db;"><span>开盘:</span> <span>${open}</span></div>`;
+            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;color:#d1d5db;"><span>最高:</span> <span style="color:#EF4444;">${high}</span></div>`;
+            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:10px;color:#d1d5db;"><span>最低:</span> <span style="color:#10B981;">${low}</span></div>`;
           } else if (param.seriesName === '成交量') {
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;font-size:11px;color:#888;margin-bottom:4px;">
+            res += `<div style="display:flex;justify-content:space-between;gap:20px;font-size:11px;color:#9ca3af;margin-bottom:4px;">
                       <span>成交量:</span> 
                       <span style="font-weight:500;">${param.value}</span>
                     </div>`;
           } else if (param.seriesType === 'line') {
             const val = param.value === '-' || param.value === undefined ? '-' : param.value;
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;font-size:11px;color:#666;margin-bottom:2px;">
+            res += `<div style="display:flex;justify-content:space-between;gap:20px;font-size:11px;color:#9ca3af;margin-bottom:2px;">
                       <span>${param.seriesName}:</span> 
                       <span style="color:${param.color};font-weight:500;">${val}</span>
                     </div>`;
@@ -282,8 +283,8 @@ const renderChart = (data: StockQuoteHistory[]) => {
         start: 70,
         end: 100,
         borderColor: 'transparent',
-        backgroundColor: '#f5f5f5',
-        fillerColor: 'rgba(140, 140, 140, 0.4)',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        fillerColor: 'rgba(255, 255, 255, 0.15)',
         handleSize: 0,
         moveHandleSize: 0,
         showDetail: false,
@@ -311,8 +312,8 @@ const renderChart = (data: StockQuoteHistory[]) => {
       {
         type: 'category',
         data: dates,
-        axisLine: { lineStyle: { color: '#eee' } },
-        axisLabel: { color: '#999' }
+        axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } },
+        axisLabel: { color: '#999', fontSize: 11 }
       },
       {
         type: 'category',
@@ -327,8 +328,8 @@ const renderChart = (data: StockQuoteHistory[]) => {
       {
         scale: true,
         position: 'right',
-        splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } },
-        axisLabel: { color: '#999' }
+        splitLine: { lineStyle: { type: 'dashed', color: 'rgba(255, 255, 255, 0.08)' } },
+        axisLabel: { color: '#999', fontSize: 11 }
       },
       {
         scale: true,
@@ -347,10 +348,10 @@ const renderChart = (data: StockQuoteHistory[]) => {
         type: 'candlestick',
         data: values,
         itemStyle: {
-          color: '#ff4d4f',
-          color0: '#52c41a',
-          borderColor: '#ff4d4f',
-          borderColor0: '#52c41a'
+          color: '#EF4444',
+          color0: '#10B981',
+          borderColor: '#EF4444',
+          borderColor0: '#10B981'
         }
       },
       {
@@ -408,8 +409,8 @@ const renderChart = (data: StockQuoteHistory[]) => {
             color: (params: any) => {
                 const i = params.dataIndex;
                 const v = values[i];
-                if (!v || v.length < 2) return '#ff4d4f';
-                return v[1]! >= v[0]! ? '#ff4d4f' : '#52c41a';
+                if (!v || v.length < 2) return '#EF4444';
+                return v[1]! >= v[0]! ? '#EF4444' : '#10B981';
             }
         }
       }
@@ -450,12 +451,12 @@ onUnmounted(() => {
   font-size: 24px;
   font-weight: 600;
   margin: 0;
-  color: #262626;
+  color: var(--color-text-primary);
 }
 
 .stock-code {
   font-size: 14px;
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
   margin-left: 8px;
   font-weight: normal;
 }
@@ -485,14 +486,14 @@ onUnmounted(() => {
 
 .metric-item .label {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
   margin-bottom: 4px;
 }
 
 .metric-item .value {
   font-size: 18px;
   font-weight: 600;
-  color: #262626;
+  color: var(--color-text-primary);
   font-family: 'DIN Alternate', sans-serif;
 }
 
@@ -518,13 +519,13 @@ onUnmounted(() => {
 .section-title {
   font-size: 16px;
   font-weight: 600;
-  color: #262626;
+  color: var(--color-text-primary);
 }
 
 .chart-container {
   flex: 1;
   width: 100%;
-  background: #fafafa;
+  background: var(--color-bg-elevated);
   border-radius: 8px;
 }
 
@@ -551,7 +552,7 @@ onUnmounted(() => {
   position: relative;
   padding-left: 16px;
   padding-bottom: 20px;
-  border-left: 1px solid #e8e8e8;
+  border-left: 1px solid var(--color-divider);
 }
 
 .timeline-dot {
@@ -560,10 +561,10 @@ onUnmounted(() => {
   top: 4px;
   width: 9px;
   height: 9px;
-  background: #1890ff;
+  background: var(--color-accent);
   border-radius: 50%;
-  border: 2px solid #fff;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  border: 2px solid var(--color-bg-secondary);
+  box-shadow: 0 0 0 2px rgba(229, 231, 235, 0.2);
 }
 
 .timeline-content-row {
@@ -575,7 +576,7 @@ onUnmounted(() => {
 
 .div-date-col {
   font-size: 11px;
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
   font-family: 'DIN Alternate', sans-serif;
   min-width: 65px;
   flex-shrink: 0;
@@ -592,7 +593,7 @@ onUnmounted(() => {
 .div-plan-name {
   font-size: 12px;
   font-weight: 500;
-  color: #262626;
+  color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -614,9 +615,9 @@ onUnmounted(() => {
 }
 
 .div-badge.unified { 
-  background: #f0f2f5; 
-  color: #434343; 
-  border: 1px solid #d9d9d9; 
+  background: rgba(255, 255, 255, 0.08); 
+  color: var(--color-text-primary); 
+  border: 1px solid var(--color-border); 
   padding: 1px 8px;
   font-weight: 600;
   letter-spacing: 0.5px;
@@ -624,8 +625,8 @@ onUnmounted(() => {
 
 .report-date {
   font-size: 10px;
-  color: #8c8c8c;
-  background: #f5f5f5;
+  color: var(--color-text-tertiary);
+  background: rgba(255, 255, 255, 0.06);
   padding: 2px 6px;
   border-radius: 4px;
   align-self: flex-start;
@@ -637,11 +638,11 @@ onUnmounted(() => {
   padding: 40px 0;
 }
 
-.text-up { color: #ff4d4f; }
-.text-down { color: #52c41a; }
+.text-up { color: #EF4444; }
+.text-down { color: #10B981; }
 
 .empty-text {
-  color: #bfbfbf;
+  color: var(--color-text-tertiary);
   text-align: center;
   margin-top: 40px;
 }
