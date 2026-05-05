@@ -37,7 +37,7 @@
         :pagination="pagination"
         @change="handleTableChange"
         row-key="id"
-        :scroll="{ x: 1730 }"
+        :scroll="{ x: 1670 }"
         :expandable="{ columnWidth: 50 }"
       >
 
@@ -131,7 +131,7 @@ const formatValue = (val: any) => val != null ? val : '-';
 const columns: TableProps['columns'] = [
   { title: '排名', dataIndex: 'roe3yAvgRank', sorter: true, width: 120 },
   { title: '代码', dataIndex: 'stockCode', width: 100 },
-  { title: '名称', dataIndex: 'stockName', width: 220 },
+  { title: '名称', dataIndex: 'stockName', width: 140 },
   {
     title: 'ROE(%)',
     children: [
@@ -370,8 +370,8 @@ onMounted(async () => {
 }
 
 .dupont-industry-panel .industry-compare-row {
-    grid-template-columns: 50px 120px 100px 220px repeat(4, 110px 90px 90px 90px) 100px;
-    min-width: 1730px;
+    grid-template-columns: 50px 120px 100px 140px repeat(4, 110px 90px 90px 90px) 100px;
+    min-width: 1670px;
 }
 
 .industry-compare-row + .industry-compare-row {

@@ -1,37 +1,34 @@
 <template>
   <div class="finance-sites-page">
-    <a-card :bordered="false">
-      <template #title>常用网站</template>
-      <a-row :gutter="[16, 16]">
-        <a-col v-for="site in financeSites" :key="site.url" :xs="24" :sm="12" :xl="8">
-          <a
-            class="finance-site-card"
-            :href="site.url"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div class="finance-site-card__icon">
-              <img
-                v-if="!brokenSiteIcons[site.url]"
-                :src="site.iconUrl"
-                :alt="`${site.name} logo`"
-                class="finance-site-card__icon-image"
-                @error="handleIconError(site.url)"
-              />
-              <GlobalOutlined v-else />
+    <a-row :gutter="[16, 16]">
+      <a-col v-for="site in financeSites" :key="site.url" :xs="24" :sm="12" :xl="8">
+        <a
+          class="finance-site-card"
+          :href="site.url"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <div class="finance-site-card__icon">
+            <img
+              v-if="!brokenSiteIcons[site.url]"
+              :src="site.iconUrl"
+              :alt="`${site.name} logo`"
+              class="finance-site-card__icon-image"
+              @error="handleIconError(site.url)"
+            />
+            <GlobalOutlined v-else />
+          </div>
+          <div class="finance-site-card__content">
+            <div class="finance-site-card__title">
+              {{ site.name }}
+              <ExportOutlined class="finance-site-card__jump" />
             </div>
-            <div class="finance-site-card__content">
-              <div class="finance-site-card__title">
-                {{ site.name }}
-                <ExportOutlined class="finance-site-card__jump" />
-              </div>
-              <div class="finance-site-card__desc">{{ site.description }}</div>
-              <div class="finance-site-card__url">{{ site.url }}</div>
-            </div>
-          </a>
-        </a-col>
-      </a-row>
-    </a-card>
+            <div class="finance-site-card__desc">{{ site.description }}</div>
+            <div class="finance-site-card__url">{{ site.url }}</div>
+          </div>
+        </a>
+      </a-col>
+    </a-row>
   </div>
 </template>
 
@@ -83,16 +80,17 @@ const handleIconError = (siteUrl: string) => {
   height: 100%;
   padding: 18px;
   border-radius: 14px;
-  border: 1px solid #f0f0f0;
-  background: linear-gradient(180deg, #ffffff, #fafcff);
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.03);
   text-decoration: none;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .finance-site-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(24, 144, 255, 0.28);
-  box-shadow: 0 10px 24px rgba(15, 41, 77, 0.08);
+  border-color: var(--color-border-hover);
+  box-shadow: var(--shadow-card-hover);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .finance-site-card__icon {
@@ -102,8 +100,8 @@ const handleIconError = (siteUrl: string) => {
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: rgba(24, 144, 255, 0.1);
-  color: #1890ff;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-secondary);
   font-size: 20px;
   flex-shrink: 0;
   overflow: hidden;
@@ -125,25 +123,25 @@ const handleIconError = (siteUrl: string) => {
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
-  color: #1f1f1f;
+  color: var(--color-text-primary);
   font-size: 17px;
   font-weight: 700;
 }
 
 .finance-site-card__jump {
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
   font-size: 13px;
 }
 
 .finance-site-card__desc {
   margin-bottom: 8px;
-  color: #595959;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.7;
 }
 
 .finance-site-card__url {
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
   font-size: 12px;
   word-break: break-all;
 }

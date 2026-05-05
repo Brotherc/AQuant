@@ -105,7 +105,7 @@
       >
         <template #bodyCell="{ column, text, record }">
           <template v-if="column.key === 'signal'">
-            <a-tag :color="getSignalLabel(text).color">
+            <a-tag :class="getSignalLabel(text).class">
               {{ getSignalLabel(text).text }}
             </a-tag>
           </template>
@@ -115,7 +115,7 @@
             </span>
           </template>
           <template v-if="column.key === 'totalReturn'">
-            <span :style="{ color: text > 0 ? 'red' : (text < 0 ? 'green' : 'inherit') }">
+            <span :style="{ color: text > 0 ? '#EF4444' : (text < 0 ? '#10B981' : 'inherit') }">
               {{ text > 0 ? '+' : '' }}{{ text != null ? (text * 100).toFixed(2) + '%' : '-' }}
             </span>
           </template>
@@ -128,7 +128,7 @@
             </span>
           </template>
           <template v-if="column.key === 'reliability'">
-            <a-tag :color="text === '高' ? 'success' : (text === '中' ? 'warning' : 'default')">
+            <a-tag :color="text === '高' ? 'error' : (text === '中' ? 'warning' : 'default')">
               {{ text }}
             </a-tag>
           </template>
@@ -283,12 +283,12 @@ const columns = computed(() => {
 
 // 信号类型映射
 const getSignalLabel = (signal: string) => {
-  const map: Record<string, { text: string; color: string }> = {
-    'BUY': { text: '强势', color: 'red' },
-    'SELL': { text: '弱势', color: 'green' },
-    'HOLD': { text: '中性', color: 'blue' },
+  const map: Record<string, { text: string; class: string }> = {
+    'BUY': { text: '强势', class: 'signal-tag-buy' },
+    'SELL': { text: '弱势', class: 'signal-tag-sell' },
+    'HOLD': { text: '中性', class: 'signal-tag-hold' },
   };
-  return map[signal] || { text: signal, color: 'default' };
+  return map[signal] || { text: signal, class: 'signal-tag-default' };
 };
 
 const formatDateTime = (value?: string) => {
@@ -467,25 +467,26 @@ onBeforeUnmount(() => {
 .strategy-info h3 {
   margin-top: 16px;
   margin-bottom: 8px;
-  color: #1890ff;
+  color: var(--color-text-primary);
   font-weight: 600;
 }
 
 .strategy-info h4 {
   margin-top: 12px;
   margin-bottom: 6px;
+  color: var(--color-text-primary);
   font-weight: 600;
 }
 
 .strategy-info p {
-  color: #555;
+  color: var(--color-text-secondary);
   line-height: 1.6;
   margin-bottom: 12px;
 }
 
 .strategy-info ul {
   padding-left: 20px;
-  color: #555;
+  color: var(--color-text-secondary);
   line-height: 1.6;
 }
 
@@ -494,10 +495,11 @@ onBeforeUnmount(() => {
 }
 
 .strategy-info code {
-  background-color: #f0f2f5;
+  background-color: rgba(255, 255, 255, 0.08);
   padding: 2px 6px;
   border-radius: 4px;
-  color: #cf1322;
+  color: var(--color-text-primary);
   font-size: 0.9em;
+  border: 1px solid var(--color-border);
 }
 </style>

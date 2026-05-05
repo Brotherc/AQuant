@@ -476,6 +476,20 @@
   color: var(--color-text-tertiary) !important;
 }
 
+.ant-select-clear,
+.ant-select-clear .anticon,
+.ant-select-clear svg {
+  background: transparent !important;
+  color: var(--color-text-tertiary) !important;
+}
+
+.ant-select-clear:hover,
+.ant-select-clear:hover .anticon,
+.ant-select-clear:hover svg {
+  background: transparent !important;
+  color: var(--color-text-secondary) !important;
+}
+
 .ant-select-dropdown {
   background: var(--color-bg-secondary) !important;
   border: 1px solid var(--color-border) !important;
@@ -1097,6 +1111,88 @@
 }
 
 /* ========================================
+   Alert 提示框组件 - Apple Style
+   ======================================== */
+
+.ant-alert {
+  border-radius: var(--radius-md) !important;
+  border: 1px solid var(--color-border) !important;
+}
+
+/* Info 类型 - 深色主题 */
+.ant-alert-info {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.ant-alert-info .ant-alert-icon {
+  color: var(--color-text-secondary) !important;
+}
+
+.ant-alert-info .ant-alert-message {
+  color: var(--color-text-primary) !important;
+  font-weight: var(--font-weight-medium);
+}
+
+.ant-alert-info .ant-alert-description {
+  color: var(--color-text-secondary) !important;
+}
+
+/* Success 类型 */
+.ant-alert-success {
+  background: rgba(16, 185, 129, 0.1) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+.ant-alert-success .ant-alert-icon {
+  color: #10B981 !important;
+}
+
+.ant-alert-success .ant-alert-message {
+  color: var(--color-text-primary) !important;
+}
+
+.ant-alert-success .ant-alert-description {
+  color: var(--color-text-secondary) !important;
+}
+
+/* Warning 类型 */
+.ant-alert-warning {
+  background: rgba(245, 158, 11, 0.1) !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+.ant-alert-warning .ant-alert-icon {
+  color: #F59E0B !important;
+}
+
+.ant-alert-warning .ant-alert-message {
+  color: var(--color-text-primary) !important;
+}
+
+.ant-alert-warning .ant-alert-description {
+  color: var(--color-text-secondary) !important;
+}
+
+/* Error 类型 */
+.ant-alert-error {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+.ant-alert-error .ant-alert-icon {
+  color: #EF4444 !important;
+}
+
+.ant-alert-error .ant-alert-message {
+  color: var(--color-text-primary) !important;
+}
+
+.ant-alert-error .ant-alert-description {
+  color: var(--color-text-secondary) !important;
+}
+
+/* ========================================
    Switch 开关组件 - Professional Dark Theme
    参考 GitHub Dark / VS Code Dark 风格
    ======================================== */
@@ -1160,4 +1256,85 @@
 
 .ant-switch-checked .ant-switch-loading-icon {
   color: #1a1f2e !important;
+}
+
+/* ========================================
+   Tag 标签组件 - Apple Style
+   ======================================== */
+
+.ant-tag {
+  border-radius: var(--radius-sm) !important;
+  font-size: var(--font-size-xs) !important;
+  padding: 2px 8px !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+}
+
+/* 交易信号标签 - 边框样式 */
+.signal-tag-buy {
+  background: transparent !important;
+  border-color: #EF4444 !important;
+  color: #EF4444 !important;
+}
+
+.signal-tag-sell {
+  background: transparent !important;
+  border-color: #10B981 !important;
+  color: #10B981 !important;
+}
+
+.signal-tag-hold {
+  background: transparent !important;
+  border-color: #6B7280 !important;
+  color: #6B7280 !important;
+}
+
+.signal-tag-default {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-secondary) !important;
+}
+
+/* 自定义颜色标签 - 边框样式 */
+.ant-tag[style*="#EF4444"] {
+  background: transparent !important;
+  border-color: #EF4444 !important;
+  color: #EF4444 !important;
+}
+
+.ant-tag[style*="#10B981"] {
+  background: transparent !important;
+  border-color: #10B981 !important;
+  color: #10B981 !important;
+}
+
+.ant-tag[style*="#6B7280"] {
+  background: transparent !important;
+  border-color: #6B7280 !important;
+  color: #6B7280 !important;
+}
+
+/* 预设颜色标签 */
+.ant-tag-success {
+  background: rgba(16, 185, 129, 0.1) !important;
+  border-color: #10B981 !important;
+  color: #10B981 !important;
+}
+
+.ant-tag-warning {
+  background: rgba(245, 158, 11, 0.1) !important;
+  border-color: #F59E0B !important;
+  color: #F59E0B !important;
+}
+
+.ant-tag-error {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border-color: #EF4444 !important;
+  color: #EF4444 !important;
+}
+
+.ant-tag-default {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-secondary) !important;
 }

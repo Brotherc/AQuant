@@ -48,7 +48,7 @@
         :pagination="pagination"
         @change="handleTableChange"
         row-key="id"
-        :scroll="{ x: 2420 }"
+        :scroll="{ x: 2360 }"
         :expandable="{ columnWidth: 50 }"
       >
         <template #headerCell="{ column }">
@@ -141,7 +141,7 @@ const formatNumber = (val: any) => {
 const columns: TableProps['columns'] = [
   { title: '排名', dataIndex: 'epsGrowth3yCagrRank', sorter: true, width: 120 },
   { title: '代码', dataIndex: 'stockCode', width: 100 },
-  { title: '名称', dataIndex: 'stockName', width: 220 },
+  { title: '名称', dataIndex: 'stockName', width: 140 },
   {
     title: '基本每股收益增长率(%)',
     children: [
@@ -381,8 +381,8 @@ onMounted(async () => {
 }
 
 .growth-industry-panel .industry-compare-row {
-    grid-template-columns: 50px 120px 100px 220px repeat(3, 110px 100px 100px 100px 100px 100px) 100px;
-    min-width: 2420px;
+    grid-template-columns: 50px 120px 100px 140px repeat(3, 110px 100px 100px 100px 100px 100px) 100px;
+    min-width: 2360px;
 }
 
 .industry-compare-row + .industry-compare-row {

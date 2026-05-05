@@ -154,12 +154,12 @@
       >
         <template #bodyCell="{ column, text, record }">
           <template v-if="column.key === 'signal'">
-            <a-tag :color="getSignalLabel(text).color">
+            <a-tag :class="getSignalLabel(text).class">
               {{ getSignalLabel(text).text }}
             </a-tag>
           </template>
           <template v-if="column.key === 'totalReturn'">
-            <span :style="{ color: text > 0 ? 'red' : (text < 0 ? 'green' : 'inherit') }">
+            <span :style="{ color: text > 0 ? '#EF4444' : (text < 0 ? '#10B981' : 'inherit') }">
               {{ text > 0 ? '+' : '' }}{{ text != null ? (text * 100).toFixed(2) + '%' : '-' }}
             </span>
           </template>
@@ -172,7 +172,7 @@
             </span>
           </template>
           <template v-if="column.key === 'reliability'">
-            <a-tag :color="text === '高' ? 'success' : (text === '中' ? 'warning' : 'default')">
+            <a-tag :color="text === '高' ? 'error' : (text === '中' ? 'warning' : 'default')">
               {{ text }}
             </a-tag>
           </template>
@@ -312,12 +312,12 @@ const tableScrollX = computed(() => analysisMode.value === 'backtest' ? 1150 : 7
 
 // 信号类型映射
 const getSignalLabel = (signal: string) => {
-  const map: Record<string, { text: string; color: string }> = {
-    'BUY': { text: '买入', color: 'red' },
-    'SELL': { text: '卖出', color: 'green' },
-    'HOLD': { text: '无', color: 'blue' },
+  const map: Record<string, { text: string; class: string }> = {
+    'BUY': { text: '买入', class: 'signal-tag-buy' },
+    'SELL': { text: '卖出', class: 'signal-tag-sell' },
+    'HOLD': { text: '无', class: 'signal-tag-hold' },
   };
-  return map[signal] || { text: signal, color: 'default' };
+  return map[signal] || { text: signal, class: 'signal-tag-default' };
 };
 
 const formatDateTime = (value?: string) => {
@@ -440,6 +440,9 @@ onMounted(async () => {
 .strategy-search-form-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  flex: 0 0 100%;
+  width: 100%;
   column-gap: 24px;
   row-gap: 12px;
 }
@@ -449,12 +452,30 @@ onMounted(async () => {
   margin-bottom: 0;
 }
 
-.strategy-search-form-row + .strategy-search-form-row {
-  margin-top: 12px;
+.strategy-search-form--backtest :deep(.ant-form-item-row) {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
 }
 
-.strategy-search-form-row--second {
-  align-items: flex-start;
+.strategy-search-form--backtest :deep(.ant-form-item-label) {
+  flex: 0 0 84px;
+  padding-right: 8px;
+  text-align: right;
+}
+
+.strategy-search-form--backtest :deep(.ant-form-item-label > label) {
+  display: inline-flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.strategy-search-form--backtest :deep(.ant-form-item-control) {
+  flex: none;
+}
+
+.strategy-search-form-row + .strategy-search-form-row {
+  margin-top: 12px;
 }
 
 .strategy-search-form--backtest .strategy-search-form-submit {
@@ -470,25 +491,26 @@ onMounted(async () => {
 .strategy-info h3 {
   margin-top: 16px;
   margin-bottom: 8px;
-  color: #1890ff;
+  color: var(--color-text-primary);
   font-weight: 600;
 }
 
 .strategy-info h4 {
   margin-top: 12px;
   margin-bottom: 6px;
+  color: var(--color-text-primary);
   font-weight: 600;
 }
 
 .strategy-info p {
-  color: #555;
+  color: var(--color-text-secondary);
   line-height: 1.6;
   margin-bottom: 12px;
 }
 
 .strategy-info ul {
   padding-left: 20px;
-  color: #555;
+  color: var(--color-text-secondary);
   line-height: 1.6;
 }
 

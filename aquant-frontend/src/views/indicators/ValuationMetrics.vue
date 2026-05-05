@@ -60,7 +60,7 @@
         :pagination="pagination"
         @change="handleTableChange"
         row-key="id"
-        :scroll="{ x: 2410 }"
+        :scroll="{ x: 2350 }"
         :expandable="{ columnWidth: 50 }"
       >
         <template #headerCell="{ column }">
@@ -154,7 +154,7 @@ const formatNumber = (val: any) => {
 const columns: TableProps['columns'] = [
   { title: '排名', dataIndex: 'pegRank', sorter: true, width: 120 },
   { title: '代码', dataIndex: 'stockCode', width: 100 },
-  { title: '名称', dataIndex: 'stockName', width: 220 },
+  { title: '名称', dataIndex: 'stockName', width: 140 },
   { title: 'PEG', dataIndex: 'peg', sorter: true, width: 100 },
   {
     title: '市盈率(PE)',
@@ -417,8 +417,8 @@ onMounted(async () => {
 }
 
 .valuation-industry-panel .industry-compare-row {
-    grid-template-columns: 50px 120px 100px 220px 100px repeat(5, 100px) repeat(5, 100px) repeat(2, 100px) repeat(2, 100px) repeat(2, 100px) 120px 100px;
-    min-width: 2410px;
+    grid-template-columns: 50px 120px 100px 140px 100px repeat(5, 100px) repeat(5, 100px) repeat(2, 100px) repeat(2, 100px) repeat(2, 100px) 120px 100px;
+    min-width: 2350px;
 }
 
 .industry-compare-row + .industry-compare-row {
