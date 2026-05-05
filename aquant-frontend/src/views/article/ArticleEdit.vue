@@ -202,8 +202,7 @@ onMounted(() => {
 
 <style scoped>
 .article-edit-container {
-  max-width: 1400px;
-  margin: 0 auto;
+  /* 移除 max-width 限制，与其他页面保持一致 */
 }
 
 .header-actions {

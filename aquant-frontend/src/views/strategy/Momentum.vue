@@ -263,7 +263,7 @@ const columns = computed(() => {
     baseColumns.push(
       { title: '交易次数', dataIndex: 'tradeCount', key: 'tradeCount', sorter: true, width: 120 } as any,
       { title: '胜率', dataIndex: 'winRate', key: 'winRate', sorter: true, width: 100 } as any,
-      { title: '显著性(p)', dataIndex: 'pValue', key: 'pValue', sorter: true, width: 110 } as any,
+      { title: '显著性(p)', dataIndex: 'pValue', key: 'pValue', sorter: true, width: 130} as any,
       { title: '可靠度', dataIndex: 'reliability', key: 'reliability', width: 90 } as any,
       { 
         title: '累计收益率', 
@@ -272,7 +272,7 @@ const columns = computed(() => {
         sorter: true, 
         defaultSortOrder: 'descend',
         showSorterTooltip: false, 
-        width: 120 
+        width: 130,
       } as any
     );
   }

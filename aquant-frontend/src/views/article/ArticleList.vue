@@ -3,17 +3,21 @@
     <a-card :bordered="false">
       <!-- 标题和操作栏 -->
       <div class="header-section" :class="{ 'justify-end': !isMyArticles }">
-        <a-button v-if="isMyArticles" type="primary" @click="handleCreate">
+        <a-button v-if="isMyArticles" @click="handleCreate">
           <template #icon><PlusOutlined /></template>
           创建文章
         </a-button>
-        <a-input-search
+        <a-input
           v-model:value="searchKeyword"
           placeholder="搜索文章标题或内容"
           style="width: 300px"
-          @search="handleSearch"
           allow-clear
-        />
+          @pressEnter="handleSearch"
+        >
+          <template #prefix>
+            <SearchOutlined />
+          </template>
+        </a-input>
       </div>
 
       <!-- 文章列表 -->
@@ -102,7 +106,8 @@ import {
   EditOutlined,
   UserOutlined,
   LockOutlined,
-  GlobalOutlined
+  GlobalOutlined,
+  SearchOutlined
 } from '@ant-design/icons-vue';
 import {
   getPublicArticles,
@@ -225,7 +230,8 @@ const handleSearch = () => {
 
 // 查看文章详情
 const handleView = (id: number) => {
-  router.push({ name: 'ArticleDetail', params: { id } });
+  const query = props.isMyArticles ? { from: 'my-articles' } : {};
+  router.push({ name: 'ArticleDetail', params: { id }, query });
 };
 
 // 创建文章
@@ -351,7 +357,7 @@ onUnmounted(() => {
 }
 
 .article-list :deep(.ant-list-item:hover) {
-  background-color: #fafafa;
+  background-color: rgba(255, 255, 255, 0.03);
 }
 
 .clickable-meta {
@@ -361,7 +367,7 @@ onUnmounted(() => {
 .article-title {
   font-size: 16px;
   font-weight: 600;
-  color: #262626;
+  color: var(--color-text-primary);
   word-break: break-word;
   overflow-wrap: break-word;
 }
@@ -390,7 +396,20 @@ onUnmounted(() => {
 }
 
 :deep(.ant-list-item-action a) {
-  color: #1890ff;
+  color: var(--color-text-secondary);
+  transition: color var(--transition-fast);
+}
+
+:deep(.ant-list-item-action a:hover) {
+  color: var(--color-text-primary);
+}
+
+:deep(.ant-list-item-action a[style*="color: #ff4d4f"]) {
+  color: #ff4d4f !important;
+}
+
+:deep(.ant-list-item-action a[style*="color: #ff4d4f"]:hover) {
+  color: #ff7875 !important;
 }
 
 .load-more-trigger {

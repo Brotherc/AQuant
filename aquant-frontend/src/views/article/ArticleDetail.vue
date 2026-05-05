@@ -25,7 +25,7 @@
                 <EditOutlined />
                 更新于 {{ formatDateTime(article.updatedAt) }}
               </span>
-              <a-tag :color="article.visibility === 1 ? 'green' : 'orange'">
+              <a-tag v-if="isMyArticles" color="default">
                 {{ article.visibility === 1 ? '公开' : '私密' }}
               </a-tag>
             </a-space>
@@ -106,6 +106,12 @@ const isAuthor = computed(() => {
   // TODO: 从用户状态中获取当前用户ID进行比较
   // 这里暂时返回false，需要集成用户认证状态
   return false;
+});
+
+// 判断是否来自"我的笔记"页面
+const isMyArticles = computed(() => {
+  // 通过路由的 query 参数或者 referrer 判断
+  return route.query.from === 'my-articles' || route.path.includes('my-articles');
 });
 
 // 加载文章详情
@@ -192,8 +198,7 @@ onMounted(() => {
 
 <style scoped>
 .article-detail-container {
-  max-width: 1400px;
-  margin: 0 auto;
+  /* 移除 max-width 限制，与其他页面保持一致 */
 }
 
 .back-button {
@@ -214,7 +219,7 @@ onMounted(() => {
   font-weight: 600;
   line-height: 1.4;
   margin-bottom: 16px;
-  color: #262626;
+  color: var(--color-text-primary);
   word-wrap: break-word;
   word-break: break-word;
   overflow-wrap: break-word;
@@ -233,7 +238,7 @@ onMounted(() => {
 .article-text {
   font-size: 16px;
   line-height: 1.8;
-  color: #262626;
+  color: var(--color-text-primary);
   word-wrap: break-word;
   word-break: break-word;
   overflow-wrap: break-word;
@@ -291,11 +296,13 @@ onMounted(() => {
 }
 
 .article-text :deep(code) {
-  background-color: #f5f5f5;
+  background-color: rgba(255, 255, 255, 0.08);
   padding: 0.2em 0.4em;
   border-radius: 3px;
   font-family: 'Courier New', monospace;
   font-size: 0.9em;
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
 }
 
 .article-text :deep(pre) {
@@ -320,10 +327,10 @@ onMounted(() => {
 }
 
 .article-text :deep(blockquote) {
-  border-left: 4px solid #1890ff;
+  border-left: 4px solid var(--color-text-secondary);
   padding-left: 1em;
   margin: 1em 0;
-  color: #595959;
+  color: var(--color-text-secondary);
   font-style: italic;
   word-wrap: break-word;
   word-break: break-word;
@@ -331,7 +338,7 @@ onMounted(() => {
 }
 
 .article-text :deep(a) {
-  color: #1890ff;
+  color: var(--color-text-secondary);
   text-decoration: underline;
   word-wrap: break-word;
   word-break: break-all;
@@ -339,12 +346,12 @@ onMounted(() => {
 }
 
 .article-text :deep(a:hover) {
-  color: #40a9ff;
+  color: var(--color-text-primary);
 }
 
 .article-text :deep(hr) {
   border: none;
-  border-top: 2px solid #f0f0f0;
+  border-top: 2px solid var(--color-divider);
   margin: 2em 0;
 }
 
@@ -363,7 +370,7 @@ onMounted(() => {
 .article-actions {
   margin-top: 48px;
   padding-top: 24px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--color-divider);
 }
 
 :deep(.ant-divider) {

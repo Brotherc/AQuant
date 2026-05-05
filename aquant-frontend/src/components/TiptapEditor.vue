@@ -260,16 +260,16 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .tiptap-editor {
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   overflow: hidden;
-  background: #fff;
+  background: var(--color-bg-secondary);
   transition: border-color 0.3s;
 }
 
 .tiptap-editor:focus-within {
-  border-color: #1890ff;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+  border-color: var(--color-border-hover);
+  box-shadow: none;
 }
 
 .editor-toolbar {
@@ -277,8 +277,8 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
   gap: 4px;
   padding: 8px;
-  border-bottom: 1px solid #f0f0f0;
-  background: #fafafa;
+  border-bottom: 1px solid var(--color-divider);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .toolbar-group {
@@ -288,7 +288,7 @@ onBeforeUnmount(() => {
 
 .toolbar-divider {
   width: 1px;
-  background: #d9d9d9;
+  background: var(--color-divider);
   margin: 0 4px;
 }
 
@@ -302,20 +302,20 @@ onBeforeUnmount(() => {
   background: transparent;
   border-radius: 4px;
   cursor: pointer;
-  color: #595959;
+  color: var(--color-text-secondary);
   font-size: 14px;
   font-weight: 600;
   transition: all 0.2s;
 }
 
 .toolbar-button:hover:not(:disabled) {
-  background: #e6f7ff;
-  color: #1890ff;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-primary);
 }
 
 .toolbar-button.is-active {
-  background: #1890ff;
-  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--color-text-primary);
 }
 
 .toolbar-button:disabled {
@@ -334,25 +334,26 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: flex-end;
   padding: 8px 16px;
-  border-top: 1px solid #f0f0f0;
-  background: #fafafa;
+  border-top: 1px solid var(--color-divider);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .char-count {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
 }
 
 /* Tiptap 编辑器样式 */
 :deep(.ProseMirror) {
   outline: none;
   min-height: 400px;
+  color: var(--color-text-primary);
 }
 
 :deep(.ProseMirror p.is-editor-empty:first-child::before) {
   content: attr(data-placeholder);
   float: left;
-  color: #adb5bd;
+  color: var(--color-text-tertiary);
   pointer-events: none;
   height: 0;
 }
@@ -394,11 +395,13 @@ onBeforeUnmount(() => {
 }
 
 :deep(.ProseMirror code) {
-  background-color: #f5f5f5;
+  background-color: rgba(255, 255, 255, 0.08);
   padding: 0.2em 0.4em;
   border-radius: 3px;
   font-family: 'Courier New', monospace;
   font-size: 0.9em;
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
 }
 
 :deep(.ProseMirror pre) {
@@ -418,26 +421,26 @@ onBeforeUnmount(() => {
 }
 
 :deep(.ProseMirror blockquote) {
-  border-left: 4px solid #1890ff;
+  border-left: 4px solid var(--color-text-secondary);
   padding-left: 1em;
   margin: 1em 0;
-  color: #595959;
+  color: var(--color-text-secondary);
   font-style: italic;
 }
 
 :deep(.ProseMirror a) {
-  color: #1890ff;
+  color: var(--color-text-secondary);
   text-decoration: underline;
   cursor: pointer;
 }
 
 :deep(.ProseMirror a:hover) {
-  color: #40a9ff;
+  color: var(--color-text-primary);
 }
 
 :deep(.ProseMirror hr) {
   border: none;
-  border-top: 2px solid #f0f0f0;
+  border-top: 2px solid var(--color-divider);
   margin: 2em 0;
 }
 
