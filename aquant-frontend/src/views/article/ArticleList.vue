@@ -90,8 +90,6 @@
         没有更多文章了
       </div>
 
-      <!-- 空状态 -->
-      <a-empty v-if="!loading && articles.length === 0" description="暂无文章" />
     </a-card>
   </div>
 </template>
