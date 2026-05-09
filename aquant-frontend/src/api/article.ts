@@ -108,14 +108,14 @@ export const getArticleDetail = (id: number) => {
 /**
  * 获取公开文章列表(支持搜索)
  * @param params.keyword - 可选，搜索关键词。不传则返回全部公开文章
- * @param params.page - 页码，默认1
+ * @param params.page - 页码，默认0（Spring Data Pageable从0开始）
  * @param params.size - 每页大小，默认20
  */
 export const getPublicArticles = (params: { keyword?: string; page?: number; size?: number }) => {
     return api.get<ResponseDTO<PageResult<ArticleListItemVO>>>('/article/public/list', {
         params: {
             keyword: params.keyword,
-            page: params.page || 1,
+            page: params.page !== undefined ? params.page : 0,
             size: params.size || 20
         }
     });
@@ -124,14 +124,14 @@ export const getPublicArticles = (params: { keyword?: string; page?: number; siz
 /**
  * 获取个人文章列表(支持搜索)
  * @param params.keyword - 可选，搜索关键词。不传则返回全部个人文章
- * @param params.page - 页码，默认1
+ * @param params.page - 页码，默认0（Spring Data Pageable从0开始）
  * @param params.size - 每页大小，默认20
  */
 export const getUserArticles = (params: { keyword?: string; page?: number; size?: number }) => {
     return api.get<ResponseDTO<PageResult<ArticleListItemVO>>>('/article/my/list', {
         params: {
             keyword: params.keyword,
-            page: params.page || 1,
+            page: params.page !== undefined ? params.page : 0,
             size: params.size || 20
         }
     });

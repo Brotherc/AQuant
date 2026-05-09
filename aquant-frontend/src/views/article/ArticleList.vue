@@ -127,7 +127,7 @@ const route = useRoute();
 // 状态
 const loading = ref(false);
 const articles = ref<ArticleListItemVO[]>([]);
-const currentPage = ref(1);
+const currentPage = ref(0); // 改为从0开始，匹配Spring Data Pageable
 const pageSize = ref(20);
 const hasMore = ref(true);
 const searchKeyword = ref('');
@@ -221,7 +221,7 @@ const setupObserver = () => {
 
 // 搜索
 const handleSearch = () => {
-  currentPage.value = 1;
+  currentPage.value = 0; // 重置为0
   hasMore.value = true;
   loadArticles(false);
 };
@@ -249,7 +249,7 @@ const handleDelete = async (id: number) => {
     if (response.data.success) {
       message.success('删除成功');
       // 重新加载当前页
-      currentPage.value = 1;
+      currentPage.value = 0; // 重置为0
       hasMore.value = true;
       loadArticles(false);
     } else {
@@ -317,7 +317,7 @@ onMounted(() => {
 // 监听路由变化，重新加载数据
 watch(() => route.path, () => {
   // 重置状态
-  currentPage.value = 1;
+  currentPage.value = 0; // 重置为0
   searchKeyword.value = '';
   hasMore.value = true;
   articles.value = [];
