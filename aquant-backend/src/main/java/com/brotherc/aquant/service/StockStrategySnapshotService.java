@@ -33,6 +33,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.math.BigDecimal;
@@ -142,6 +143,7 @@ public class StockStrategySnapshotService {
                 && isPresetRecentYears(reqVO.getRecentYears());
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void refreshDualMaBacktestSnapshots() {
         if (!dualMaRefreshing.compareAndSet(false, true)) {
             log.info("双均线回测快照任务已在执行中，本次跳过");
@@ -150,13 +152,6 @@ public class StockStrategySnapshotService {
 
         long batchNo = System.currentTimeMillis();
         try {
-            if (shouldSkipRefreshSnapshots(
-                    StockSyncConstant.STOCK_STRATEGY_DUAL_MA_BACKTEST_SNAPSHOT_LATEST,
-                    "双均线回测快照"
-            )) {
-                return;
-            }
-
             List<String> recentDates = stockQuoteHistoryRepository.findRecentTradeDates(MAX_NEED_DAYS);
             if (CollectionUtils.isEmpty(recentDates)) {
                 log.warn("双均线回测快照生成跳过，历史行情为空");
@@ -171,7 +166,15 @@ public class StockStrategySnapshotService {
                     batchNo,
                     StockSyncConstant.STOCK_STRATEGY_DUAL_MA_BACKTEST_SNAPSHOT_LATEST
             );
-            dualMaSnapshotRepository.deleteByBatchNoNot(batchNo);
+            int limit = 5000;
+
+            while (true) {
+                int deleted = dualMaSnapshotRepository.deleteOldBatchLimit(batchNo, limit);
+
+                if (deleted < limit) {
+                    break;
+                }
+            }
             log.info("双均线回测快照生成完成，batchNo={}", batchNo);
         } catch (Exception e) {
             log.error("双均线回测快照生成失败，batchNo={}", batchNo, e);
@@ -180,7 +183,8 @@ public class StockStrategySnapshotService {
         }
     }
 
-    public void refreshMomentumBacktestSnapshots() {
+    @Transactional(rollbackFor = Exception.class)
+    public void  refreshMomentumBacktestSnapshots() {
         if (!momentumRefreshing.compareAndSet(false, true)) {
             log.info("动量回测快照任务已在执行中，本次跳过");
             return;
@@ -616,7 +620,7 @@ public class StockStrategySnapshotService {
         return false;
     }
 
-    protected void activateLatestBatch(Long batchNo, String syncName) {
+    private void activateLatestBatch(Long batchNo, String syncName) {
         StockSync stockSync = stockSyncRepository.findByName(syncName);
         if (stockSync == null) {
             stockSync = new StockSync();
