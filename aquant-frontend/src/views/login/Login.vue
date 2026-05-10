@@ -281,8 +281,26 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f0f2f5;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%);
   padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-page::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.03) 0%, transparent 70%);
+  animation: rotate 30s linear infinite;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .login-container {
@@ -291,21 +309,40 @@ onBeforeUnmount(() => {
   min-height: 480px;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 60px rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  position: relative;
+  z-index: 1;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* 左侧品牌 */
 .brand-section {
   flex: 1;
-  background: linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  background: linear-gradient(160deg, #0f0f0f 0%, #1a1a1a 50%, #0a0a0a 100%);
   padding: 48px 40px;
   display: flex;
   align-items: center;
   color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+
+.brand-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+  pointer-events: none;
 }
 
 .brand-content {
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .brand-logo {
@@ -313,18 +350,26 @@ onBeforeUnmount(() => {
   font-weight: 800;
   letter-spacing: 2px;
   margin-bottom: 12px;
+  color: #fff;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.brand-logo-icon {
+  color: #fff;
+  margin-right: 8px;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.3));
 }
 
 .brand-slogan {
   font-size: 18px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.9);
   margin-bottom: 20px;
 }
 
 .brand-desc {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.7);
   line-height: 1.8;
   margin-bottom: 36px;
 }
@@ -340,34 +385,62 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 12px;
   font-size: 14px;
-  color: #fff;
+  color: rgba(255, 255, 255, 0.85);
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.feature-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateX(4px);
 }
 
 .feature-icon {
   font-size: 20px;
+  color: #fff;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.3));
 }
 
 /* 右侧表单 */
 .form-section {
   flex: 1;
-  background: #fff;
+  background: rgba(20, 20, 20, 0.95);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 40px;
+  position: relative;
+}
+
+.form-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 70% 50%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
+  pointer-events: none;
 }
 
 .form-wrapper {
   width: 100%;
   max-width: 340px;
+  position: relative;
+  z-index: 1;
 }
 
 .form-title {
   font-size: 24px;
   font-weight: 700;
-  color: #000;
+  color: #fff;
   margin-bottom: 32px;
   text-align: center;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
 }
 
 .auth-form {
@@ -381,6 +454,11 @@ onBeforeUnmount(() => {
 
 .forget-btn {
   padding-right: 0;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.forget-btn:hover {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .submit-btn {
@@ -390,6 +468,18 @@ onBeforeUnmount(() => {
   font-weight: 600;
   border-radius: 8px;
   letter-spacing: 2px;
+  background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s ease;
+}
+
+.submit-btn:hover {
+  background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7);
+  transform: translateY(-2px);
 }
 
 .verify-row {
@@ -398,8 +488,89 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 
+/* 深色主题输入框样式 */
+:deep(.ant-input),
+:deep(.ant-input-password),
 :deep(.ant-input-affix-wrapper) {
+  background: rgba(30, 30, 30, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
+  color: #fff;
+  transition: all 0.3s ease;
+}
+
+:deep(.ant-input::placeholder),
+:deep(.ant-input-password::placeholder) {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+:deep(.ant-input:hover),
+:deep(.ant-input-password:hover),
+:deep(.ant-input-affix-wrapper:hover) {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(30, 30, 30, 0.8);
+}
+
+:deep(.ant-input:focus),
+:deep(.ant-input-password:focus),
+:deep(.ant-input-affix-wrapper-focused) {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(30, 30, 30, 0.9);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+:deep(.ant-input-prefix) {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+:deep(.ant-input-suffix) {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Modal 深色样式 */
+:deep(.ant-modal-content) {
+  background: rgba(20, 20, 20, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+}
+
+:deep(.ant-modal-header) {
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+:deep(.ant-modal-title) {
+  color: #fff;
+}
+
+:deep(.ant-modal-close) {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+:deep(.ant-modal-close:hover) {
+  color: #fff;
+}
+
+:deep(.ant-form-item-label > label) {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+:deep(.ant-btn-default) {
+  background: rgba(30, 30, 30, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+:deep(.ant-btn-default:hover) {
+  background: rgba(40, 40, 40, 0.8);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+:deep(.ant-btn-default:disabled) {
+  background: rgba(30, 30, 30, 0.3);
+  border-color: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.3);
 }
 
 @media (max-width: 768px) {
