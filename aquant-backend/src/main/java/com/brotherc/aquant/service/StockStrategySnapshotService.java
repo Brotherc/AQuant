@@ -220,7 +220,17 @@ public class StockStrategySnapshotService {
                     batchNo,
                     StockSyncConstant.STOCK_STRATEGY_MOMENTUM_BACKTEST_SNAPSHOT_LATEST
             );
-            momentumSnapshotRepository.deleteByBatchNoNot(batchNo);
+
+            int limit = 5000;
+
+            while (true) {
+                int deleted = momentumSnapshotRepository.deleteOldBatchLimit(batchNo, limit);
+
+                if (deleted < limit) {
+                    break;
+                }
+            }
+
             log.info("动量回测快照生成完成，batchNo={}", batchNo);
         } catch (Exception e) {
             log.error("动量回测快照生成失败，batchNo={}", batchNo, e);
