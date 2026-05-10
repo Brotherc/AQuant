@@ -152,6 +152,13 @@ public class StockStrategySnapshotService {
 
         long batchNo = System.currentTimeMillis();
         try {
+            if (shouldSkipRefreshSnapshots(
+                    StockSyncConstant.STOCK_STRATEGY_DUAL_MA_BACKTEST_SNAPSHOT_LATEST,
+                    "双均线回测快照"
+            )) {
+                return;
+            }
+
             List<String> recentDates = stockQuoteHistoryRepository.findRecentTradeDates(MAX_NEED_DAYS);
             if (CollectionUtils.isEmpty(recentDates)) {
                 log.warn("双均线回测快照生成跳过，历史行情为空");
