@@ -79,7 +79,9 @@ public class StockUtils {
         LocalDate now = LocalDate.now();
 
         // 条件1：周五
-        boolean isFriday = lastTime.getDayOfWeek() == DayOfWeek.FRIDAY;
+        boolean isFriday = lastTime.getDayOfWeek() == DayOfWeek.FRIDAY
+                || lastTime.getDayOfWeek() == DayOfWeek.SATURDAY
+                || lastTime.getDayOfWeek() == DayOfWeek.SUNDAY;
 
         // 条件2：时间 >= 15:00
         boolean after3 = !lastTime.toLocalTime().isBefore(LocalTime.of(15, 0));
