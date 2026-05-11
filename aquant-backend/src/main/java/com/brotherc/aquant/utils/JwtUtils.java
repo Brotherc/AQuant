@@ -7,17 +7,38 @@ import com.auth0.jwt.exceptions.TokenExpiredException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.brotherc.aquant.exception.BusinessException;
 import com.brotherc.aquant.exception.ExceptionEnum;
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import java.util.Date;
 
 /**
  * JWT 工具类
  */
+@Component
 public class JwtUtils {
 
-    private static final String SECRET = "AQuant@2025!SecretKey#Jwt";
-    private static final long EXPIRE_MS = 7L * 24 * 60 * 60 * 1000; // 7天
     private static final String ISSUER = "aquant";
+
+    private static String SECRET;
+    private static long EXPIRE_MS;
+
+    @Value("${aquant.jwt.secret:}")
+    private String secretConfig;
+
+    @Value("${aquant.jwt.expire-seconds:604800}")
+    private long expireSecondsConfig;
+
+    @PostConstruct
+    public void init() {
+        if (secretConfig == null || secretConfig.isBlank()) {
+            throw new IllegalStateException(
+                    "JWT 密钥未配置，请在配置文件中设置 aquant.jwt.secret");
+        }
+        SECRET = secretConfig;
+        EXPIRE_MS = expireSecondsConfig * 1000L;
+    }
 
     /**
      * 生成 JWT Token

@@ -61,3 +61,8 @@ akshare-address: http://127.0.0.1:8080
 aquant:
   stock:
     max-notification-stock-count: 600
+  jwt:
+    # JWT 签名密钥
+    secret: AQuant@2025!SecretKey#Jwt
+    # Token 有效期（秒），默认 7 天 = 604800 秒
+    expire-seconds: 604800
