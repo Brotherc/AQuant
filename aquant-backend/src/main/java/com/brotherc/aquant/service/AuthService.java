@@ -7,8 +7,8 @@ import com.brotherc.aquant.model.vo.auth.*;
 import com.brotherc.aquant.repository.SysUserRepository;
 import com.brotherc.aquant.utils.JwtUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -23,6 +23,7 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * 认证服务
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -121,17 +122,23 @@ public class AuthService {
 
     public void sendResetPasswordCode(String email) {
         String normalizedEmail = normalizeRequiredEmail(email);
-        SysUser user = sysUserRepository.findByEmail(normalizedEmail)
-                .orElseThrow(() -> ExceptionEnum.AUTH_EMAIL_NOT_FOUND.toException());
 
         if (mailFrom == null || mailFrom.isBlank()) {
             throw ExceptionEnum.AUTH_MAIL_NOT_CONFIGURED.toException();
         }
 
+        // 无论邮箱是否存在，先做同邮箱的 60 秒限频（避免通过"过快报错/成功"区分邮箱是否存在）
         LocalDateTime now = LocalDateTime.now();
         ResetPasswordCodeCache existing = resetPasswordCodeCache.get(normalizedEmail);
         if (existing != null && existing.nextSendAllowedAt().isAfter(now)) {
             throw ExceptionEnum.AUTH_RESET_CODE_SEND_TOO_FREQUENT.toException();
+        }
+
+        // 邮箱不存在：静默返回，避免邮箱枚举
+        SysUser user = sysUserRepository.findByEmail(normalizedEmail).orElse(null);
+        if (user == null) {
+            log.warn("Reset code requested for non-existent email: {}", normalizedEmail);
+            return;
         }
 
         String code = String.format("%06d", ThreadLocalRandom.current().nextInt(0, 1_000_000));
@@ -157,9 +164,8 @@ public class AuthService {
     @Transactional(rollbackFor = Exception.class)
     public void resetPasswordByEmail(ResetPasswordReqVO reqVO) {
         String normalizedEmail = normalizeRequiredEmail(reqVO.getEmail());
-        SysUser user = sysUserRepository.findByEmail(normalizedEmail)
-                .orElseThrow(() -> ExceptionEnum.AUTH_EMAIL_NOT_FOUND.toException());
 
+        // 先做验证码校验，再查邮箱：即使邮箱不存在也统一按"验证码不正确"返回，避免枚举
         ResetPasswordCodeCache cache = resetPasswordCodeCache.get(normalizedEmail);
         if (cache == null || !cache.code().equals(reqVO.getCode().trim())) {
             throw ExceptionEnum.AUTH_RESET_CODE_INVALID.toException();
@@ -168,6 +174,9 @@ public class AuthService {
             resetPasswordCodeCache.remove(normalizedEmail);
             throw ExceptionEnum.AUTH_RESET_CODE_EXPIRED.toException();
         }
+
+        SysUser user = sysUserRepository.findByEmail(normalizedEmail)
+                .orElseThrow(() -> ExceptionEnum.AUTH_RESET_CODE_INVALID.toException());
 
         BCrypt.Result result = BCrypt.verifyer().verify(reqVO.getNewPassword().toCharArray(), user.getPassword());
         if (result.verified) {
