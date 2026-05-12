@@ -87,9 +87,15 @@ public class AuthService {
         if (userId == null) {
             throw ExceptionEnum.AUTH_TOKEN_INVALID.toException();
         }
+        return getUserInfoById(userId);
+    }
 
+    /**
+     * 根据用户 ID 获取用户信息
+     */
+    public UserInfoVO getUserInfoById(Long userId) {
         SysUser user = sysUserRepository.findById(userId)
-                .orElseThrow(() -> ExceptionEnum.AUTH_USER_NOT_FOUND.toException());
+                .orElseThrow(ExceptionEnum.AUTH_USER_NOT_FOUND::toException);
 
         UserInfoVO vo = new UserInfoVO();
         vo.setId(user.getId());

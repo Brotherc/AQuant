@@ -3,9 +3,9 @@ package com.brotherc.aquant.controller;
 import com.brotherc.aquant.model.dto.common.ResponseDTO;
 import com.brotherc.aquant.model.vo.auth.*;
 import com.brotherc.aquant.service.AuthService;
+import com.brotherc.aquant.utils.UserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -33,18 +33,15 @@ public class AuthController {
 
     @Operation(summary = "获取当前用户信息")
     @GetMapping("/userInfo")
-    public ResponseDTO<UserInfoVO> getUserInfo(HttpServletRequest request) {
-        String authHeader = request.getHeader("Authorization");
-        String token = authHeader.substring(7);
-        return ResponseDTO.success(authService.getUserInfo(token));
+    public ResponseDTO<UserInfoVO> getUserInfo() {
+        Long userId = UserContext.requireCurrentUserId();
+        return ResponseDTO.success(authService.getUserInfoById(userId));
     }
 
     @Operation(summary = "修改邮箱")
     @PostMapping("/updateEmail")
-    public ResponseDTO<Void> updateEmail(
-            @RequestBody @Valid UpdateEmailReqVO reqVO,
-            @RequestAttribute(value = "userId", required = false) Long userId
-    ) {
+    public ResponseDTO<Void> updateEmail(@RequestBody @Valid UpdateEmailReqVO reqVO) {
+        Long userId = UserContext.requireCurrentUserId();
         authService.updateEmail(userId, reqVO.getEmail());
         return ResponseDTO.success();
     }
