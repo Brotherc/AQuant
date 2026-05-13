@@ -3,9 +3,11 @@ package com.brotherc.aquant.controller;
 import com.brotherc.aquant.model.dto.common.ResponseDTO;
 import com.brotherc.aquant.model.vo.auth.*;
 import com.brotherc.aquant.service.AuthService;
+import com.brotherc.aquant.utils.IpUtils;
 import com.brotherc.aquant.utils.UserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -48,8 +50,11 @@ public class AuthController {
 
     @Operation(summary = "发送找回密码验证码")
     @PostMapping("/password/sendResetCode")
-    public ResponseDTO<Void> sendResetCode(@RequestBody @Valid SendResetCodeReqVO reqVO) {
-        authService.sendResetPasswordCode(reqVO.getEmail());
+    public ResponseDTO<Void> sendResetCode(
+            @RequestBody @Valid SendResetCodeReqVO reqVO,
+            HttpServletRequest request
+    ) {
+        authService.sendResetPasswordCode(reqVO.getEmail(), IpUtils.getClientIp(request));
         return ResponseDTO.success();
     }
 

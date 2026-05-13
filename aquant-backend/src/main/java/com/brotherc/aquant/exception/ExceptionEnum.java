@@ -34,6 +34,8 @@ public enum ExceptionEnum {
     AUTH_MAIL_NOT_CONFIGURED(1000211, "邮件服务未配置"),
     AUTH_RESET_PASSWORD_SAME_AS_OLD(1000212, "新密码不能与原密码相同"),
     AUTH_RESET_CODE_SEND_FAILED(1000213, "验证码发送失败，请稍后重试"),
+    AUTH_RESET_CODE_IP_RATE_LIMIT(1000214, "操作过于频繁，请稍后再试"),
+    AUTH_RESET_CODE_GLOBAL_RATE_LIMIT(1000215, "系统繁忙，请稍后再试"),
 
     ARTICLE_NOT_FOUND(1000301, "文章不存在"),
     ARTICLE_ACCESS_DENIED(1000302, "无权访问该文章"),

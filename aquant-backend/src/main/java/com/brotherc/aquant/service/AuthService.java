@@ -6,6 +6,7 @@ import com.brotherc.aquant.exception.ExceptionEnum;
 import com.brotherc.aquant.model.vo.auth.*;
 import com.brotherc.aquant.repository.SysUserRepository;
 import com.brotherc.aquant.utils.JwtUtils;
+import com.brotherc.aquant.utils.SlidingWindowRateLimiter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,6 +16,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -30,6 +32,17 @@ public class AuthService {
 
     private static final int RESET_CODE_EXPIRE_MINUTES = 10;
     private static final int RESET_CODE_RESEND_INTERVAL_SECONDS = 60;
+
+    /** 单 IP 1 分钟内最多 3 次发送验证码 */
+    private static final SlidingWindowRateLimiter IP_LIMITER_PER_MINUTE =
+            new SlidingWindowRateLimiter(Duration.ofMinutes(1), 3);
+    /** 单 IP 1 小时内最多 10 次发送验证码 */
+    private static final SlidingWindowRateLimiter IP_LIMITER_PER_HOUR =
+            new SlidingWindowRateLimiter(Duration.ofHours(1), 10);
+    /** 全局 1 天内最多 500 次发送（所有 IP 加起来） */
+    private static final SlidingWindowRateLimiter GLOBAL_LIMITER_PER_DAY =
+            new SlidingWindowRateLimiter(Duration.ofDays(1), 500);
+    private static final String GLOBAL_LIMITER_KEY = "global";
 
     @Value("${spring.mail.username:}")
     private String mailFrom;
@@ -120,14 +133,27 @@ public class AuthService {
         sysUserRepository.save(user);
     }
 
-    public void sendResetPasswordCode(String email) {
+    public void sendResetPasswordCode(String email, String clientIp) {
         String normalizedEmail = normalizeRequiredEmail(email);
 
         if (mailFrom == null || mailFrom.isBlank()) {
             throw ExceptionEnum.AUTH_MAIL_NOT_CONFIGURED.toException();
         }
 
-        // 无论邮箱是否存在，先做同邮箱的 60 秒限频（避免通过"过快报错/成功"区分邮箱是否存在）
+        // IP 限流：先消耗较严格的分钟级配额，再检查小时级
+        String ipKey = clientIp == null || clientIp.isBlank() ? "unknown" : clientIp;
+        if (!IP_LIMITER_PER_MINUTE.tryAcquire(ipKey) || !IP_LIMITER_PER_HOUR.tryAcquire(ipKey)) {
+            log.warn("Reset code IP rate limited, ip={}, email={}", ipKey, normalizedEmail);
+            throw ExceptionEnum.AUTH_RESET_CODE_IP_RATE_LIMIT.toException();
+        }
+
+        // 全局限流：防止成为邮件炸弹来源
+        if (!GLOBAL_LIMITER_PER_DAY.tryAcquire(GLOBAL_LIMITER_KEY)) {
+            log.warn("Reset code global rate limited, ip={}, email={}", ipKey, normalizedEmail);
+            throw ExceptionEnum.AUTH_RESET_CODE_GLOBAL_RATE_LIMIT.toException();
+        }
+
+        // 同邮箱 60 秒限频（避免通过"过快报错/成功"区分邮箱是否存在）
         LocalDateTime now = LocalDateTime.now();
         ResetPasswordCodeCache existing = resetPasswordCodeCache.get(normalizedEmail);
         if (existing != null && existing.nextSendAllowedAt().isAfter(now)) {
