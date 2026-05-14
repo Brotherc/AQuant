@@ -7,6 +7,8 @@ import com.brotherc.aquant.model.vo.auth.*;
 import com.brotherc.aquant.repository.SysUserRepository;
 import com.brotherc.aquant.utils.JwtUtils;
 import com.brotherc.aquant.utils.SlidingWindowRateLimiter;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,8 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -49,7 +49,11 @@ public class AuthService {
 
     private final SysUserRepository sysUserRepository;
     private final JavaMailSender mailSender;
-    private final ConcurrentMap<String, ResetPasswordCodeCache> resetPasswordCodeCache = new ConcurrentHashMap<>();
+    /** 验证码缓存，自动按写入时间过期 */
+    private final Cache<String, ResetPasswordCodeCache> resetPasswordCodeCache = Caffeine.newBuilder()
+            .expireAfterWrite(Duration.ofMinutes(RESET_CODE_EXPIRE_MINUTES))
+            .maximumSize(10_000)
+            .build();
 
     /**
      * 登录
@@ -155,7 +159,7 @@ public class AuthService {
 
         // 同邮箱 60 秒限频（避免通过"过快报错/成功"区分邮箱是否存在）
         LocalDateTime now = LocalDateTime.now();
-        ResetPasswordCodeCache existing = resetPasswordCodeCache.get(normalizedEmail);
+        ResetPasswordCodeCache existing = resetPasswordCodeCache.getIfPresent(normalizedEmail);
         if (existing != null && existing.nextSendAllowedAt().isAfter(now)) {
             throw ExceptionEnum.AUTH_RESET_CODE_SEND_TOO_FREQUENT.toException();
         }
@@ -182,7 +186,7 @@ public class AuthService {
         try {
             mailSender.send(message);
         } catch (MailException e) {
-            resetPasswordCodeCache.remove(normalizedEmail);
+            resetPasswordCodeCache.invalidate(normalizedEmail);
             throw ExceptionEnum.AUTH_RESET_CODE_SEND_FAILED.toException(e);
         }
     }
@@ -192,12 +196,12 @@ public class AuthService {
         String normalizedEmail = normalizeRequiredEmail(reqVO.getEmail());
 
         // 先做验证码校验，再查邮箱：即使邮箱不存在也统一按"验证码不正确"返回，避免枚举
-        ResetPasswordCodeCache cache = resetPasswordCodeCache.get(normalizedEmail);
+        ResetPasswordCodeCache cache = resetPasswordCodeCache.getIfPresent(normalizedEmail);
         if (cache == null || !cache.code().equals(reqVO.getCode().trim())) {
             throw ExceptionEnum.AUTH_RESET_CODE_INVALID.toException();
         }
         if (cache.expiredAt().isBefore(LocalDateTime.now())) {
-            resetPasswordCodeCache.remove(normalizedEmail);
+            resetPasswordCodeCache.invalidate(normalizedEmail);
             throw ExceptionEnum.AUTH_RESET_CODE_EXPIRED.toException();
         }
 
@@ -211,7 +215,7 @@ public class AuthService {
 
         user.setPassword(BCrypt.withDefaults().hashToString(12, reqVO.getNewPassword().toCharArray()));
         sysUserRepository.save(user);
-        resetPasswordCodeCache.remove(normalizedEmail);
+        resetPasswordCodeCache.invalidate(normalizedEmail);
     }
 
     private String buildResetPasswordMailContent(SysUser user, String code) {

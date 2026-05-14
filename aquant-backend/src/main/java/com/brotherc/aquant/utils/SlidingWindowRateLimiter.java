@@ -1,25 +1,34 @@
 package com.brotherc.aquant.utils;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+
 import java.time.Duration;
 import java.util.Deque;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.ConcurrentMap;
 
 /**
- * 基于内存的滑动窗口限流器。
+ * 基于 Caffeine 的滑动窗口限流器（内存版）。
  * <p>
+ * 外层 Cache 负责自动过期与容量兜底，内层 {@link Deque} 保存窗口内的时间戳序列。
  * 适合单实例部署。多实例部署时请迁移到 Redis。
  * <p>
- * 线程安全；空闲窗口会被懒清理，防止 key 泄漏。
+ * 线程安全：每个 key 对应的 Deque 用锁保护读写。
  */
 public class SlidingWindowRateLimiter {
 
-    private final ConcurrentMap<String, Deque<Long>> windows = new ConcurrentHashMap<>();
+    /** 容量上限，防止恶意构造大量不同 key 把内存吃满 */
+    private static final int DEFAULT_MAX_KEYS = 100_000;
+
+    private final Cache<String, Deque<Long>> windows;
     private final Duration window;
     private final int maxRequests;
 
     public SlidingWindowRateLimiter(Duration window, int maxRequests) {
+        this(window, maxRequests, DEFAULT_MAX_KEYS);
+    }
+
+    public SlidingWindowRateLimiter(Duration window, int maxRequests, int maxKeys) {
         if (window == null || window.isZero() || window.isNegative()) {
             throw new IllegalArgumentException("window must be positive");
         }
@@ -28,6 +37,11 @@ public class SlidingWindowRateLimiter {
         }
         this.window = window;
         this.maxRequests = maxRequests;
+        this.windows = Caffeine.newBuilder()
+                // 窗口期内无访问则过期清理，避免 key 无限增长
+                .expireAfterAccess(window)
+                .maximumSize(maxKeys)
+                .build();
     }
 
     /**
@@ -40,7 +54,7 @@ public class SlidingWindowRateLimiter {
         long now = System.currentTimeMillis();
         long windowStart = now - window.toMillis();
 
-        Deque<Long> timestamps = windows.computeIfAbsent(key, k -> new ConcurrentLinkedDeque<>());
+        Deque<Long> timestamps = windows.get(key, k -> new ConcurrentLinkedDeque<>());
 
         synchronized (timestamps) {
             // 清理窗口外的旧时间戳
@@ -49,7 +63,6 @@ public class SlidingWindowRateLimiter {
             }
 
             if (timestamps.size() >= maxRequests) {
-                // 空窗口从 map 中移除，避免 key 积累（此时 timestamps 非空，下次再判断）
                 return false;
             }
 
@@ -57,23 +70,4 @@ public class SlidingWindowRateLimiter {
             return true;
         }
     }
-
-    /**
-     * 清理空窗口，避免长期运行下 map 的 key 无限增长。
-     * 可由定时任务或请求结束时调用。
-     */
-    public void purgeEmpty() {
-        long now = System.currentTimeMillis();
-        long windowStart = now - window.toMillis();
-        windows.entrySet().removeIf(entry -> {
-            Deque<Long> timestamps = entry.getValue();
-            synchronized (timestamps) {
-                while (!timestamps.isEmpty() && timestamps.peekFirst() <= windowStart) {
-                    timestamps.pollFirst();
-                }
-                return timestamps.isEmpty();
-            }
-        });
-    }
-
 }
