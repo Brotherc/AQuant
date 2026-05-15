@@ -23,6 +23,7 @@
 import { ref, watch, nextTick, onUnmounted } from 'vue';
 import * as echarts from 'echarts';
 import { getStockHistory, type StockQuoteHistory } from '@/api/stock';
+import { chartTooltipTheme } from '@/utils/chartTheme';
 
 const props = defineProps<{
   visible: boolean;
@@ -121,24 +122,24 @@ const renderChart = (data: StockQuoteHistory[]) => {
       trigger: 'axis',
       axisPointer: { 
         type: 'cross', 
-        lineStyle: { type: 'dashed', color: 'rgba(25, 144, 255, 0.4)' },
+        lineStyle: { type: 'dashed', color: chartTooltipTheme.axisPointerColor },
         label: {
-            backgroundColor: 'rgba(45, 49, 62, 0.95)',
-            color: '#e5e7eb',
-            borderColor: 'rgba(255, 255, 255, 0.15)',
+            backgroundColor: chartTooltipTheme.backgroundColor,
+            color: chartTooltipTheme.primaryTextColor,
+            borderColor: chartTooltipTheme.borderColor,
             borderWidth: 1,
             padding: [4, 8],
             fontSize: 11,
             shadowBlur: 4,
-            shadowColor: 'rgba(0,0,0,0.3)',
+            shadowColor: chartTooltipTheme.shadowColor,
             borderRadius: 2
         }
       },
-      backgroundColor: 'rgba(45, 49, 62, 0.95)',
-      borderColor: 'rgba(255, 255, 255, 0.15)',
+      backgroundColor: chartTooltipTheme.backgroundColor,
+      borderColor: chartTooltipTheme.borderColor,
       borderWidth: 1,
       padding: 10,
-      textStyle: { fontSize: 11, color: '#e5e7eb' },
+      textStyle: { fontSize: 11, color: chartTooltipTheme.primaryTextColor },
       formatter: function (params: any) {
         let res = '';
         let date = '';
@@ -150,17 +151,17 @@ const renderChart = (data: StockQuoteHistory[]) => {
             const low = param.value[3];
             const high = param.value[4];
             const color = close >= open ? '#EF4444' : '#10B981';
-            res += `<div style="font-weight:bold;margin-bottom:6px;font-size:13px;color:#e5e7eb;">${date}</div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:2px;"><span style="color:#d1d5db;">收盘:</span> <span style="color:${color};font-weight:bold;">${close}</span></div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:2px;"><span style="color:#d1d5db;">开盘:</span> <span style="color:#e5e7eb;">${open}</span></div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:2px;"><span style="color:#d1d5db;">最高:</span> <span style="color:#EF4444;">${high}</span></div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:6px;"><span style="color:#d1d5db;">最低:</span> <span style="color:#10B981;">${low}</span></div>`;
+            res += `<div style="font-weight:bold;margin-bottom:6px;font-size:13px;color:${chartTooltipTheme.primaryTextColor};">${date}</div>`;
+            res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:2px;"><span style="color:${chartTooltipTheme.secondaryTextColor};">收盘:</span> <span style="color:${color};font-weight:bold;">${close}</span></div>`;
+            res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:2px;"><span style="color:${chartTooltipTheme.secondaryTextColor};">开盘:</span> <span style="color:${chartTooltipTheme.primaryTextColor};">${open}</span></div>`;
+            res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:2px;"><span style="color:${chartTooltipTheme.secondaryTextColor};">最高:</span> <span style="color:#EF4444;">${high}</span></div>`;
+            res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:6px;"><span style="color:${chartTooltipTheme.secondaryTextColor};">最低:</span> <span style="color:#10B981;">${low}</span></div>`;
           } else if (param.seriesType === 'bar') {
-            res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:6px;"><span style="color:#9ca3af;">成交量:</span> <span style="color:#9ca3af;">${param.value}</span></div>`;
+            res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:6px;"><span style="color:${chartTooltipTheme.mutedTextColor};">成交量:</span> <span style="color:${chartTooltipTheme.primaryTextColor};">${param.value}</span></div>`;
           } else if (param.seriesType === 'line') {
             const val = param.value === '-' || param.value === undefined ? '-' : param.value;
             res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:1px;">
-                      <span>${param.seriesName}:</span> 
+                      <span style="color:${chartTooltipTheme.mutedTextColor};">${param.seriesName}:</span> 
                       <span style="color:${param.color};font-weight:500;">${val}</span>
                     </div>`;
           }

@@ -3,7 +3,6 @@
     <!-- 分组导航标签 -->
     <div class="group-tags-header">
       <div class="group-tags-left">
-        <div class="group-label">自选分组：</div>
         <div 
           v-for="group in groups" 
           :key="group.id" 
@@ -26,6 +25,7 @@
           </template>
           <template v-else>
             <span class="tag-name">{{ group.name }}</span>
+            <span v-if="activeGroupId === group.id" class="tag-status">当前</span>
             <div class="tag-actions">
               <edit-outlined 
                 v-if="activeGroupId === group.id" 
@@ -106,7 +106,7 @@
                     <span @click.stop="openNotiModal(stock)" style="display: inline-flex; align-items: center; cursor: pointer; margin-right: 12px; font-size: 16px;">
                       <bell-filled
                         v-if="stock.hasNotification"
-                        style="color: rgba(255, 255, 255, 0.9);"
+                        class="noti-icon noti-icon--active"
                         title="修改通知规则"
                       />
                       <bell-outlined 
@@ -969,9 +969,17 @@ onMounted(() => {
   transition: all var(--transition-base) var(--transition-timing);
 }
 
+.noti-icon--active {
+  color: var(--color-accent);
+}
+
 .noti-icon:hover {
   color: var(--color-accent);
   transform: scale(1.1);
+}
+
+.noti-icon--active:hover {
+  color: var(--color-accent-hover);
 }
 
 .watchlist-container {
@@ -991,17 +999,18 @@ onMounted(() => {
   justify-content: space-between;
   margin-bottom: var(--spacing-xl);
   gap: var(--spacing-sm);
-  background: rgba(255, 255, 255, 0.04);
-  padding: var(--spacing-md);
-  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 251, 254, 0.98));
+  padding: 18px 20px;
+  border-radius: var(--radius-xl);
   border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
 }
 
 .group-tags-left {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: 10px;
   flex: 1;
 }
 
@@ -1011,46 +1020,43 @@ onMounted(() => {
   margin-left: auto;
 }
 
-.group-label {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  margin-right: var(--spacing-sm);
-  letter-spacing: 0.3px;
-}
-
 .custom-group-tag {
   font-size: var(--font-size-sm);
-  padding: 6px 14px;
+  min-height: 40px;
+  padding: 8px 16px;
   cursor: pointer;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(110, 132, 158, 0.16);
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: 8px;
   transition: all var(--transition-base) var(--transition-timing);
   color: var(--color-text-secondary);
-  background-color: transparent;
+  background: rgba(255, 255, 255, 0.72);
   user-select: none;
   font-weight: var(--font-weight-medium);
+  box-shadow: 0 4px 10px rgba(25, 48, 78, 0.04);
 }
 
 .custom-group-tag:hover {
-  background-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.96);
   color: var(--color-text-primary);
   border-color: var(--color-border-hover);
+  box-shadow: 0 8px 16px rgba(25, 48, 78, 0.08);
+  transform: translateY(-1px);
 }
 
 .custom-group-tag.active {
-  background-color: rgba(255, 255, 255, 0.15);
+  background: linear-gradient(180deg, rgba(76, 127, 184, 0.16), rgba(76, 127, 184, 0.08));
   color: var(--color-text-primary);
   font-weight: var(--font-weight-semibold);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(76, 127, 184, 0.4);
+  box-shadow: 0 12px 24px rgba(76, 127, 184, 0.16);
 }
 
 .custom-group-tag.active:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: linear-gradient(180deg, rgba(76, 127, 184, 0.2), rgba(76, 127, 184, 0.1));
+  border-color: rgba(76, 127, 184, 0.46);
 }
 
 .delete-group-icon {
@@ -1067,14 +1073,27 @@ onMounted(() => {
 }
 
 .custom-group-tag .tag-name {
-  margin-right: 16px !important;
+  margin-right: 0 !important;
+}
+
+.tag-status {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--color-accent-active);
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.4px;
 }
 
 .custom-group-tag .tag-actions {
   display: flex;
   align-items: center;
   gap: 4px !important;
-  margin-left: auto;
+  margin-left: 4px;
 }
 
 .edit-group-icon {
@@ -1094,6 +1113,7 @@ onMounted(() => {
 .custom-group-tag.editing {
   padding: 0;
   background-color: transparent;
+  box-shadow: none;
 }
 
 .edit-group-input {
@@ -1104,22 +1124,24 @@ onMounted(() => {
 }
 
 .custom-group-tag.add-btn {
-  color: var(--color-text-primary);
-  padding: 6px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-accent);
+  min-height: 42px;
+  padding: 8px 18px;
+  border: 1px dashed rgba(76, 127, 184, 0.26);
+  border-radius: var(--radius-lg);
+  background: rgba(76, 127, 184, 0.04);
   font-size: 14px;
   font-weight: var(--font-weight-semibold);
   display: flex;
   align-items: center;
   gap: 6px;
+  box-shadow: none;
 }
 
 .custom-group-tag.add-btn:hover {
-  color: var(--color-text-primary);
-  border-color: var(--color-border-hover);
-  background-color: rgba(255, 255, 255, 0.12);
+  color: var(--color-accent-hover);
+  border-color: rgba(76, 127, 184, 0.36);
+  background-color: rgba(76, 127, 184, 0.08);
   transform: translateY(-1px);
 }
 
@@ -1456,40 +1478,51 @@ onMounted(() => {
 }
 
 /* ========================================
-   搜索框样式 - 完全禁用 hover 效果
+   搜索框样式 - 浅色主题下增强可见性
    ======================================== */
 
 .watchlist-search-input.ant-input-affix-wrapper,
 .watchlist-search-input.ant-input-affix-wrapper:hover,
-.watchlist-search-input.ant-input-affix-wrapper:focus,
+.watchlist-search-input.ant-input-affix-wrapper:focus {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-color: rgba(110, 132, 158, 0.2) !important;
+  box-shadow: 0 6px 16px rgba(25, 48, 78, 0.06) !important;
+  border-radius: 12px !important;
+}
+
 .watchlist-search-input.ant-input-affix-wrapper-focused,
 .watchlist-search-input.ant-input-affix-wrapper-focused:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
-  box-shadow: none !important;
-  border-radius: 10px !important;
+  background: #ffffff !important;
+  border-color: rgba(76, 127, 184, 0.28) !important;
+  box-shadow: 0 0 0 3px rgba(76, 127, 184, 0.1), 0 8px 18px rgba(25, 48, 78, 0.08) !important;
+  border-radius: 12px !important;
 }
 
 .watchlist-search-input :deep(.ant-input),
+.watchlist-search-input.ant-input-affix-wrapper > input.ant-input,
+.watchlist-search-input.ant-input-affix-wrapper:hover > input.ant-input,
+.watchlist-search-input.ant-input-affix-wrapper-focused > input.ant-input,
 .watchlist-search-input :deep(.ant-input:hover),
 .watchlist-search-input :deep(.ant-input:focus) {
   background: transparent !important;
+  background-color: transparent !important;
   color: var(--color-text-primary) !important;
   box-shadow: none !important;
+  border: none !important;
 }
 
 .watchlist-search-input :deep(.ant-input::placeholder) {
-  color: var(--color-text-tertiary) !important;
+  color: var(--color-text-secondary) !important;
 }
 
 .watchlist-search-input :deep(.ant-input-prefix),
 .watchlist-search-input :deep(.anticon-search) {
-  color: var(--color-text-tertiary) !important;
+  color: var(--color-accent) !important;
 }
 
 .watchlist-search-input :deep(.ant-input-suffix),
 .watchlist-search-input :deep(.ant-input-clear-icon) {
-  color: var(--color-text-tertiary) !important;
+  color: var(--color-text-secondary) !important;
 }
 
 .watchlist-search-input :deep(.ant-input-clear-icon:hover) {

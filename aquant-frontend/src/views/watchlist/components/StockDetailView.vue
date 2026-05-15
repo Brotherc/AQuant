@@ -80,6 +80,7 @@ import * as echarts from 'echarts';
 import { getStockHistory, type StockQuoteHistory } from '@/api/stock';
 import type { WatchlistStockVO } from '@/api/watchlist';
 import { getDividendDetailByCode, type StockDividendDetail } from '@/api/indicator';
+import { chartTooltipTheme } from '@/utils/chartTheme';
 
 const props = defineProps<{
   stock: WatchlistStockVO;
@@ -215,26 +216,26 @@ const renderChart = (data: StockQuoteHistory[]) => {
       trigger: 'axis',
       axisPointer: { 
         type: 'cross', 
-        lineStyle: { type: 'dashed', color: 'rgba(229, 231, 235, 0.4)' },
+        lineStyle: { type: 'dashed', color: chartTooltipTheme.axisPointerColor },
         label: {
-            backgroundColor: 'rgba(45, 49, 62, 0.95)',
-            color: '#e5e7eb',
-            borderColor: 'rgba(255, 255, 255, 0.15)',
+            backgroundColor: chartTooltipTheme.backgroundColor,
+            color: chartTooltipTheme.primaryTextColor,
+            borderColor: chartTooltipTheme.borderColor,
             borderWidth: 1,
             padding: [4, 8],
             fontSize: 11,
             shadowBlur: 4,
-            shadowColor: 'rgba(0,0,0,0.3)',
+            shadowColor: chartTooltipTheme.shadowColor,
             borderRadius: 4
         }
       },
-      backgroundColor: 'rgba(45, 49, 62, 0.95)',
-      borderColor: 'rgba(255, 255, 255, 0.15)',
+      backgroundColor: chartTooltipTheme.backgroundColor,
+      borderColor: chartTooltipTheme.borderColor,
       borderWidth: 1,
       padding: 12,
-      textStyle: { color: '#e5e7eb' },
+      textStyle: { color: chartTooltipTheme.primaryTextColor },
       shadowBlur: 12,
-      shadowColor: 'rgba(0,0,0,0.3)',
+      shadowColor: chartTooltipTheme.shadowColor,
       formatter: function (params: any) {
         let res = '';
         let date = '';
@@ -246,19 +247,19 @@ const renderChart = (data: StockQuoteHistory[]) => {
             const low = param.value[3];
             const high = param.value[4];
             const color = close >= open ? '#EF4444' : '#10B981';
-            res += `<div style="font-weight:bold;margin-bottom:8px;font-size:14px;color:#e5e7eb;">${date}</div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;color:#d1d5db;"><span>收盘:</span> <span style="color:${color};font-weight:bold;">${close}</span></div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;color:#d1d5db;"><span>开盘:</span> <span>${open}</span></div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;color:#d1d5db;"><span>最高:</span> <span style="color:#EF4444;">${high}</span></div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:10px;color:#d1d5db;"><span>最低:</span> <span style="color:#10B981;">${low}</span></div>`;
+            res += `<div style="font-weight:bold;margin-bottom:8px;font-size:14px;color:${chartTooltipTheme.primaryTextColor};">${date}</div>`;
+            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;color:${chartTooltipTheme.secondaryTextColor};"><span>收盘:</span> <span style="color:${color};font-weight:bold;">${close}</span></div>`;
+            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;color:${chartTooltipTheme.secondaryTextColor};"><span>开盘:</span> <span style="color:${chartTooltipTheme.primaryTextColor};">${open}</span></div>`;
+            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;color:${chartTooltipTheme.secondaryTextColor};"><span>最高:</span> <span style="color:#EF4444;">${high}</span></div>`;
+            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:10px;color:${chartTooltipTheme.secondaryTextColor};"><span>最低:</span> <span style="color:#10B981;">${low}</span></div>`;
           } else if (param.seriesName === '成交量') {
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;font-size:11px;color:#9ca3af;margin-bottom:4px;">
+            res += `<div style="display:flex;justify-content:space-between;gap:20px;font-size:11px;color:${chartTooltipTheme.mutedTextColor};margin-bottom:4px;">
                       <span>成交量:</span> 
-                      <span style="font-weight:500;">${param.value}</span>
+                      <span style="font-weight:500;color:${chartTooltipTheme.primaryTextColor};">${param.value}</span>
                     </div>`;
           } else if (param.seriesType === 'line') {
             const val = param.value === '-' || param.value === undefined ? '-' : param.value;
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;font-size:11px;color:#9ca3af;margin-bottom:2px;">
+            res += `<div style="display:flex;justify-content:space-between;gap:20px;font-size:11px;color:${chartTooltipTheme.mutedTextColor};margin-bottom:2px;">
                       <span>${param.seriesName}:</span> 
                       <span style="color:${param.color};font-weight:500;">${val}</span>
                     </div>`;
@@ -530,7 +531,7 @@ onUnmounted(() => {
 }
 
 .info-sidebar {
-  width: 300px;
+  width: 348px;
   display: flex;
   flex-direction: column;
 }
@@ -542,43 +543,44 @@ onUnmounted(() => {
 }
 
 .dividend-list {
-  margin-top: 16px;
+  margin-top: 18px;
   flex: 1;
   overflow-y: auto;
-  padding: 0 12px 0 8px; /* 增加左侧内边距确保圆点不被遮挡 */
+  padding: 4px 12px 4px 10px;
 }
 
 .dividend-timeline-item {
   position: relative;
-  padding-left: 16px;
-  padding-bottom: 20px;
+  padding-left: 20px;
+  padding-bottom: 24px;
   border-left: 1px solid var(--color-divider);
 }
 
 .timeline-dot {
   position: absolute;
-  left: -5px;
-  top: 4px;
-  width: 9px;
-  height: 9px;
+  left: -6px;
+  top: 6px;
+  width: 10px;
+  height: 10px;
   background: var(--color-accent);
   border-radius: 50%;
   border: 2px solid var(--color-bg-secondary);
-  box-shadow: 0 0 0 2px rgba(229, 231, 235, 0.2);
+  box-shadow: 0 0 0 2px rgba(76, 127, 184, 0.12);
 }
 
 .timeline-content-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   width: 100%;
 }
 
 .div-date-col {
-  font-size: 11px;
-  color: var(--color-text-tertiary);
+  font-size: 14px;
+  color: var(--color-text-secondary);
   font-family: 'DIN Alternate', sans-serif;
-  min-width: 65px;
+  font-weight: 600;
+  min-width: 94px;
   flex-shrink: 0;
 }
 
@@ -586,41 +588,44 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   flex: 1;
   overflow: hidden;
 }
 
 .div-plan-name {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 600;
   color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-right: 8px;
+  margin-right: 0;
 }
 
 .div-badges {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   flex-shrink: 0;
 }
 
 .div-badge {
-  font-size: 10px;
-  padding: 0px 4px;
-  border-radius: 2px;
-  font-weight: 500;
+  font-size: 13px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-weight: 600;
   white-space: nowrap;
 }
 
 .div-badge.unified { 
-  background: rgba(255, 255, 255, 0.08); 
+  background: rgba(76, 127, 184, 0.08); 
   color: var(--color-text-primary); 
-  border: 1px solid var(--color-border); 
-  padding: 1px 8px;
+  border: 1px solid rgba(76, 127, 184, 0.18); 
+  padding: 4px 12px;
+  border-radius: 8px;
   font-weight: 600;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.2px;
+  font-family: 'DIN Alternate', sans-serif;
 }
 
 .report-date {

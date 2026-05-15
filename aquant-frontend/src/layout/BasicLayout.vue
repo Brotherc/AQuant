@@ -76,10 +76,13 @@
       <div class="content-container">
         <div v-if="currentRouteMeta" class="page-context">
           <a-breadcrumb class="page-breadcrumb">
-            <a-breadcrumb-item>{{ currentRouteMeta.parent }}</a-breadcrumb-item>
-            <a-breadcrumb-item>{{ currentRouteMeta.child }}</a-breadcrumb-item>
+            <a-breadcrumb-item>
+              <span class="page-breadcrumb-parent">{{ currentRouteMeta.parent }}</span>
+            </a-breadcrumb-item>
+            <a-breadcrumb-item>
+              <span class="page-breadcrumb-current">{{ currentRouteMeta.child }}</span>
+            </a-breadcrumb-item>
           </a-breadcrumb>
-          <div class="page-title">{{ currentRouteMeta.child }}</div>
         </div>
         <router-view />
       </div>
@@ -537,31 +540,58 @@ const handleUpdateEmail = async () => {
 }
 
 .page-context {
-  margin-bottom: 24px;
-  padding: 16px 20px;
+  margin-bottom: 20px;
+  padding: 10px 0 4px;
   border-radius: var(--radius-lg);
   background: transparent;
   border: none;
 }
 
 .page-breadcrumb {
-  margin-bottom: 8px;
+  margin-bottom: 0;
 }
 
 .page-breadcrumb :deep(.ant-breadcrumb-link) {
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
+  color: inherit;
 }
 
 .page-breadcrumb :deep(.ant-breadcrumb-link:hover) {
   color: var(--color-text-primary);
 }
 
-.page-title {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-semibold);
+.page-breadcrumb :deep(.ant-breadcrumb-separator) {
+  margin-inline: 12px;
+  color: var(--color-text-tertiary);
+  font-size: 18px;
+}
+
+.page-breadcrumb-parent {
+  color: var(--color-text-secondary);
+  font-size: 18px;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: -0.2px;
+}
+
+.page-breadcrumb-current {
   color: var(--color-text-primary);
-  letter-spacing: -0.5px;
+  font-size: 19px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.3px;
+}
+
+@media (max-width: 768px) {
+  .page-breadcrumb-parent {
+    font-size: 16px;
+  }
+
+  .page-breadcrumb-current {
+    font-size: 17px;
+  }
+
+  .page-breadcrumb :deep(.ant-breadcrumb-separator) {
+    margin-inline: 8px;
+    font-size: 16px;
+  }
 }
 
 .c-footer {

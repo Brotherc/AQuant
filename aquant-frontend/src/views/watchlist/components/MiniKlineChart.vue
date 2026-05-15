@@ -17,6 +17,7 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import * as echarts from 'echarts';
 import { getStockHistory, type StockQuoteHistory } from '@/api/stock';
+import { chartTooltipTheme } from '@/utils/chartTheme';
 
 const props = defineProps<{
   stockCode: string;
@@ -98,12 +99,12 @@ const renderChart = (data: StockQuoteHistory[]) => {
       show: true,
       trigger: 'axis',
       axisPointer: { type: 'none' },
-      textStyle: { fontSize: 10, color: '#e5e7eb' },
+      textStyle: { fontSize: 10, color: chartTooltipTheme.primaryTextColor },
       padding: 8,
-      backgroundColor: 'rgba(45, 49, 62, 0.95)',
-      borderColor: 'rgba(255, 255, 255, 0.15)',
+      backgroundColor: chartTooltipTheme.backgroundColor,
+      borderColor: chartTooltipTheme.borderColor,
       borderWidth: 1,
-      extraCssText: 'z-index: 99; box-shadow: 0 4px 12px rgba(0,0,0,0.3);',
+      extraCssText: `z-index: 99; border-radius: 10px; box-shadow: 0 10px 24px ${chartTooltipTheme.shadowColor};`,
       formatter: function (params: any) {
         let res = '';
         let date = '';
@@ -115,13 +116,13 @@ const renderChart = (data: StockQuoteHistory[]) => {
             const low = param.value[3];
             const high = param.value[4];
             const color = close >= open ? '#EF4444' : '#10B981';
-            res += '<div style="font-weight:bold;margin-bottom:4px;font-size:12px;color:#e5e7eb;">' + date + '</div>';
-            res += '<div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:2px;color:#d1d5db;"><span>收盘:</span> <span style="color:' + color + ';font-weight:bold;">' + close + '</span></div>';
-            res += '<div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:2px;color:#d1d5db;"><span>开盘:</span> <span>' + open + '</span></div>';
-            res += '<div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:2px;color:#d1d5db;"><span>最高:</span> <span>' + high + '</span></div>';
-            res += '<div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:6px;color:#d1d5db;"><span>最低:</span> <span>' + low + '</span></div>';
+            res += '<div style="font-weight:bold;margin-bottom:4px;font-size:12px;color:' + chartTooltipTheme.primaryTextColor + ';">' + date + '</div>';
+            res += '<div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:2px;color:' + chartTooltipTheme.secondaryTextColor + ';"><span>收盘:</span> <span style="color:' + color + ';font-weight:bold;">' + close + '</span></div>';
+            res += '<div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:2px;color:' + chartTooltipTheme.secondaryTextColor + ';"><span>开盘:</span> <span style="color:' + chartTooltipTheme.primaryTextColor + ';">' + open + '</span></div>';
+            res += '<div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:2px;color:' + chartTooltipTheme.secondaryTextColor + ';"><span>最高:</span> <span style="color:#EF4444;">' + high + '</span></div>';
+            res += '<div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:6px;color:' + chartTooltipTheme.secondaryTextColor + ';"><span>最低:</span> <span style="color:#10B981;">' + low + '</span></div>';
           } else if (param.seriesType === 'line' && param.value !== '-') {
-            res += '<div style="display:flex;justify-content:space-between;gap:12px;font-size:10px;color:#9ca3af;">' +
+            res += '<div style="display:flex;justify-content:space-between;gap:12px;font-size:10px;color:' + chartTooltipTheme.mutedTextColor + ';">' +
                       '<span>' + param.seriesName + ':</span> ' +
                       '<span style="color:' + param.color + ';font-weight:500;">' + param.value + '</span>' +
                     '</div>';
