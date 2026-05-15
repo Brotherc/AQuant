@@ -281,7 +281,9 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%);
+  background:
+    radial-gradient(circle at top left, rgba(76, 127, 184, 0.14), transparent 30%),
+    linear-gradient(135deg, #f8fbff 0%, #edf3f9 55%, #e6eef7 100%);
   padding: 20px;
   position: relative;
   overflow: hidden;
@@ -294,7 +296,7 @@ onBeforeUnmount(() => {
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.03) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(76, 127, 184, 0.08) 0%, transparent 70%);
   animation: rotate 30s linear infinite;
 }
 
@@ -309,21 +311,21 @@ onBeforeUnmount(() => {
   min-height: 480px;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 60px rgba(255, 255, 255, 0.05);
+  box-shadow: 0 22px 46px rgba(33, 60, 92, 0.12);
   backdrop-filter: blur(10px);
   position: relative;
   z-index: 1;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(110, 132, 158, 0.16);
 }
 
 /* 左侧品牌 */
 .brand-section {
   flex: 1;
-  background: linear-gradient(160deg, #0f0f0f 0%, #1a1a1a 50%, #0a0a0a 100%);
+  background: linear-gradient(160deg, #f7fbff 0%, #eef4fb 52%, #e8f0f9 100%);
   padding: 48px 40px;
   display: flex;
   align-items: center;
-  color: #fff;
+  color: var(--color-text-primary);
   position: relative;
   overflow: hidden;
 }
@@ -335,7 +337,7 @@ onBeforeUnmount(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+  background: radial-gradient(circle at 30% 50%, rgba(76, 127, 184, 0.08) 0%, transparent 52%);
   pointer-events: none;
 }
 
@@ -350,26 +352,24 @@ onBeforeUnmount(() => {
   font-weight: 800;
   letter-spacing: 2px;
   margin-bottom: 12px;
-  color: #fff;
-  text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+  color: var(--color-text-primary);
 }
 
 .brand-logo-icon {
-  color: #fff;
+  color: var(--color-accent);
   margin-right: 8px;
-  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.3));
 }
 
 .brand-slogan {
   font-size: 18px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--color-text-primary);
   margin-bottom: 20px;
 }
 
 .brand-desc {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-text-secondary);
   line-height: 1.8;
   margin-bottom: 36px;
 }
@@ -385,30 +385,29 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 12px;
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--color-text-primary);
   padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.72);
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(110, 132, 158, 0.14);
   transition: all 0.3s ease;
 }
 
 .feature-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(76, 127, 184, 0.22);
   transform: translateX(4px);
 }
 
 .feature-icon {
   font-size: 20px;
-  color: #fff;
-  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.3));
+  color: var(--color-accent);
 }
 
 /* 右侧表单 */
 .form-section {
   flex: 1;
-  background: rgba(20, 20, 20, 0.95);
+  background: rgba(248, 251, 254, 0.94);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -423,7 +422,7 @@ onBeforeUnmount(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(circle at 70% 50%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
+  background: radial-gradient(circle at 70% 50%, rgba(76, 127, 184, 0.08) 0%, transparent 52%);
   pointer-events: none;
 }
 
@@ -437,10 +436,9 @@ onBeforeUnmount(() => {
 .form-title {
   font-size: 24px;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-text-primary);
   margin-bottom: 32px;
   text-align: center;
-  text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
 }
 
 .auth-form {
@@ -454,11 +452,11 @@ onBeforeUnmount(() => {
 
 .forget-btn {
   padding-right: 0;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-text-secondary);
 }
 
 .forget-btn:hover {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--color-accent);
 }
 
 .submit-btn {
@@ -468,17 +466,17 @@ onBeforeUnmount(() => {
   font-weight: 600;
   border-radius: 8px;
   letter-spacing: 2px;
-  background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #fff;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(135deg, #5a86bd 0%, #4674ad 100%);
+  border: 1px solid rgba(76, 127, 184, 0.28);
+  color: var(--color-text-inverse);
+  box-shadow: 0 12px 24px rgba(76, 127, 184, 0.18);
   transition: all 0.3s ease;
 }
 
 .submit-btn:hover {
-  background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
-  border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7);
+  background: linear-gradient(135deg, #4c7fb8 0%, #3f6fa5 100%);
+  border-color: rgba(76, 127, 184, 0.38);
+  box-shadow: 0 16px 28px rgba(76, 127, 184, 0.22);
   transform: translateY(-2px);
 }
 
@@ -488,89 +486,89 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 
-/* 深色主题输入框样式 */
+/* 浅灰蓝主题输入框样式 */
 :deep(.ant-input),
 :deep(.ant-input-password),
 :deep(.ant-input-affix-wrapper) {
-  background: rgba(30, 30, 30, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(110, 132, 158, 0.16);
   border-radius: 8px;
-  color: #fff;
+  color: var(--color-text-primary);
   transition: all 0.3s ease;
 }
 
 :deep(.ant-input::placeholder),
 :deep(.ant-input-password::placeholder) {
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--color-text-tertiary);
 }
 
 :deep(.ant-input:hover),
 :deep(.ant-input-password:hover),
 :deep(.ant-input-affix-wrapper:hover) {
-  border-color: rgba(255, 255, 255, 0.25);
-  background: rgba(30, 30, 30, 0.8);
+  border-color: rgba(76, 127, 184, 0.24);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 :deep(.ant-input:focus),
 :deep(.ant-input-password:focus),
 :deep(.ant-input-affix-wrapper-focused) {
-  border-color: rgba(255, 255, 255, 0.4);
-  background: rgba(30, 30, 30, 0.9);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+  border-color: rgba(76, 127, 184, 0.42);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(76, 127, 184, 0.12);
 }
 
 :deep(.ant-input-prefix) {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-text-secondary);
 }
 
 :deep(.ant-input-suffix) {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-text-secondary);
 }
 
-/* Modal 深色样式 */
+/* Modal 浅色样式 */
 :deep(.ant-modal-content) {
-  background: rgba(20, 20, 20, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+  background: rgba(248, 251, 254, 0.98);
+  border: 1px solid rgba(110, 132, 158, 0.14);
+  box-shadow: 0 20px 42px rgba(33, 60, 92, 0.14);
 }
 
 :deep(.ant-modal-header) {
   background: transparent;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(110, 132, 158, 0.12);
 }
 
 :deep(.ant-modal-title) {
-  color: #fff;
+  color: var(--color-text-primary);
 }
 
 :deep(.ant-modal-close) {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-text-secondary);
 }
 
 :deep(.ant-modal-close:hover) {
-  color: #fff;
+  color: var(--color-text-primary);
 }
 
 :deep(.ant-form-item-label > label) {
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--color-text-primary);
 }
 
 :deep(.ant-btn-default) {
-  background: rgba(30, 30, 30, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(110, 132, 158, 0.16);
+  color: var(--color-text-primary);
 }
 
 :deep(.ant-btn-default:hover) {
-  background: rgba(40, 40, 40, 0.8);
-  border-color: rgba(255, 255, 255, 0.25);
-  color: #fff;
+  background: #ffffff;
+  border-color: rgba(76, 127, 184, 0.24);
+  color: var(--color-accent);
 }
 
 :deep(.ant-btn-default:disabled) {
-  background: rgba(30, 30, 30, 0.3);
-  border-color: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.5);
+  border-color: rgba(110, 132, 158, 0.08);
+  color: var(--color-text-disabled);
 }
 
 @media (max-width: 768px) {

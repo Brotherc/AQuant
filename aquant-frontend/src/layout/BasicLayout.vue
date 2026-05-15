@@ -48,7 +48,7 @@
             <!-- 已登录：显示用户头像 + 退出 -->
             <a-dropdown v-else>
               <div class="user-trigger">
-                <a-avatar size="small" style="background-color: rgba(255, 255, 255, 0.1);">
+                <a-avatar size="small" style="background-color: var(--color-bg-surface); color: var(--color-accent);">
                   <template #icon><user-outlined /></template>
                 </a-avatar>
                 <span class="user-nickname">{{ nickname }}</span>
@@ -351,7 +351,8 @@ const handleUpdateEmail = async () => {
   background: var(--color-bg-header);
   border-bottom: 1px solid var(--color-divider);
   padding: 0;
-  box-shadow: none;
+  box-shadow: 0 12px 28px rgba(36, 63, 94, 0.08);
+  backdrop-filter: blur(18px);
   display: flex;
   justify-content: center;
 }
@@ -425,9 +426,9 @@ const handleUpdateEmail = async () => {
 }
 
 .c-menu :deep(.ant-menu-item-selected) {
-  color: var(--color-text-primary);
+  color: var(--color-accent);
   background: transparent;
-  border-bottom-color: var(--color-text-primary);
+  border-bottom-color: var(--color-accent);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -443,7 +444,7 @@ const handleUpdateEmail = async () => {
 }
 
 .c-menu :deep(.ant-menu-submenu-selected .ant-menu-submenu-title) {
-  color: var(--color-text-primary);
+  color: var(--color-accent);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -491,8 +492,8 @@ const handleUpdateEmail = async () => {
 }
 
 .login-trigger:hover {
-  color: var(--color-text-primary);
-  background: rgba(255, 255, 255, 0.12);
+  color: var(--color-accent);
+  background: var(--color-bg-surface-hover);
 }
 
 /* 已登录的用户区 */
@@ -509,7 +510,7 @@ const handleUpdateEmail = async () => {
 }
 
 .user-trigger:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-bg-surface);
 }
 
 .user-nickname {

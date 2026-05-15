@@ -1,6 +1,6 @@
 /* ========================================
-   Ant Design Vue - 专业金融终端深色主题
-   极简灰白配色 - 数据优先设计
+   Ant Design Vue - 专业金融终端浅色主题
+   浅灰蓝金融配色 - 数据优先设计
    ======================================== */
 
 /* ========================================
@@ -53,7 +53,7 @@
 }
 
 .ant-table-thead > tr > th {
-  background: rgba(255, 255, 255, 0.03) !important;
+  background: var(--color-bg-surface) !important;
   border-bottom: 1px solid var(--color-divider) !important;
   color: var(--color-text-secondary) !important;
   font-weight: var(--font-weight-semibold);
@@ -73,12 +73,12 @@
 }
 
 .ant-table-tbody > tr:hover > td {
-  background: rgba(255, 255, 255, 0.03) !important;
+  background: var(--color-bg-surface) !important;
   transition: none !important;
 }
 
 .ant-table-tbody > tr > td.ant-table-cell-row-hover {
-  background: rgba(255, 255, 255, 0.03) !important;
+  background: var(--color-bg-surface) !important;
   transition: none !important;
 }
 
@@ -90,7 +90,7 @@
   transition: none !important;
 }
 
-/* 表格内链接样式 - 深色主题 */
+/* 表格内链接样式 - 浅色主题 */
 .ant-table-tbody > tr > td a {
   color: var(--color-text-secondary) !important;
   transition: color var(--transition-fast);
@@ -102,24 +102,24 @@
 
 /* 涨跌颜色 - 金融终端标准 */
 .price-up {
-  color: #EF4444 !important;
+  color: var(--color-error) !important;
 }
 
 .price-down {
-  color: #10B981 !important;
+  color: var(--color-success) !important;
 }
 
-/* 表格展开按钮 - 深色主题 */
+/* 表格展开按钮 - 浅色主题 */
 .ant-table-row-expand-icon {
   color: var(--color-text-secondary) !important;
   border-color: var(--color-border) !important;
-  background: rgba(255, 255, 255, 0.06) !important;
+  background: var(--color-bg-elevated) !important;
 }
 
 .ant-table-row-expand-icon:hover {
   color: var(--color-text-primary) !important;
   border-color: var(--color-border-hover) !important;
-  background: rgba(255, 255, 255, 0.1) !important;
+  background: var(--color-bg-surface-hover) !important;
 }
 
 .ant-table-row-expand-icon::before,
@@ -132,7 +132,7 @@
   background-color: var(--color-text-primary) !important;
 }
 
-/* 表格展开行 - 深色主题 */
+/* 表格展开行 - 浅色主题 */
 .ant-table-expanded-row > td {
   background: var(--color-bg-secondary) !important;
   color: var(--color-text-primary) !important;
@@ -149,34 +149,34 @@
 /* 固定列背景 - 防止透明穿透 */
 .ant-table-cell-fix-left,
 .ant-table-cell-fix-right {
-  background: #2d313e !important;
+  background: var(--color-bg-table-fixed) !important;
   position: relative;
   z-index: 2;
 }
 
 .ant-table-tbody > tr:hover > td.ant-table-cell-fix-left,
 .ant-table-tbody > tr:hover > td.ant-table-cell-fix-right {
-  background: #353945 !important;
+  background: var(--color-bg-table-fixed-hover) !important;
 }
 
 .ant-table-tbody > tr > td.ant-table-cell-fix-left.ant-table-cell-row-hover,
 .ant-table-tbody > tr > td.ant-table-cell-fix-right.ant-table-cell-row-hover {
-  background: #353945 !important;
+  background: var(--color-bg-table-fixed-hover) !important;
 }
 
 .ant-table-thead > tr > th.ant-table-cell-fix-left,
 .ant-table-thead > tr > th.ant-table-cell-fix-right {
-  background: #2d313e !important;
+  background: var(--color-bg-table-fixed) !important;
   z-index: 3;
 }
 
-/* 排序列背景 - 保持深色主题 */
+/* 排序列背景 - 保持浅色主题 */
 .ant-table-column-sort {
   background: transparent !important;
 }
 
 .ant-table-thead > tr > th.ant-table-column-sort {
-  background: rgba(255, 255, 255, 0.03) !important;
+  background: var(--color-bg-surface) !important;
 }
 
 .ant-table-tbody > tr > td.ant-table-column-sort {
@@ -184,30 +184,30 @@
 }
 
 .ant-table-tbody > tr:hover > td.ant-table-column-sort {
-  background: rgba(255, 255, 255, 0.03) !important;
+  background: var(--color-bg-surface) !important;
 }
 
 .ant-table-tbody > tr > td.ant-table-column-sort.ant-table-cell-row-hover {
-  background: rgba(255, 255, 255, 0.03) !important;
+  background: var(--color-bg-surface) !important;
 }
 
 /* 固定列 + 排序列组合 */
 .ant-table-tbody > tr > td.ant-table-cell-fix-left.ant-table-column-sort,
 .ant-table-tbody > tr > td.ant-table-cell-fix-right.ant-table-column-sort {
-  background: #2d313e !important;
+  background: var(--color-bg-table-fixed) !important;
 }
 
 .ant-table-tbody > tr:hover > td.ant-table-cell-fix-left.ant-table-column-sort,
 .ant-table-tbody > tr:hover > td.ant-table-cell-fix-right.ant-table-column-sort {
-  background: #353945 !important;
+  background: var(--color-bg-table-fixed-hover) !important;
 }
 
 .ant-table-tbody > tr > td.ant-table-cell-fix-left.ant-table-column-sort.ant-table-cell-row-hover,
 .ant-table-tbody > tr > td.ant-table-cell-fix-right.ant-table-column-sort.ant-table-cell-row-hover {
-  background: #353945 !important;
+  background: var(--color-bg-table-fixed-hover) !important;
 }
 
-/* 排序图标颜色 - 深色主题 */
+/* 排序图标颜色 - 浅色主题 */
 .ant-table-column-sorter {
   color: var(--color-text-tertiary) !important;
 }
@@ -242,36 +242,37 @@
 
 /* Default Button */
 .ant-btn-default {
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: var(--color-bg-elevated) !important;
   border-color: var(--color-border) !important;
   color: var(--color-text-primary) !important;
 }
 
 .ant-btn-default:hover {
-  background: rgba(255, 255, 255, 0.12) !important;
+  background: var(--color-bg-surface-hover) !important;
   border-color: var(--color-border-hover) !important;
-  color: var(--color-text-primary) !important;
+  color: var(--color-accent) !important;
 }
 
-/* Primary Button - Gray/White */
+/* Primary Button - Calm Financial Blue */
 .ant-btn-primary {
-  background: rgba(255, 255, 255, 0.9) !important;
-  border-color: rgba(255, 255, 255, 0.9) !important;
-  color: #111318 !important;
-  box-shadow: none;
+  background: var(--color-accent) !important;
+  border-color: var(--color-accent) !important;
+  color: var(--color-text-inverse) !important;
+  box-shadow: 0 10px 18px rgba(76, 127, 184, 0.16);
   font-weight: var(--font-weight-semibold);
 }
 
 .ant-btn-primary:hover {
-  background: #ffffff !important;
-  border-color: #ffffff !important;
-  color: #111318 !important;
+  background: var(--color-accent-hover) !important;
+  border-color: var(--color-accent-hover) !important;
+  color: var(--color-text-inverse) !important;
+  box-shadow: 0 14px 24px rgba(76, 127, 184, 0.2);
 }
 
 .ant-btn-primary:active {
   background: var(--color-accent) !important;
   border-color: var(--color-accent) !important;
-  color: #111318 !important;
+  color: var(--color-text-inverse) !important;
 }
 
 /* Text Button */
@@ -300,7 +301,7 @@
 .ant-input,
 .ant-input-affix-wrapper,
 .ant-input-affix-wrapper > input.ant-input {
-  background: transparent !important;
+  background: var(--color-bg-elevated) !important;
   border-color: var(--color-border) !important;
   color: var(--color-text-primary) !important;
   border-radius: var(--radius-md) !important;
@@ -337,27 +338,27 @@
 .ant-input:hover,
 .ant-input-affix-wrapper:hover,
 .ant-input-affix-wrapper:hover > input.ant-input {
-  border-color: var(--color-border) !important;
-  background: transparent !important;
+  border-color: var(--color-border-hover) !important;
+  background: var(--color-bg-surface) !important;
 }
 
 .ant-input:focus,
 .ant-input-affix-wrapper:focus,
 .ant-input-affix-wrapper-focused,
 .ant-input-affix-wrapper-focused > input.ant-input {
-  border-color: var(--color-border) !important;
-  box-shadow: none !important;
-  background: transparent !important;
+  border-color: var(--color-accent) !important;
+  box-shadow: 0 0 0 3px var(--color-accent-light) !important;
+  background: var(--color-bg-elevated) !important;
 }
 
 .ant-input::placeholder,
 .ant-input-affix-wrapper input::placeholder {
-  color: rgba(255, 255, 255, 0.45) !important;
+  color: var(--color-text-tertiary) !important;
   opacity: 1 !important;
 }
 
 .ant-input-number input::placeholder {
-  color: rgba(255, 255, 255, 0.45) !important;
+  color: var(--color-text-tertiary) !important;
   opacity: 1 !important;
 }
 
@@ -385,7 +386,7 @@
 
 /* Input Number */
 .ant-input-number {
-  background: transparent !important;
+  background: var(--color-bg-elevated) !important;
   border-color: var(--color-border) !important;
   border-radius: var(--radius-md) !important;
   transition: none !important;
@@ -395,15 +396,15 @@
 }
 
 .ant-input-number:hover {
-  border-color: var(--color-border) !important;
-  background: transparent !important;
+  border-color: var(--color-border-hover) !important;
+  background: var(--color-bg-surface) !important;
 }
 
 .ant-input-number:focus,
 .ant-input-number-focused {
-  border-color: var(--color-border) !important;
-  box-shadow: none !important;
-  background: transparent !important;
+  border-color: var(--color-accent) !important;
+  box-shadow: 0 0 0 3px var(--color-accent-light) !important;
+  background: var(--color-bg-elevated) !important;
 }
 
 .ant-input-number-input {
@@ -416,7 +417,7 @@
 
 /* InputNumber 右侧按钮 - 深色调整 */
 .ant-input-number-handler-wrap {
-  background: rgba(255, 255, 255, 0.06) !important;
+  background: var(--color-bg-surface) !important;
   border-left-color: var(--color-border) !important;
 }
 
@@ -425,7 +426,7 @@
 }
 
 .ant-input-number-handler:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
+  background: var(--color-bg-surface-hover) !important;
 }
 
 .ant-input-number-handler-up-inner,
@@ -443,7 +444,7 @@
    ======================================== */
 
 .ant-select-selector {
-  background: rgba(255, 255, 255, 0.06) !important;
+  background: var(--color-bg-elevated) !important;
   border-color: var(--color-border) !important;
   color: var(--color-text-primary) !important;
   border-radius: var(--radius-md) !important;
@@ -451,7 +452,7 @@
 
 .ant-select:hover .ant-select-selector {
   border-color: var(--color-border-hover) !important;
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: var(--color-bg-surface) !important;
 }
 
 .ant-select-focused .ant-select-selector {
@@ -510,7 +511,7 @@
 }
 
 .ant-select-item-option-active {
-  background: rgba(255, 255, 255, 0.06) !important;
+  background: var(--color-bg-surface) !important;
 }
 
 /* ========================================
@@ -518,8 +519,8 @@
    ======================================== */
 
 .ant-modal-mask {
-  background-color: rgba(0, 0, 0, 0.4) !important;
-  backdrop-filter: blur(2px);
+  background-color: var(--color-bg-overlay) !important;
+  backdrop-filter: blur(6px);
 }
 
 .ant-modal-content {
@@ -558,7 +559,7 @@
 
 .ant-modal-close:hover {
   color: var(--color-text-primary) !important;
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: var(--color-bg-surface) !important;
 }
 
 /* Modal.confirm 确认对话框样式 */
@@ -659,7 +660,7 @@
    ======================================== */
 
 .ant-pagination-item {
-  background: rgba(255, 255, 255, 0.06) !important;
+  background: var(--color-bg-elevated) !important;
   border-color: var(--color-border) !important;
   border-radius: var(--radius-md) !important;
 }
@@ -669,7 +670,7 @@
 }
 
 .ant-pagination-item:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
+  background: var(--color-bg-surface-hover) !important;
   border-color: var(--color-border-hover) !important;
 }
 
@@ -679,7 +680,7 @@
 }
 
 .ant-pagination-item-active a {
-  color: #111318 !important;
+  color: var(--color-text-inverse) !important;
   font-weight: var(--font-weight-semibold);
 }
 
@@ -693,8 +694,8 @@
 }
 
 .ant-pagination-options-quick-jumper input {
-  color: #111318 !important;
-  background: rgba(255, 255, 255, 0.9) !important;
+  color: var(--color-text-primary) !important;
+  background: var(--color-bg-elevated) !important;
   border-color: var(--color-border) !important;
 }
 
@@ -703,7 +704,7 @@
 .ant-pagination-jump-prev .ant-pagination-item-link,
 .ant-pagination-jump-next .ant-pagination-item-link {
   color: var(--color-text-secondary) !important;
-  background: rgba(255, 255, 255, 0.06) !important;
+  background: var(--color-bg-elevated) !important;
   border-color: var(--color-border) !important;
 }
 
@@ -712,13 +713,13 @@
 .ant-pagination-jump-prev:hover .ant-pagination-item-link,
 .ant-pagination-jump-next:hover .ant-pagination-item-link {
   color: var(--color-text-primary) !important;
-  background: rgba(255, 255, 255, 0.1) !important;
+  background: var(--color-bg-surface-hover) !important;
   border-color: var(--color-border-hover) !important;
 }
 
 .ant-pagination-disabled .ant-pagination-item-link {
   color: var(--color-text-tertiary) !important;
-  background: rgba(255, 255, 255, 0.03) !important;
+  background: rgba(120, 146, 181, 0.04) !important;
 }
 
 /* 跳转按钮的省略号图标 */
@@ -754,12 +755,12 @@
 
 .ant-menu-item:hover {
   color: var(--color-text-primary) !important;
-  background: rgba(255, 255, 255, 0.06) !important;
+  background: var(--color-bg-surface) !important;
 }
 
 .ant-menu-item-selected {
-  color: var(--color-text-primary) !important;
-  background: rgba(255, 255, 255, 0.1) !important;
+  color: var(--color-accent) !important;
+  background: var(--color-bg-surface-hover) !important;
   font-weight: var(--font-weight-semibold) !important;
 }
 
@@ -770,11 +771,11 @@
 
 .ant-menu-submenu-title:hover {
   color: var(--color-text-primary) !important;
-  background: rgba(255, 255, 255, 0.06) !important;
+  background: var(--color-bg-surface) !important;
 }
 
 .ant-menu-submenu-selected > .ant-menu-submenu-title {
-  color: var(--color-text-primary) !important;
+  color: var(--color-accent) !important;
   font-weight: var(--font-weight-semibold) !important;
 }
 
@@ -802,12 +803,12 @@
 
 .ant-menu-horizontal > .ant-menu-item-selected::after,
 .ant-menu-horizontal > .ant-menu-submenu-selected::after {
-  border-bottom-color: var(--color-text-primary) !important;
+  border-bottom-color: var(--color-accent) !important;
 }
 
 .ant-menu-horizontal > .ant-menu-item:hover::after,
 .ant-menu-horizontal > .ant-menu-submenu:hover::after {
-  border-bottom-color: rgba(255, 255, 255, 0.5) !important;
+  border-bottom-color: rgba(76, 127, 184, 0.5) !important;
 }
 
 /* 去掉一级菜单 hover 背景 - 使用更强的选择器 */
@@ -906,7 +907,7 @@
 }
 
 .ant-dropdown-menu-item:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: var(--color-bg-surface) !important;
 }
 
 /* ========================================
@@ -945,7 +946,7 @@
 
 .ant-drawer-close:hover {
   color: var(--color-text-primary) !important;
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: var(--color-bg-surface) !important;
 }
 
 /* ========================================
@@ -981,22 +982,22 @@
 }
 
 .ant-checkbox-inner {
-  background-color: rgba(255, 255, 255, 0.06) !important;
+  background-color: var(--color-bg-elevated) !important;
   border-color: var(--color-border) !important;
   border-radius: var(--radius-sm) !important;
 }
 
 .ant-checkbox-checked .ant-checkbox-inner {
-  background-color: rgba(255, 255, 255, 0.9) !important;
-  border-color: rgba(255, 255, 255, 0.9) !important;
+  background-color: var(--color-accent) !important;
+  border-color: var(--color-accent) !important;
 }
 
 .ant-checkbox-checked .ant-checkbox-inner::after {
-  border-color: #111318 !important;
+  border-color: var(--color-text-inverse) !important;
 }
 
 .ant-checkbox-checked::after {
-  border-color: rgba(255, 255, 255, 0.9) !important;
+  border-color: var(--color-accent) !important;
 }
 
 .ant-checkbox-wrapper + span {
@@ -1013,7 +1014,7 @@
 }
 
 .ant-radio-inner {
-  background-color: rgba(255, 255, 255, 0.06) !important;
+  background-color: var(--color-bg-elevated) !important;
   border-color: var(--color-border) !important;
 }
 
@@ -1043,20 +1044,20 @@
 
 .ant-radio-button-wrapper:hover {
   color: var(--color-text-primary) !important;
-  background: rgba(255, 255, 255, 0.04) !important;
+  background: var(--color-bg-surface) !important;
 }
 
 .ant-radio-button-wrapper-checked {
-  background: rgba(255, 255, 255, 0.12) !important;
-  border-color: rgba(255, 255, 255, 0.2) !important;
-  color: var(--color-text-primary) !important;
+  background: var(--color-bg-surface-active) !important;
+  border-color: var(--color-accent) !important;
+  color: var(--color-accent) !important;
   font-weight: var(--font-weight-medium);
 }
 
 .ant-radio-button-wrapper-checked:hover {
-  background: rgba(255, 255, 255, 0.15) !important;
-  border-color: rgba(255, 255, 255, 0.25) !important;
-  color: var(--color-text-primary) !important;
+  background: var(--color-bg-surface-active) !important;
+  border-color: var(--color-accent-hover) !important;
+  color: var(--color-accent-hover) !important;
 }
 
 .ant-radio-button-wrapper:first-child {
@@ -1119,10 +1120,10 @@
   border: 1px solid var(--color-border) !important;
 }
 
-/* Info 类型 - 深色主题 */
+/* Info 类型 - 浅色主题 */
 .ant-alert-info {
-  background: rgba(255, 255, 255, 0.04) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
+  background: rgba(76, 127, 184, 0.08) !important;
+  border-color: rgba(76, 127, 184, 0.18) !important;
 }
 
 .ant-alert-info .ant-alert-icon {
@@ -1199,23 +1200,23 @@
 
 /* 未选中状态 - 深灰色低调 */
 .ant-switch {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: var(--color-bg-elevated) !important;
+  border: 1px solid var(--color-border) !important;
 }
 
 .ant-switch:hover:not(.ant-switch-disabled) {
-  background: rgba(255, 255, 255, 0.15) !important;
+  background: var(--color-bg-surface-hover) !important;
 }
 
-/* 选中状态 - 白色/浅灰色 */
+/* 选中状态 - 蓝色强调但保持克制 */
 .ant-switch-checked {
-  background: rgba(255, 255, 255, 0.9) !important;
-  border-color: rgba(255, 255, 255, 0.9) !important;
+  background: var(--color-accent) !important;
+  border-color: var(--color-accent) !important;
 }
 
 .ant-switch-checked:hover:not(.ant-switch-disabled) {
-  background: #ffffff !important;
-  border-color: #ffffff !important;
+  background: var(--color-accent-hover) !important;
+  border-color: var(--color-accent-hover) !important;
 }
 
 /* 开关按钮 */
@@ -1228,16 +1229,16 @@
 }
 
 .ant-switch-handle::before {
-  background-color: #ffffff !important;
+  background-color: #f8fbff !important;
 }
 
 .ant-switch-checked .ant-switch-handle::before {
-  background-color: #1a1f2e !important;
+  background-color: var(--color-text-inverse) !important;
 }
 
 /* 内部文字颜色 */
 .ant-switch-inner {
-  color: rgba(255, 255, 255, 0.88) !important;
+  color: var(--color-text-secondary) !important;
 }
 
 .ant-switch-inner-checked,
@@ -1246,16 +1247,16 @@
 }
 
 .ant-switch-checked .ant-switch-inner {
-  color: #111827 !important;
+  color: var(--color-text-inverse) !important;
 }
 
 /* 加载状态 */
 .ant-switch-loading-icon {
-  color: rgba(255, 255, 255, 0.7) !important;
+  color: var(--color-text-secondary) !important;
 }
 
 .ant-switch-checked .ant-switch-loading-icon {
-  color: #1a1f2e !important;
+  color: var(--color-text-inverse) !important;
 }
 
 /* ========================================
@@ -1290,7 +1291,7 @@
 }
 
 .signal-tag-default {
-  background: rgba(255, 255, 255, 0.04) !important;
+  background: rgba(120, 146, 181, 0.06) !important;
   border-color: var(--color-border) !important;
   color: var(--color-text-secondary) !important;
 }
@@ -1334,7 +1335,7 @@
 }
 
 .ant-tag-default {
-  background: rgba(255, 255, 255, 0.04) !important;
+  background: rgba(120, 146, 181, 0.06) !important;
   border-color: var(--color-border) !important;
   color: var(--color-text-secondary) !important;
 }
