@@ -22,8 +22,8 @@ public class AuthController {
 
     @Operation(summary = "登录")
     @PostMapping("/login")
-    public ResponseDTO<LoginRespVO> login(@RequestBody @Valid LoginReqVO reqVO) {
-        return ResponseDTO.success(authService.login(reqVO));
+    public ResponseDTO<LoginRespVO> login(@RequestBody @Valid LoginReqVO reqVO, HttpServletRequest request) {
+        return ResponseDTO.success(authService.login(reqVO, IpUtils.getClientIp(request)));
     }
 
     @Operation(summary = "注册")

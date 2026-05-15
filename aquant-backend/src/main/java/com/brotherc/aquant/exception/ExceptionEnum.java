@@ -36,6 +36,8 @@ public enum ExceptionEnum {
     AUTH_RESET_CODE_SEND_FAILED(1000213, "验证码发送失败，请稍后重试"),
     AUTH_RESET_CODE_IP_RATE_LIMIT(1000214, "操作过于频繁，请稍后再试"),
     AUTH_RESET_CODE_GLOBAL_RATE_LIMIT(1000215, "系统繁忙，请稍后再试"),
+    AUTH_ACCOUNT_LOCKED(1000216, "账号已被临时锁定，请 %d 分钟后再试"),
+    AUTH_LOGIN_IP_RATE_LIMIT(1000217, "登录请求过于频繁，请稍后再试"),
 
     ARTICLE_NOT_FOUND(1000301, "文章不存在"),
     ARTICLE_ACCESS_DENIED(1000302, "无权访问该文章"),
@@ -64,6 +66,13 @@ public enum ExceptionEnum {
 
     public BusinessException toException(Throwable cause) {
         return new BusinessException(this, cause);
+    }
+
+    /**
+     * 使用格式化后的消息构造异常（用于 msg 是模板的场景，如 "%d 分钟"）
+     */
+    public BusinessException toFormattedException(Object... args) {
+        return new BusinessException(this, String.format(this.msg, args));
     }
 
 }

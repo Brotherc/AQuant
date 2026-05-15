@@ -18,6 +18,15 @@ public class BusinessException extends RuntimeException {
         this.msg = exceptionEnum.getMsg();
     }
 
+    /**
+     * 使用自定义消息（一般用于 ExceptionEnum 中模板消息的格式化）
+     */
+    public BusinessException(ExceptionEnum exceptionEnum, String customMsg) {
+        super(customMsg);
+        this.code = exceptionEnum.getCode();
+        this.msg = customMsg;
+    }
+
     public Integer getCode() {
         return code;
     }

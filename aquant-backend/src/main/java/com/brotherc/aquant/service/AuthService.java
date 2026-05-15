@@ -44,6 +44,18 @@ public class AuthService {
             new SlidingWindowRateLimiter(Duration.ofDays(1), 500);
     private static final String GLOBAL_LIMITER_KEY = "global";
 
+    /** 登录 IP 限流：单 IP 1 分钟最多 10 次 */
+    private static final SlidingWindowRateLimiter LOGIN_IP_LIMITER_PER_MINUTE =
+            new SlidingWindowRateLimiter(Duration.ofMinutes(1), 10);
+    /** 登录 IP 限流：单 IP 1 小时最多 30 次失败请求 */
+    private static final SlidingWindowRateLimiter LOGIN_IP_FAIL_LIMITER_PER_HOUR =
+            new SlidingWindowRateLimiter(Duration.ofHours(1), 30);
+
+    /** 账号锁定阈值：30 分钟内连续失败 5 次则锁定 */
+    private static final int LOGIN_FAIL_THRESHOLD = 5;
+    private static final Duration LOGIN_FAIL_WINDOW = Duration.ofMinutes(30);
+    private static final Duration LOGIN_LOCK_DURATION = Duration.ofMinutes(15);
+
     @Value("${spring.mail.username:}")
     private String mailFrom;
 
@@ -55,12 +67,49 @@ public class AuthService {
             .maximumSize(10_000)
             .build();
 
+    /** 用户名 → 失败次数；统计窗口内的连续失败 */
+    private final Cache<String, Integer> loginFailCounter = Caffeine.newBuilder()
+            .expireAfterWrite(LOGIN_FAIL_WINDOW)
+            .maximumSize(10_000)
+            .build();
+
+    /** 用户名 → 解锁时间；锁定期内禁止登录 */
+    private final Cache<String, LocalDateTime> loginLockUntil = Caffeine.newBuilder()
+            .expireAfterWrite(LOGIN_LOCK_DURATION)
+            .maximumSize(10_000)
+            .build();
+
     /**
      * 登录
+     *
+     * @param reqVO    登录请求
+     * @param clientIp 客户端 IP（用于限流）
      */
-    public LoginRespVO login(LoginReqVO reqVO) {
-        SysUser user = sysUserRepository.findByUsername(reqVO.getUsername())
-                .orElseThrow(() -> ExceptionEnum.AUTH_LOGIN_FAILED.toException());
+    public LoginRespVO login(LoginReqVO reqVO, String clientIp) {
+        String ipKey = clientIp == null || clientIp.isBlank() ? "unknown" : clientIp;
+        String username = reqVO.getUsername();
+
+        // 1. IP 限流：单 IP 每分钟最多 10 次登录请求
+        if (!LOGIN_IP_LIMITER_PER_MINUTE.tryAcquire(ipKey)) {
+            log.warn("Login IP rate limited (per-minute), ip={}, username={}", ipKey, username);
+            throw ExceptionEnum.AUTH_LOGIN_IP_RATE_LIMIT.toException();
+        }
+
+        // 2. 账号锁定检查
+        LocalDateTime unlockAt = loginLockUntil.getIfPresent(username);
+        if (unlockAt != null && unlockAt.isAfter(LocalDateTime.now())) {
+            long minutesLeft = Math.max(1L,
+                    java.time.Duration.between(LocalDateTime.now(), unlockAt).toMinutes() + 1);
+            throw ExceptionEnum.AUTH_ACCOUNT_LOCKED.toFormattedException(minutesLeft);
+        }
+
+        // 3. 校验用户名密码
+        SysUser user = sysUserRepository.findByUsername(username).orElse(null);
+        if (user == null) {
+            // 用户名不存在：消耗 IP 失败计数，但不计入用户名锁定（避免攻击者锁别人账号）
+            recordIpLoginFailure(ipKey);
+            throw ExceptionEnum.AUTH_LOGIN_FAILED.toException();
+        }
 
         if (user.getStatus() == 0) {
             throw ExceptionEnum.AUTH_ACCOUNT_DISABLED.toException();
@@ -68,8 +117,14 @@ public class AuthService {
 
         BCrypt.Result result = BCrypt.verifyer().verify(reqVO.getPassword().toCharArray(), user.getPassword());
         if (!result.verified) {
+            recordIpLoginFailure(ipKey);
+            recordUserLoginFailure(username);
             throw ExceptionEnum.AUTH_LOGIN_FAILED.toException();
         }
+
+        // 4. 登录成功：清除该用户的失败计数与锁定状态
+        loginFailCounter.invalidate(username);
+        loginLockUntil.invalidate(username);
 
         String token = JwtUtils.generateToken(user.getId(), user.getUsername());
 
@@ -78,6 +133,31 @@ public class AuthService {
         resp.setNickname(user.getNickname() != null ? user.getNickname() : user.getUsername());
         resp.setUsername(user.getUsername());
         return resp;
+    }
+
+    /**
+     * 记录某用户名的登录失败，达到阈值后写入锁定时间
+     */
+    private void recordUserLoginFailure(String username) {
+        Integer count = loginFailCounter.get(username, k -> 0);
+        count = (count == null ? 0 : count) + 1;
+        loginFailCounter.put(username, count);
+
+        if (count >= LOGIN_FAIL_THRESHOLD) {
+            loginLockUntil.put(username, LocalDateTime.now().plus(LOGIN_LOCK_DURATION));
+            loginFailCounter.invalidate(username);
+            log.warn("Account locked due to too many failed logins, username={}", username);
+        }
+    }
+
+    /**
+     * 记录登录失败的 IP，超过 IP 失败上限直接拒绝（不影响合法用户的下一次成功）
+     */
+    private void recordIpLoginFailure(String ipKey) {
+        if (!LOGIN_IP_FAIL_LIMITER_PER_HOUR.tryAcquire(ipKey)) {
+            log.warn("Login IP rate limited (per-hour failures), ip={}", ipKey);
+            throw ExceptionEnum.AUTH_LOGIN_IP_RATE_LIMIT.toException();
+        }
     }
 
     /**
