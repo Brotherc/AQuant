@@ -299,8 +299,7 @@
    ======================================== */
 
 .ant-input,
-.ant-input-affix-wrapper,
-.ant-input-affix-wrapper > input.ant-input {
+.ant-input-affix-wrapper {
   background: var(--color-bg-elevated) !important;
   border-color: var(--color-border) !important;
   color: var(--color-text-primary) !important;
@@ -323,10 +322,18 @@
 }
 
 .ant-input-affix-wrapper > input.ant-input {
+  background: transparent !important;
+  background-color: transparent !important;
+  border-color: transparent !important;
+  border-radius: 0 !important;
+  color: var(--color-text-primary) !important;
   height: auto !important;
   padding: 0 !important;
   border: none !important;
   box-shadow: none !important;
+  transition: none !important;
+  font-size: var(--font-size-sm);
+  line-height: 20px !important;
 }
 
 .ant-input-affix-wrapper .ant-input-prefix,
@@ -336,19 +343,25 @@
 }
 
 .ant-input:hover,
-.ant-input-affix-wrapper:hover,
-.ant-input-affix-wrapper:hover > input.ant-input {
+.ant-input-affix-wrapper:hover {
   border-color: var(--color-border-hover) !important;
   background: var(--color-bg-surface) !important;
 }
 
 .ant-input:focus,
 .ant-input-affix-wrapper:focus,
-.ant-input-affix-wrapper-focused,
-.ant-input-affix-wrapper-focused > input.ant-input {
+.ant-input-affix-wrapper-focused {
   border-color: var(--color-accent) !important;
   box-shadow: 0 0 0 3px var(--color-accent-light) !important;
   background: var(--color-bg-elevated) !important;
+}
+
+.ant-input-affix-wrapper:hover > input.ant-input,
+.ant-input-affix-wrapper-focused > input.ant-input {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .ant-input::placeholder,

@@ -6,9 +6,10 @@
         <!-- 左侧：刷新操作 -->
         <div style="display: flex; align-items: center">
           <a-button @click="handleRefresh" :loading="refreshLoading">刷新</a-button>
-          <span v-if="lastRefreshTime" style="margin-left: 12px; color: #666; font-size: 14px">
-            最后同步时间：{{ lastRefreshTime }}
-          </span>
+          <div v-if="lastRefreshTime" class="page-sync-meta board-refresh-time">
+            <span class="page-sync-meta__label">最后同步时间</span>
+            <span class="page-sync-meta__value">{{ lastRefreshTime }}</span>
+          </div>
         </div>
 
         <!-- 右侧：查询条件 -->
@@ -204,3 +205,9 @@ onMounted(() => {
   fetchRefreshTime();
 });
 </script>
+
+<style scoped>
+.board-refresh-time {
+  margin-left: 12px;
+}
+</style>

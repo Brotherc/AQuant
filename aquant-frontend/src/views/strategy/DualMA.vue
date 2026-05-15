@@ -16,9 +16,10 @@
             <a-radio-button value="signal">实时信号</a-radio-button>
             <a-radio-button value="backtest">历史回测</a-radio-button>
           </a-radio-group>
-          <span v-if="analysisMode === 'backtest'" class="strategy-sync-badge">
-            最后时间：{{ formatDateTime(backtestLastTime) }}
-          </span>
+          <div v-if="analysisMode === 'backtest' && backtestLastTime" class="page-sync-meta">
+            <span class="page-sync-meta__label">最后时间</span>
+            <span class="page-sync-meta__value">{{ formatDateTime(backtestLastTime) }}</span>
+          </div>
           <a-button type="link" class="strategy-help-link" @click="infoVisible = true">
             <info-circle-outlined /> 了解双均线策略
           </a-button>
@@ -518,20 +519,6 @@ onMounted(async () => {
 .strategy-mode-switch :deep(.ant-radio-button-wrapper) {
   min-width: 92px;
   text-align: center;
-}
-
-.strategy-sync-badge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 0 12px;
-  border: 1px solid rgba(16, 185, 129, 0.18);
-  border-radius: var(--radius-full);
-  background: rgba(16, 185, 129, 0.08);
-  color: #9FE8C8;
-  font-size: var(--font-size-xs);
-  font-family: var(--font-family-mono);
-  white-space: nowrap;
 }
 
 .strategy-help-link {

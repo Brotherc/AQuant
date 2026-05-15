@@ -7,9 +7,10 @@
             <a-radio-button value="signal">实时信号</a-radio-button>
             <a-radio-button value="backtest">历史回测</a-radio-button>
           </a-radio-group>
-          <span v-if="analysisMode === 'backtest'" style="color: #666; font-size: 13px;">
-            最后时间：{{ formatDateTime(backtestLastTime) }}
-          </span>
+          <div v-if="analysisMode === 'backtest' && backtestLastTime" class="page-sync-meta">
+            <span class="page-sync-meta__label">最后时间</span>
+            <span class="page-sync-meta__value">{{ formatDateTime(backtestLastTime) }}</span>
+          </div>
         </div>
         <a-button type="link" @click="infoVisible = true">
           <info-circle-outlined /> 了解动量策略

@@ -636,6 +636,8 @@ const handleUpdateEmail = async () => {
 <style>
 .top-nav-popup.ant-menu-submenu-popup > .ant-menu {
   min-width: 132px;
+  padding: 0 !important;
+  overflow: hidden;
 }
 
 .top-nav-popup-compact.ant-menu-submenu-popup > .ant-menu {
@@ -644,7 +646,13 @@ const handleUpdateEmail = async () => {
 
 .top-nav-popup.ant-menu-submenu-popup .ant-menu-item,
 .top-nav-popup.ant-menu-submenu-popup .ant-menu-submenu-title {
+  display: flex !important;
+  align-items: center;
+  width: 100% !important;
   padding-inline: 14px !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  box-sizing: border-box;
 }
 
 .mobile-nav-drawer .ant-drawer-body {

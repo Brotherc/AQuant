@@ -169,6 +169,27 @@ body {
   background: transparent;
 }
 
+.page-sync-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.page-sync-meta__label {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.page-sync-meta__value {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family-mono);
+  font-weight: var(--font-weight-semibold);
+}
+
 /* ========================================
    滚动条样式 (Scrollbar - macOS Style)
    ======================================== */

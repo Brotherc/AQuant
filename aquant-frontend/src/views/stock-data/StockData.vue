@@ -7,9 +7,10 @@
         <!-- 左侧：刷新操作 -->
         <div style="display: flex; align-items: center">
           <a-button @click="handleRefresh" :loading="refreshLoading">刷新</a-button>
-          <span v-if="lastRefreshTime" class="refresh-time">
-            最后同步时间：{{ lastRefreshTime }}
-          </span>
+          <div v-if="lastRefreshTime" class="page-sync-meta refresh-time">
+            <span class="page-sync-meta__label">最后同步时间</span>
+            <span class="page-sync-meta__value">{{ lastRefreshTime }}</span>
+          </div>
         </div>
 
         <!-- 右侧：原有查询条件 -->
@@ -26,15 +27,21 @@
             <a-input v-model:value="searchParams.name" placeholder="输入名称" allow-clear style="width: 140px" />
           </a-form-item>
           <a-form-item label="最新价范围">
-            <a-input-group compact>
-              <a-input-number v-model:value="searchParams.latestPriceMin" placeholder="最小" style="width: 80px; text-align: center" :min="0" />
-              <a-input
-                style="width: 30px; border: none; pointer-events: none; background: transparent; text-align: center"
-                placeholder="~"
-                disabled
+            <div class="price-range-group">
+              <a-input-number
+                v-model:value="searchParams.latestPriceMin"
+                class="price-range-input"
+                placeholder="最小"
+                :min="0"
               />
-              <a-input-number v-model:value="searchParams.latestPriceMax" placeholder="最大" style="width: 80px; text-align: center; border-left: 0" :min="0" />
-            </a-input-group>
+              <span class="price-range-separator">~</span>
+              <a-input-number
+                v-model:value="searchParams.latestPriceMax"
+                class="price-range-input"
+                placeholder="最大"
+                :min="0"
+              />
+            </div>
           </a-form-item>
           <a-form-item>
             <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
@@ -57,7 +64,7 @@
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.dataIndex === 'code'">
-            <span class="stock-code">{{ record.code }}</span>
+            <a-tag class="stock-code-tag">{{ record.code }}</a-tag>
           </template>
           <template v-if="column.dataIndex === 'changePercent'">
             <span :class="['change-value', record.changePercent > 0 ? 'price-up' : record.changePercent < 0 ? 'price-down' : '']">
@@ -315,19 +322,43 @@ onMounted(async () => {
   row-gap: var(--spacing-md);
 }
 
-.refresh-time {
-  margin-left: 12px;
-  color: var(--color-text-tertiary);
-  font-size: 14px;
-  font-family: var(--font-family-mono);
+.price-range-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.stock-code {
-  font-family: var(--font-family-mono);
-  color: var(--color-accent);
-  font-weight: var(--font-weight-semibold);
+.price-range-input {
+  width: 80px;
+  text-align: center;
+}
+
+.price-range-separator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  color: var(--color-text-tertiary);
   font-size: var(--font-size-sm);
-  letter-spacing: 0.3px;
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
+}
+
+.refresh-time {
+  margin-left: 12px;
+}
+
+.stock-code-tag {
+  margin-inline-end: 0;
+  padding: 1px 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(76, 127, 184, 0.08);
+  border-color: rgba(76, 127, 184, 0.18);
+  color: var(--color-accent);
+  font-family: var(--font-family-mono);
+  font-weight: var(--font-weight-semibold);
+  font-size: 12px;
+  line-height: 18px;
 }
 
 .change-value {

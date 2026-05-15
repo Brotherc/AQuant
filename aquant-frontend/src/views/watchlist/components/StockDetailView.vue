@@ -4,8 +4,8 @@
     <div class="detail-header">
       <div class="stock-main-info">
         <h2 class="stock-title">
-          {{ stock.stockName }} 
-          <small class="stock-code">{{ stock.stockCode }}</small>
+          {{ stock.stockName }}
+          <a-tag class="stock-code-tag">{{ stock.stockCode }}</a-tag>
         </h2>
         <div class="price-row" :class="getPriceColor(stock.changePercent)">
           <span class="latest-price">{{ stock.latestPrice.toFixed(2) }}</span>
@@ -451,15 +451,25 @@ onUnmounted(() => {
 .stock-title {
   font-size: 24px;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
   margin: 0;
   color: var(--color-text-primary);
 }
 
-.stock-code {
-  font-size: 14px;
-  color: var(--color-text-tertiary);
-  margin-left: 8px;
-  font-weight: normal;
+.stock-code-tag {
+  margin-inline-end: 0;
+  padding: 2px 10px;
+  border-radius: var(--radius-md);
+  background: rgba(76, 127, 184, 0.08);
+  border-color: rgba(76, 127, 184, 0.18);
+  color: var(--color-accent);
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold);
+  font-family: var(--font-family-mono);
+  line-height: 20px;
 }
 
 .price-row {
