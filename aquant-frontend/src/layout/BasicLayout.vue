@@ -452,12 +452,35 @@ const handleUpdateEmail = async () => {
 
 .mobile-nav-trigger {
   display: none;
-  margin-right: 8px;
+  align-items: center;
+  justify-content: center;
+  width: 36px !important;
+  min-width: 36px;
+  height: 36px !important;
+  margin-right: 12px;
+  padding: 0 !important;
+  line-height: 1 !important;
+  border-radius: var(--radius-md);
   color: var(--color-text-secondary);
 }
 
 .mobile-nav-trigger:hover {
   color: var(--color-text-primary);
+  background: var(--color-bg-surface-hover) !important;
+}
+
+.mobile-nav-trigger :deep(.ant-btn-icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-inline-end: 0 !important;
+}
+
+.mobile-nav-trigger :deep(.anticon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
 }
 
 /* 用户信息区 */
