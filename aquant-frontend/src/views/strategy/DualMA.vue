@@ -2,11 +2,7 @@
   <div class="dual-ma-container">
     <a-card :bordered="false" class="strategy-section-card strategy-section-card--context">
       <div class="strategy-page-header">
-        <div class="strategy-page-header-main">
-          <div class="strategy-workbench-title">{{ pageModeMeta.workbenchTitle }}</div>
-          <div class="strategy-workbench-hint">{{ pageModeMeta.workbenchHint }}</div>
-        </div>
-        <div class="strategy-page-header-actions">
+        <div class="strategy-page-header-left">
           <a-radio-group
             v-model:value="analysisMode"
             button-style="solid"
@@ -20,6 +16,8 @@
             <span class="page-sync-meta__label">最后时间</span>
             <span class="page-sync-meta__value">{{ formatDateTime(backtestLastTime) }}</span>
           </div>
+        </div>
+        <div class="strategy-page-header-actions">
           <a-button type="link" class="strategy-help-link" @click="infoVisible = true">
             <info-circle-outlined /> 了解双均线策略
           </a-button>
@@ -35,7 +33,7 @@
           :model="queryParams"
           @finish="handleSearch"
         >
-          <a-form-item label="所属市场" required>
+          <a-form-item label="所属市场">
             <a-select v-model:value="queryParams.market" style="width: 110px">
               <a-select-option value="sh">沪市 (SH)</a-select-option>
               <a-select-option value="sz">深市 (SZ)</a-select-option>
@@ -92,18 +90,18 @@
           @finish="handleSearch"
         >
           <div class="strategy-search-form-row">
-            <a-form-item label="所属市场" required>
-              <a-select v-model:value="queryParams.market" style="width: 125px">
+            <a-form-item label="所属市场">
+              <a-select v-model:value="queryParams.market" style="width: 130px">
                 <a-select-option value="sh">沪市 (SH)</a-select-option>
                 <a-select-option value="sz">深市 (SZ)</a-select-option>
                 <a-select-option value="bj">北交所 (BJ)</a-select-option>
               </a-select>
             </a-form-item>
             <a-form-item label="股票代码">
-              <a-input v-model:value="queryParams.code" placeholder="输入代码" allow-clear style="width: 125px" />
+              <a-input v-model:value="queryParams.code" placeholder="输入代码" allow-clear style="width: 130px" />
             </a-form-item>
             <a-form-item label="自选分组">
-              <a-select v-model:value="queryParams.watchlistGroupId" placeholder="全部" allow-clear style="width: 155px">
+              <a-select v-model:value="queryParams.watchlistGroupId" placeholder="全部" allow-clear style="width: 130px">
                 <a-select-option v-for="group in watchlistGroups" :key="group.id" :value="group.id">
                   {{ group.name }}
                 </a-select-option>
@@ -112,7 +110,7 @@
           </div>
           <div class="strategy-search-form-row strategy-search-form-row--second">
             <a-form-item label="短期均线">
-              <a-select v-model:value="queryParams.maShort" style="width: 95px">
+              <a-select v-model:value="queryParams.maShort" style="width: 130px">
                 <a-select-option :value="5">5天</a-select-option>
                 <a-select-option :value="10">10天</a-select-option>
                 <a-select-option :value="20">20天</a-select-option>
@@ -122,7 +120,7 @@
               </a-select>
             </a-form-item>
             <a-form-item label="长期均线">
-              <a-select v-model:value="queryParams.maLong" style="width: 95px">
+              <a-select v-model:value="queryParams.maLong" style="width: 130px">
                 <a-select-option :value="5">5天</a-select-option>
                 <a-select-option :value="10">10天</a-select-option>
                 <a-select-option :value="20">20天</a-select-option>
@@ -132,7 +130,7 @@
               </a-select>
             </a-form-item>
             <a-form-item label="回测年数">
-              <a-select v-model:value="queryParams.recentYears" style="width: 110px">
+              <a-select v-model:value="queryParams.recentYears" style="width: 130px">
                 <a-select-option :value="1">近 1 年</a-select-option>
                 <a-select-option :value="2">近 2 年</a-select-option>
                 <a-select-option :value="3">近 3 年</a-select-option>
@@ -140,7 +138,7 @@
               </a-select>
             </a-form-item>
             <a-form-item label="可靠度">
-              <a-select v-model:value="queryParams.reliability" placeholder="全部" allow-clear style="width: 120px">
+              <a-select v-model:value="queryParams.reliability" placeholder="全部" allow-clear style="width: 130px">
                 <a-select-option v-for="option in reliabilityOptions" :key="option" :value="option">
                   {{ option }}
                 </a-select-option>
@@ -156,17 +154,6 @@
 
     <a-card :bordered="false" class="strategy-section-card strategy-section-card--results">
       <div class="strategy-result-shell">
-        <div class="strategy-result-header">
-          <div>
-            <div class="strategy-result-title">{{ pageModeMeta.resultTitle }}</div>
-            <div class="strategy-result-hint">{{ pageModeMeta.resultHint }}</div>
-          </div>
-          <div class="strategy-result-meta">
-            <span class="strategy-result-chip">{{ resultMetaLabel }}</span>
-            <span class="strategy-result-chip strategy-result-chip--strong">共 {{ pagination.total }} 条</span>
-          </div>
-        </div>
-
         <!-- Data Table -->
         <a-table
           :columns="columns"
@@ -493,9 +480,17 @@ onMounted(async () => {
 .strategy-page-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 20px;
   margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.strategy-page-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .strategy-page-header-main {
@@ -510,6 +505,7 @@ onMounted(async () => {
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .strategy-mode-switch {
@@ -550,6 +546,10 @@ onMounted(async () => {
 }
 
 .strategy-search-form--signal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  width: 100%;
   row-gap: 16px;
 }
 
@@ -601,16 +601,12 @@ onMounted(async () => {
 
 .strategy-search-form-submit {
   margin-inline-start: auto;
-  margin-inline-end: 0;
+  margin-inline-end: 0 !important;
 }
 
 .strategy-search-form-submit :deep(.ant-form-item-control-input-content) {
   display: flex;
   justify-content: flex-end;
-}
-
-.strategy-search-form-submit--signal {
-  margin-inline-start: 0;
 }
 
 .strategy-result-shell {

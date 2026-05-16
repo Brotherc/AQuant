@@ -221,6 +221,62 @@ public class StockWatchlistService {
         stockRepository.deleteByGroupId(groupId);
     }
 
+    /**
+     * 分组上移/下移（按 sortNo 升序展示）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void moveGroup(com.brotherc.aquant.model.vo.watchlist.WatchlistGroupMoveReqVO reqVO, Long userId) {
+        if (userId == null) {
+            throw ExceptionEnum.AUTH_TOKEN_INVALID.toException();
+        }
+
+        groupRepository.findByIdAndUserId(reqVO.getId(), userId)
+                .orElseThrow(() -> new BusinessException(ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND));
+
+        List<StockWatchlistGroup> groups = groupRepository.findAllByUserIdOrderBySortNoAsc(userId);
+        int index = -1;
+        for (int i = 0; i < groups.size(); i++) {
+            if (groups.get(i).getId().equals(reqVO.getId())) {
+                index = i;
+                break;
+            }
+        }
+        if (index == -1) return;
+
+        String action = reqVO.getAction();
+        StockWatchlistGroup current = groups.get(index);
+
+        if ("UP".equalsIgnoreCase(action)) {
+            if (index == 0) return;
+            StockWatchlistGroup prev = groups.get(index - 1);
+            int currentSort = current.getSortNo() != null ? current.getSortNo() : 0;
+            int prevSort = prev.getSortNo() != null ? prev.getSortNo() : 0;
+
+            if (currentSort == prevSort) {
+                current.setSortNo(prevSort - 1);
+            } else {
+                current.setSortNo(prevSort);
+                prev.setSortNo(currentSort);
+                groupRepository.save(prev);
+            }
+            groupRepository.save(current);
+        } else if ("DOWN".equalsIgnoreCase(action)) {
+            if (index == groups.size() - 1) return;
+            StockWatchlistGroup next = groups.get(index + 1);
+            int currentSort = current.getSortNo() != null ? current.getSortNo() : 0;
+            int nextSort = next.getSortNo() != null ? next.getSortNo() : 0;
+
+            if (currentSort == nextSort) {
+                current.setSortNo(nextSort + 1);
+            } else {
+                current.setSortNo(nextSort);
+                next.setSortNo(currentSort);
+                groupRepository.save(next);
+            }
+            groupRepository.save(current);
+        }
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public void addStockToWatchlist(WatchlistStockReqVO reqVO, Long userId) {
         if (userId == null) {

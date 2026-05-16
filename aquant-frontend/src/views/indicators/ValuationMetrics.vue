@@ -1,7 +1,7 @@
 <template>
   <div class="valuation-metrics-container">
     <!-- Search Form -->
-    <a-card style="margin-bottom: 24px">
+    <a-card style="margin-bottom: 16px">
       <a-form
         :model="searchParams"
         @finish="handleSearch"

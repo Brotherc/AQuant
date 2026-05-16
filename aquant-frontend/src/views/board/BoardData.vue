@@ -13,12 +13,12 @@
         </div>
 
         <!-- 右侧：查询条件 -->
-        <a-form layout="inline" :model="searchParams" @finish="handleSearch">
+        <a-form layout="inline" :model="searchParams" @finish="handleSearch" class="board-search-form">
 
           <a-form-item label="板块名称">
             <a-input v-model:value="searchParams.boardName" placeholder="输入名称" allow-clear style="width: 150px" />
           </a-form-item>
-          <a-form-item>
+          <a-form-item class="board-search-actions">
             <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
             <a-button type="primary" ghost style="margin-left: 8px" @click="resetSearch">重置</a-button>
           </a-form-item>
@@ -209,5 +209,14 @@ onMounted(() => {
 <style scoped>
 .board-refresh-time {
   margin-left: 12px;
+}
+
+.board-search-form {
+  row-gap: var(--spacing-md);
+}
+
+.board-search-actions {
+  margin-inline-start: auto;
+  margin-inline-end: 0;
 }
 </style>

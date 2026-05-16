@@ -43,7 +43,7 @@
               />
             </div>
           </a-form-item>
-          <a-form-item>
+          <a-form-item class="stock-data-search-actions">
             <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
             <a-button type="primary" ghost style="margin-left: 8px" @click="resetSearch">重置</a-button>
           </a-form-item>
@@ -320,6 +320,11 @@ onMounted(async () => {
 
 .stock-data-search-form {
   row-gap: var(--spacing-md);
+}
+
+.stock-data-search-actions {
+  margin-inline-start: auto;
+  margin-inline-end: 0;
 }
 
 .price-range-group {

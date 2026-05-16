@@ -15,6 +15,10 @@
 }
 
 .ant-card:hover {
+  /* 普通卡片 hover 时不再加阴影，仅保留边框微妙变化 */
+}
+
+.ant-card.ant-card-hoverable:hover {
   border-color: var(--color-border-hover) !important;
   box-shadow: var(--shadow-lg) !important;
 }

@@ -51,6 +51,14 @@ public class StockWatchlistController {
         return ResponseDTO.success();
     }
 
+    @Operation(summary = "分组上移/下移")
+    @PostMapping("/group/move")
+    public ResponseDTO<Void> moveGroup(@RequestBody @Valid WatchlistGroupMoveReqVO reqVO) {
+        Long userId = UserContext.requireCurrentUserId();
+        watchlistService.moveGroup(reqVO, userId);
+        return ResponseDTO.success();
+    }
+
     @Operation(summary = "获取分组下的股票列表")
     @GetMapping("/stock/list")
     public ResponseDTO<List<WatchlistStockVO>> getStocksByGroupId(@RequestParam Long groupId) {

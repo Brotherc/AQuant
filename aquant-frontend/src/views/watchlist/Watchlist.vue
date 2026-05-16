@@ -94,11 +94,18 @@
             <template #overlay>
               <a-menu>
                 <a-menu-item @click="openRenameGroupModal(group)">
-                  <edit-outlined /> 重命名分组
+                  重命名
+                </a-menu-item>
+                <a-menu-divider />
+                <a-menu-item :disabled="isFirstGroup(group.id)" @click="handleMoveGroup(group.id, 'UP')">
+                  上移
+                </a-menu-item>
+                <a-menu-item :disabled="isLastGroup(group.id)" @click="handleMoveGroup(group.id, 'DOWN')">
+                  下移
                 </a-menu-item>
                 <a-menu-divider />
                 <a-menu-item danger @click="onDeleteGroup(group.id)">
-                  <close-outlined /> 删除分组
+                  删除
                 </a-menu-item>
               </a-menu>
             </template>
@@ -439,6 +446,7 @@ import {
   createWatchlistGroup,
   updateWatchlistGroup,
   deleteWatchlistGroup,
+  moveWatchlistGroup,
   addStockToWatchlist,
   removeStockFromWatchlist,
   moveWatchlistStock,
@@ -503,6 +511,54 @@ const setGroupSectionRef = (groupId: number, el: any) => {
 };
 
 let intersectionObserver: IntersectionObserver | null = null;
+let activeGroupUpdateFrame: number | null = null;
+let initialActiveUnlockFrame: number | null = null;
+let initialActiveUnlockSecondFrame: number | null = null;
+let initialActiveLocked = true;
+
+const getActiveAnchorTop = () => {
+  const toolbar = document.querySelector('.watchlist-sticky-toolbar') as HTMLElement | null;
+  return toolbar ? toolbar.getBoundingClientRect().bottom + 16 : 140;
+};
+
+const updateActiveGroupByPosition = () => {
+  if (initialActiveLocked || groupSectionRefs.size === 0) return;
+  const anchorTop = getActiveAnchorTop();
+  let nearestPassed: { id: number; top: number } | null = null;
+  let nearestPending: { id: number; top: number } | null = null;
+
+  for (const group of groups.value) {
+    const el = groupSectionRefs.get(group.id);
+    if (!el) continue;
+    const rect = el.getBoundingClientRect();
+    if (rect.bottom <= anchorTop) continue;
+    const top = rect.top - anchorTop;
+
+    if (top <= 0) {
+      if (!nearestPassed || top > nearestPassed.top) {
+        nearestPassed = { id: group.id, top };
+      }
+    } else if (!nearestPending || top < nearestPending.top) {
+      nearestPending = { id: group.id, top };
+    }
+  }
+
+  const nextActiveId = nearestPassed?.id || nearestPending?.id;
+  if (nextActiveId && activeGroupId.value !== nextActiveId) {
+    activeGroupId.value = nextActiveId;
+  }
+};
+
+const scheduleActiveGroupUpdate = () => {
+  if (initialActiveLocked) return;
+  if (activeGroupUpdateFrame != null) {
+    cancelAnimationFrame(activeGroupUpdateFrame);
+  }
+  activeGroupUpdateFrame = requestAnimationFrame(() => {
+    activeGroupUpdateFrame = null;
+    updateActiveGroupByPosition();
+  });
+};
 
 /**
  * 第一次出现在视口时：触发懒加载 + 更新 activeGroupId
@@ -514,8 +570,6 @@ const observeGroupSection = (groupId: number, el: HTMLElement) => {
 
 const initIntersectionObserver = () => {
   intersectionObserver = new IntersectionObserver((entries) => {
-    // 找到当前可见度最高的一个，将其设为 activeGroupId
-    let topEntry: IntersectionObserverEntry | null = null;
     for (const entry of entries) {
       const groupId = Number(entry.target.getAttribute('data-group-id'));
       if (entry.isIntersecting) {
@@ -523,15 +577,9 @@ const initIntersectionObserver = () => {
           loadedGroups.add(groupId);
           fetchStocks(groupId);
         }
-        if (!topEntry || entry.intersectionRatio > topEntry.intersectionRatio) {
-          topEntry = entry;
-        }
       }
     }
-    if (topEntry) {
-      const id = Number((topEntry.target as HTMLElement).getAttribute('data-group-id'));
-      if (id) activeGroupId.value = id;
-    }
+    scheduleActiveGroupUpdate();
   }, {
     threshold: [0, 0.2, 0.5],
     rootMargin: '-140px 0px -40% 0px'
@@ -741,6 +789,21 @@ const scrollToGroup = (groupId: number) => {
   if (el) {
     activeGroupId.value = groupId;
     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+};
+
+/* === 分组上移/下移 === */
+const isFirstGroup = (groupId: number) => groups.value.length > 0 && groups.value[0]?.id === groupId;
+const isLastGroup = (groupId: number) => groups.value.length > 0 && groups.value[groups.value.length - 1]?.id === groupId;
+
+const handleMoveGroup = async (groupId: number, action: 'UP' | 'DOWN') => {
+  try {
+    const res = await moveWatchlistGroup({ id: groupId, action });
+    if (res.data.success) {
+      await fetchGroups();
+    }
+  } catch (error) {
+    console.error('Move group failed:', error);
   }
 };
 
@@ -1067,12 +1130,15 @@ const handleDeleteNoti = async (item: any, index: number) => {
 };
 
 onMounted(async () => {
+  initialActiveLocked = true;
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   initIntersectionObserver();
   await fetchGroups();
   // 初次进入主动加载第一个分组（IntersectionObserver 在 ref 设置后才能触发）
   await nextTick();
   if (groups.value.length > 0) {
     const firstId = groups.value[0]!.id;
+    activeGroupId.value = firstId;
     if (!loadedGroups.has(firstId)) {
       loadedGroups.add(firstId);
       fetchStocks(firstId);
@@ -1080,9 +1146,34 @@ onMounted(async () => {
   }
   // 初始化锚点容量观察
   setupAnchorsResize();
+  initialActiveUnlockFrame = requestAnimationFrame(() => {
+    initialActiveUnlockFrame = null;
+    initialActiveUnlockSecondFrame = requestAnimationFrame(() => {
+      initialActiveUnlockSecondFrame = null;
+      initialActiveLocked = false;
+      updateActiveGroupByPosition();
+      window.addEventListener('scroll', scheduleActiveGroupUpdate, { passive: true });
+      window.addEventListener('resize', scheduleActiveGroupUpdate);
+    });
+  });
 });
 
 onBeforeUnmount(() => {
+  initialActiveLocked = true;
+  window.removeEventListener('scroll', scheduleActiveGroupUpdate);
+  window.removeEventListener('resize', scheduleActiveGroupUpdate);
+  if (initialActiveUnlockFrame != null) {
+    cancelAnimationFrame(initialActiveUnlockFrame);
+    initialActiveUnlockFrame = null;
+  }
+  if (initialActiveUnlockSecondFrame != null) {
+    cancelAnimationFrame(initialActiveUnlockSecondFrame);
+    initialActiveUnlockSecondFrame = null;
+  }
+  if (activeGroupUpdateFrame != null) {
+    cancelAnimationFrame(activeGroupUpdateFrame);
+    activeGroupUpdateFrame = null;
+  }
   if (intersectionObserver) {
     intersectionObserver.disconnect();
     intersectionObserver = null;

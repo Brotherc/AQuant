@@ -1,7 +1,7 @@
 <template>
   <div class="dupont-analysis-container">
     <!-- Search Form -->
-    <a-card style="margin-bottom: 24px">
+    <a-card style="margin-bottom: 16px">
       <a-form
         layout="inline"
         :model="searchParams"
