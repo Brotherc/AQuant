@@ -57,7 +57,8 @@ const financeSites = [
   createSite('Kronos', 'https://github.com/shiyu-coder/Kronos', '面向金融市场语言的基础模型', 'https://github.com/fluidicon.png'),
   createSite('TradingAgents', 'https://github.com/TauricResearch/TradingAgents', '多智能体大语言模型金融交易框架', 'https://github.com/fluidicon.png'),
   createSite('AI Hedge Fund', 'https://github.com/virattt/ai-hedge-fund', '一个 AI 对冲基金团队', 'https://github.com/fluidicon.png'),
-  createSite('大盘云图', 'https://52etf.site', '大盘云图 - A股热力图')
+  createSite('大盘云图', 'https://52etf.site', '大盘云图 - A股热力图'),
+  createSite('美股编年史', 'https://historyofmarket.com', '美股编年史 - 美股历史行情与重大事件回顾')
 ];
 
 const brokenSiteIcons = ref<Record<string, boolean>>({});
