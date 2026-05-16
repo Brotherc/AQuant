@@ -60,10 +60,10 @@
                 style="width: 90px"
               >
                 <a-select-option :value="0">
-                  <LockOutlined /> 私密
+                  私密
                 </a-select-option>
                 <a-select-option :value="1">
-                  <GlobalOutlined /> 公开
+                  公开
                 </a-select-option>
               </a-select>
               <a @click="handleEdit(item)">编辑</a>
@@ -73,7 +73,7 @@
                 cancel-text="取消"
                 @confirm="handleDelete(item.id)"
               >
-                <a style="color: #ff4d4f;">删除</a>
+                <a>删除</a>
               </a-popconfirm>
             </template>
           </a-list-item>
@@ -103,8 +103,6 @@ import {
   CalendarOutlined,
   EditOutlined,
   UserOutlined,
-  LockOutlined,
-  GlobalOutlined,
   SearchOutlined
 } from '@ant-design/icons-vue';
 import {
@@ -400,14 +398,6 @@ onUnmounted(() => {
 
 :deep(.ant-list-item-action a:hover) {
   color: var(--color-text-primary);
-}
-
-:deep(.ant-list-item-action a[style*="color: #ff4d4f"]) {
-  color: #ff4d4f !important;
-}
-
-:deep(.ant-list-item-action a[style*="color: #ff4d4f"]:hover) {
-  color: #ff7875 !important;
 }
 
 .load-more-trigger {

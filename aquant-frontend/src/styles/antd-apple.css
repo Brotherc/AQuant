@@ -548,7 +548,11 @@
 }
 
 .ant-select-item-option-active {
-  background: var(--color-bg-surface) !important;
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+.ant-select-item-option-active:not(.ant-select-item-option-selected) {
+  color: var(--color-text-primary) !important;
 }
 
 /* ========================================
