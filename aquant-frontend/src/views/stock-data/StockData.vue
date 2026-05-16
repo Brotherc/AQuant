@@ -350,15 +350,6 @@ onMounted(async () => {
 
 .stock-code-tag {
   margin-inline-end: 0;
-  padding: 1px 8px;
-  border-radius: var(--radius-sm);
-  background: rgba(76, 127, 184, 0.08);
-  border-color: rgba(76, 127, 184, 0.18);
-  color: var(--color-accent);
-  font-family: var(--font-family-mono);
-  font-weight: var(--font-weight-semibold);
-  font-size: 12px;
-  line-height: 18px;
 }
 
 .change-value {

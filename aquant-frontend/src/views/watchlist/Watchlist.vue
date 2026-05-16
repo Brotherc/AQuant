@@ -1,97 +1,134 @@
 <template>
   <div class="watchlist-container">
-    <!-- 分组导航标签 -->
-    <div class="group-tags-header">
-      <div class="group-tags-left">
-        <div 
-          v-for="group in groups" 
-          :key="group.id" 
-          class="custom-group-tag"
-          :class="{ active: activeGroupId === group.id, editing: editingGroupId === group.id }"
-          @click="handleTabChange(group.id)"
-          @dblclick="startEditGroup(group)"
-        >
-          <template v-if="editingGroupId === group.id">
-            <a-input
-              ref="editInputRef"
-              v-model:value="editGroupName"
-              size="small"
-              class="edit-group-input"
-              @blur="submitEditGroup"
-              @keyup.enter="submitEditGroup"
-              @keyup.esc="cancelEditGroup"
-              @click.stop
-            />
-          </template>
-          <template v-else>
-            <span class="tag-name">{{ group.name }}</span>
-            <span v-if="activeGroupId === group.id" class="tag-status">当前</span>
-            <div class="tag-actions">
-              <edit-outlined 
-                v-if="activeGroupId === group.id" 
-                class="edit-group-icon"
-                @click.stop="startEditGroup(group)" 
-              />
-              <close-outlined 
-                v-if="activeGroupId === group.id" 
-                class="delete-group-icon"
-                @click.stop="onDeleteGroup(group.id)" 
-              />
-            </div>
+    <!-- 顶部分组导航与全局过滤 -->
+    <div class="watchlist-sticky-toolbar" v-if="groups.length > 0">
+      <div class="group-anchors-header">
+        <div class="group-anchors-list" ref="anchorsListEl">
+          <template v-for="(group, idx) in visibleGroups" :key="group.id">
+            <span
+              class="group-anchor"
+              :class="{ active: activeGroupId === group.id }"
+              :title="group.name"
+              @click="scrollToGroup(group.id)"
+            >
+              {{ group.name }}
+            </span>
+            <span v-if="idx < visibleGroups.length - 1" class="group-anchor-sep">·</span>
           </template>
         </div>
-      </div>
-      <div class="group-tags-right">
-        <div class="custom-group-tag add-btn" @click="showAddGroupModal">
-          <plus-outlined style="font-size: 12px;" />
-          <span>新建分组</span>
+        <a-dropdown
+          v-if="overflowGroups.length > 0"
+          :trigger="['hover']"
+          placement="bottomRight"
+          overlayClassName="group-anchor-more-dropdown"
+        >
+          <div class="group-anchors-more-wrap">
+            <span v-if="visibleGroups.length > 0" class="group-anchor-sep">·</span>
+            <span class="group-anchor group-anchor-more" :class="{ active: overflowGroups.some(g => g.id === activeGroupId) }">
+              更多
+            </span>
+          </div>
+          <template #overlay>
+            <a-menu>
+              <a-menu-item
+                v-for="group in overflowGroups"
+                :key="group.id"
+                :class="{ active: activeGroupId === group.id }"
+                :title="group.name"
+                @click="scrollToGroup(group.id)"
+              >
+                {{ group.name }}
+              </a-menu-item>
+            </a-menu>
+          </template>
+        </a-dropdown>
+        <div class="group-anchors-right">
+          <div class="global-filter-bar">
+            <a-checkbox v-model:checked="globalFilterNoti">仅看有通知设置</a-checkbox>
+            <a-input
+              v-model:value="globalSearchQuery"
+              placeholder="输入名称或代码搜索"
+              allowClear
+              class="watchlist-search-input global-filter-search"
+            >
+              <template #prefix>
+                <search-outlined />
+              </template>
+            </a-input>
+          </div>
+          <a-button type="primary" class="toolbar-action-button" @click="showAddGroupModal">
+            <template #icon><plus-outlined /></template>
+            新建分组
+          </a-button>
         </div>
       </div>
     </div>
 
-    <!-- 自选股内容区 -->
-    <div class="watchlist-content" v-if="activeGroupId">
-    
-      <!-- 轻量级排序与搜索操作带 -->
-      <div class="control-bar" v-if="stocks.length > 0">
-        <div class="search-box" style="display: flex; align-items: center; gap: 12px;">
-          <a-input 
-            v-model:value="searchQuery" 
-            placeholder="输入名称或代码搜索" 
-            allowClear 
-            size="small"
-            class="watchlist-search-input"
-            style="width: 230px;"
-          >
-            <template #prefix>
-              <search-outlined />
+    <!-- 整个页面没有任何分组时的空状态 -->
+    <div v-if="groups.length === 0 && !groupsLoading" class="full-empty-container">
+      <a-empty description="暂无自选分组" >
+        <a-button type="primary" @click="showAddGroupModal">
+          <template #icon><plus-outlined /></template>
+          新建分组
+        </a-button>
+      </a-empty>
+    </div>
+
+    <!-- 各分组卡片区 -->
+    <div
+      v-for="group in groups"
+      :key="group.id"
+      class="group-section"
+      :data-group-id="group.id"
+      :ref="(el) => setGroupSectionRef(group.id, el)"
+    >
+      <!-- 分组标题与操作 -->
+      <div class="group-section-header">
+        <div class="group-section-title" :title="group.name">{{ group.name }}</div>
+        <div class="group-section-divider"></div>
+        <div class="group-section-actions">
+          <a-dropdown :trigger="['click']" placement="bottomRight">
+            <span class="group-section-more" @click.stop>
+              <ellipsis-outlined />
+            </span>
+            <template #overlay>
+              <a-menu>
+                <a-menu-item @click="openRenameGroupModal(group)">
+                  <edit-outlined /> 重命名分组
+                </a-menu-item>
+                <a-menu-divider />
+                <a-menu-item danger @click="onDeleteGroup(group.id)">
+                  <close-outlined /> 删除分组
+                </a-menu-item>
+              </a-menu>
             </template>
-          </a-input>
-          <a-checkbox v-model:checked="filterNoti">仅看有通知设置</a-checkbox>
+          </a-dropdown>
         </div>
+      </div>
+      <div class="group-section-sort-row" v-if="(groupStocks[group.id] || []).length > 0">
         <div class="sort-options">
           <span class="ctrl-label">排序：</span>
-        <span class="ctrl-item" :class="{ active: sortKey === 'default' }" @click="handleSortChange('default')">默认</span>
-        <span class="ctrl-item" :class="{ active: sortKey === 'latestPrice' }" @click="handleSortChange('latestPrice')">
-          最新价 <caret-up-outlined v-if="sortKey === 'latestPrice' && sortOrder === 'asc'"/><caret-down-outlined v-else />
-        </span>
-        <span class="ctrl-item" :class="{ active: sortKey === 'changePercent' }" @click="handleSortChange('changePercent')">
-          涨跌幅 <caret-up-outlined v-if="sortKey === 'changePercent' && sortOrder === 'asc'"/><caret-down-outlined v-else />
-        </span>
-        <span class="ctrl-item" :class="{ active: sortKey === 'pe' }" @click="handleSortChange('pe')">
-          PE <caret-up-outlined v-if="sortKey === 'pe' && sortOrder === 'asc'"/><caret-down-outlined v-else />
-        </span>
-        <span class="ctrl-item" :class="{ active: sortKey === 'roe' }" @click="handleSortChange('roe')">
-          ROE <caret-up-outlined v-if="sortKey === 'roe' && sortOrder === 'asc'"/><caret-down-outlined v-else />
-        </span>
+          <span class="ctrl-item" :class="{ active: groupUiState[group.id].sortKey === 'default' }" @click="handleSortChange(group.id, 'default')">默认</span>
+          <span class="ctrl-item" :class="{ active: groupUiState[group.id].sortKey === 'latestPrice' }" @click="handleSortChange(group.id, 'latestPrice')">
+            最新价 <caret-up-outlined v-if="groupUiState[group.id].sortKey === 'latestPrice' && groupUiState[group.id].sortOrder === 'asc'"/><caret-down-outlined v-else />
+          </span>
+          <span class="ctrl-item" :class="{ active: groupUiState[group.id].sortKey === 'changePercent' }" @click="handleSortChange(group.id, 'changePercent')">
+            涨跌幅 <caret-up-outlined v-if="groupUiState[group.id].sortKey === 'changePercent' && groupUiState[group.id].sortOrder === 'asc'"/><caret-down-outlined v-else />
+          </span>
+          <span class="ctrl-item" :class="{ active: groupUiState[group.id].sortKey === 'pe' }" @click="handleSortChange(group.id, 'pe')">
+            PE <caret-up-outlined v-if="groupUiState[group.id].sortKey === 'pe' && groupUiState[group.id].sortOrder === 'asc'"/><caret-down-outlined v-else />
+          </span>
+          <span class="ctrl-item" :class="{ active: groupUiState[group.id].sortKey === 'roe' }" @click="handleSortChange(group.id, 'roe')">
+            ROE <caret-up-outlined v-if="groupUiState[group.id].sortKey === 'roe' && groupUiState[group.id].sortOrder === 'asc'"/><caret-down-outlined v-else />
+          </span>
         </div>
       </div>
 
-      <a-spin :spinning="loading">
+      <a-spin :spinning="groupLoading[group.id]">
         <a-row :gutter="[16, 16]" class="card-grid">
-          <a-col 
+          <a-col
             :xs="24" :sm="24" :md="12" :lg="8" :xl="6"
-            v-for="stock in sortedStocks" 
+            v-for="stock in getSortedStocks(group.id)"
             :key="stock.stockCode"
           >
             <div class="draggable-wrapper">
@@ -109,7 +146,7 @@
                         class="noti-icon noti-icon--active"
                         title="修改通知规则"
                       />
-                      <bell-outlined 
+                      <bell-outlined
                         v-else
                         class="noti-icon"
                         title="新增消息提醒"
@@ -123,38 +160,36 @@
                             查看详情
                           </a-menu-item>
                           <a-menu-divider />
-                          <a-menu-item 
-                            :disabled="isFirst(stock.stockCode)"
-                            @click="handleMoveToTop(stock.stockCode)"
+                          <a-menu-item
+                            :disabled="isFirstInGroup(group.id, stock.stockCode)"
+                            @click="handleMoveToTop(group.id, stock.stockCode)"
                           >
                             移至最前
                           </a-menu-item>
-                          <a-tooltip :title="sortKey !== 'default' ? '请先切换到默认排序以进行手动排序' : ''" placement="left">
-                            <a-menu-item 
-                              :disabled="sortKey !== 'default' || isFirst(stock.stockCode)"
-                              @click="handleMove(stock.stockCode, 'up')"
-                            >
-                              往前移
-                            </a-menu-item>
-                          </a-tooltip>
-                          <a-tooltip :title="sortKey !== 'default' ? '请先切换到默认排序以进行手动排序' : ''" placement="left">
-                            <a-menu-item 
-                              :disabled="sortKey !== 'default' || isLast(stock.stockCode)"
-                              @click="handleMove(stock.stockCode, 'down')"
-                            >
-                              往后移
-                            </a-menu-item>
-                          </a-tooltip>
+                          <a-menu-item
+                            :disabled="groupUiState[group.id].sortKey !== 'default' || isFirstInGroup(group.id, stock.stockCode)"
+                            :title="groupUiState[group.id].sortKey !== 'default' ? '请先切换到默认排序以进行手动排序' : ''"
+                            @click="handleMove(group.id, stock.stockCode, 'up')"
+                          >
+                            往前移
+                          </a-menu-item>
+                          <a-menu-item
+                            :disabled="groupUiState[group.id].sortKey !== 'default' || isLastInGroup(group.id, stock.stockCode)"
+                            :title="groupUiState[group.id].sortKey !== 'default' ? '请先切换到默认排序以进行手动排序' : ''"
+                            @click="handleMove(group.id, stock.stockCode, 'down')"
+                          >
+                            往后移
+                          </a-menu-item>
                           <a-menu-divider />
-                          <a-menu-item @click="showMoveGroupModal(stock)">
+                          <a-menu-item @click="showMoveGroupModal(group.id, stock)">
                             修改分组
                           </a-menu-item>
                           <a-menu-divider />
                           <a-menu-item danger @click.stop>
                             <div @click.stop>
-                              <a-popconfirm 
-                                title="确定移除该股票吗？" 
-                                @confirm="handleRemoveStock(stock.stockCode)"
+                              <a-popconfirm
+                                title="确定移除该股票吗？"
+                                @confirm="handleRemoveStock(group.id, stock.stockCode)"
                                 placement="left"
                               >
                                 <div style="margin: -5px -12px; padding: 5px 12px;">移除</div>
@@ -166,7 +201,7 @@
                     </a-dropdown>
                   </div>
                 </div>
-              
+
                 <!-- 行情数据 -->
                 <div class="quote-info" :class="getPriceColorClass(stock.changePercent)">
                   <div class="latest-price">{{ stock.latestPrice != null ? stock.latestPrice.toFixed(2) : '-' }}</div>
@@ -174,7 +209,7 @@
                     {{ stock.changePercent > 0 ? '+' : '' }}{{ stock.changePercent != null ? stock.changePercent.toFixed(2) + '%' : '-' }}
                   </div>
                 </div>
-                
+
                 <!-- 迷你K线 -->
                 <div class="kline-box">
                   <MiniKlineChart :stockCode="stock.stockCode" />
@@ -212,7 +247,7 @@
           </a-col>
           <!-- 添加股票的常驻卡片 -->
           <a-col :xs="24" :sm="24" :md="12" :lg="8" :xl="6">
-            <a-card hoverable class="add-stock-card" size="small" @click="showAddStockModal">
+            <a-card hoverable class="add-stock-card" size="small" @click="showAddStockModal(group.id)">
               <plus-outlined class="add-icon" />
               <div class="add-text">添加股票</div>
             </a-card>
@@ -221,26 +256,21 @@
       </a-spin>
     </div>
 
-    <!-- 整个页面没有任何分组时的空状态 -->
-    <div v-else-if="groups.length === 0 && !loading" class="full-empty-container">
-      <a-empty description="暂无自选数据" />
-    </div>
-
     <!-- 新增股票 Modal -->
     <a-modal v-model:visible="addStockModalVisible" title="添加自选股票" @ok="handleAddStock" :confirmLoading="addLoading">
       <a-form layout="vertical">
         <a-form-item label="股票代码" required>
-          <a-input 
-            v-model:value="newStockCode" 
-            placeholder="请输入 6 位股票代码，例如 600519" 
-            @pressEnter="handleAddStock" 
+          <a-input
+            v-model:value="newStockCode"
+            placeholder="请输入 6 位股票代码，例如 600519"
+            @pressEnter="handleAddStock"
           />
         </a-form-item>
       </a-form>
     </a-modal>
 
     <!-- 新增分组 Modal -->
-    <a-modal v-model:visible="groupModalVisible" title="新增自选分组" @ok="handleCreateGroup" :confirmLoading="groupLoading">
+    <a-modal v-model:visible="groupModalVisible" title="新增自选分组" @ok="handleCreateGroup" :confirmLoading="createGroupLoading">
       <a-form :model="groupForm" layout="vertical">
         <a-form-item label="分组名称" required>
           <a-input v-model:value="groupForm.name" placeholder="请输入分组名称" />
@@ -248,11 +278,20 @@
       </a-form>
     </a-modal>
 
-    <a-modal 
-      v-model:visible="detailVisible" 
-      title="股票详情" 
-      :width="1000" 
-      :footer="null" 
+    <!-- 重命名分组 Modal -->
+    <a-modal v-model:visible="renameModalVisible" title="重命名分组" @ok="handleRenameGroup" :confirmLoading="renameLoading">
+      <a-form :model="renameForm" layout="vertical">
+        <a-form-item label="分组名称" required>
+          <a-input v-model:value="renameForm.name" placeholder="请输入分组名称" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <a-modal
+      v-model:visible="detailVisible"
+      title="股票详情"
+      :width="1000"
+      :footer="null"
       centered
       destroyOnClose
     >
@@ -264,11 +303,11 @@
       <div style="margin-bottom: 20px;">
         <div style="margin-bottom: 8px; color: #8c8c8c;">将股票从当前分组移动到：</div>
         <a-select v-model:value="targetGroupId" placeholder="请选择目标分组" style="width: 100%" size="large">
-          <a-select-option v-for="g in otherGroups" :key="g.id" :value="g.id">
+          <a-select-option v-for="g in moveGroupOptions" :key="g.id" :value="g.id">
             {{ g.name }}
           </a-select-option>
         </a-select>
-        <div v-if="otherGroups.length === 0" style="color: #ff4d4f; margin-top: 8px; font-size: 12px;">暂无其他可迁入的分组</div>
+        <div v-if="moveGroupOptions.length === 0" style="color: #ff4d4f; margin-top: 8px; font-size: 12px;">暂无其他可迁入的分组</div>
       </div>
     </a-modal>
 
@@ -377,15 +416,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, nextTick } from 'vue';
+import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import { 
-  CloseOutlined, 
-  PlusOutlined, 
-  CaretUpOutlined, 
-  CaretDownOutlined, 
-  SearchOutlined, 
-  EllipsisOutlined, 
+import {
+  CloseOutlined,
+  PlusOutlined,
+  CaretUpOutlined,
+  CaretDownOutlined,
+  SearchOutlined,
+  EllipsisOutlined,
   EditOutlined,
   BellOutlined,
   BellFilled,
@@ -394,33 +433,110 @@ import {
 } from '@ant-design/icons-vue';
 import MiniKlineChart from './components/MiniKlineChart.vue';
 import StockDetailView from './components/StockDetailView.vue';
-import { 
+import {
   getWatchlistGroups,
-  getWatchlistStocks, 
-  createWatchlistGroup, 
+  getWatchlistStocks,
+  createWatchlistGroup,
   updateWatchlistGroup,
-  deleteWatchlistGroup, 
-  addStockToWatchlist, 
+  deleteWatchlistGroup,
+  addStockToWatchlist,
   removeStockFromWatchlist,
   moveWatchlistStock,
   moveWatchlistStockToGroup,
   type WatchlistGroupVO,
-  type WatchlistStockVO
+  type WatchlistStockVO,
+  type WatchlistDividendVO
 } from '@/api/watchlist';
 import { getNotificationList, saveNotification, deleteNotification } from '@/api/notification';
 
 const groups = ref<WatchlistGroupVO[]>([]);
+const groupsLoading = ref(false);
+/** 当前在视口内（被锚点高亮）的分组 */
 const activeGroupId = ref<number>();
-const stocks = ref<WatchlistStockVO[]>([]);
-const loading = ref(false);
-const addLoading = ref(false);
-const newStockCode = ref('');
-const currentStockCode = ref('');
+/** 各分组的股票数据：groupId → 股票列表 */
+const groupStocks = reactive<Record<number, WatchlistStockVO[]>>({});
+/** 各分组的加载状态 */
+const groupLoading = reactive<Record<number, boolean>>({});
+/** 已经请求过的分组（按需懒加载使用） */
+const loadedGroups = reactive<Set<number>>(new Set());
 
-// Group Modal
-const groupModalVisible = ref(false);
-const groupLoading = ref(false);
-const groupForm = reactive({ name: '' });
+/** 顶部锚点导航：可显示的分组数（其余进入"更多"下拉） */
+const MAX_VISIBLE_ANCHOR_GROUPS = 4;
+const anchorsListEl = ref<HTMLElement | null>(null);
+const visibleCount = ref(Number.MAX_SAFE_INTEGER);
+const visibleAnchorCount = computed(() => Math.min(visibleCount.value, MAX_VISIBLE_ANCHOR_GROUPS, groups.value.length));
+const visibleGroups = computed(() => groups.value.slice(0, visibleAnchorCount.value));
+const overflowGroups = computed(() => groups.value.slice(visibleAnchorCount.value));
+
+/** 全局搜索/通知过滤状态 */
+const globalSearchQuery = ref('');
+const globalFilterNoti = ref(false);
+
+/** 各分组的排序状态 */
+interface GroupUiState {
+  sortKey: string;
+  sortOrder: 'asc' | 'desc';
+}
+const groupUiState = reactive<Record<number, GroupUiState>>({});
+const ensureUiState = (groupId: number) => {
+  if (!groupUiState[groupId]) {
+    groupUiState[groupId] = {
+      sortKey: 'default',
+      sortOrder: 'desc'
+    };
+  }
+};
+
+/** 分组区块 DOM 引用（用于滚动定位与 IntersectionObserver） */
+const groupSectionRefs = new Map<number, HTMLElement>();
+const setGroupSectionRef = (groupId: number, el: any) => {
+  if (el && el instanceof HTMLElement) {
+    groupSectionRefs.set(groupId, el);
+    observeGroupSection(groupId, el);
+  } else {
+    const old = groupSectionRefs.get(groupId);
+    if (old && intersectionObserver) {
+      intersectionObserver.unobserve(old);
+    }
+    groupSectionRefs.delete(groupId);
+  }
+};
+
+let intersectionObserver: IntersectionObserver | null = null;
+
+/**
+ * 第一次出现在视口时：触发懒加载 + 更新 activeGroupId
+ */
+const observeGroupSection = (groupId: number, el: HTMLElement) => {
+  if (!intersectionObserver) return;
+  intersectionObserver.observe(el);
+};
+
+const initIntersectionObserver = () => {
+  intersectionObserver = new IntersectionObserver((entries) => {
+    // 找到当前可见度最高的一个，将其设为 activeGroupId
+    let topEntry: IntersectionObserverEntry | null = null;
+    for (const entry of entries) {
+      const groupId = Number(entry.target.getAttribute('data-group-id'));
+      if (entry.isIntersecting) {
+        if (!loadedGroups.has(groupId)) {
+          loadedGroups.add(groupId);
+          fetchStocks(groupId);
+        }
+        if (!topEntry || entry.intersectionRatio > topEntry.intersectionRatio) {
+          topEntry = entry;
+        }
+      }
+    }
+    if (topEntry) {
+      const id = Number((topEntry.target as HTMLElement).getAttribute('data-group-id'));
+      if (id) activeGroupId.value = id;
+    }
+  }, {
+    threshold: [0, 0.2, 0.5],
+    rootMargin: '-140px 0px -40% 0px'
+  });
+};
 
 // 股票详情相关
 const detailVisible = ref(false);
@@ -431,66 +547,65 @@ const openStockDetail = (stock: WatchlistStockVO) => {
   detailVisible.value = true;
 };
 
-// 修改分组名称相关
-const editingGroupId = ref<number | null>(null);
-const editGroupName = ref('');
-const editInputRef = ref<any>(null);
+// 重命名分组 Modal
+const renameModalVisible = ref(false);
+const renameLoading = ref(false);
+const renamingGroupId = ref<number>();
+const renameForm = reactive({ name: '' });
 
-const startEditGroup = (group: WatchlistGroupVO) => {
-  if (activeGroupId.value !== group.id) return;
-  editingGroupId.value = group.id;
-  editGroupName.value = group.name;
-  nextTick(() => {
-    editInputRef.value?.focus();
-  });
+const openRenameGroupModal = (group: WatchlistGroupVO) => {
+  renamingGroupId.value = group.id;
+  renameForm.name = group.name;
+  renameModalVisible.value = true;
 };
 
-const cancelEditGroup = () => {
-  editingGroupId.value = null;
-  editGroupName.value = '';
-};
-
-const submitEditGroup = async () => {
-  if (!editingGroupId.value) return;
-  const newName = editGroupName.value.trim();
-  const oldGroup = groups.value.find(g => g.id === editingGroupId.value);
-  
-  if (!newName || newName === oldGroup?.name) {
-    cancelEditGroup();
+const handleRenameGroup = async () => {
+  if (!renamingGroupId.value) return;
+  const newName = renameForm.name.trim();
+  if (!newName) {
+    message.warning('请输入分组名称');
     return;
   }
-
+  const target = groups.value.find(g => g.id === renamingGroupId.value);
+  if (target && target.name === newName) {
+    renameModalVisible.value = false;
+    return;
+  }
+  renameLoading.value = true;
   try {
-    const res = await updateWatchlistGroup({ id: editingGroupId.value, name: newName });
+    const res = await updateWatchlistGroup({ id: renamingGroupId.value, name: newName });
     if (res.data.success) {
       message.success('修改成功');
-      // 更新本地状态
-      if (oldGroup) oldGroup.name = newName;
-      cancelEditGroup();
+      if (target) target.name = newName;
+      renameModalVisible.value = false;
     }
   } catch (error) {
     console.error('Failed to update group name:', error);
+  } finally {
+    renameLoading.value = false;
   }
 };
 
-// 修改分组相关
+// 修改分组（移动股票）相关
 const moveGroupModalVisible = ref(false);
 const moveGroupLoading = ref(false);
 const targetGroupId = ref<number>();
 const movingStockCode = ref('');
+const movingFromGroupId = ref<number>();
 
-const otherGroups = computed(() => {
-  return groups.value.filter(g => g.id !== activeGroupId.value);
+const moveGroupOptions = computed(() => {
+  return groups.value.filter(g => g.id !== movingFromGroupId.value);
 });
 
-const showMoveGroupModal = (stock: WatchlistStockVO) => {
+const showMoveGroupModal = (groupId: number, stock: WatchlistStockVO) => {
   movingStockCode.value = stock.stockCode;
+  movingFromGroupId.value = groupId;
   targetGroupId.value = undefined;
   moveGroupModalVisible.value = true;
 };
 
 const handleExecuteMoveGroup = async () => {
-  if (!targetGroupId.value) {
+  if (!targetGroupId.value || !movingFromGroupId.value) {
     message.warning('请选择目标分组');
     return;
   }
@@ -498,15 +613,16 @@ const handleExecuteMoveGroup = async () => {
   try {
     const res = await moveWatchlistStockToGroup({
       stockCode: movingStockCode.value,
-      fromGroupId: activeGroupId.value!,
+      fromGroupId: movingFromGroupId.value,
       toGroupId: targetGroupId.value
     });
     if (res.data.success) {
       message.success('分组修改成功');
       moveGroupModalVisible.value = false;
-      // 刷新当前分组列表
-      if (activeGroupId.value) {
-        await fetchStocks(activeGroupId.value);
+      // 刷新源分组与目标分组
+      await fetchStocks(movingFromGroupId.value);
+      if (loadedGroups.has(targetGroupId.value)) {
+        await fetchStocks(targetGroupId.value);
       }
     }
   } catch (error) {
@@ -516,69 +632,59 @@ const handleExecuteMoveGroup = async () => {
   }
 };
 
-// 搜索与排序状态控制
-const searchQuery = ref<string>('');
-const filterNoti = ref<boolean>(false);
-const sortKey = ref<string>('default');
-const sortOrder = ref<'asc' | 'desc'>('desc');
-
-const handleSortChange = (key: string) => {
+// 排序处理
+const handleSortChange = (groupId: number, key: string) => {
+  ensureUiState(groupId);
+  const state = groupUiState[groupId];
   if (key === 'default') {
-    sortKey.value = 'default';
+    state.sortKey = 'default';
     return;
   }
-  if (sortKey.value === key) {
-    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+  if (state.sortKey === key) {
+    state.sortOrder = state.sortOrder === 'asc' ? 'desc' : 'asc';
   } else {
-    sortKey.value = key;
-    sortOrder.value = 'desc';
+    state.sortKey = key;
+    state.sortOrder = 'desc';
   }
 };
 
-const sortedStocks = computed(() => {
-  let result = stocks.value;
-  
-  // 1. 本地实时过滤
-  if (searchQuery.value) {
-    const q = searchQuery.value.trim().toLowerCase();
-    result = result.filter(stock => 
-      (stock.stockName && stock.stockName.toLowerCase().includes(q)) || 
+const getSortedStocks = (groupId: number): WatchlistStockVO[] => {
+  ensureUiState(groupId);
+  const state = groupUiState[groupId];
+  let result = groupStocks[groupId] || [];
+
+  if (globalSearchQuery.value) {
+    const q = globalSearchQuery.value.trim().toLowerCase();
+    result = result.filter(stock =>
+      (stock.stockName && stock.stockName.toLowerCase().includes(q)) ||
       (stock.stockCode && stock.stockCode.toLowerCase().includes(q))
     );
   }
-
-  // 1.5 按是否有预警通知过滤
-  if (filterNoti.value) {
+  if (globalFilterNoti.value) {
     result = result.filter(stock => stock.hasNotification);
   }
+  if (state.sortKey === 'default') return result;
 
-  // 2. 本地实时排序
-  if (sortKey.value === 'default') return result;
-  
   return [...result].sort((a, b) => {
-    let valA = (a as any)[sortKey.value];
-    let valB = (b as any)[sortKey.value];
-    
-    // 把空值或者无效值放到末尾
-    if (valA == null || isNaN(valA)) valA = sortOrder.value === 'asc' ? Infinity : -Infinity;
-    if (valB == null || isNaN(valB)) valB = sortOrder.value === 'asc' ? Infinity : -Infinity;
-    
-    return sortOrder.value === 'asc' ? valA - valB : valB - valA;
+    let valA = (a as any)[state.sortKey];
+    let valB = (b as any)[state.sortKey];
+    if (valA == null || isNaN(valA)) valA = state.sortOrder === 'asc' ? Infinity : -Infinity;
+    if (valB == null || isNaN(valB)) valB = state.sortOrder === 'asc' ? Infinity : -Infinity;
+    return state.sortOrder === 'asc' ? valA - valB : valB - valA;
   });
-});
+};
 
 const getPriceColorClass = (changePercent: number | undefined | null) => {
   if (changePercent == null) return 'neutral';
   return changePercent > 0 ? 'up' : changePercent < 0 ? 'down' : 'neutral';
 };
 
-import type { WatchlistDividendVO } from '@/api/watchlist';
 const formatDividend = (div: WatchlistDividendVO) => {
   const parts = [];
   if (div.cashDividendRatio) parts.push(`派${div.cashDividendRatio}`);
   if (div.bonusShareRatio) parts.push(`送${div.bonusShareRatio}`);
   if (div.transferShareRatio) parts.push(`转${div.transferShareRatio}`);
-  
+
   if (parts.length === 0) {
     return div.planStatus || '不分红';
   }
@@ -587,7 +693,6 @@ const formatDividend = (div: WatchlistDividendVO) => {
 
 const formatReportDate = (dateStr: string | undefined | null) => {
   if (!dateStr) return '-';
-  // 如果是 yyyyMMdd 格式，则转换为 yyyy-MM-dd
   if (dateStr.length === 8 && !dateStr.includes('-')) {
     return `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`;
   }
@@ -595,40 +700,48 @@ const formatReportDate = (dateStr: string | undefined | null) => {
 };
 
 const fetchGroups = async () => {
+  groupsLoading.value = true;
   try {
     const res = await getWatchlistGroups();
     if (res.data.success) {
-      groups.value = res.data.data;
-      if (groups.value && groups.value.length > 0 && !activeGroupId.value) {
-        const firstGroup = groups.value[0];
-        if (firstGroup) {
-          activeGroupId.value = firstGroup.id;
-          fetchStocks(activeGroupId.value);
-        }
+      groups.value = res.data.data || [];
+      // 初始化每个分组的 ui 状态
+      for (const g of groups.value) {
+        ensureUiState(g.id);
+      }
+      // 默认 active 为第一个
+      if (groups.value.length > 0 && !activeGroupId.value) {
+        activeGroupId.value = groups.value[0]!.id;
       }
     }
   } catch (error) {
     console.error(error);
+  } finally {
+    groupsLoading.value = false;
   }
 };
 
 const fetchStocks = async (groupId: number) => {
-  loading.value = true;
+  groupLoading[groupId] = true;
   try {
     const res = await getWatchlistStocks(groupId);
     if (res.data.success) {
-      stocks.value = res.data.data;
+      groupStocks[groupId] = res.data.data || [];
     }
   } catch (error) {
     console.error(error);
   } finally {
-    loading.value = false;
+    groupLoading[groupId] = false;
   }
 };
 
-const handleTabChange = (key: any) => {
-  activeGroupId.value = key;
-  fetchStocks(key);
+/** 滚动到指定分组 */
+const scrollToGroup = (groupId: number) => {
+  const el = groupSectionRefs.get(groupId);
+  if (el) {
+    activeGroupId.value = groupId;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 };
 
 const onDeleteGroup = (targetKey: number) => {
@@ -640,14 +753,14 @@ const onDeleteGroup = (targetKey: number) => {
         const res = await deleteWatchlistGroup(targetKey);
         if (res.data.success) {
           message.success('删除成功');
-          fetchGroups().then(() => {
-            if (activeGroupId.value === targetKey) {
-              const firstGroup = groups.value && groups.value.length > 0 ? groups.value[0] : undefined;
-              activeGroupId.value = firstGroup ? firstGroup.id : undefined;
-              if (activeGroupId.value) fetchStocks(activeGroupId.value);
-              else stocks.value = [];
-            }
-          });
+          delete groupStocks[targetKey];
+          delete groupLoading[targetKey];
+          delete groupUiState[targetKey];
+          loadedGroups.delete(targetKey);
+          await fetchGroups();
+          if (activeGroupId.value === targetKey) {
+            activeGroupId.value = groups.value[0]?.id;
+          }
         }
       } catch (error) {
         console.error(error);
@@ -655,6 +768,11 @@ const onDeleteGroup = (targetKey: number) => {
     },
   });
 };
+
+// 新建分组
+const groupModalVisible = ref(false);
+const createGroupLoading = ref(false);
+const groupForm = reactive({ name: '' });
 
 const showAddGroupModal = () => {
   groupForm.name = '';
@@ -666,35 +784,36 @@ const handleCreateGroup = async () => {
     message.warning('请输入分组名称');
     return;
   }
-  groupLoading.value = true;
+  createGroupLoading.value = true;
   try {
     const res = await createWatchlistGroup(groupForm);
     if (res.data.success) {
       message.success('创建成功');
       groupModalVisible.value = false;
-      fetchGroups();
+      await fetchGroups();
     }
   } catch (error) {
     console.error(error);
   } finally {
-    groupLoading.value = false;
+    createGroupLoading.value = false;
   }
 };
 
+// 添加股票
 const addStockModalVisible = ref(false);
+const addLoading = ref(false);
+const newStockCode = ref('');
+const addStockTargetGroupId = ref<number>();
 
-const showAddStockModal = () => {
-  if (!activeGroupId.value) {
-    message.warning('请先创建并选择一个分组');
-    return;
-  }
+const showAddStockModal = (groupId: number) => {
+  addStockTargetGroupId.value = groupId;
   newStockCode.value = '';
   addStockModalVisible.value = true;
 };
 
 const handleAddStock = async () => {
-  if (!activeGroupId.value) {
-    message.warning('请先创建分组');
+  if (!addStockTargetGroupId.value) {
+    message.warning('请先选择分组');
     return;
   }
   if (!newStockCode.value || newStockCode.value.length < 6) {
@@ -704,14 +823,14 @@ const handleAddStock = async () => {
   addLoading.value = true;
   try {
     const res = await addStockToWatchlist({
-      groupId: activeGroupId.value,
+      groupId: addStockTargetGroupId.value,
       stockCode: newStockCode.value
     });
     if (res.data.success) {
       message.success('添加成功');
       addStockModalVisible.value = false;
       newStockCode.value = '';
-      fetchStocks(activeGroupId.value);
+      await fetchStocks(addStockTargetGroupId.value);
     }
   } catch (error) {
     console.error(error);
@@ -720,36 +839,36 @@ const handleAddStock = async () => {
   }
 };
 
-const handleRemoveStock = async (stockCode: string) => {
-  if (!activeGroupId.value) return;
+const handleRemoveStock = async (groupId: number, stockCode: string) => {
   try {
-    const res = await removeStockFromWatchlist(activeGroupId.value, stockCode);
+    const res = await removeStockFromWatchlist(groupId, stockCode);
     if (res.data.success) {
       message.success('移除成功');
-      fetchStocks(activeGroupId.value);
+      await fetchStocks(groupId);
     }
   } catch (error) {
     console.error(error);
   }
 };
 
-const isFirst = (stockCode: string) => {
-  return stocks.value.length > 0 && stocks.value[0]?.stockCode === stockCode;
+const isFirstInGroup = (groupId: number, stockCode: string) => {
+  const list = groupStocks[groupId] || [];
+  return list.length > 0 && list[0]?.stockCode === stockCode;
 };
 
-const isLast = (stockCode: string) => {
-  return stocks.value.length > 0 && stocks.value[stocks.value.length - 1]?.stockCode === stockCode;
+const isLastInGroup = (groupId: number, stockCode: string) => {
+  const list = groupStocks[groupId] || [];
+  return list.length > 0 && list[list.length - 1]?.stockCode === stockCode;
 };
 
-const handleMove = async (stockCode: string, direction: 'up' | 'down') => {
-  if (!activeGroupId.value) return;
-  
-  const index = stocks.value.findIndex(s => s.stockCode === stockCode);
+const handleMove = async (groupId: number, stockCode: string, direction: 'up' | 'down') => {
+  const list = groupStocks[groupId] || [];
+  const index = list.findIndex(s => s.stockCode === stockCode);
   if (index === -1) return;
-  
+
   const action = direction === 'up' ? 'UP' : 'DOWN';
-  
-  const newStocks = [...stocks.value];
+  const newStocks = [...list];
+
   if (direction === 'up' && index > 0) {
     const s1 = newStocks[index];
     const s2 = newStocks[index - 1];
@@ -767,42 +886,36 @@ const handleMove = async (stockCode: string, direction: 'up' | 'down') => {
   } else {
     return;
   }
-  
-  await syncMove(stockCode, action, newStocks);
+
+  await syncMove(groupId, stockCode, action, newStocks);
 };
 
-const handleMoveToTop = async (stockCode: string) => {
-  if (!activeGroupId.value) return;
-  
-  const index = stocks.value.findIndex(s => s.stockCode === stockCode);
+const handleMoveToTop = async (groupId: number, stockCode: string) => {
+  const list = groupStocks[groupId] || [];
+  const index = list.findIndex(s => s.stockCode === stockCode);
   if (index <= 0) return;
-  
-  const newStocks = [...stocks.value];
+
+  const newStocks = [...list];
   const [target] = newStocks.splice(index, 1);
   if (target) {
     newStocks.unshift(target);
-    await syncMove(stockCode, 'TOP', newStocks);
+    await syncMove(groupId, stockCode, 'TOP', newStocks);
   }
 };
 
-const syncMove = async (stockCode: string, action: 'UP' | 'DOWN' | 'TOP', newStocks: WatchlistStockVO[]) => {
-  if (!activeGroupId.value) return;
-  
+const syncMove = async (groupId: number, stockCode: string, action: 'UP' | 'DOWN' | 'TOP', newStocks: WatchlistStockVO[]) => {
   try {
     const res = await moveWatchlistStock({
-      groupId: activeGroupId.value,
+      groupId,
       stockCode,
       action
     });
     if (res.data.success) {
-      // 始终更新底层数据，确保切换回默认排序时是正确的
-      stocks.value = newStocks;
-      
-      if (action === 'TOP' && sortKey.value !== 'default') {
+      groupStocks[groupId] = newStocks;
+      const sortKey = groupUiState[groupId]?.sortKey;
+      if (action === 'TOP' && sortKey !== 'default') {
         message.success('已移至手动排序首位，切换到默认排序即可查看');
-      } else if (sortKey.value === 'default') {
-        // 默认排序下不需要额外提示
-      } else {
+      } else if (sortKey !== 'default') {
         message.success('置顶排序更新成功');
       }
     }
@@ -816,7 +929,10 @@ const syncMove = async (stockCode: string, action: 'UP' | 'DOWN' | 'TOP', newSto
 const notiModalVisible = ref(false);
 const notiLoading = ref(false);
 const notiList = ref<any[]>([]);
+const currentStockCode = ref('');
 const currentStockName = ref('');
+/** 当前打开通知 Modal 的股票所在分组（用于保存后刷新） */
+const notiSourceGroupId = ref<number>();
 
 const processNotiList = (list: any[]) => {
   return list.map((item: any) => {
@@ -839,7 +955,6 @@ const processNotiList = (list: any[]) => {
         }
       }
     } else {
-      // 无参数时的默认值
       if (item.type === 1) item.condition = 'UP';
       else if (item.type === 2) {
         item.condition = 'UP';
@@ -855,6 +970,15 @@ const processNotiList = (list: any[]) => {
 const openNotiModal = async (stock: any) => {
   currentStockCode.value = stock.stockCode;
   currentStockName.value = stock.stockName;
+  // 找到该股票所在分组（遍历已加载的分组数据）
+  notiSourceGroupId.value = undefined;
+  for (const g of groups.value) {
+    const list = groupStocks[g.id] || [];
+    if (list.some(s => s.stockCode === stock.stockCode)) {
+      notiSourceGroupId.value = g.id;
+      break;
+    }
+  }
   notiModalVisible.value = true;
   notiLoading.value = true;
   try {
@@ -870,7 +994,7 @@ const openNotiModal = async (stock: any) => {
 const handleAddNoti = () => {
   notiList.value.push({
     stockCode: currentStockCode.value,
-    type: 1, // 默认价格通知
+    type: 1,
     thresholdValue: null,
     condition: 'UP',
     maShort: 5,
@@ -897,15 +1021,14 @@ const handleSaveNoti = async (item: any) => {
       return;
     }
   }
-  
-  // 组装 params
+
   if (item.type === 1) {
     item.params = JSON.stringify({ condition: item.condition || 'UP' });
   } else if (item.type === 2) {
-    item.params = JSON.stringify({ 
+    item.params = JSON.stringify({
       condition: item.condition || 'UP',
-      maShort: Math.floor(item.maShort), 
-      maLong: Math.floor(item.maLong) 
+      maShort: Math.floor(item.maShort),
+      maLong: Math.floor(item.maLong)
     });
   }
 
@@ -913,12 +1036,10 @@ const handleSaveNoti = async (item: any) => {
     const res = await saveNotification(item);
     if (res.data.success) {
       message.success('通知设置已保存');
-      // 重新拉取一次以获取新创建的 ID 并确保数据回显正确
       const listRes = await getNotificationList(currentStockCode.value);
       notiList.value = processNotiList(listRes.data.data || []);
-      // 刷新列表以同步铃铛图标状态
-      if (activeGroupId.value) {
-        fetchStocks(activeGroupId.value);
+      if (notiSourceGroupId.value) {
+        fetchStocks(notiSourceGroupId.value);
       }
     }
   } catch (error) {
@@ -936,9 +1057,8 @@ const handleDeleteNoti = async (item: any, index: number) => {
     if (res.data.success) {
       message.success('通知已删除');
       notiList.value.splice(index, 1);
-      // 刷新列表以同步铃铛图标状态
-      if (activeGroupId.value) {
-        fetchStocks(activeGroupId.value);
+      if (notiSourceGroupId.value) {
+        fetchStocks(notiSourceGroupId.value);
       }
     }
   } catch (error) {
@@ -946,8 +1066,93 @@ const handleDeleteNoti = async (item: any, index: number) => {
   }
 };
 
-onMounted(() => {
-  fetchGroups();
+onMounted(async () => {
+  initIntersectionObserver();
+  await fetchGroups();
+  // 初次进入主动加载第一个分组（IntersectionObserver 在 ref 设置后才能触发）
+  await nextTick();
+  if (groups.value.length > 0) {
+    const firstId = groups.value[0]!.id;
+    if (!loadedGroups.has(firstId)) {
+      loadedGroups.add(firstId);
+      fetchStocks(firstId);
+    }
+  }
+  // 初始化锚点容量观察
+  setupAnchorsResize();
+});
+
+onBeforeUnmount(() => {
+  if (intersectionObserver) {
+    intersectionObserver.disconnect();
+    intersectionObserver = null;
+  }
+  groupSectionRefs.clear();
+  if (anchorsResizeObserver) {
+    anchorsResizeObserver.disconnect();
+    anchorsResizeObserver = null;
+  }
+});
+
+/* ============================================================
+ * 顶部锚点容量测量：根据容器宽度决定 visibleCount
+ * ============================================================ */
+let anchorsResizeObserver: ResizeObserver | null = null;
+const setupAnchorsResize = () => {
+  if (!anchorsListEl.value) return;
+  anchorsResizeObserver = new ResizeObserver(() => {
+    measureAnchors();
+  });
+  anchorsResizeObserver.observe(anchorsListEl.value);
+};
+
+let measuring = false;
+const measureAnchors = async () => {
+  if (measuring) return;
+  measuring = true;
+  // 先重置为全部显示，等下一帧测量
+  visibleCount.value = groups.value.length;
+  await nextTick();
+
+  const container = anchorsListEl.value;
+  if (!container) {
+    measuring = false;
+    return;
+  }
+  const containerWidth = container.clientWidth;
+
+  const items = Array.from(container.querySelectorAll<HTMLElement>(':scope > .group-anchor:not(.group-anchor-more)'));
+  const seps = Array.from(container.querySelectorAll<HTMLElement>(':scope > .group-anchor-sep'));
+  // 给"更多"预留固定宽度：分隔符 + 文字按钮 + 缓冲（避免边界情况下被挤掉）
+  const reservedForMore = 80;
+
+  // 全部都能放下
+  const totalWidth = items.reduce((sum, it, i) => sum + it.offsetWidth + (i > 0 ? (seps[i - 1]?.offsetWidth || 12) : 0), 0);
+  if (totalWidth <= containerWidth) {
+    visibleCount.value = items.length;
+    measuring = false;
+    return;
+  }
+
+  // 否则按顺序累加，给"更多"预留固定空间
+  let used = 0;
+  let count = 0;
+  for (let i = 0; i < items.length; i++) {
+    const sepWidth = i > 0 ? (seps[i - 1]?.offsetWidth || 12) : 0;
+    const itemWidth = items[i]!.offsetWidth + sepWidth;
+    if (used + itemWidth + reservedForMore > containerWidth) break;
+    used += itemWidth;
+    count = i + 1;
+  }
+
+  visibleCount.value = Math.max(1, count);
+  measuring = false;
+};
+
+// groups 变化时重新测量
+watch(() => groups.value.length, async () => {
+  await nextTick();
+  measureAnchors();
 });
 </script>
 
@@ -989,7 +1194,272 @@ onMounted(() => {
 }
 
 /* ========================================
-   分组标签 - Segmented Control 风格
+   顶部锚点导航
+   ======================================== */
+.watchlist-sticky-toolbar {
+  position: sticky;
+  top: calc(64px + var(--spacing-sm));
+  z-index: 20;
+  margin-bottom: var(--spacing-lg);
+  padding: 10px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 10px 26px rgba(36, 63, 94, 0.08);
+  backdrop-filter: saturate(180%) blur(12px);
+}
+
+.group-anchors-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  padding: 0;
+  margin-bottom: 0;
+}
+
+.group-anchors-list {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+  flex: 0 1 auto;
+  max-width: min(760px, 56vw);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.group-anchor {
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+  user-select: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.group-anchor-more {
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  color: var(--color-accent);
+  font-weight: var(--font-weight-medium);
+}
+
+.group-anchors-more-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.group-anchor-more.active {
+  color: var(--color-accent);
+  font-weight: var(--font-weight-semibold);
+}
+
+:global(.group-anchor-more-dropdown .ant-dropdown-menu) {
+  width: 260px;
+  max-width: min(260px, calc(100vw - 32px));
+}
+
+:global(.group-anchor-more-dropdown .ant-dropdown-menu-item) {
+  overflow: hidden;
+}
+
+:global(.group-anchor-more-dropdown .ant-dropdown-menu-title-content) {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.group-anchor:hover {
+  color: var(--color-text-primary);
+  background: rgba(76, 127, 184, 0.08);
+}
+
+.group-anchor.active {
+  color: var(--color-accent);
+  font-weight: var(--font-weight-semibold);
+}
+
+.group-anchor-sep {
+  color: var(--color-text-tertiary);
+  user-select: none;
+  padding: 0 2px;
+}
+
+.group-anchors-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.global-filter-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.global-filter-bar :deep(.ant-checkbox-wrapper) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  line-height: 32px;
+}
+
+.global-filter-search {
+  width: 240px;
+  max-width: 24vw;
+}
+
+.toolbar-action-button {
+  height: 32px;
+  line-height: 30px;
+}
+
+@media (max-width: 980px) {
+  .group-anchors-header {
+    flex-wrap: wrap;
+  }
+
+  .group-anchors-list {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+
+  .group-anchors-right {
+    width: 100%;
+    margin-left: 0;
+    flex-wrap: wrap;
+  }
+
+  .global-filter-search {
+    max-width: min(240px, 52vw);
+  }
+}
+
+@media (max-width: 640px) {
+  .watchlist-sticky-toolbar {
+    top: calc(64px + 6px);
+    padding: 10px 12px;
+  }
+
+  .group-anchors-right {
+    justify-content: flex-start;
+  }
+
+  .global-filter-bar {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .global-filter-search {
+    width: 100%;
+    max-width: 100%;
+  }
+
+}
+
+/* ========================================
+   分组区块
+   ======================================== */
+.group-section {
+  scroll-margin-top: 140px;
+  margin-bottom: var(--spacing-2xl, 32px);
+}
+
+@media (max-width: 640px) {
+  .group-section {
+    scroll-margin-top: 220px;
+  }
+}
+
+.group-section[data-group-id]:not([data-group-id]) {
+  /* placeholder so attribute selector parses */
+}
+
+.group-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-xs);
+  padding: 0 4px;
+}
+
+.group-section-title {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 1 auto;
+  min-width: 80px;
+  max-width: min(420px, calc(100% - 112px));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 4px 10px;
+  border: 1px solid rgba(76, 127, 184, 0.18);
+  border-radius: var(--radius-sm);
+  background: rgba(76, 127, 184, 0.07);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-accent);
+  line-height: 20px;
+}
+
+.group-section-divider {
+  flex: 1 1 48px;
+  min-width: 24px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(76, 127, 184, 0.22), rgba(76, 127, 184, 0.05));
+}
+
+.group-section-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.group-section-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1;
+  transition: all var(--transition-fast);
+}
+
+.group-section-more:hover {
+  background: rgba(76, 127, 184, 0.08);
+  color: var(--color-accent);
+}
+
+/* ========================================
+   分组标签 - Segmented Control 风格（保留原样式以兼容其他位置）
    ======================================== */
 
 .group-tags-header {
@@ -1074,19 +1544,6 @@ onMounted(() => {
 
 .custom-group-tag .tag-name {
   margin-right: 0 !important;
-}
-
-.tag-status {
-  display: inline-flex;
-  align-items: center;
-  height: 22px;
-  padding: 0 8px;
-  border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.72);
-  color: var(--color-accent-active);
-  font-size: 11px;
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.4px;
 }
 
 .custom-group-tag .tag-actions {
@@ -1379,47 +1836,33 @@ onMounted(() => {
 }
 
 /* ========================================
-   排序与搜索控制器
+   过滤与排序控制器
    ======================================== */
 
-.control-bar {
+.group-section-sort-row {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
-  gap: var(--spacing-md);
-  row-gap: 12px;
-  margin-bottom: 12px;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  background: transparent;
-  padding: 12px 0;
-  border-radius: var(--radius-lg);
-}
-
-.search-box {
-  display: flex;
-  align-items: center;
-  flex: 0 1 auto;
-  min-width: 0;
-  flex-wrap: wrap;
+  margin-bottom: var(--spacing-md);
+  padding: 0 4px;
 }
 
 .sort-options {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  flex: 1 1 480px;
+  flex: 0 1 auto;
   max-width: 100%;
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
   white-space: nowrap;
   padding-bottom: 2px;
-  margin-left: auto;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
 }
 
-.control-bar .ctrl-label {
+.sort-options .ctrl-label {
   margin-right: var(--spacing-sm);
   white-space: nowrap;
   flex: 0 0 auto;
@@ -1427,7 +1870,7 @@ onMounted(() => {
   font-weight: var(--font-weight-medium);
 }
 
-.control-bar .ctrl-item {
+.sort-options .ctrl-item {
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
@@ -1441,18 +1884,18 @@ onMounted(() => {
   font-weight: var(--font-weight-medium);
 }
 
-.control-bar .ctrl-item:hover {
+.sort-options .ctrl-item:hover {
   color: var(--color-text-primary);
   background: rgba(255, 255, 255, 0.05);
 }
 
-.control-bar .ctrl-item.active {
+.sort-options .ctrl-item.active {
   color: var(--color-accent);
   font-weight: var(--font-weight-semibold);
   background: var(--color-accent-light);
 }
 
-.control-bar .ctrl-item .anticon {
+.sort-options .ctrl-item .anticon {
   margin-left: 2px;
   font-size: 11px;
 }

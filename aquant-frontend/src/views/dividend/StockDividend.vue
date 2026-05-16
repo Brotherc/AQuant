@@ -51,8 +51,11 @@
         @change="handleTableChange"
         row-key="stockCode"
       >
-        <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'operation'">
+        <template #bodyCell="{ column, text, record }">
+          <template v-if="column.dataIndex === 'stockCode'">
+            <a-tag class="stock-code-tag">{{ text }}</a-tag>
+          </template>
+          <template v-else-if="column.key === 'operation'">
             <a-space>
               <a @click="handleDetail(record)">详情</a>
               <a @click="showAddWatchlist(record)">加入自选</a>

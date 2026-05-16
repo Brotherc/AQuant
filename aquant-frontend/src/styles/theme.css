@@ -13,16 +13,16 @@
      ======================================== */
   
   /* 背景色 (Backgrounds) */
-  --color-bg-primary: #edf3f9;
-  --color-bg-secondary: #f8fbfe;
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #ffffff;
   --color-bg-elevated: #ffffff;
   --color-bg-overlay: rgba(22, 34, 48, 0.22);
-  --color-bg-header: rgba(248, 251, 254, 0.88);
-  --color-bg-surface: rgba(76, 127, 184, 0.06);
-  --color-bg-surface-hover: rgba(76, 127, 184, 0.1);
-  --color-bg-surface-active: rgba(76, 127, 184, 0.14);
-  --color-bg-table-fixed: #f5f8fc;
-  --color-bg-table-fixed-hover: #ebf1f8;
+  --color-bg-header: rgba(255, 255, 255, 0.94);
+  --color-bg-surface: rgba(76, 127, 184, 0.05);
+  --color-bg-surface-hover: rgba(76, 127, 184, 0.08);
+  --color-bg-surface-active: rgba(76, 127, 184, 0.12);
+  --color-bg-table-fixed: #fafbfd;
+  --color-bg-table-fixed-hover: #f3f6fa;
   
   /* 文本色 (Text Colors) */
   --color-text-primary: #1f2a37;
@@ -48,12 +48,12 @@
   --color-info-light: rgba(76, 127, 184, 0.12);
   
   /* 边框色 (Border Colors) */
-  --color-border: rgba(110, 132, 158, 0.2);
+  --color-border: rgba(110, 132, 158, 0.16);
   --color-border-hover: rgba(76, 127, 184, 0.34);
   --color-border-active: rgba(76, 127, 184, 0.4);
   
   /* 分割线 (Divider) */
-  --color-divider: rgba(110, 132, 158, 0.12);
+  --color-divider: rgba(110, 132, 158, 0.1);
   
   /* ========================================
      排版系统 (Typography - Apple SF)
@@ -112,11 +112,11 @@
      阴影 (Shadows - Subtle Dark Shadows)
      ======================================== */
   
-  --shadow-sm: 0 2px 8px rgba(25, 48, 78, 0.06);
-  --shadow-md: 0 8px 20px rgba(25, 48, 78, 0.08);
-  --shadow-lg: 0 16px 32px rgba(25, 48, 78, 0.1);
-  --shadow-xl: 0 24px 48px rgba(25, 48, 78, 0.12);
-  --shadow-card-hover: 0 18px 36px rgba(25, 48, 78, 0.12);
+  --shadow-sm: 0 2px 6px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 8px 18px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 16px 30px rgba(15, 23, 42, 0.08);
+  --shadow-xl: 0 24px 44px rgba(15, 23, 42, 0.1);
+  --shadow-card-hover: 0 16px 28px rgba(15, 23, 42, 0.08);
   
   /* ========================================
      过渡动画 (Transitions - Apple Timing)
@@ -153,8 +153,8 @@ body {
   padding: 0;
   background-color: var(--color-bg-primary);
   background-image:
-    radial-gradient(circle at top, rgba(76, 127, 184, 0.14), transparent 30%),
-    linear-gradient(180deg, #f7fbff 0%, var(--color-bg-primary) 100%);
+    linear-gradient(180deg, #ffffff 0%, #fcfdff 42%, #f7f9fc 100%);
+  background-repeat: no-repeat;
   color: var(--color-text-primary);
   font-family: var(--font-family-base);
   font-size: var(--font-size-base);
@@ -312,6 +312,20 @@ body {
 /* 等宽字体（用于代码、股票代码、数字等） */
 .font-mono {
   font-family: var(--font-family-mono);
+}
+
+/* 股票代码标签（无背景，仅文字样式）—— 兼容 span / a-tag 两种用法 */
+.stock-code-tag,
+.ant-tag.stock-code-tag {
+  margin-inline-end: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-accent);
+  font-family: var(--font-family-mono);
+  font-weight: var(--font-weight-semibold);
+  font-size: 12px;
+  line-height: 18px;
 }
 
 /* 截断文本 */

@@ -57,7 +57,10 @@
           </template>
         </template>
         <template #bodyCell="{ column, text, record }">
-          <template v-if="[
+          <template v-if="column.dataIndex === 'stockCode'">
+            <a-tag class="stock-code-tag">{{ text }}</a-tag>
+          </template>
+          <template v-else-if="[
             'epsGrowth3yCagr', 'epsGrowthLastYA', 'epsGrowthTtm', 'epsGrowthThisYE', 'epsGrowthNextYE', 'epsGrowthNext2YE',
             'revenueGrowth3yCagr', 'revenueGrowthLastYA', 'revenueGrowthTtm', 'revenueGrowthThisYE', 'revenueGrowthNextYE', 'revenueGrowthNext2YE',
             'netProfitGrowth3yCagr', 'netProfitGrowthLastYA', 'netProfitGrowthTtm', 'netProfitGrowthThisYE', 'netProfitGrowthNextYE', 'netProfitGrowthNext2YE'

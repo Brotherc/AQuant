@@ -47,7 +47,10 @@
           </template>
         </template>
         <template #bodyCell="{ column, text, record }">
-          <template v-if="[
+          <template v-if="column.dataIndex === 'stockCode'">
+            <a-tag class="stock-code-tag">{{ text }}</a-tag>
+          </template>
+          <template v-else-if="[
             'roe3yAvg', 'roeLastYA', 'roeLast2yA', 'roeLast3yA',
             'netMargin3yAvg', 'netMarginLastYA', 'netMarginLast2yA', 'netMarginLast3yA'
           ].includes(column.dataIndex as string)">
