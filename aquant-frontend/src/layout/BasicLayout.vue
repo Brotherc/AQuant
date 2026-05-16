@@ -146,8 +146,6 @@ import {
   StockOutlined,
   LineChartOutlined,
   RadarChartOutlined,
-  PayCircleOutlined,
-  GlobalOutlined,
   HeartOutlined,
   LogoutOutlined,
   LoginOutlined,
@@ -205,15 +203,9 @@ const navigationGroups: NavigationGroup[] = [
     children: [
       { key: '/indicators/dupont', label: '杜邦分析' },
       { key: '/indicators/growth', label: '行业成长性指标' },
-      { key: '/indicators/valuation', label: '估值指标' }
+      { key: '/indicators/valuation', label: '估值指标' },
+      { key: '/dividend/index', label: '分红数据' }
     ]
-  },
-  {
-    key: '/dividend',
-    title: '分红数据',
-    icon: PayCircleOutlined,
-    popupClassName: 'top-nav-popup top-nav-popup-compact',
-    children: [{ key: '/dividend/index', label: '分红数据' }]
   },
   {
     key: '/strategy',
@@ -226,20 +218,14 @@ const navigationGroups: NavigationGroup[] = [
     ]
   },
   {
-    key: '/finance-sites',
-    title: '投资工具',
-    icon: GlobalOutlined,
-    popupClassName: 'top-nav-popup top-nav-popup-compact',
-    children: [{ key: '/finance-sites/index', label: '常用网站' }]
-  },
-  {
     key: '/article',
     title: '投资社区',
     icon: FileTextOutlined,
     popupClassName: 'top-nav-popup top-nav-popup-compact',
     children: [
       { key: '/article/public', label: '广场' },
-      { key: '/article/my', label: '我的笔记' }
+      { key: '/article/my', label: '我的笔记' },
+      { key: '/finance-sites/index', label: '常用网站' }
     ]
   }
 ];
