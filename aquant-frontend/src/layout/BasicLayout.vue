@@ -526,8 +526,8 @@ const handleUpdateEmail = async () => {
 }
 
 .page-context {
-  margin-bottom: 20px;
-  padding: 10px 0 4px;
+  margin-bottom: 16px;
+  padding: 4px 0 2px;
   border-radius: var(--radius-lg);
   background: transparent;
   border: none;
@@ -546,37 +546,37 @@ const handleUpdateEmail = async () => {
 }
 
 .page-breadcrumb :deep(.ant-breadcrumb-separator) {
-  margin-inline: 12px;
+  margin-inline: 8px;
   color: var(--color-text-tertiary);
-  font-size: 18px;
+  font-size: 14px;
 }
 
 .page-breadcrumb-parent {
   color: var(--color-text-secondary);
-  font-size: 18px;
+  font-size: 15px;
   font-weight: var(--font-weight-medium);
-  letter-spacing: -0.2px;
+  letter-spacing: -0.1px;
 }
 
 .page-breadcrumb-current {
   color: var(--color-text-primary);
-  font-size: 19px;
+  font-size: 16px;
   font-weight: var(--font-weight-semibold);
-  letter-spacing: -0.3px;
+  letter-spacing: -0.15px;
 }
 
 @media (max-width: 768px) {
   .page-breadcrumb-parent {
-    font-size: 16px;
+    font-size: 14px;
   }
 
   .page-breadcrumb-current {
-    font-size: 17px;
+    font-size: 15px;
   }
 
   .page-breadcrumb :deep(.ant-breadcrumb-separator) {
-    margin-inline: 8px;
-    font-size: 16px;
+    margin-inline: 6px;
+    font-size: 13px;
   }
 }
 

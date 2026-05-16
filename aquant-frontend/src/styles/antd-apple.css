@@ -536,6 +536,7 @@
 .ant-modal-mask {
   background-color: var(--color-bg-overlay) !important;
   backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .ant-modal-content {
@@ -943,6 +944,12 @@
 /* ========================================
    Drawer 抽屉组件 - Apple Style
    ======================================== */
+
+.ant-drawer-mask {
+  background-color: var(--color-bg-overlay) !important;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
 
 .ant-drawer-content-wrapper {
   box-shadow: var(--shadow-xl) !important;

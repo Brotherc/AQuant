@@ -1232,6 +1232,7 @@ watch(() => groups.value.length, async () => {
 .group-anchor {
   cursor: pointer;
   padding: 4px 8px;
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
@@ -1287,8 +1288,10 @@ watch(() => groups.value.length, async () => {
   background: rgba(76, 127, 184, 0.08);
 }
 
-.group-anchor.active {
+.group-anchor.active:not(.group-anchor-more) {
   color: var(--color-accent);
+  border: 1px solid rgba(76, 127, 184, 0.32);
+  background: transparent;
   font-weight: var(--font-weight-semibold);
 }
 
@@ -1413,14 +1416,13 @@ watch(() => groups.value.length, async () => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding: 4px 10px;
-  border: 1px solid rgba(76, 127, 184, 0.18);
-  border-radius: var(--radius-sm);
-  background: rgba(76, 127, 184, 0.07);
-  font-size: var(--font-size-sm);
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-accent);
-  line-height: 20px;
+  color: var(--color-text-primary);
+  line-height: 28px;
 }
 
 .group-section-divider {

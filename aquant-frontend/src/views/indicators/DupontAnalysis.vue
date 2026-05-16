@@ -21,9 +21,9 @@
         <a-form-item>
           <a-checkbox v-model:checked="searchParams.roeHigherThanIndustryAvg">高于行业平均ROE</a-checkbox>
         </a-form-item>
-        <a-form-item>
+        <a-form-item class="indicator-search-form-actions">
           <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
-          <a-button style="margin-left: 8px" @click="resetSearch">重置</a-button>
+          <a-button @click="resetSearch">重置</a-button>
         </a-form-item>
       </a-form>
     </a-card>
@@ -341,6 +341,17 @@ onMounted(async () => {
 <style scoped>
 .dupont-search-form {
     row-gap: 16px;
+}
+
+.indicator-search-form-actions {
+    margin-inline-start: auto;
+    margin-inline-end: 0;
+}
+
+.indicator-search-form-actions :deep(.ant-form-item-control-input-content) {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
 }
 
 .dupont-analysis-container :deep(.ant-table-cell) {
