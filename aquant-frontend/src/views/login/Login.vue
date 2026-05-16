@@ -309,7 +309,7 @@ onBeforeUnmount(() => {
   display: flex;
   width: 900px;
   min-height: 480px;
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 22px 46px rgba(33, 60, 92, 0.12);
   backdrop-filter: blur(10px);

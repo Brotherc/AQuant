@@ -1487,7 +1487,7 @@ onMounted(() => {
   background: rgba(255, 255, 255, 0.96) !important;
   border-color: rgba(110, 132, 158, 0.2) !important;
   box-shadow: 0 6px 16px rgba(25, 48, 78, 0.06) !important;
-  border-radius: 12px !important;
+  border-radius: var(--radius-lg) !important;
 }
 
 .watchlist-search-input.ant-input-affix-wrapper-focused,
@@ -1495,7 +1495,7 @@ onMounted(() => {
   background: #ffffff !important;
   border-color: rgba(76, 127, 184, 0.28) !important;
   box-shadow: 0 0 0 3px rgba(76, 127, 184, 0.1), 0 8px 18px rgba(25, 48, 78, 0.08) !important;
-  border-radius: 12px !important;
+  border-radius: var(--radius-lg) !important;
 }
 
 .watchlist-search-input :deep(.ant-input),

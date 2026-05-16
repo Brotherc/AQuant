@@ -80,9 +80,9 @@ const handleIconError = (siteUrl: string) => {
   gap: 14px;
   height: 100%;
   padding: 18px;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.03);
+  background: #ffffff;
   text-decoration: none;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
@@ -91,7 +91,7 @@ const handleIconError = (siteUrl: string) => {
   transform: translateY(-2px);
   border-color: var(--color-border-hover);
   box-shadow: var(--shadow-card-hover);
-  background: rgba(255, 255, 255, 0.05);
+  background: #ffffff;
 }
 
 .finance-site-card__icon {
@@ -100,7 +100,7 @@ const handleIconError = (siteUrl: string) => {
   justify-content: center;
   width: 42px;
   height: 42px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.08);
   color: var(--color-text-secondary);
   font-size: 20px;
