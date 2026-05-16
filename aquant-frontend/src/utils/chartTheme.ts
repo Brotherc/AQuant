@@ -6,4 +6,6 @@ export const chartTooltipTheme = {
   mutedTextColor: '#8e9daf',
   shadowColor: 'rgba(36, 63, 94, 0.14)',
   axisPointerColor: 'rgba(76, 127, 184, 0.28)',
+  tooltipBorderRadius: 6,
+  axisPointerLabelRadius: 4,
 };

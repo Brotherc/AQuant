@@ -104,7 +104,7 @@ const renderChart = (data: StockQuoteHistory[]) => {
       backgroundColor: chartTooltipTheme.backgroundColor,
       borderColor: chartTooltipTheme.borderColor,
       borderWidth: 1,
-      extraCssText: `z-index: 99; border-radius: 10px; box-shadow: 0 10px 24px ${chartTooltipTheme.shadowColor};`,
+      extraCssText: `z-index: 99; border-radius: ${chartTooltipTheme.tooltipBorderRadius}px; box-shadow: 0 10px 24px ${chartTooltipTheme.shadowColor};`,
       formatter: function (params: any) {
         let res = '';
         let date = '';

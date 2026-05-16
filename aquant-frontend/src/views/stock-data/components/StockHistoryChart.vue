@@ -132,7 +132,7 @@ const renderChart = (data: StockQuoteHistory[]) => {
             fontSize: 11,
             shadowBlur: 4,
             shadowColor: chartTooltipTheme.shadowColor,
-            borderRadius: 2
+            borderRadius: chartTooltipTheme.axisPointerLabelRadius
         }
       },
       backgroundColor: chartTooltipTheme.backgroundColor,
@@ -140,6 +140,7 @@ const renderChart = (data: StockQuoteHistory[]) => {
       borderWidth: 1,
       padding: 10,
       textStyle: { fontSize: 11, color: chartTooltipTheme.primaryTextColor },
+      extraCssText: `border-radius: ${chartTooltipTheme.tooltipBorderRadius}px;`,
       formatter: function (params: any) {
         let res = '';
         let date = '';
