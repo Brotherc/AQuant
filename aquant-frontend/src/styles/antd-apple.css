@@ -275,6 +275,28 @@
   color: var(--color-text-inverse) !important;
 }
 
+/* Ghost Primary Button - 主色细边框 + 白底 + 主色文字（柔和版） */
+.ant-btn-primary.ant-btn-background-ghost {
+  background: #ffffff !important;
+  border-color: rgba(76, 127, 184, 0.45) !important;
+  color: var(--color-accent) !important;
+  font-weight: var(--font-weight-medium);
+  box-shadow: none;
+}
+
+.ant-btn-primary.ant-btn-background-ghost:hover {
+  background: rgba(76, 127, 184, 0.06) !important;
+  border-color: var(--color-accent-hover) !important;
+  color: var(--color-accent-hover) !important;
+  box-shadow: none;
+}
+
+.ant-btn-primary.ant-btn-background-ghost:active {
+  background: rgba(76, 127, 184, 0.1) !important;
+  border-color: var(--color-accent) !important;
+  color: var(--color-accent) !important;
+}
+
 /* Text Button */
 .ant-btn-text {
   color: var(--color-text-secondary) !important;

@@ -35,7 +35,7 @@
         <a-form-item class="dividend-search-form-actions">
           <a-space>
             <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
-            <a-button @click="resetSearch">重置</a-button>
+            <a-button type="primary" ghost @click="resetSearch">重置</a-button>
           </a-space>
         </a-form-item>
       </a-form>
@@ -122,7 +122,7 @@ const watchlistGroups = ref<WatchlistGroupVO[]>([]);
 
 const pagination = reactive({
   current: 1,
-  pageSize: 20,
+  pageSize: 10,
   total: 0,
   showSizeChanger: true,
   showQuickJumper: true,

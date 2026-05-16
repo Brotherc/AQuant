@@ -5,7 +5,7 @@
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px">
         <!-- 左侧：刷新操作 -->
         <div style="display: flex; align-items: center">
-          <a-button @click="handleRefresh" :loading="refreshLoading">刷新</a-button>
+          <a-button type="primary" ghost @click="handleRefresh" :loading="refreshLoading">刷新</a-button>
           <div v-if="lastRefreshTime" class="page-sync-meta board-refresh-time">
             <span class="page-sync-meta__label">最后同步时间</span>
             <span class="page-sync-meta__value">{{ lastRefreshTime }}</span>
@@ -20,7 +20,7 @@
           </a-form-item>
           <a-form-item>
             <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
-            <a-button style="margin-left: 8px" @click="resetSearch">重置</a-button>
+            <a-button type="primary" ghost style="margin-left: 8px" @click="resetSearch">重置</a-button>
           </a-form-item>
         </a-form>
       </div>
@@ -89,7 +89,7 @@ const dataSource = ref<StockIndustryBoardVO[]>([]);
 const sortState = ref<string[]>(['seqNo,asc']); // 默认按 seqNo 升序
 const pagination = reactive({
   current: 1,
-  pageSize: 20, // 默认每页 20 条
+  pageSize: 10, // 默认每页 10 条
   total: 0,
   showSizeChanger: true,
   showQuickJumper: true,

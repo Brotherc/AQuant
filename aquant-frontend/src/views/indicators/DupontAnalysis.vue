@@ -23,7 +23,7 @@
         </a-form-item>
         <a-form-item class="indicator-search-form-actions">
           <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
-          <a-button @click="resetSearch">重置</a-button>
+          <a-button type="primary" ghost @click="resetSearch">重置</a-button>
         </a-form-item>
       </a-form>
     </a-card>
@@ -231,7 +231,7 @@ const searchParams = reactive<DupontAnalysisPageReqVO>({
 
 const pagination = reactive({
   current: 1,
-  pageSize: 20,
+  pageSize: 10,
   total: 0,
   showSizeChanger: true,
   showQuickJumper: true,
