@@ -122,7 +122,7 @@ const handleIconError = (siteUrl: string) => {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   color: var(--color-text-primary);
   font-size: 17px;
   font-weight: 700;
@@ -134,7 +134,7 @@ const handleIconError = (siteUrl: string) => {
 }
 
 .finance-site-card__desc {
-  margin-bottom: 8px;
+  margin-bottom: 18px;
   color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.7;
