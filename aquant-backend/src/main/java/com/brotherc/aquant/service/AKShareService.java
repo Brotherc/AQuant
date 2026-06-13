@@ -442,4 +442,44 @@ public class AKShareService {
         return list;
     }
 
+    public List<FundOpenFundInfoEm> fundOpenFundInfoEm(String symbol, String indicator, String period) {
+        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/fund_open_fund_info_em")
+                .newBuilder();
+
+        if (StringUtils.isNotBlank(symbol)) {
+            builder.addQueryParameter("symbol", symbol);
+        }
+
+        if (StringUtils.isNotBlank(indicator)) {
+            builder.addQueryParameter("indicator", indicator);
+        }
+
+        if (StringUtils.isNotBlank(period)) {
+            builder.addQueryParameter("period", period);
+        }
+
+        Request request = new Request.Builder()
+                .url(builder.build())
+                .get()
+                .build();
+
+        List<FundOpenFundInfoEm> list;
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                log.info("失败响应: {}", response);
+                throw new RuntimeException("fund_open_fund_info_em请求失败");
+            }
+
+            list = objectMapper.readValue(response.body().string(), new TypeReference<>() {
+            });
+
+        } catch (IOException e) {
+            log.error("fund_open_fund_info_em请求失败", e);
+            throw new RuntimeException("fund_open_fund_info_em请求失败");
+        }
+
+        return list;
+    }
+
 }
