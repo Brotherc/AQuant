@@ -2,7 +2,7 @@
   <div class="fund-container">
     <a-row :gutter="16">
       <a-col :span="11">
-        <a-card title="基金列表" :bordered="false" class="h-full">
+        <a-card title="基金列表" :bordered="false" class="h-full fund-card">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
             <a-form layout="inline" :model="queryParams" @finish="onSearch" class="fund-search-form" style="margin-bottom: 0;">
               <a-form-item label="基金代码">
@@ -38,7 +38,7 @@
       </a-col>
       
       <a-col :span="13">
-        <a-card title="基金详情" :bordered="false" class="h-full">
+        <a-card title="基金详情" :bordered="false" class="h-full fund-card">
           <template v-if="selectedFund">
             <a-descriptions bordered :column="1">
               <a-descriptions-item label="基金代码">{{ selectedFund.fundCode }}</a-descriptions-item>
@@ -152,7 +152,10 @@ onMounted(() => {
 .fund-container {
   padding: 16px;
   min-height: calc(100vh - 64px);
-  background-color: #f0f2f5;
+  background-color: #fff;
+}
+.fund-card {
+  box-shadow: 0 1px 2px -2px rgba(0, 0, 0, 0.08), 0 3px 6px 0 rgba(0, 0, 0, 0.06), 0 5px 12px 4px rgba(0, 0, 0, 0.04);
 }
 .fund-search-form {
   margin-bottom: 16px;
