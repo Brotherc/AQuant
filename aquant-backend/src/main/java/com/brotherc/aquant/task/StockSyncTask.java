@@ -88,6 +88,10 @@ public class StockSyncTask {
         syncStockBoard();
         log.info("同步股票板块数据完成");
 
+        log.info("同步基金基本信息开始");
+        syncFundInfo();
+        log.info("同步基金基本信息完成");
+
         log.info("同步股票分红数据开始");
         syncStockDividend();
         log.info("同步股票分红数据完成");
@@ -297,6 +301,29 @@ public class StockSyncTask {
         }
 
         stockQuoteService.deleteQuoteAndHistoryByCodes(codes);
+    }
+
+    /**
+     * 同步基金基本信息
+     */
+    public void syncFundInfo() {
+        StockSync stockSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_FUND_INFO_LATEST);
+        Long lastTimestamp = Optional.ofNullable(stockSync).map(StockSync::getValue).map(Long::valueOf).orElse(0L);
+        long now = System.currentTimeMillis();
+        long tenDaysMillis = 10L * 24 * 60 * 60 * 1000;
+
+        if (lastTimestamp == 0L || now - lastTimestamp > tenDaysMillis) {
+            log.info("基金基本信息超过10天未同步或从未同步，开始同步...");
+            List<FundNameEm> fundNameEms = aKShareService.fundNameEm();
+            if (fundNameEms != null && !fundNameEms.isEmpty()) {
+                stockSyncService.syncFundInfo(fundNameEms, stockSync, now);
+                log.info("基金基本信息同步完毕。");
+            } else {
+                log.warn("获取到的基金基本信息为空。");
+            }
+        } else {
+            log.info("基金基本信息未超过10天，无需同步。");
+        }
     }
 
 }

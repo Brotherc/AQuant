@@ -42,6 +42,7 @@ public class StockSyncService {
     private final StockQuoteHistoryRepository stockQuoteHistoryRepository;
     private final StockIndustryBoardHistoryRepository stockIndustryBoardHistoryRepository;
     private final StockIndustryBoardRepository stockIndustryBoardRepository;
+    private final StockFundInfoService stockFundInfoService;
 
     @Transactional(rollbackFor = Exception.class)
     public void stockQuote(List<StockZhASpot> stockZhASpotList, StockSync stockDailyLatest, long timestamp) {
@@ -54,6 +55,14 @@ public class StockSyncService {
             stockQuoteHistoryService.save(stockZhASpotList, now);
             // 更新最后一次股票同步时间
             save(stockDailyLatest, StockSyncConstant.STOCK_DAILY_LATEST, timestamp);
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void syncFundInfo(List<FundNameEm> fundNameEms, StockSync stockSync, long timestamp) {
+        if (!CollectionUtils.isEmpty(fundNameEms)) {
+            stockFundInfoService.saveFundInfos(fundNameEms);
+            save(stockSync, StockSyncConstant.STOCK_FUND_INFO_LATEST, timestamp);
         }
     }
 

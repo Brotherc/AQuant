@@ -10,8 +10,8 @@ import java.time.LocalDateTime;
  */
 @Data
 @Entity
-@Table(name = "fund_info")
-public class FundInfo {
+@Table(name = "stock_fund_info")
+public class StockFundInfo {
 
     /**
      * 主键ID
