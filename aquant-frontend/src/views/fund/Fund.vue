@@ -1,6 +1,6 @@
 <template>
   <div class="fund-container">
-    <a-row :gutter="16">
+    <a-row :gutter="16" class="fund-row">
       <a-col :span="11">
         <a-card title="基金列表" :bordered="false" class="h-full fund-card">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
@@ -51,7 +51,9 @@
             </a-descriptions>
           </template>
           <template v-else>
-            <a-empty description="请在左侧列表中选择一只基金以查看详情" />
+            <div style="display: flex; justify-content: center; align-items: center; min-height: 400px; height: 100%;">
+              <a-empty description="请在左侧列表中选择一只基金以查看详情" />
+            </div>
           </template>
         </a-card>
       </a-col>
@@ -153,6 +155,24 @@ onMounted(() => {
   padding: 16px;
   min-height: calc(100vh - 64px);
   background-color: #fff;
+  display: flex;
+  flex-direction: column;
+}
+.fund-row {
+  flex: 1;
+}
+.fund-row > .ant-col {
+  display: flex;
+  flex-direction: column;
+}
+.h-full {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.h-full :deep(.ant-card-body) {
+  flex: 1;
+  overflow-y: auto;
 }
 .fund-card {
   box-shadow: 0 1px 2px -2px rgba(0, 0, 0, 0.08), 0 3px 6px 0 rgba(0, 0, 0, 0.06), 0 5px 12px 4px rgba(0, 0, 0, 0.04);
@@ -161,9 +181,6 @@ onMounted(() => {
   margin-bottom: 16px;
   display: flex;
   width: 100%;
-}
-.h-full {
-  height: 100%;
 }
 .fund-table :deep(.ant-table-row) {
   transition: background-color 0.3s;
