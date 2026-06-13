@@ -735,6 +735,14 @@
    Pagination 分页组件 - Apple Style
    ======================================== */
 
+.ant-pagination-item,
+.ant-pagination-prev,
+.ant-pagination-next,
+.ant-pagination-jump-prev,
+.ant-pagination-jump-next {
+  margin: 0 4px !important;
+}
+
 .ant-pagination-item {
   background: var(--color-bg-elevated) !important;
   border-color: var(--color-border) !important;

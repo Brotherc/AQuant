@@ -192,7 +192,8 @@ const navigationGroups: NavigationGroup[] = [
     popupClassName: 'top-nav-popup top-nav-popup-compact',
     children: [
       { key: '/stock-data/index', label: '股票详情' },
-      { key: '/board/index', label: '行业板块' }
+      { key: '/board/index', label: '行业板块' },
+      { key: '/fund/index', label: '基金' }
     ]
   },
   {

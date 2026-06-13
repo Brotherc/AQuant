@@ -48,6 +48,17 @@ const router = createRouter({
                         }
                     ]
                 },
+                {
+                    path: 'fund',
+                    name: 'FundRoot',
+                    children: [
+                        {
+                            path: 'index',
+                            name: 'Fund',
+                            component: () => import('@/views/fund/Fund.vue')
+                        }
+                    ]
+                },
 
                 {
                     path: 'indicators',

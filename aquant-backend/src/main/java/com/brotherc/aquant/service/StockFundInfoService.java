@@ -2,9 +2,17 @@ package com.brotherc.aquant.service;
 
 import com.brotherc.aquant.entity.StockFundInfo;
 import com.brotherc.aquant.model.dto.akshare.FundNameEm;
+import com.brotherc.aquant.model.vo.stockfund.StockFundInfoPageReqVO;
+import com.brotherc.aquant.model.vo.stockfund.StockFundInfoVO;
 import com.brotherc.aquant.repository.StockFundInfoRepository;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -45,6 +53,44 @@ public class StockFundInfoService {
 
             stockFundInfoRepository.saveAll(toSave);
         }
+    }
+
+    public Page<StockFundInfoVO> getPage(StockFundInfoPageReqVO reqVO, Pageable pageable) {
+        Specification<StockFundInfo> specification = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (StringUtils.isNotBlank(reqVO.getFundCode())) {
+                predicates.add(cb.like(root.get("fundCode"), "%" + reqVO.getFundCode() + "%"));
+            }
+
+            if (StringUtils.isNotBlank(reqVO.getFundName())) {
+                predicates.add(cb.like(root.get("fundName"), "%" + reqVO.getFundName() + "%"));
+            }
+
+            if (StringUtils.isNotBlank(reqVO.getFundType())) {
+                predicates.add(cb.equal(root.get("fundType"), reqVO.getFundType()));
+            }
+
+            if (Boolean.TRUE.equals(reqVO.getIncludeUsStock())) {
+                List<Predicate> usStockPredicates = new ArrayList<>();
+                String[] keywords = {"QDII", "纳斯达克", "标普", "美国", "全球", "海外", "美元"};
+                for (String keyword : keywords) {
+                    usStockPredicates.add(cb.like(root.get("fundName"), "%" + keyword + "%"));
+                }
+                usStockPredicates.add(cb.like(root.get("fundType"), "QDII%"));
+                usStockPredicates.add(cb.equal(root.get("fundType"), "指数型-海外股票"));
+                
+                predicates.add(cb.or(usStockPredicates.toArray(new Predicate[0])));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        return stockFundInfoRepository.findAll(specification, pageable).map(o -> {
+            StockFundInfoVO vo = new StockFundInfoVO();
+            BeanUtils.copyProperties(o, vo);
+            return vo;
+        });
     }
 
 }
