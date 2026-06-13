@@ -103,6 +103,9 @@
         row-key="id"
       >
         <template #bodyCell="{ column, text, record }">
+          <template v-if="column.key === 'code'">
+            <a-tag class="stock-code-tag">{{ text }}</a-tag>
+          </template>
           <template v-if="column.key === 'signal'">
             <a-tag :class="getSignalLabel(text).class">
               {{ getSignalLabel(text).text }}

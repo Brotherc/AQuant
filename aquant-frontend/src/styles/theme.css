@@ -318,14 +318,14 @@ body {
 .stock-code-tag,
 .ant-tag.stock-code-tag {
   margin-inline-end: 0;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--color-accent);
+  padding: 0 6px !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  background: #fafafa !important;
+  color: var(--color-text-primary) !important;
   font-family: var(--font-family-mono);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-medium);
   font-size: 12px;
-  line-height: 18px;
+  line-height: 20px;
 }
 
 /* 截断文本 */
