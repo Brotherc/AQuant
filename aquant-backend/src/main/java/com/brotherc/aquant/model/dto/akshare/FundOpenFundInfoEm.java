@@ -11,7 +11,7 @@ public class FundOpenFundInfoEm {
     /**
      * 净值日期
      */
-    @JsonProperty("净值日期")
+    @JsonProperty("净值日期，格式例如：2026-06-11T00:00:00.000")
     private String navDate;
 
     /**
