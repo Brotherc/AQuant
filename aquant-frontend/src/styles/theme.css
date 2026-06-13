@@ -18,24 +18,24 @@
   --color-bg-elevated: #ffffff;
   --color-bg-overlay: rgba(22, 34, 48, 0.22);
   --color-bg-header: rgba(255, 255, 255, 0.94);
-  --color-bg-surface: rgba(76, 127, 184, 0.05);
-  --color-bg-surface-hover: rgba(76, 127, 184, 0.08);
-  --color-bg-surface-active: rgba(76, 127, 184, 0.12);
-  --color-bg-table-fixed: #fafbfd;
-  --color-bg-table-fixed-hover: #f3f6fa;
+  --color-bg-surface: rgba(0, 0, 0, 0.03);
+  --color-bg-surface-hover: rgba(0, 0, 0, 0.06);
+  --color-bg-surface-active: rgba(0, 0, 0, 0.09);
+  --color-bg-table-fixed: #fafafa;
+  --color-bg-table-fixed-hover: #f0f0f0;
   
   /* 文本色 (Text Colors) */
-  --color-text-primary: #1f2a37;
-  --color-text-secondary: #607287;
-  --color-text-tertiary: #8e9daf;
-  --color-text-disabled: #b2bdc9;
+  --color-text-primary: #000000;
+  --color-text-secondary: #4d4d4d;
+  --color-text-tertiary: #808080;
+  --color-text-disabled: #bfbfbf;
   --color-text-inverse: #f8fbff;
   
-  /* 品牌色 (Brand Color - Calm Financial Blue) */
-  --color-accent: #4c7fb8;
-  --color-accent-hover: #3f6fa5;
-  --color-accent-active: #315b89;
-  --color-accent-light: rgba(76, 127, 184, 0.16);
+  /* 品牌色 (Brand Color - Classic Black) */
+  --color-accent: #000000;
+  --color-accent-hover: #333333;
+  --color-accent-active: #000000;
+  --color-accent-light: rgba(0, 0, 0, 0.08);
   
   /* 状态色 (Status Colors - Financial Terminal Style) */
   --color-success: #1ea55b;
@@ -44,16 +44,16 @@
   --color-error-light: rgba(224, 84, 84, 0.12);
   --color-warning: #c9922f;
   --color-warning-light: rgba(201, 146, 47, 0.12);
-  --color-info: #4c7fb8;
-  --color-info-light: rgba(76, 127, 184, 0.12);
+  --color-info: #000000;
+  --color-info-light: rgba(0, 0, 0, 0.08);
   
   /* 边框色 (Border Colors) */
-  --color-border: rgba(110, 132, 158, 0.16);
-  --color-border-hover: rgba(76, 127, 184, 0.34);
-  --color-border-active: rgba(76, 127, 184, 0.4);
+  --color-border: rgba(0, 0, 0, 0.12);
+  --color-border-hover: rgba(0, 0, 0, 0.34);
+  --color-border-active: rgba(0, 0, 0, 0.5);
   
   /* 分割线 (Divider) */
-  --color-divider: rgba(110, 132, 158, 0.1);
+  --color-divider: rgba(0, 0, 0, 0.08);
   
   /* ========================================
      排版系统 (Typography - Apple SF)
@@ -204,7 +204,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(76, 127, 184, 0.22);
+  background: rgba(0, 0, 0, 0.15);
   border-radius: 10px;
   border: 2px solid transparent;
   background-clip: content-box;
@@ -212,7 +212,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(76, 127, 184, 0.34);
+  background: rgba(0, 0, 0, 0.3);
   background-clip: content-box;
 }
 
@@ -223,7 +223,7 @@ body {
 /* Firefox 滚动条 */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(76, 127, 184, 0.22) transparent;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
 }
 
 /* ========================================

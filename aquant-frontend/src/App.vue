@@ -6,7 +6,7 @@ dayjs.locale('zh-cn');
 </script>
 
 <template>
-  <a-config-provider :locale="zhCN">
+  <a-config-provider :locale="zhCN" :theme="{ token: { colorPrimary: '#000000', colorInfo: '#000000' } }">
     <router-view />
   </a-config-provider>
 </template>

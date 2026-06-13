@@ -1376,12 +1376,12 @@ watch(() => groups.value.length, async () => {
 
 .group-anchor:hover {
   color: var(--color-text-primary);
-  background: rgba(76, 127, 184, 0.08);
+  background: rgba(0, 0, 0, 0.08);
 }
 
 .group-anchor.active:not(.group-anchor-more) {
   color: var(--color-accent);
-  border: 1px solid rgba(76, 127, 184, 0.32);
+  border: 1px solid rgba(0, 0, 0, 0.32);
   background: transparent;
   font-weight: var(--font-weight-semibold);
 }
@@ -1520,7 +1520,7 @@ watch(() => groups.value.length, async () => {
   flex: 1 1 48px;
   min-width: 24px;
   height: 1px;
-  background: linear-gradient(90deg, rgba(76, 127, 184, 0.22), rgba(76, 127, 184, 0.05));
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.05));
 }
 
 .group-section-actions {
@@ -1547,7 +1547,7 @@ watch(() => groups.value.length, async () => {
 }
 
 .group-section-more:hover {
-  background: rgba(76, 127, 184, 0.08);
+  background: rgba(0, 0, 0, 0.08);
   color: var(--color-accent);
 }
 
@@ -1610,16 +1610,16 @@ watch(() => groups.value.length, async () => {
 }
 
 .custom-group-tag.active {
-  background: linear-gradient(180deg, rgba(76, 127, 184, 0.16), rgba(76, 127, 184, 0.08));
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.08));
   color: var(--color-text-primary);
   font-weight: var(--font-weight-semibold);
-  border-color: rgba(76, 127, 184, 0.4);
-  box-shadow: 0 12px 24px rgba(76, 127, 184, 0.16);
+  border-color: rgba(0, 0, 0, 0.4);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.16);
 }
 
 .custom-group-tag.active:hover {
-  background: linear-gradient(180deg, rgba(76, 127, 184, 0.2), rgba(76, 127, 184, 0.1));
-  border-color: rgba(76, 127, 184, 0.46);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.1));
+  border-color: rgba(0, 0, 0, 0.46);
 }
 
 .delete-group-icon {
@@ -1674,12 +1674,12 @@ watch(() => groups.value.length, async () => {
 }
 
 .custom-group-tag.add-btn {
-  color: var(--color-accent);
+  color: var(--color-text-tertiary);
   min-height: 42px;
   padding: 8px 18px;
-  border: 1px dashed rgba(76, 127, 184, 0.26);
+  border: 1px dashed rgba(0, 0, 0, 0.26);
   border-radius: var(--radius-lg);
-  background: rgba(76, 127, 184, 0.04);
+  background: rgba(0, 0, 0, 0.04);
   font-size: 14px;
   font-weight: var(--font-weight-semibold);
   display: flex;
@@ -1690,8 +1690,8 @@ watch(() => groups.value.length, async () => {
 
 .custom-group-tag.add-btn:hover {
   color: var(--color-accent-hover);
-  border-color: rgba(76, 127, 184, 0.36);
-  background-color: rgba(76, 127, 184, 0.08);
+  border-color: rgba(0, 0, 0, 0.36);
+  background-color: rgba(0, 0, 0, 0.08);
   transform: translateY(-1px);
 }
 
@@ -2029,8 +2029,8 @@ watch(() => groups.value.length, async () => {
 .watchlist-search-input.ant-input-affix-wrapper-focused,
 .watchlist-search-input.ant-input-affix-wrapper-focused:hover {
   background: #ffffff !important;
-  border-color: rgba(76, 127, 184, 0.28) !important;
-  box-shadow: 0 0 0 3px rgba(76, 127, 184, 0.1), 0 8px 18px rgba(25, 48, 78, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.28) !important;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1), 0 8px 18px rgba(25, 48, 78, 0.08) !important;
   border-radius: var(--radius-lg) !important;
 }
 

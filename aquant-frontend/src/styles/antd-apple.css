@@ -259,7 +259,7 @@
   background: var(--color-accent) !important;
   border-color: var(--color-accent) !important;
   color: var(--color-text-inverse) !important;
-  box-shadow: 0 10px 18px rgba(76, 127, 184, 0.16);
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.16);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -267,7 +267,7 @@
   background: var(--color-accent-hover) !important;
   border-color: var(--color-accent-hover) !important;
   color: var(--color-text-inverse) !important;
-  box-shadow: 0 14px 24px rgba(76, 127, 184, 0.2);
+  box-shadow: 0 14px 24px rgba(0, 0, 0, 0.2);
 }
 
 .ant-btn-primary:active {
@@ -279,21 +279,21 @@
 /* Ghost Primary Button - 主色细边框 + 白底 + 主色文字（柔和版） */
 .ant-btn-primary.ant-btn-background-ghost {
   background: #ffffff !important;
-  border-color: rgba(76, 127, 184, 0.45) !important;
+  border-color: rgba(0, 0, 0, 0.45) !important;
   color: var(--color-accent) !important;
   font-weight: var(--font-weight-medium);
   box-shadow: none;
 }
 
 .ant-btn-primary.ant-btn-background-ghost:hover {
-  background: rgba(76, 127, 184, 0.06) !important;
+  background: rgba(0, 0, 0, 0.06) !important;
   border-color: var(--color-accent-hover) !important;
   color: var(--color-accent-hover) !important;
   box-shadow: none;
 }
 
 .ant-btn-primary.ant-btn-background-ghost:active {
-  background: rgba(76, 127, 184, 0.1) !important;
+  background: rgba(0, 0, 0, 0.1) !important;
   border-color: var(--color-accent) !important;
   color: var(--color-accent) !important;
 }
@@ -851,7 +851,7 @@
 
 .ant-menu-horizontal > .ant-menu-item:hover::after,
 .ant-menu-horizontal > .ant-menu-submenu:hover::after {
-  border-bottom-color: rgba(76, 127, 184, 0.5) !important;
+  border-bottom-color: rgba(0, 0, 0, 0.5) !important;
 }
 
 /* 去掉一级菜单 hover 背景 - 使用更强的选择器 */
@@ -1208,8 +1208,8 @@
 
 /* Info 类型 - 浅色主题 */
 .ant-alert-info {
-  background: rgba(76, 127, 184, 0.08) !important;
-  border-color: rgba(76, 127, 184, 0.18) !important;
+  background: rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.18) !important;
 }
 
 .ant-alert-info .ant-alert-icon {

@@ -282,7 +282,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   background:
-    radial-gradient(circle at top left, rgba(76, 127, 184, 0.14), transparent 30%),
+    radial-gradient(circle at top left, rgba(0, 0, 0, 0.05), transparent 30%),
     linear-gradient(135deg, #f8fbff 0%, #edf3f9 55%, #e6eef7 100%);
   padding: 20px;
   position: relative;
@@ -296,7 +296,7 @@ onBeforeUnmount(() => {
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle, rgba(76, 127, 184, 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(0, 0, 0, 0.03) 0%, transparent 70%);
   animation: rotate 30s linear infinite;
 }
 
@@ -337,7 +337,7 @@ onBeforeUnmount(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(circle at 30% 50%, rgba(76, 127, 184, 0.08) 0%, transparent 52%);
+  background: radial-gradient(circle at 30% 50%, rgba(0, 0, 0, 0.03) 0%, transparent 52%);
   pointer-events: none;
 }
 
@@ -395,7 +395,7 @@ onBeforeUnmount(() => {
 
 .feature-item:hover {
   background: rgba(255, 255, 255, 0.92);
-  border-color: rgba(76, 127, 184, 0.22);
+  border-color: rgba(0, 0, 0, 0.12);
   transform: translateX(4px);
 }
 
@@ -422,7 +422,7 @@ onBeforeUnmount(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(circle at 70% 50%, rgba(76, 127, 184, 0.08) 0%, transparent 52%);
+  background: radial-gradient(circle at 70% 50%, rgba(0, 0, 0, 0.03) 0%, transparent 52%);
   pointer-events: none;
 }
 
@@ -466,17 +466,17 @@ onBeforeUnmount(() => {
   font-weight: 600;
   border-radius: 8px;
   letter-spacing: 2px;
-  background: linear-gradient(135deg, #5a86bd 0%, #4674ad 100%);
-  border: 1px solid rgba(76, 127, 184, 0.28);
+  background: linear-gradient(135deg, #333333 0%, #000000 100%);
+  border: 1px solid rgba(0, 0, 0, 0.28);
   color: var(--color-text-inverse);
-  box-shadow: 0 12px 24px rgba(76, 127, 184, 0.18);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
   transition: all 0.3s ease;
 }
 
 .submit-btn:hover {
-  background: linear-gradient(135deg, #4c7fb8 0%, #3f6fa5 100%);
-  border-color: rgba(76, 127, 184, 0.38);
-  box-shadow: 0 16px 28px rgba(76, 127, 184, 0.22);
+  background: linear-gradient(135deg, #000000 0%, #000000 100%);
+  border-color: rgba(0, 0, 0, 0.38);
+  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.22);
   transform: translateY(-2px);
 }
 
@@ -505,16 +505,16 @@ onBeforeUnmount(() => {
 :deep(.ant-input:hover),
 :deep(.ant-input-password:hover),
 :deep(.ant-input-affix-wrapper:hover) {
-  border-color: rgba(76, 127, 184, 0.24);
+  border-color: rgba(0, 0, 0, 0.24);
   background: rgba(255, 255, 255, 0.95);
 }
 
 :deep(.ant-input:focus),
 :deep(.ant-input-password:focus),
 :deep(.ant-input-affix-wrapper-focused) {
-  border-color: rgba(76, 127, 184, 0.42);
+  border-color: rgba(0, 0, 0, 0.42);
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(76, 127, 184, 0.12);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.12);
 }
 
 :deep(.ant-input-prefix) {
@@ -561,7 +561,7 @@ onBeforeUnmount(() => {
 
 :deep(.ant-btn-default:hover) {
   background: #ffffff;
-  border-color: rgba(76, 127, 184, 0.24);
+  border-color: rgba(0, 0, 0, 0.24);
   color: var(--color-accent);
 }
 
