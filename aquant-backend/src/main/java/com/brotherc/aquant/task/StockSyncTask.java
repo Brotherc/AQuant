@@ -155,8 +155,16 @@ public class StockSyncTask {
                 return;
             }
 
-            // 同步最新行情 与 最后一次同步时间-昨天的历史数据
-            stockSyncService.stockQuote(stockZhASpots, stockSync, maxTradeLocalDate, LocalDate.now().minusDays(1), now);
+            // 实时行情会单独覆盖最近交易日；历史接口是闭区间，补数时需要避开两侧边界，防止重复写入。
+            LocalDate historyStartDate = maxTradeLocalDate.plusDays(1);
+            LocalDate historyEndDate = latestTradeDay.minusDays(1);
+            if (historyStartDate.isAfter(historyEndDate)) {
+                stockSyncService.stockQuote(stockZhASpots, stockSync, now);
+                return;
+            }
+
+            // 同步最新行情 与 缺失区间的历史数据
+            stockSyncService.stockQuote(stockZhASpots, stockSync, historyStartDate, historyEndDate, now);
         }
     }
 

@@ -14,6 +14,8 @@ public interface StockQuoteHistoryRepository extends JpaRepository<StockQuoteHis
 
         List<StockQuoteHistory> findByTradeDateAndCodeIn(String tradeDate, List<String> codeList);
 
+        List<StockQuoteHistory> findByCodeAndTradeDateIn(String code, List<String> tradeDateList);
+
         List<StockQuoteHistory> findByCodeOrderByTradeDateAsc(String code);
 
         @Query(value = "SELECT * " +

@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -32,23 +31,40 @@ public class StockQuoteHistoryService {
 
     @Transactional(rollbackFor = Exception.class)
     public void save(List<StockZhASpot> stockZhASpotList, LocalDateTime now) {
+        if (CollectionUtils.isEmpty(stockZhASpotList)) {
+            return;
+        }
+
         // 获取最新的交易日期
         String tradeDate = stockHelper.latestTradeDayFallback(LocalDate.now()).toString();
 
-        // 提取所有股票代码
-        List<String> codes = stockZhASpotList.stream().map(StockZhASpot::get代码).toList();
+        // 提取所有股票代码；如果上游异常返回重复代码，保留最后一条行情。
+        Map<String, StockZhASpot> spotMap = new LinkedHashMap<>();
+        for (StockZhASpot spot : stockZhASpotList) {
+            if (spot != null && spot.get代码() != null) {
+                spotMap.put(spot.get代码(), spot);
+            }
+        }
+        if (spotMap.isEmpty()) {
+            return;
+        }
 
         // 一次性查出该交易日期已存在的数据
+        List<String> codes = new ArrayList<>(spotMap.keySet());
         List<StockQuoteHistory> existedList = stockQuoteHistoryRepository.findByTradeDateAndCodeIn(tradeDate, codes);
 
         // 构建 Map：code -> entity
-        Map<String, StockQuoteHistory> existedMap = existedList.stream()
-                .collect(Collectors.toMap(StockQuoteHistory::getCode, e -> e));
+        Map<String, StockQuoteHistory> existedMap = new LinkedHashMap<>();
+        List<Long> duplicateIds = new ArrayList<>();
+        for (StockQuoteHistory existed : existedList) {
+            mergeExisting(existedMap, duplicateIds, existed.getCode(), existed);
+        }
+        deleteDuplicateHistories(duplicateIds);
 
-        List<StockQuoteHistory> saveList = new ArrayList<>(stockZhASpotList.size());
+        List<StockQuoteHistory> saveList = new ArrayList<>(spotMap.size());
 
         // 遍历实时行情
-        for (StockZhASpot spot : stockZhASpotList) {
+        for (StockZhASpot spot : spotMap.values()) {
             StockQuoteHistory entity = existedMap.get(spot.get代码());
 
             if (entity == null) {
@@ -77,26 +93,104 @@ public class StockQuoteHistoryService {
 
     @Transactional(rollbackFor = Exception.class)
     public void save(List<StockZhADaily> stockZhAHists, String code, String name, LocalDateTime now) {
-        List<StockQuoteHistory> stockQuoteHistoryList = stockZhAHists.stream()
-                .map(o -> {
-                    StockQuoteHistory stockQuoteHistory = new StockQuoteHistory();
-                    stockQuoteHistory.setCode(code);
-                    stockQuoteHistory.setName(name);
-                    stockQuoteHistory.setOpenPrice(o.getOpen());
-                    stockQuoteHistory.setClosePrice(o.getClose());
-                    stockQuoteHistory.setHighPrice(o.getHigh());
-                    stockQuoteHistory.setLowPrice(o.getLow());
-                    stockQuoteHistory.setVolume(o.getVolume());
-                    stockQuoteHistory.setTurnover(o.getTurnover());
-                    stockQuoteHistory.setQuoteTime("15:00:00");
-                    String tradeDate = o.getDate().substring(0, 10);
-                    stockQuoteHistory.setTradeDate(tradeDate);
-                    stockQuoteHistory.setCreatedAt(now);
-                    return stockQuoteHistory;
-                })
-                .toList();
+        if (CollectionUtils.isEmpty(stockZhAHists)) {
+            return;
+        }
 
-        stockQuoteHistoryRepository.saveAll(stockQuoteHistoryList);
+        // 历史接口按闭区间返回；按交易日去重后再 upsert，保证重复同步不会新增重复K线。
+        Map<String, StockZhADaily> dailyMap = new LinkedHashMap<>();
+        for (StockZhADaily daily : stockZhAHists) {
+            String tradeDate = parseTradeDate(daily);
+            if (tradeDate != null) {
+                dailyMap.put(tradeDate, daily);
+            }
+        }
+        if (dailyMap.isEmpty()) {
+            return;
+        }
+
+        List<String> tradeDates = new ArrayList<>(dailyMap.keySet());
+        List<StockQuoteHistory> existedList = stockQuoteHistoryRepository.findByCodeAndTradeDateIn(code, tradeDates);
+        Map<String, StockQuoteHistory> existedMap = new LinkedHashMap<>();
+        List<Long> duplicateIds = new ArrayList<>();
+        for (StockQuoteHistory existed : existedList) {
+            mergeExisting(existedMap, duplicateIds, existed.getTradeDate(), existed);
+        }
+        deleteDuplicateHistories(duplicateIds);
+
+        List<StockQuoteHistory> saveList = new ArrayList<>(dailyMap.size());
+        for (Map.Entry<String, StockZhADaily> entry : dailyMap.entrySet()) {
+            String tradeDate = entry.getKey();
+            StockZhADaily daily = entry.getValue();
+            StockQuoteHistory stockQuoteHistory = existedMap.get(tradeDate);
+            if (stockQuoteHistory == null) {
+                stockQuoteHistory = new StockQuoteHistory();
+                stockQuoteHistory.setCode(code);
+                stockQuoteHistory.setTradeDate(tradeDate);
+            }
+
+            stockQuoteHistory.setName(name);
+            stockQuoteHistory.setOpenPrice(daily.getOpen());
+            stockQuoteHistory.setClosePrice(daily.getClose());
+            stockQuoteHistory.setHighPrice(daily.getHigh());
+            stockQuoteHistory.setLowPrice(daily.getLow());
+            stockQuoteHistory.setVolume(daily.getVolume());
+            stockQuoteHistory.setTurnover(daily.getTurnover());
+            stockQuoteHistory.setQuoteTime("15:00:00");
+            stockQuoteHistory.setCreatedAt(now);
+            saveList.add(stockQuoteHistory);
+        }
+
+        stockQuoteHistoryRepository.saveAll(saveList);
+    }
+
+    private String parseTradeDate(StockZhADaily daily) {
+        if (daily == null || daily.getDate() == null || daily.getDate().length() < 10) {
+            return null;
+        }
+        return daily.getDate().substring(0, 10);
+    }
+
+    private void mergeExisting(
+            Map<String, StockQuoteHistory> existedMap,
+            List<Long> duplicateIds,
+            String key,
+            StockQuoteHistory candidate
+    ) {
+        if (key == null || candidate == null) {
+            return;
+        }
+
+        StockQuoteHistory current = existedMap.get(key);
+        if (current == null) {
+            existedMap.put(key, candidate);
+            return;
+        }
+
+        StockQuoteHistory keep = chooseLatest(current, candidate);
+        StockQuoteHistory duplicate = keep == current ? candidate : current;
+        if (duplicate.getId() != null) {
+            duplicateIds.add(duplicate.getId());
+        }
+        existedMap.put(key, keep);
+    }
+
+    private StockQuoteHistory chooseLatest(StockQuoteHistory current, StockQuoteHistory candidate) {
+        Long currentId = current.getId();
+        Long candidateId = candidate.getId();
+        if (currentId == null) {
+            return candidate;
+        }
+        if (candidateId == null) {
+            return current;
+        }
+        return candidateId > currentId ? candidate : current;
+    }
+
+    private void deleteDuplicateHistories(List<Long> duplicateIds) {
+        if (!CollectionUtils.isEmpty(duplicateIds)) {
+            stockQuoteHistoryRepository.deleteAllByIdInBatch(duplicateIds);
+        }
     }
 
     /**
