@@ -12,6 +12,7 @@ import com.brotherc.aquant.repository.StockValuationMetricsRepository;
 import com.brotherc.aquant.repository.StockDupontAnalysisRepository;
 import com.brotherc.aquant.entity.StockValuationMetrics;
 import com.brotherc.aquant.entity.StockDupontAnalysis;
+import com.brotherc.aquant.model.projection.StockDividendProjection;
 import com.brotherc.aquant.repository.StockWatchlistStockRepository;
 import com.brotherc.aquant.entity.StockWatchlistStock;
 import lombok.RequiredArgsConstructor;
