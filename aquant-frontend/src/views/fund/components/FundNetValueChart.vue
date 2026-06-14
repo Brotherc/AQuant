@@ -190,7 +190,7 @@ onUnmounted(() => {
 <style scoped>
 .fund-chart-container {
   width: 100%;
-  height: 350px;
-  margin-top: 20px;
+  height: 300px;
+  margin-top: 12px;
 }
 </style>
