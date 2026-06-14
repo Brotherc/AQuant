@@ -127,7 +127,7 @@ const selectedBoard = ref<StockIndustryBoardVO | null>(null);
 
 // 列定义
 const columns: TableProps['columns'] = [
-  { title: '板块名称', dataIndex: 'sectorName', fixed: 'left', width: 120 },
+  { title: '板块名称', dataIndex: 'sectorName', width: 120 },
   { title: '涨跌幅(%)', dataIndex: 'changePercent', sorter: true, showSorterTooltip: false, width: 150 },
   { title: '总成交量', dataIndex: 'totalVolume', width: 120 },
   { title: '总成交额', dataIndex: 'totalAmount', width: 120 },
