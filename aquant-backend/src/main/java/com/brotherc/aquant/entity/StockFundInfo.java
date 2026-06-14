@@ -3,6 +3,7 @@ package com.brotherc.aquant.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -50,6 +51,24 @@ public class StockFundInfo {
      */
     @Column(name = "pinyin_full")
     private String pinyinFull;
+
+    /**
+     * 购买起点
+     */
+    @Column(name = "purchase_start_amount")
+    private BigDecimal purchaseStartAmount;
+
+    /**
+     * 日累计限定金额
+     */
+    @Column(name = "daily_limit_amount")
+    private BigDecimal dailyLimitAmount;
+
+    /**
+     * 手续费
+     */
+    @Column(name = "fee_rate")
+    private BigDecimal feeRate;
 
     /**
      * 创建时间

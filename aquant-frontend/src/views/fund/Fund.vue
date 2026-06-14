@@ -31,6 +31,7 @@
             :row-key="getRowKey"
             :row-class-name="rowClassName"
             :custom-row="customRow"
+            :scroll="{ y: 'calc(100vh - 280px)' }"
             size="small"
             class="fund-table"
           >
@@ -41,12 +42,15 @@
       <a-col :span="13">
         <a-card title="基金详情" :bordered="false" class="fund-card">
           <template v-if="selectedFund">
-            <a-descriptions bordered :column="1">
+            <a-descriptions bordered :column="2">
               <a-descriptions-item label="基金代码">{{ selectedFund.fundCode }}</a-descriptions-item>
               <a-descriptions-item label="基金简称">{{ selectedFund.fundName }}</a-descriptions-item>
               <a-descriptions-item label="基金类型">
                 <a-tag color="blue">{{ selectedFund.fundType }}</a-tag>
               </a-descriptions-item>
+              <a-descriptions-item label="购买起点">{{ selectedFund.purchaseStartAmount != null ? selectedFund.purchaseStartAmount + '元' : '-' }}</a-descriptions-item>
+              <a-descriptions-item label="日累计限定金额">{{ selectedFund.dailyLimitAmount != null ? selectedFund.dailyLimitAmount + '元' : '-' }}</a-descriptions-item>
+              <a-descriptions-item label="手续费">{{ selectedFund.feeRate != null ? selectedFund.feeRate + '%' : '-' }}</a-descriptions-item>
             </a-descriptions>
             <FundNetValueChart :fundCode="selectedFund.fundCode" />
           </template>

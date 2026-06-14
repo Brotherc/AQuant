@@ -25,4 +25,13 @@ public class StockFundInfoVO {
     @Schema(description = "拼音全称")
     private String pinyinFull;
 
+    @Schema(description = "购买起点")
+    private java.math.BigDecimal purchaseStartAmount;
+
+    @Schema(description = "日累计限定金额")
+    private java.math.BigDecimal dailyLimitAmount;
+
+    @Schema(description = "手续费")
+    private java.math.BigDecimal feeRate;
+
 }

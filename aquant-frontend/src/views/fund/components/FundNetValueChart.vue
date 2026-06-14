@@ -102,8 +102,8 @@ const renderChart = (data: StockFundNetValue[]) => {
       {
         type: 'inside',
         zoomLock: false,
-        startValue: dates.length > 120 ? dates.length - 120 : 0,
-        endValue: dates.length > 0 ? dates.length - 1 : 0
+        start: 0,
+        end: 100
       },
       {
         type: 'slider',
@@ -118,8 +118,8 @@ const renderChart = (data: StockFundNetValue[]) => {
         showDetail: false,
         zoomLock: false,
         showDataShadow: false,
-        startValue: dates.length > 120 ? dates.length - 120 : 0,
-        endValue: dates.length > 0 ? dates.length - 1 : 0
+        start: 0,
+        end: 100
       }
     ],
     xAxis: {

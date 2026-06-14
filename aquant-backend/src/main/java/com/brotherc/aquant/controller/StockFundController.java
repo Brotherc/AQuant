@@ -45,4 +45,11 @@ public class StockFundController {
         return ResponseDTO.success(stockFundNetValueService.getFundNetValues(fundCode));
     }
 
+    @Operation(summary = "更新基金购买起点等附加信息")
+    @GetMapping("/updateAdditionalInfo")
+    public ResponseDTO<Void> updateAdditionalInfo() {
+        stockFundInfoService.updateAdditionalInfo();
+        return ResponseDTO.success();
+    }
+
 }

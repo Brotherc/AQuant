@@ -7,6 +7,9 @@ export interface FundInfoVO {
   pinyinAbbr: string
   fundType: string
   pinyinFull: string
+  purchaseStartAmount?: number
+  dailyLimitAmount?: number
+  feeRate?: number
 }
 
 export interface FundInfoPageReqVO {
