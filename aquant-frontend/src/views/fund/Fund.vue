@@ -5,10 +5,10 @@
         <a-card title="基金列表" :bordered="false" class="fund-card fund-list-card">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
             <a-form layout="inline" :model="queryParams" @finish="onSearch" class="fund-search-form" style="margin-bottom: 0;">
-              <a-form-item label="基金代码">
+              <a-form-item label="代码">
                 <a-input v-model:value="queryParams.fundCode" placeholder="输入代码" allow-clear style="width: 140px" />
               </a-form-item>
-              <a-form-item label="基金简称">
+              <a-form-item label="简称">
                 <a-input v-model:value="queryParams.fundName" placeholder="输入名称" allow-clear style="width: 140px" />
               </a-form-item>
               <a-form-item>
@@ -48,8 +48,8 @@
               <a-descriptions-item label="基金类型">
                 <a-tag color="blue">{{ selectedFund.fundType }}</a-tag>
               </a-descriptions-item>
-              <a-descriptions-item label="购买起点">{{ selectedFund.purchaseStartAmount != null ? selectedFund.purchaseStartAmount + '元' : '-' }}</a-descriptions-item>
-              <a-descriptions-item label="日累计限定金额">{{ selectedFund.dailyLimitAmount != null ? selectedFund.dailyLimitAmount + '元' : '-' }}</a-descriptions-item>
+              <a-descriptions-item label="购买起点">{{ selectedFund.purchaseStartAmount != null ? formatAmount(selectedFund.purchaseStartAmount) + '元' : '-' }}</a-descriptions-item>
+              <a-descriptions-item label="日累计限定金额">{{ selectedFund.dailyLimitAmount != null ? formatAmount(selectedFund.dailyLimitAmount) + '元' : '-' }}</a-descriptions-item>
               <a-descriptions-item label="手续费">{{ selectedFund.feeRate != null ? selectedFund.feeRate + '%' : '-' }}</a-descriptions-item>
             </a-descriptions>
             <FundNetValueChart :fundCode="selectedFund.fundCode" />
@@ -75,6 +75,14 @@ const loading = ref(false)
 const dataList = ref<FundInfoVO[]>([])
 const selectedFund = ref<FundInfoVO | null>(null)
 
+const formatAmount = (val: number | null | undefined) => {
+  if (val == null) return '-'
+  if (val >= 100000000) return (val / 100000000).toFixed(2).replace(/\.?0+$/, '') + '亿'
+  if (val >= 10000) return (val / 10000).toFixed(2).replace(/\.?0+$/, '') + '万'
+  if (val >= 1000) return (val / 1000).toFixed(2).replace(/\.?0+$/, '') + '千'
+  return val.toString()
+}
+
 const queryParams = reactive<FundInfoPageReqVO>({
   page: 0,
   size: 10,
@@ -91,9 +99,10 @@ const pagination = reactive({
 })
 
 const columns = [
-  { title: '基金代码', dataIndex: 'fundCode', key: 'fundCode', width: 100 },
-  { title: '基金简称', dataIndex: 'fundName', key: 'fundName' },
-  { title: '基金类型', dataIndex: 'fundType', key: 'fundType', width: 150 }
+  { title: '代码', dataIndex: 'fundCode', key: 'fundCode', width: 80 },
+  { title: '简称', dataIndex: 'fundName', key: 'fundName' },
+  { title: '类型', dataIndex: 'fundType', key: 'fundType', width: 140 },
+  { title: '日累计限额', dataIndex: 'dailyLimitAmount', key: 'dailyLimitAmount', width: 100, customRender: ({ text }: any) => formatAmount(text) }
 ]
 
 const loadData = async () => {
