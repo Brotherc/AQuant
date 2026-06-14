@@ -1,22 +1,21 @@
 <template>
-  <a-drawer
-    :title="`板块历史行情 - ${boardName} (${boardCode})`"
-    width="1200"
-    :visible="visible"
-    @close="handleClose"
-    destroy-on-close
-  >
-    <div class="mb-2" style="display: flex; justify-content: flex-start;">
-      <a-radio-group v-model:value="frequency" @change="fetchHistory" size="small">
-        <a-radio-button value="1d">日K</a-radio-button>
-        <a-radio-button value="1w">周K</a-radio-button>
-        <a-radio-button value="1M">月K</a-radio-button>
-        <a-radio-button value="1Q">季K</a-radio-button>
-        <a-radio-button value="1Y">年K</a-radio-button>
-      </a-radio-group>
+  <div class="board-history-chart-container">
+    <div v-if="!boardCode" style="display: flex; justify-content: center; align-items: center; min-height: 400px;">
+      <a-empty description="请在左侧列表中选择一个板块以查看历史行情" />
     </div>
-    <div ref="chartContainer" style="width: 100%; height: 700px"></div>
-  </a-drawer>
+    <div v-else>
+      <div class="mb-2" style="display: flex; justify-content: flex-start;">
+        <a-radio-group v-model:value="frequency" @change="fetchHistory" size="small">
+          <a-radio-button value="1d">日K</a-radio-button>
+          <a-radio-button value="1w">周K</a-radio-button>
+          <a-radio-button value="1M">月K</a-radio-button>
+          <a-radio-button value="1Q">季K</a-radio-button>
+          <a-radio-button value="1Y">年K</a-radio-button>
+        </a-radio-group>
+      </div>
+      <div ref="chartContainer" style="width: 100%; height: 700px"></div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -26,21 +25,18 @@ import { getBoardHistory, type StockIndustryBoardHistory } from '@/api/board';
 import { chartTooltipTheme } from '@/utils/chartTheme';
 
 const props = defineProps<{
-  visible: boolean;
   boardCode: string;
   boardName: string;
 }>();
 
-const emit = defineEmits(['update:visible']);
+// Removed emit for visible
 
 const frequency = ref('1d');
 const chartContainer = ref<HTMLElement>();
 let chartInstance: echarts.ECharts | null = null;
 let resizeObserver: ResizeObserver | null = null;
 
-const handleClose = () => {
-  emit('update:visible', false);
-};
+// Removed handleClose
 
 const initChart = () => {
   if (chartContainer.value) {
@@ -334,7 +330,7 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
 };
 
 watch(
-  () => props.visible,
+  () => props.boardCode,
   (val) => {
     if (val) {
       frequency.value = '1d';
@@ -343,16 +339,12 @@ watch(
         fetchHistory();
       });
     } else {
-        if (resizeObserver) {
-          resizeObserver.disconnect();
-          resizeObserver = null;
-        }
         if (chartInstance) {
-          chartInstance.dispose();
-          chartInstance = null;
+          chartInstance.clear();
         }
     }
-  }
+  },
+  { immediate: true }
 );
 
 onUnmounted(() => {
