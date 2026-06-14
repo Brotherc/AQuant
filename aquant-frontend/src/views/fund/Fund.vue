@@ -3,25 +3,26 @@
     <a-row :gutter="16" class="fund-row">
       <a-col :span="11">
         <a-card title="基金列表" :bordered="false" class="fund-card fund-list-card">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
-            <a-form layout="inline" :model="queryParams" @finish="onSearch" class="fund-search-form" style="margin-bottom: 0;">
-              <a-form-item label="代码">
-                <a-input v-model:value="queryParams.fundCode" placeholder="输入代码" allow-clear style="width: 140px" />
-              </a-form-item>
-              <a-form-item label="简称">
-                <a-input v-model:value="queryParams.fundName" placeholder="输入名称" allow-clear style="width: 140px" />
-              </a-form-item>
-              <a-form-item>
-                <a-checkbox v-model:checked="queryParams.includeUsStock">
-                  包含海外
-                </a-checkbox>
-              </a-form-item>
-            </a-form>
-            <div style="white-space: nowrap; margin-left: 16px;">
+          <a-form layout="inline" :model="queryParams" @finish="onSearch" class="fund-search-form">
+            <a-form-item label="代码">
+              <a-input v-model:value="queryParams.fundCode" placeholder="输入代码" allow-clear style="width: 140px" />
+            </a-form-item>
+            <a-form-item label="简称">
+              <a-input v-model:value="queryParams.fundName" placeholder="输入名称" allow-clear style="width: 140px" />
+            </a-form-item>
+            <a-form-item label="类型">
+              <a-select v-model:value="queryParams.fundType" placeholder="选择类型" allow-clear style="width: 140px" :options="fundTypeOptions" />
+            </a-form-item>
+            <a-form-item>
+              <a-checkbox v-model:checked="queryParams.includeUsStock">
+                包含海外
+              </a-checkbox>
+            </a-form-item>
+            <a-form-item class="fund-search-actions">
               <a-button type="primary" @click="onSearch" :loading="loading">查 询</a-button>
-              <a-button type="primary" ghost style="margin-left: 8px" @click="resetSearch">重 置</a-button>
-            </div>
-          </div>
+              <a-button type="primary" ghost @click="resetSearch">重 置</a-button>
+            </a-form-item>
+          </a-form>
           <a-table
             :columns="columns"
             :data-source="dataList"
@@ -88,8 +89,42 @@ const queryParams = reactive<FundInfoPageReqVO>({
   size: 10,
   fundName: '',
   fundCode: '',
+  fundType: undefined,
   includeUsStock: true
 })
+
+const fundTypeOptions = [
+  { value: 'FOF-均衡型', label: 'FOF-均衡型' },
+  { value: 'FOF-稳健型', label: 'FOF-稳健型' },
+  { value: 'FOF-进取型', label: 'FOF-进取型' },
+  { value: 'QDII-FOF', label: 'QDII-FOF' },
+  { value: 'QDII-REITs', label: 'QDII-REITs' },
+  { value: 'QDII-商品', label: 'QDII-商品' },
+  { value: 'QDII-普通股票', label: 'QDII-普通股票' },
+  { value: 'QDII-混合债', label: 'QDII-混合债' },
+  { value: 'QDII-混合偏股', label: 'QDII-混合偏股' },
+  { value: 'QDII-混合平衡', label: 'QDII-混合平衡' },
+  { value: 'QDII-混合灵活', label: 'QDII-混合灵活' },
+  { value: 'QDII-纯债', label: 'QDII-纯债' },
+  { value: 'Reits', label: 'Reits' },
+  { value: '债券型-中短债', label: '债券型-中短债' },
+  { value: '债券型-混合一级', label: '债券型-混合一级' },
+  { value: '债券型-混合二级', label: '债券型-混合二级' },
+  { value: '债券型-长债', label: '债券型-长债' },
+  { value: '商品', label: '商品' },
+  { value: '指数型-其他', label: '指数型-其他' },
+  { value: '指数型-固收', label: '指数型-固收' },
+  { value: '指数型-海外股票', label: '指数型-海外股票' },
+  { value: '指数型-股票', label: '指数型-股票' },
+  { value: '混合型-偏债', label: '混合型-偏债' },
+  { value: '混合型-偏股', label: '混合型-偏股' },
+  { value: '混合型-平衡', label: '混合型-平衡' },
+  { value: '混合型-灵活', label: '混合型-灵活' },
+  { value: '混合型-绝对收益', label: '混合型-绝对收益' },
+  { value: '股票型', label: '股票型' },
+  { value: '货币型-普通货币', label: '货币型-普通货币' },
+  { value: '货币型-浮动净值', label: '货币型-浮动净值' }
+]
 
 const pagination = reactive({
   current: 1,
@@ -103,7 +138,7 @@ const columns = [
   { title: '代码', dataIndex: 'fundCode', key: 'fundCode', width: 80 },
   { title: '简称', dataIndex: 'fundName', key: 'fundName' },
   { title: '类型', dataIndex: 'fundType', key: 'fundType', width: 140 },
-  { title: '日累计限额', dataIndex: 'dailyLimitAmount', key: 'dailyLimitAmount', width: 100, customRender: ({ text }: any) => formatAmount(text) }
+  { title: '日累计限额', dataIndex: 'dailyLimitAmount', key: 'dailyLimitAmount', width: 130, sorter: true, customRender: ({ text }: any) => formatAmount(text) }
 ]
 
 const loadData = async () => {
@@ -112,7 +147,8 @@ const loadData = async () => {
     const res = await getFundPage({
       ...queryParams,
       page: pagination.current - 1,
-      size: pagination.pageSize
+      size: pagination.pageSize,
+      sort: queryParams.sort
     })
     if (res.data && res.data.success && res.data.data) {
       dataList.value = res.data.data.content
@@ -143,9 +179,14 @@ const resetSearch = () => {
   onSearch()
 }
 
-const handleTableChange = (pag: any) => {
+const handleTableChange = (pag: any, filters: any, sorter: any) => {
   pagination.current = pag.current
   pagination.pageSize = pag.pageSize
+  if (sorter.field && sorter.order) {
+    queryParams.sort = `${sorter.field},${sorter.order === 'ascend' ? 'asc' : 'desc'}`
+  } else {
+    queryParams.sort = undefined
+  }
   loadData()
 }
 
@@ -202,7 +243,23 @@ onMounted(() => {
 .fund-search-form {
   margin-bottom: 16px;
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 18px;
+  row-gap: 14px;
   width: 100%;
+}
+.fund-search-form :deep(.ant-form-item) {
+  margin-right: 0;
+  margin-bottom: 0;
+}
+.fund-search-actions {
+  margin-left: auto;
+}
+.fund-search-actions :deep(.ant-form-item-control-input-content) {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 .fund-table :deep(.ant-table-row) {
   transition: none;

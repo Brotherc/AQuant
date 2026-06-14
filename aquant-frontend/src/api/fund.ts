@@ -19,6 +19,7 @@ export interface FundInfoPageReqVO {
   fundName?: string
   fundType?: string
   includeUsStock?: boolean
+  sort?: string
 }
 
 export interface ResponseDTO<T> {
