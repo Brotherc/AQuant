@@ -223,7 +223,6 @@
                 </div>
 
                 <!-- 基本面数据 -->
-                <a-divider style="margin: 8px 0" />
                 <div class="fundamentals">
                   <div class="fund-item">
                     <span class="label">PE</span>
@@ -241,7 +240,6 @@
 
                 <!-- 分红数据 -->
                 <template v-if="stock.recentDividends && stock.recentDividends.length > 0">
-                  <a-divider style="margin: 6px 0" dashed />
                   <div class="dividends-wrap">
                     <div v-for="(div, idx) in stock.recentDividends" :key="idx" class="dividend-row">
                       <span class="div-date">{{ formatReportDate(div.proposalAnnouncementDate) }}</span>
@@ -1876,8 +1874,7 @@ watch(() => groups.value.length, async () => {
   display: flex;
   justify-content: space-between;
   font-size: var(--font-size-xs);
-  padding-top: 12px;
-  border-top: 1px solid var(--color-divider);
+  padding-top: 4px;
 }
 
 .fund-item {

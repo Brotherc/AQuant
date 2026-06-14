@@ -140,7 +140,7 @@ const renderChart = (data: StockQuoteHistory[]) => {
       },
       {
         type: 'slider',
-        show: true,
+        show: false,
         height: 6,
         bottom: 0,
         borderColor: 'transparent',
@@ -159,7 +159,7 @@ const renderChart = (data: StockQuoteHistory[]) => {
       left: 10,
       right: 10,
       top: 10,
-      bottom: 24,
+      bottom: 15,
       containLabel: true
     },
     xAxis: {
@@ -278,6 +278,6 @@ onUnmounted(() => {
 
 .mini-kline-container {
   width: 100%;
-  height: 180px; /* 再次增大高度以撑开卡片，让 K 线图更高 */
+  height: 150px;
 }
 </style>
