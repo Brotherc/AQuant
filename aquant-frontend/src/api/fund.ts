@@ -41,3 +41,18 @@ export function getFundPage(params: FundInfoPageReqVO) {
     params
   })
 }
+
+export interface StockFundNetValue {
+  id: number
+  fundCode: string
+  navDate: string
+  unitNav: number
+}
+
+export function getFundNetValues(fundCode: string) {
+  return request<ResponseDTO<StockFundNetValue[]>>({
+    url: '/stockFund/history/netValue',
+    method: 'GET',
+    params: { fundCode }
+  })
+}

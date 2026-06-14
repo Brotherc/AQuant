@@ -28,7 +28,8 @@
             :pagination="pagination"
             :loading="loading"
             @change="handleTableChange"
-            :row-key="record => record.id"
+            :row-key="getRowKey"
+            :row-class-name="rowClassName"
             :custom-row="customRow"
             size="small"
             class="fund-table"
@@ -46,9 +47,8 @@
               <a-descriptions-item label="基金类型">
                 <a-tag color="blue">{{ selectedFund.fundType }}</a-tag>
               </a-descriptions-item>
-              <a-descriptions-item label="拼音缩写">{{ selectedFund.pinyinAbbr }}</a-descriptions-item>
-              <a-descriptions-item label="拼音全称">{{ selectedFund.pinyinFull }}</a-descriptions-item>
             </a-descriptions>
+            <FundNetValueChart :fundCode="selectedFund.fundCode" />
           </template>
           <template v-else>
             <div style="display: flex; justify-content: center; align-items: center; min-height: 400px; height: 100%;">
@@ -65,6 +65,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { getFundPage } from '@/api/fund'
 import type { FundInfoPageReqVO, FundInfoVO } from '@/api/fund'
+import FundNetValueChart from './components/FundNetValueChart.vue'
 
 const loading = ref(false)
 const dataList = ref<FundInfoVO[]>([])
@@ -75,7 +76,7 @@ const queryParams = reactive<FundInfoPageReqVO>({
   size: 15,
   fundName: '',
   fundCode: '',
-  includeUsStock: false
+  includeUsStock: true
 })
 
 const pagination = reactive({
@@ -102,10 +103,11 @@ const loadData = async () => {
     if (res.data && res.data.success && res.data.data) {
       dataList.value = res.data.data.content
       pagination.total = res.data.data.totalElements
-      // 如果需要，可以在加载后自动选中第一条
-      // if (!selectedFund.value && dataList.value.length > 0) {
-      //   selectedFund.value = dataList.value[0]
-      // }
+      if (dataList.value.length > 0) {
+        selectedFund.value = dataList.value[0] ?? null
+      } else {
+        selectedFund.value = null
+      }
     }
   } catch (error) {
     console.error('Failed to load fund data:', error)
@@ -133,16 +135,21 @@ const handleTableChange = (pag: any) => {
   loadData()
 }
 
+const getRowKey = (record: FundInfoVO) => record.id
+
 const customRow = (record: FundInfoVO) => {
   return {
     onClick: () => {
       selectedFund.value = record
     },
     style: {
-      cursor: 'pointer',
-      backgroundColor: selectedFund.value?.id === record.id ? 'var(--ant-primary-1)' : undefined
+      cursor: 'pointer'
     }
   }
+}
+
+const rowClassName = (record: FundInfoVO) => {
+  return selectedFund.value?.id === record.id ? 'fund-table-row-selected' : ''
 }
 
 onMounted(() => {
@@ -183,9 +190,20 @@ onMounted(() => {
   width: 100%;
 }
 .fund-table :deep(.ant-table-row) {
-  transition: background-color 0.3s;
+  transition: none;
 }
 .fund-table :deep(.ant-table-row:hover) {
   background-color: #fafafa;
+}
+.fund-table :deep(.ant-table-tbody > tr.fund-table-row-selected > td),
+.fund-table :deep(.ant-table-tbody > tr.fund-table-row-selected:hover > td),
+.fund-table :deep(.ant-table-tbody > tr.fund-table-row-selected > td.ant-table-cell-row-hover) {
+  background: #f3f3f3 !important;
+  color: #1f2d3d;
+  font-weight: 600;
+  transition: none !important;
+}
+.fund-table :deep(.fund-table-row-selected > td:first-child) {
+  box-shadow: inset 3px 0 0 #6f6f6f;
 }
 </style>
