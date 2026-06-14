@@ -95,7 +95,8 @@ const pagination = reactive({
   current: 1,
   pageSize: 10,
   total: 0,
-  showSizeChanger: true
+  showSizeChanger: true,
+  showTotal: (total: number) => `共 ${total} 条`
 })
 
 const columns = [
