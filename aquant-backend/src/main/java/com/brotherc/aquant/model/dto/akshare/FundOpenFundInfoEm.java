@@ -9,9 +9,9 @@ import java.math.BigDecimal;
 public class FundOpenFundInfoEm {
 
     /**
-     * 净值日期
+     * 净值日期，格式例如：2026-06-11T00:00:00.000
      */
-    @JsonProperty("净值日期，格式例如：2026-06-11T00:00:00.000")
+    @JsonProperty("净值日期")
     private String navDate;
 
     /**

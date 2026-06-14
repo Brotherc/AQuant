@@ -32,7 +32,7 @@ public class StockFundNetValue {
      * 净值日期
      */
     @Column(name = "nav_date")
-    private String navDate;
+    private LocalDateTime navDate;
 
     /**
      * 单位净值
