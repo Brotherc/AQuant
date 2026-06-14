@@ -1,11 +1,5 @@
 <template>
-  <a-drawer
-    :title="`个股历史行情 - ${stockName} (${stockCode})`"
-    width="1200"
-    :visible="visible"
-    @close="handleClose"
-    destroy-on-close
-  >
+  <div v-if="stockCode">
     <div class="mb-2" style="display: flex; justify-content: flex-start;">
       <a-radio-group v-model:value="frequency" @change="fetchHistory" size="small">
         <a-radio-button value="1d">日K</a-radio-button>
@@ -16,31 +10,25 @@
       </a-radio-group>
     </div>
     <div ref="chartContainer" style="width: 100%; height: 700px"></div>
-  </a-drawer>
+  </div>
+  <a-empty v-else description="请选择股票查看详情" style="margin-top: 100px;" />
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, onUnmounted } from 'vue';
+import { ref, watch, nextTick, onUnmounted, onMounted } from 'vue';
 import * as echarts from 'echarts';
 import { getStockHistory, type StockQuoteHistory } from '@/api/stock';
 import { chartTooltipTheme } from '@/utils/chartTheme';
 
 const props = defineProps<{
-  visible: boolean;
   stockCode: string;
   stockName: string;
 }>();
-
-const emit = defineEmits(['update:visible']);
 
 const frequency = ref('1d');
 const chartContainer = ref<HTMLElement>();
 let chartInstance: echarts.ECharts | null = null;
 let resizeObserver: ResizeObserver | null = null;
-
-const handleClose = () => {
-  emit('update:visible', false);
-};
 
 const initChart = () => {
   if (chartContainer.value) {
@@ -334,26 +322,26 @@ const renderChart = (data: StockQuoteHistory[]) => {
 };
 
 watch(
-  () => props.visible,
-  (val) => {
-    if (val) {
+  () => props.stockCode,
+  (newVal) => {
+    if (newVal) {
       frequency.value = '1d';
       nextTick(() => {
         initChart();
         fetchHistory();
       });
-    } else {
-        if (resizeObserver) {
-          resizeObserver.disconnect();
-          resizeObserver = null;
-        }
-        if (chartInstance) {
-          chartInstance.dispose();
-          chartInstance = null;
-        }
     }
   }
 );
+
+onMounted(() => {
+  if (props.stockCode) {
+    nextTick(() => {
+      initChart();
+      fetchHistory();
+    });
+  }
+});
 
 onUnmounted(() => {
   if (resizeObserver) {

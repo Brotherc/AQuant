@@ -1,96 +1,100 @@
 <template>
   <div class="stock-data-container">
     
-    <!-- 搜索表单与工具栏 -->
-    <a-card style="margin-bottom: 16px">
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px">
-        <!-- 左侧：刷新操作 -->
-        <div style="display: flex; align-items: center">
-          <a-button type="primary" ghost @click="handleRefresh" :loading="refreshLoading">刷新</a-button>
-          <div v-if="lastRefreshTime" class="page-sync-meta refresh-time">
-            <span class="page-sync-meta__label">最后同步时间</span>
-            <span class="page-sync-meta__value">{{ lastRefreshTime }}</span>
-          </div>
-        </div>
-
-        <!-- 右侧：原有查询条件 -->
-        <a-form
-          layout="inline"
-          :model="searchParams"
-          @finish="handleSearch"
-          class="stock-data-search-form"
-        >
-          <a-form-item label="股票代码">
-            <a-input v-model:value="searchParams.code" placeholder="输入代码" allow-clear style="width: 140px" />
-          </a-form-item>
-          <a-form-item label="股票名称">
-            <a-input v-model:value="searchParams.name" placeholder="输入名称" allow-clear style="width: 140px" />
-          </a-form-item>
-          <a-form-item label="最新价范围">
-            <div class="price-range-group">
-              <a-input-number
-                v-model:value="searchParams.latestPriceMin"
-                class="price-range-input"
-                placeholder="最小"
-                :min="0"
-              />
-              <span class="price-range-separator">~</span>
-              <a-input-number
-                v-model:value="searchParams.latestPriceMax"
-                class="price-range-input"
-                placeholder="最大"
-                :min="0"
-              />
+    <a-row :gutter="16">
+      <a-col :span="11">
+        <!-- 搜索表单与列表 -->
+        <a-card style="height: 100%;" title="股票列表">
+          <template #extra>
+            <div style="display: flex; align-items: center; gap: 12px; font-weight: normal; font-size: 14px;">
+              <div v-if="lastRefreshTime" class="page-sync-meta refresh-time" style="margin-left: 0;">
+                <span class="page-sync-meta__label">最后同步时间:</span>
+                <span class="page-sync-meta__value">{{ lastRefreshTime }}</span>
+              </div>
+              <a-button type="primary" ghost @click="handleRefresh" :loading="refreshLoading" size="small" title="刷新">
+                <template #icon><SyncOutlined /></template>
+              </a-button>
             </div>
-          </a-form-item>
-          <a-form-item class="stock-data-search-actions">
-            <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
-            <a-button type="primary" ghost style="margin-left: 8px" @click="resetSearch">重置</a-button>
-          </a-form-item>
-        </a-form>
-      </div>
-    </a-card>
+          </template>
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
+            <!-- 右侧：查询条件 -->
+            <a-form
+              layout="inline"
+              :model="searchParams"
+              @finish="handleSearch"
+              class="stock-data-search-form"
+              style="flex: auto; display: flex; flex-wrap: wrap;"
+            >
+              <a-form-item label="股票代码">
+                <a-input v-model:value="searchParams.code" placeholder="输入代码" allow-clear style="width: 140px" />
+              </a-form-item>
+              <a-form-item label="股票名称">
+                <a-input v-model:value="searchParams.name" placeholder="输入名称" allow-clear style="width: 140px" />
+              </a-form-item>
+              <a-form-item class="stock-data-search-actions" style="margin-left: auto; margin-right: 0;">
+                <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
+                <a-button type="primary" ghost style="margin-left: 8px" @click="resetSearch">重置</a-button>
+              </a-form-item>
+            </a-form>
+          </div>
+          
+          <!-- 数据表格 -->
+          <a-table
+            :columns="columns"
+            :data-source="dataSource"
+            :pagination="pagination"
+            :loading="loading"
+            @change="handleTableChange"
+            row-key="id"
+            :custom-row="customRow"
+            :row-class-name="rowClassName"
+            :scroll="pagination.pageSize <= 20 ? { x: 'max-content' } : { x: 'max-content', y: 760 }" 
+            size="small"
+            class="stock-table"
+          >
+            <template #bodyCell="{ column, record }">
+              <template v-if="column.dataIndex === 'code'">
+                <a-tag class="stock-code-tag">{{ record.code }}</a-tag>
+              </template>
+              <template v-if="column.dataIndex === 'changePercent'">
+                <span :class="['change-value', record.changePercent > 0 ? 'price-up' : record.changePercent < 0 ? 'price-down' : '']">
+                  {{ record.changePercent > 0 ? '+' : '' }}{{ record.changePercent }}%
+                </span>
+              </template>
+            </template>
+          </a-table>
+        </a-card>
+      </a-col>
 
-    <!-- 数据表格 -->
-    <a-card>
-      <a-table
-        :columns="columns"
-        :data-source="dataSource"
-        :pagination="pagination"
-        :loading="loading"
-        @change="handleTableChange"
-        row-key="id"
-        :scroll="{ x: 1800 }" 
-      >
-        <template #bodyCell="{ column, record }">
-          <template v-if="column.dataIndex === 'code'">
-            <a-tag class="stock-code-tag">{{ record.code }}</a-tag>
+      <a-col :span="13">
+        <!-- 图表与详情 -->
+        <a-card :title="currentStockName ? `股票详情 - ${currentStockName}` : '股票详情'" style="height: 100%;">
+          <template #extra>
+            <a-button type="primary" @click="showAddWatchlist" :disabled="!selectedStock">加入自选</a-button>
           </template>
-          <template v-if="column.dataIndex === 'changePercent'">
-            <span :class="['change-value', record.changePercent > 0 ? 'price-up' : record.changePercent < 0 ? 'price-down' : '']">
-              {{ record.changePercent > 0 ? '+' : '' }}{{ record.changePercent }}%
-            </span>
-          </template>
-           <template v-if="column.dataIndex === 'changeAmount'">
-            <span :class="['change-value', record.changeAmount > 0 ? 'price-up' : record.changeAmount < 0 ? 'price-down' : '']">
-              {{ record.changeAmount > 0 ? '+' : '' }}{{ record.changeAmount }}
-            </span>
-          </template>
-          <template v-if="column.dataIndex === 'operation'">
-            <a-space>
-              <a @click="handleChart(record)">行情</a>
-              <a @click="showAddWatchlist(record)">加入自选</a>
-            </a-space>
-          </template>
-        </template>
-      </a-table>
-    </a-card>
-
-    <StockHistoryChart
-      v-model:visible="chartVisible"
-      :stockCode="currentStockCode"
-      :stockName="currentStockName"
-    />
+          <div v-if="selectedStock" style="margin-bottom: 24px;">
+            <a-descriptions bordered :column="3" size="small">
+              <a-descriptions-item label="涨跌额">
+                <span :class="['change-value', selectedStock.changeAmount > 0 ? 'price-up' : selectedStock.changeAmount < 0 ? 'price-down' : '']">
+                  {{ selectedStock.changeAmount > 0 ? '+' : '' }}{{ selectedStock.changeAmount }}
+                </span>
+              </a-descriptions-item>
+              <a-descriptions-item label="成交量">{{ selectedStock.volume }}</a-descriptions-item>
+              <a-descriptions-item label="成交额">{{ selectedStock.turnover }}</a-descriptions-item>
+              <a-descriptions-item label="昨收">{{ selectedStock.prevClose }}</a-descriptions-item>
+              <a-descriptions-item label="今开">{{ selectedStock.openPrice }}</a-descriptions-item>
+              <a-descriptions-item label="最高">{{ selectedStock.highPrice }}</a-descriptions-item>
+              <a-descriptions-item label="最低">{{ selectedStock.lowPrice }}</a-descriptions-item>
+              <a-descriptions-item label="时间">{{ selectedStock.quoteTime }}</a-descriptions-item>
+            </a-descriptions>
+          </div>
+          <StockHistoryChart
+            :stockCode="currentStockCode"
+            :stockName="currentStockName"
+          />
+        </a-card>
+      </a-col>
+    </a-row>
 
     <!-- 加入自选模态框 -->
     <a-modal
@@ -119,15 +123,16 @@ import { getWatchlistGroups, addStockToWatchlist, type WatchlistGroupVO } from '
 import { message } from 'ant-design-vue';
 import StockHistoryChart from './components/StockHistoryChart.vue';
 import type { TableProps } from 'ant-design-vue';
+import { SyncOutlined } from '@ant-design/icons-vue';
 
 // 刷新状态
 const refreshLoading = ref(false);
 const lastRefreshTime = ref('');
 
-// 图表弹窗
-const chartVisible = ref(false);
+// 图表与选中状态
 const currentStockCode = ref('');
 const currentStockName = ref('');
+const selectedStock = ref<StockQuoteVO | null>(null);
 
 // 搜索参数
 const searchParams = reactive<StockQuotePageReqVO>({
@@ -142,7 +147,8 @@ const loading = ref(false);
 const dataSource = ref<StockQuoteVO[]>([]);
 const pagination = reactive({
   current: 1,
-  pageSize: 10,
+  pageSize: 20,
+  pageSizeOptions: ['20', '50', '100', '200'],
   total: 0,
   showSizeChanger: true,
   showQuickJumper: true,
@@ -151,21 +157,11 @@ const pagination = reactive({
 // 默认按涨跌幅降序
 const sortState = ref<string[]>(['changePercent,desc']);
 
-// 列定义
 const columns: TableProps['columns'] = [
-  { title: '代码', dataIndex: 'code', fixed: 'left', width: 100 },
-  { title: '名称', dataIndex: 'name', fixed: 'left', width: 120 },
+  { title: '代码', dataIndex: 'code', width: 100 },
+  { title: '名称', dataIndex: 'name', width: 120 },
   { title: '最新价', dataIndex: 'latestPrice', sorter: true, showSorterTooltip: false, width: 100 },
-  { title: '涨跌幅', dataIndex: 'changePercent', sorter: true, showSorterTooltip: false, width: 100 },
-  { title: '涨跌额', dataIndex: 'changeAmount', width: 100 },
-  { title: '成交量', dataIndex: 'volume', width: 120 },
-  { title: '成交额', dataIndex: 'turnover', width: 120 },
-  { title: '昨收', dataIndex: 'prevClose', width: 100 },
-  { title: '今开', dataIndex: 'openPrice', width: 100 },
-  { title: '最高', dataIndex: 'highPrice', width: 100 },
-  { title: '最低', dataIndex: 'lowPrice', width: 100 },
-  { title: '时间', dataIndex: 'quoteTime', width: 150 },
-  { title: '操作', dataIndex: 'operation', fixed: 'right', width: 150 },
+  { title: '涨跌幅(%)', dataIndex: 'changePercent', sorter: true, showSorterTooltip: false, width: 100 },
 ];
 
 // 获取最新同步时间
@@ -209,6 +205,15 @@ const fetchData = async (refresh: boolean = false) => {
         const pageResult = data.data; 
         dataSource.value = pageResult.content;
         pagination.total = pageResult.totalElements;
+        if (dataSource.value.length > 0) {
+          selectedStock.value = dataSource.value[0] || null;
+          currentStockCode.value = dataSource.value[0]?.code || '';
+          currentStockName.value = dataSource.value[0]?.name || '';
+        } else {
+          selectedStock.value = null;
+          currentStockCode.value = '';
+          currentStockName.value = '';
+        }
     }
   } catch (error) {
     console.error('Failed to fetch stock data:', error);
@@ -255,7 +260,10 @@ const targetGroupId = ref<number | undefined>(undefined);
 const selectedStockCode = ref('');
 const watchlistGroups = ref<WatchlistGroupVO[]>([]);
 
-const showAddWatchlist = (record: StockQuoteVO) => {
+const showAddWatchlist = () => {
+  const record = selectedStock.value;
+  if (!record || !record.code) return;
+  
   selectedStockCode.value = record.code;
   targetGroupId.value = undefined;
   watchlistVisible.value = true;
@@ -285,11 +293,19 @@ const handleConfirmAdd = async () => {
 };
 
 
+const rowClassName = (record: StockQuoteVO) => {
+  return selectedStock.value?.id === record.id ? 'stock-table-row-selected' : '';
+};
 
-const handleChart = (record: StockQuoteVO) => {
-  currentStockCode.value = record.code;
-  currentStockName.value = record.name;
-  chartVisible.value = true;
+const customRow = (record: StockQuoteVO) => {
+  return {
+    onClick: () => {
+      selectedStock.value = record;
+      currentStockCode.value = record.code;
+      currentStockName.value = record.name;
+    },
+    style: { cursor: 'pointer' }
+  };
 };
 
 onMounted(async () => {
@@ -360,5 +376,20 @@ onMounted(async () => {
 .change-value {
   font-weight: var(--font-weight-semibold);
   font-size: var(--font-size-sm);
+}
+
+.stock-table :deep(.ant-table-row:hover) {
+  background-color: #fafafa;
+}
+.stock-table :deep(.ant-table-tbody > tr.stock-table-row-selected > td),
+.stock-table :deep(.ant-table-tbody > tr.stock-table-row-selected:hover > td),
+.stock-table :deep(.ant-table-tbody > tr.stock-table-row-selected > td.ant-table-cell-row-hover) {
+  background: #f3f3f3 !important;
+  color: #1f2d3d;
+  font-weight: 600;
+  transition: none !important;
+}
+.stock-table :deep(.stock-table-row-selected > td:first-child) {
+  box-shadow: inset 3px 0 0 #6f6f6f;
 }
 </style>

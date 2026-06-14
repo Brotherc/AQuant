@@ -239,11 +239,17 @@
       </div>
     </a-drawer>
     
-    <StockHistoryChart
+    <a-drawer
+      :title="`个股历史行情 - ${currentStockName} (${currentStockCode})`"
+      width="1200"
       v-model:visible="chartVisible"
-      :stockCode="currentStockCode"
-      :stockName="currentStockName"
-    />
+      destroy-on-close
+    >
+      <StockHistoryChart
+        :stockCode="currentStockCode"
+        :stockName="currentStockName"
+      />
+    </a-drawer>
   </div>
 </template>
 
