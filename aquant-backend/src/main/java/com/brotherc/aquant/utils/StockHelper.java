@@ -7,11 +7,14 @@ import org.springframework.stereotype.Component;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
 
 @Component
 @RequiredArgsConstructor
 public class StockHelper {
+
+    private static final LocalTime A_SHARE_CLOSE_TIME = LocalTime.of(15, 0);
 
     private final StockTradeCalendarRepository stockTradeCalendarRepository;
 
@@ -45,6 +48,25 @@ public class StockHelper {
             safeDate = safeDate.minusDays(1);
         }
         return safeDate;
+    }
+
+    /**
+     * 获取当前时间点已经完整收盘的最近交易日。
+     */
+    public LocalDate latestClosedTradeDay(LocalDateTime dateTime) {
+        LocalDate date = dateTime.toLocalDate();
+        if (isTradeDay(date) && dateTime.toLocalTime().isBefore(A_SHARE_CLOSE_TIME)) {
+            return latestTradeDayFallback(date.minusDays(1));
+        }
+        return latestTradeDayFallback(date);
+    }
+
+    /**
+     * 实时行情是否已经可以作为最近交易日的日 K 使用。
+     */
+    public boolean isClosedDailyQuoteAvailable(LocalDateTime dateTime) {
+        LocalDate date = dateTime.toLocalDate();
+        return !isTradeDay(date) || !dateTime.toLocalTime().isBefore(A_SHARE_CLOSE_TIME);
     }
 
     public boolean checkIsStartSync(Long lastTimestamp) {

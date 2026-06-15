@@ -35,8 +35,13 @@ public class StockQuoteHistoryService {
             return;
         }
 
-        // 获取最新的交易日期
-        String tradeDate = stockHelper.latestTradeDayFallback(LocalDate.now()).toString();
+        if (!stockHelper.isClosedDailyQuoteAvailable(now)) {
+            log.info("当前交易日尚未收盘，跳过实时行情写入日 K，time={}", now);
+            return;
+        }
+
+        // 获取最近已收盘交易日
+        String tradeDate = stockHelper.latestClosedTradeDay(now).toString();
 
         // 提取所有股票代码；如果上游异常返回重复代码，保留最后一条行情。
         Map<String, StockZhASpot> spotMap = new LinkedHashMap<>();
