@@ -332,6 +332,25 @@ public class StockSyncService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    public void stockBoardIndustryLatest(
+            List<StockBoardIndustrySummaryThs> stockBoardList, StockSync stocBoardSync, long timestamp
+    ) {
+        if (!CollectionUtils.isEmpty(stockBoardList)) {
+            LocalDateTime now = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime();
+            stockIndustryBoardService.save(stockBoardList, now);
+            save(stocBoardSync, StockSyncConstant.STOCK_BOARD_INDUSTRY_LATEST, timestamp);
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void stockBoardIndustryHistory(String boardName, List<StockBoardIndustryIndexThs> stockBoardDetailList, long timestamp) {
+        if (!CollectionUtils.isEmpty(stockBoardDetailList)) {
+            LocalDateTime now = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime();
+            stockIndustryBoardHistoryService.save(boardName, stockBoardDetailList, now);
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
     public void stockIndustryBoardHistory(String boardName, String startDate, String endDate) {
         List<StockBoardIndustryIndexThs> list = aKShareService.stockBoardIndustryIndexThs(boardName, startDate, endDate);
         if (CollectionUtils.isEmpty(list)) {
