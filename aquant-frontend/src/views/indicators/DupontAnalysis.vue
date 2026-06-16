@@ -1,102 +1,93 @@
 <template>
   <div class="dupont-analysis-container">
-    <!-- Search Form -->
-    <a-card style="margin-bottom: 16px">
-      <a-form
-        layout="inline"
-        :model="searchParams"
-        @finish="handleSearch"
-        class="dupont-search-form"
-      >
-        <a-form-item label="股票代码">
-          <a-input v-model:value="searchParams.stockCode" placeholder="输入代码" allow-clear style="width: 120px" />
-        </a-form-item>
-        <a-form-item label="ROE-3年平均">
-          <div style="display: flex; align-items: center; gap: 8px">
-            <a-input-number v-model:value="searchParams.roe3yAvgMin" placeholder="最小" style="width: 80px" />
-            <span style="color: var(--color-text-secondary)">~</span>
-            <a-input-number v-model:value="searchParams.roe3yAvgMax" placeholder="最大" style="width: 80px" />
+    <a-row :gutter="16">
+      <a-col :span="13">
+        <!-- 搜索表单与列表 -->
+        <a-card style="height: 100%; margin-bottom: 0;" title="杜邦分析列表">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
+            <a-form
+              layout="inline"
+              :model="searchParams"
+              @finish="handleSearch"
+              class="dupont-search-form"
+              style="width: 100%; display: flex; flex-wrap: wrap;"
+            >
+              <a-form-item label="代码">
+                <a-input v-model:value="searchParams.stockCode" placeholder="输入代码" allow-clear style="width: 100px" />
+              </a-form-item>
+              <a-form-item label="ROE-3年平均">
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <a-input-number v-model:value="searchParams.roe3yAvgMin" placeholder="最小" style="width: 70px" />
+                  <span style="color: var(--color-text-secondary)">~</span>
+                  <a-input-number v-model:value="searchParams.roe3yAvgMax" placeholder="最大" style="width: 70px" />
+                </div>
+              </a-form-item>
+              <a-form-item>
+                <a-checkbox v-model:checked="searchParams.roeHigherThanIndustryAvg">高于行业平均ROE</a-checkbox>
+              </a-form-item>
+              <a-form-item class="indicator-search-form-actions" style="margin-left: auto; margin-right: 0;">
+                <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
+                <a-button type="primary" ghost style="margin-left: 8px" @click="resetSearch">重置</a-button>
+              </a-form-item>
+            </a-form>
           </div>
-        </a-form-item>
-        <a-form-item>
-          <a-checkbox v-model:checked="searchParams.roeHigherThanIndustryAvg">高于行业平均ROE</a-checkbox>
-        </a-form-item>
-        <a-form-item class="indicator-search-form-actions">
-          <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
-          <a-button type="primary" ghost @click="resetSearch">重置</a-button>
-        </a-form-item>
-      </a-form>
-    </a-card>
 
-    <!-- Data Table -->
-    <a-card>
-      <a-table
-        :columns="columns"
-        :data-source="dataSource"
-        :loading="loading"
-        :pagination="pagination"
-        @change="handleTableChange"
-        row-key="id"
-        :scroll="{ x: 1670 }"
-        :expandable="{ columnWidth: 50 }"
-      >
+          <!-- 数据表格 -->
+          <a-table
+            :columns="columns"
+            :data-source="dataSource"
+            :loading="loading"
+            :pagination="pagination"
+            @change="handleTableChange"
+            row-key="id"
+            :custom-row="customRow"
+            :row-class-name="rowClassName"
+            :scroll="pagination.pageSize <= 15 ? { x: 'max-content' } : { x: 'max-content', y: 595 }" 
+            size="small"
+            class="dupont-table"
+          >
+            <template #headerCell="{ column }">
+              <template v-if="column.dataIndex === 'roe3yAvgRank'">
+                 <span style="color: var(--color-text-secondary)">排名</span>
+              </template>
+            </template>
+            <template #bodyCell="{ column, text, record }">
+              <template v-if="column.dataIndex === 'stockCode'">
+                <a-tag class="stock-code-tag">{{ text }}</a-tag>
+              </template>
+              <template v-else-if="['roeLastYA', 'netMarginLastYA'].includes(column.dataIndex as string)">
+                <span>{{ text != null ? text + '%' : '-' }}</span>
+              </template>
+              <template v-else-if="['assetTurnoverLastYA', 'equityMultiplierLastYA'].includes(column.dataIndex as string)">
+                <span>{{ text != null ? text : '-' }}</span>
+              </template>
+            </template>
+          </a-table>
+        </a-card>
+      </a-col>
 
-        <template #headerCell="{ column }">
-          <template v-if="column.dataIndex === 'roe3yAvgRank'">
-             <span style="color: var(--color-text-secondary)">排名</span>
+      <a-col :span="11">
+        <!-- 详情与行业对比 -->
+        <a-card :title="selectedStock ? `${selectedStock.stockName} - 杜邦分析对比` : '杜邦分析对比'" style="height: 100%;">
+          <template #extra>
+            <a-button type="primary" @click="showAddWatchlist" :disabled="!selectedStock">加入自选</a-button>
           </template>
-        </template>
-        <template #bodyCell="{ column, text, record }">
-          <template v-if="column.dataIndex === 'stockCode'">
-            <a-tag class="stock-code-tag">{{ text }}</a-tag>
-          </template>
-          <template v-else-if="[
-            'roe3yAvg', 'roeLastYA', 'roeLast2yA', 'roeLast3yA',
-            'netMargin3yAvg', 'netMarginLastYA', 'netMarginLast2yA', 'netMarginLast3yA'
-          ].includes(column.dataIndex as string)">
-            <span>{{ text != null ? text + '%' : '-' }}</span>
-          </template>
-          <template v-else-if="[
-            'assetTurnover3yAvg', 'assetTurnoverLastYA', 'assetTurnoverLast2yA', 'assetTurnoverLast3yA',
-            'equityMultiplier3yAvg', 'equityMultiplierLastYA', 'equityMultiplierLast2yA', 'equityMultiplierLast3yA'
-          ].includes(column.dataIndex as string)">
-            <span>{{ text != null ? text : '-' }}</span>
-          </template>
-          <template v-else-if="column.key === 'operation'">
-            <a @click="showAddWatchlist(record)">加入自选</a>
-          </template>
-        </template>
-
-        <!-- 展开行：行业对比数据 -->
-        <template #expandedRowRender="{ record }">
-          <div class="industry-compare-panel dupont-industry-panel">
-            <div v-for="row in getIndustryRows(record)" :key="row.key" class="industry-compare-row">
-              <span class="industry-compare-cell"></span>
-              <span class="industry-compare-cell"></span>
-              <span class="industry-compare-cell"></span>
-              <span class="industry-compare-cell industry-compare-label">{{ row.label }}</span>
-              <span class="industry-compare-cell">{{ formatPercent(row.roe3yAvg) }}</span>
-              <span class="industry-compare-cell">{{ formatPercent(row.roeLast3yA) }}</span>
-              <span class="industry-compare-cell">{{ formatPercent(row.roeLast2yA) }}</span>
-              <span class="industry-compare-cell">{{ formatPercent(row.roeLastYA) }}</span>
-              <span class="industry-compare-cell">{{ formatPercent(row.netMargin3yAvg) }}</span>
-              <span class="industry-compare-cell">{{ formatPercent(row.netMarginLast3yA) }}</span>
-              <span class="industry-compare-cell">{{ formatPercent(row.netMarginLast2yA) }}</span>
-              <span class="industry-compare-cell">{{ formatPercent(row.netMarginLastYA) }}</span>
-              <span class="industry-compare-cell">{{ formatValue(row.assetTurnover3yAvg) }}</span>
-              <span class="industry-compare-cell">{{ formatValue(row.assetTurnoverLast3yA) }}</span>
-              <span class="industry-compare-cell">{{ formatValue(row.assetTurnoverLast2yA) }}</span>
-              <span class="industry-compare-cell">{{ formatValue(row.assetTurnoverLastYA) }}</span>
-              <span class="industry-compare-cell">{{ formatValue(row.equityMultiplier3yAvg) }}</span>
-              <span class="industry-compare-cell">{{ formatValue(row.equityMultiplierLast3yA) }}</span>
-              <span class="industry-compare-cell">{{ formatValue(row.equityMultiplierLast2yA) }}</span>
-              <span class="industry-compare-cell">{{ formatValue(row.equityMultiplierLastYA) }}</span>
-              <span class="industry-compare-cell"></span>
-            </div>
+          <div v-if="selectedStock">
+            <a-table
+              :columns="detailColumns"
+              :data-source="detailTableData"
+              :pagination="false"
+              size="small"
+              bordered
+              class="detail-table"
+              :row-class-name="detailRowClassName"
+            >
+            </a-table>
           </div>
-        </template>
-      </a-table>
-    </a-card>
+          <a-empty v-else description="请选择股票查看对比详情" style="margin-top: 100px;" />
+        </a-card>
+      </a-col>
+    </a-row>
 
     <!-- 加入自选模态框 -->
     <a-modal
@@ -119,7 +110,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { getDupontAnalysisPage, type StockDupontAnalysis, type DupontAnalysisPageReqVO } from '@/api/indicator';
 import { getWatchlistGroups, addStockToWatchlist, type WatchlistGroupVO } from '@/api/watchlist';
 import { message } from 'ant-design-vue';
@@ -127,100 +118,66 @@ import { type TableProps } from 'ant-design-vue';
 
 const loading = ref(false);
 const dataSource = ref<StockDupontAnalysis[]>([]);
+const selectedStock = ref<StockDupontAnalysis | null>(null);
 
 const formatPercent = (val: any) => val != null ? `${val}%` : '-';
 const formatValue = (val: any) => val != null ? val : '-';
 
 const columns: TableProps['columns'] = [
-  { title: '排名', dataIndex: 'roe3yAvgRank', sorter: true, width: 120 },
-  { title: '代码', dataIndex: 'stockCode', width: 100 },
-  { title: '名称', dataIndex: 'stockName', width: 140 },
-  {
-    title: 'ROE(%)',
-    children: [
-      { title: '3年平均', dataIndex: 'roe3yAvg', sorter: true, defaultSortOrder: 'descend', width: 110 },
-      { title: '23A', dataIndex: 'roeLast3yA', width: 90 },
-      { title: '24A', dataIndex: 'roeLast2yA', width: 90 },
-      { title: '25A', dataIndex: 'roeLastYA', sorter: true, width: 90 },
-    ],
-  },
-  {
-    title: '净利率(%)',
-    children: [
-      { title: '3年平均', dataIndex: 'netMargin3yAvg', width: 110 },
-      { title: '23A', dataIndex: 'netMarginLast3yA', width: 90 },
-      { title: '24A', dataIndex: 'netMarginLast2yA', width: 90 },
-      { title: '25A', dataIndex: 'netMarginLastYA', width: 90 },
-    ],
-  },
-
-  {
-    title: '资产周转率',
-    children: [
-      { title: '3年平均', dataIndex: 'assetTurnover3yAvg', width: 110 },
-      { title: '23A', dataIndex: 'assetTurnoverLast3yA', width: 90 },
-      { title: '24A', dataIndex: 'assetTurnoverLast2yA', width: 90 },
-      { title: '25A', dataIndex: 'assetTurnoverLastYA', width: 90 },
-    ]
-  },
-  {
-    title: '权益乘数',
-    children: [
-      { title: '3年平均', dataIndex: 'equityMultiplier3yAvg', width: 110 },
-      { title: '23A', dataIndex: 'equityMultiplierLast3yA', width: 90 },
-      { title: '24A', dataIndex: 'equityMultiplierLast2yA', width: 90 },
-      { title: '25A', dataIndex: 'equityMultiplierLastYA', width: 90 },
-    ]
-  },
-  { title: '操作', key: 'operation', width: 100 },
+  { title: '排名', dataIndex: 'roe3yAvgRank', sorter: true, width: 80 },
+  { title: '代码', dataIndex: 'stockCode', width: 80 },
+  { title: '名称', dataIndex: 'stockName', width: 100 },
+  { title: 'ROE(%)', dataIndex: 'roeLastYA', sorter: true, width: 90 },
+  { title: '净利率(%)', dataIndex: 'netMarginLastYA', width: 90 },
+  { title: '资产周转率', dataIndex: 'assetTurnoverLastYA', width: 100 },
+  { title: '权益乘数', dataIndex: 'equityMultiplierLastYA', width: 100 },
 ];
 
-// 获取子列表数据
-const getIndustryRows = (record: StockDupontAnalysis) => {
-  return [
-    {
-      key: 'avg',
-      label: '行业平均',
-      roe3yAvg: record.roe3yAvgIndustryAvg,
-      roeLastYA: record.roeLastYAIndustryAvg,
-      roeLast2yA: record.roeLast2yAIndustryAvg,
-      roeLast3yA: record.roeLast3yAIndustryAvg,
-      netMargin3yAvg: record.netMargin3yAvgIndustryAvg,
-      netMarginLastYA: record.netMarginLastYAIndustryAvg,
-      netMarginLast2yA: record.netMarginLast2yAIndustryAvg,
-      netMarginLast3yA: record.netMarginLast3yAIndustryAvg,
-      assetTurnover3yAvg: record.assetTurnover3yAvgIndustryAvg,
-      assetTurnoverLastYA: record.assetTurnoverLastYAIndustryAvg,
-      assetTurnoverLast2yA: record.assetTurnoverLast2yAIndustryAvg,
-      assetTurnoverLast3yA: record.assetTurnoverLast3yAIndustryAvg,
-      equityMultiplier3yAvg: record.equityMultiplier3yAvgIndustryAvg,
-      equityMultiplierLastYA: record.equityMultiplierLastYAIndustryAvg,
-      equityMultiplierLast2yA: record.equityMultiplierLast2yAIndustryAvg,
-      equityMultiplierLast3yA: record.equityMultiplierLast3yAIndustryAvg,
-    },
-    {
-      key: 'med',
-      label: '行业中值',
-      roe3yAvg: record.roe3yAvgIndustryMed,
-      roeLastYA: record.roeLastYAIndustryMed,
-      roeLast2yA: record.roeLast2yAIndustryMed,
-      roeLast3yA: record.roeLast3yAIndustryMed,
-      netMargin3yAvg: record.netMargin3yAvgIndustryMed,
-      netMarginLastYA: record.netMarginLastYAIndustryMed,
-      netMarginLast2yA: record.netMarginLast2yAIndustryMed,
-      netMarginLast3yA: record.netMarginLast3yAIndustryMed,
-      assetTurnover3yAvg: record.assetTurnover3yAvgIndustryMed,
-      assetTurnoverLastYA: record.assetTurnoverLastYAIndustryMed,
-      assetTurnoverLast2yA: record.assetTurnoverLast2yAIndustryMed,
-      assetTurnoverLast3yA: record.assetTurnoverLast3yAIndustryMed,
-      equityMultiplier3yAvg: record.equityMultiplier3yAvgIndustryMed,
-      equityMultiplierLastYA: record.equityMultiplierLastYAIndustryMed,
-      equityMultiplierLast2yA: record.equityMultiplierLast2yAIndustryMed,
-      equityMultiplierLast3yA: record.equityMultiplierLast3yAIndustryMed,
+const detailColumns: TableProps['columns'] = [
+  { 
+    title: '分析指标', 
+    dataIndex: 'metric',
+    customCell: (_, index) => {
+      if (index === 0 || index === 4 || index === 8) {
+        return { rowSpan: 4, class: 'metric-group-start-cell' };
+      }
+      if (index === 12) {
+        return { rowSpan: 4 };
+      }
+      return { rowSpan: 0 };
     }
-  ];
-};
+  },
+  { title: '期间', dataIndex: 'period' },
+  { title: '个股数据', dataIndex: 'stockValue' },
+  { title: '行业平均', dataIndex: 'industryAvg' },
+  { title: '行业中值', dataIndex: 'industryMed' },
+];
 
+const detailTableData = computed(() => {
+  if (!selectedStock.value) return [];
+  const s = selectedStock.value;
+  return [
+    { key: 'roe_25A', metric: 'ROE(%)', period: '25A', stockValue: formatPercent(s.roeLastYA), industryAvg: formatPercent(s.roeLastYAIndustryAvg), industryMed: formatPercent(s.roeLastYAIndustryMed) },
+    { key: 'roe_24A', metric: 'ROE(%)', period: '24A', stockValue: formatPercent(s.roeLast2yA), industryAvg: formatPercent(s.roeLast2yAIndustryAvg), industryMed: formatPercent(s.roeLast2yAIndustryMed) },
+    { key: 'roe_23A', metric: 'ROE(%)', period: '23A', stockValue: formatPercent(s.roeLast3yA), industryAvg: formatPercent(s.roeLast3yAIndustryAvg), industryMed: formatPercent(s.roeLast3yAIndustryMed) },
+    { key: 'roe_3y', metric: 'ROE(%)', period: '3年平均', stockValue: formatPercent(s.roe3yAvg), industryAvg: formatPercent(s.roe3yAvgIndustryAvg), industryMed: formatPercent(s.roe3yAvgIndustryMed) },
+
+    { key: 'net_25A', metric: '净利率(%)', period: '25A', stockValue: formatPercent(s.netMarginLastYA), industryAvg: formatPercent(s.netMarginLastYAIndustryAvg), industryMed: formatPercent(s.netMarginLastYAIndustryMed) },
+    { key: 'net_24A', metric: '净利率(%)', period: '24A', stockValue: formatPercent(s.netMarginLast2yA), industryAvg: formatPercent(s.netMarginLast2yAIndustryAvg), industryMed: formatPercent(s.netMarginLast2yAIndustryMed) },
+    { key: 'net_23A', metric: '净利率(%)', period: '23A', stockValue: formatPercent(s.netMarginLast3yA), industryAvg: formatPercent(s.netMarginLast3yAIndustryAvg), industryMed: formatPercent(s.netMarginLast3yAIndustryMed) },
+    { key: 'net_3y', metric: '净利率(%)', period: '3年平均', stockValue: formatPercent(s.netMargin3yAvg), industryAvg: formatPercent(s.netMargin3yAvgIndustryAvg), industryMed: formatPercent(s.netMargin3yAvgIndustryMed) },
+
+    { key: 'ast_25A', metric: '资产周转率', period: '25A', stockValue: formatValue(s.assetTurnoverLastYA), industryAvg: formatValue(s.assetTurnoverLastYAIndustryAvg), industryMed: formatValue(s.assetTurnoverLastYAIndustryMed) },
+    { key: 'ast_24A', metric: '资产周转率', period: '24A', stockValue: formatValue(s.assetTurnoverLast2yA), industryAvg: formatValue(s.assetTurnoverLast2yAIndustryAvg), industryMed: formatValue(s.assetTurnoverLast2yAIndustryMed) },
+    { key: 'ast_23A', metric: '资产周转率', period: '23A', stockValue: formatValue(s.assetTurnoverLast3yA), industryAvg: formatValue(s.assetTurnoverLast3yAIndustryAvg), industryMed: formatValue(s.assetTurnoverLast3yAIndustryMed) },
+    { key: 'ast_3y', metric: '资产周转率', period: '3年平均', stockValue: formatValue(s.assetTurnover3yAvg), industryAvg: formatValue(s.assetTurnover3yAvgIndustryAvg), industryMed: formatValue(s.assetTurnover3yAvgIndustryMed) },
+
+    { key: 'eq_25A', metric: '权益乘数', period: '25A', stockValue: formatValue(s.equityMultiplierLastYA), industryAvg: formatValue(s.equityMultiplierLastYAIndustryAvg), industryMed: formatValue(s.equityMultiplierLastYAIndustryMed) },
+    { key: 'eq_24A', metric: '权益乘数', period: '24A', stockValue: formatValue(s.equityMultiplierLast2yA), industryAvg: formatValue(s.equityMultiplierLast2yAIndustryAvg), industryMed: formatValue(s.equityMultiplierLast2yAIndustryMed) },
+    { key: 'eq_23A', metric: '权益乘数', period: '23A', stockValue: formatValue(s.equityMultiplierLast3yA), industryAvg: formatValue(s.equityMultiplierLast3yAIndustryAvg), industryMed: formatValue(s.equityMultiplierLast3yAIndustryMed) },
+    { key: 'eq_3y', metric: '权益乘数', period: '3年平均', stockValue: formatValue(s.equityMultiplier3yAvg), industryAvg: formatValue(s.equityMultiplier3yAvgIndustryAvg), industryMed: formatValue(s.equityMultiplier3yAvgIndustryMed) },
+  ];
+});
 
 const searchParams = reactive<DupontAnalysisPageReqVO>({
   stockCode: '',
@@ -231,7 +188,8 @@ const searchParams = reactive<DupontAnalysisPageReqVO>({
 
 const pagination = reactive({
   current: 1,
-  pageSize: 10,
+  pageSize: 15,
+  pageSizeOptions: ['15', '50', '100', '200'],
   total: 0,
   showSizeChanger: true,
   showQuickJumper: true,
@@ -253,6 +211,11 @@ const fetchData = async () => {
     if (data.success) {
       dataSource.value = data.data.content;
       pagination.total = data.data.totalElements;
+      if (dataSource.value.length > 0) {
+        selectedStock.value = dataSource.value[0] || null;
+      } else {
+        selectedStock.value = null;
+      }
     }
   } catch (error) {
     console.error('Failed to fetch dupont analysis data:', error);
@@ -268,8 +231,9 @@ const targetGroupId = ref<number | undefined>(undefined);
 const selectedStockCode = ref('');
 const watchlistGroups = ref<WatchlistGroupVO[]>([]);
 
-const showAddWatchlist = (record: StockDupontAnalysis) => {
-  selectedStockCode.value = record.stockCode;
+const showAddWatchlist = () => {
+  if (!selectedStock.value) return;
+  selectedStockCode.value = selectedStock.value.stockCode;
   targetGroupId.value = undefined;
   watchlistVisible.value = true;
 };
@@ -324,6 +288,26 @@ const handleTableChange: TableProps['onChange'] = (pag: any, _filters: any, sort
   fetchData();
 };
 
+const rowClassName = (record: StockDupontAnalysis) => {
+  return selectedStock.value?.id === record.id ? 'dupont-table-row-selected' : '';
+};
+
+const customRow = (record: StockDupontAnalysis) => {
+  return {
+    onClick: () => {
+      selectedStock.value = record;
+    },
+    style: { cursor: 'pointer' }
+  };
+};
+
+const detailRowClassName = (_record: any, index: number) => {
+  if (index === 3 || index === 7 || index === 11) {
+    return 'metric-group-divider';
+  }
+  return '';
+};
+
 onMounted(async () => {
   fetchData();
   // 加载自选分组
@@ -358,48 +342,27 @@ onMounted(async () => {
     white-space: nowrap;
 }
 
-.dupont-analysis-container :deep(.ant-table-expanded-row > td) {
-    background: rgba(255, 255, 255, 0.02) !important;
-    padding: 0 !important;
+.dupont-table :deep(.ant-table-row:hover) {
+  background-color: #fafafa;
+}
+.dupont-table :deep(.ant-table-tbody > tr.dupont-table-row-selected > td),
+.dupont-table :deep(.ant-table-tbody > tr.dupont-table-row-selected:hover > td),
+.dupont-table :deep(.ant-table-tbody > tr.dupont-table-row-selected > td.ant-table-cell-row-hover) {
+  background: #f3f3f3 !important;
+  color: #1f2d3d;
+  font-weight: 600;
+  transition: none !important;
+}
+.dupont-table :deep(.dupont-table-row-selected > td:first-child) {
+  box-shadow: inset 3px 0 0 #6f6f6f;
 }
 
-.dupont-analysis-container :deep(.ant-table-expanded-row-fixed) {
-    padding: 0 !important;
-    position: static !important;
-    width: max-content !important;
-    min-width: 100% !important;
-    overflow: visible !important;
+.detail-table {
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.industry-compare-panel {
-    overflow: visible;
-    background: rgba(255, 255, 255, 0.02);
+.detail-table :deep(.metric-group-divider > td),
+.detail-table :deep(.metric-group-start-cell) {
+  border-bottom: 1px solid #bfbfbf !important;
 }
-
-.industry-compare-row {
-    display: grid;
-    align-items: center;
-    min-height: 36px;
-    color: var(--color-text-primary);
-}
-
-.dupont-industry-panel .industry-compare-row {
-    grid-template-columns: 50px 120px 100px 140px repeat(4, 110px 90px 90px 90px) 100px;
-    min-width: 1670px;
-}
-
-.industry-compare-row + .industry-compare-row {
-    background: rgba(255, 255, 255, 0.01);
-}
-
-.industry-compare-cell {
-    padding: 0 16px;
-    line-height: 36px;
-    white-space: nowrap;
-}
-
-.industry-compare-label {
-    color: var(--color-text-secondary) !important;
-}
-
 </style>
