@@ -1,121 +1,108 @@
 <template>
   <div class="valuation-metrics-container">
-    <!-- Search Form -->
-    <a-card style="margin-bottom: 16px">
-      <a-form
-        :model="searchParams"
-        @finish="handleSearch"
-        layout="inline"
-        class="valuation-search-form"
-      >
-        <a-form-item label="代码">
-          <a-input
-            v-model:value="searchParams.stockCode"
-            placeholder="代码/名称"
-            allow-clear
-            style="width: 110px"
-          />
-        </a-form-item>
-        <a-form-item label="PEG">
-          <div class="range-input-group">
-            <a-input-number v-model:value="searchParams.pegMin" placeholder="最小" style="width: 70px" />
-            <span style="color: var(--color-text-secondary)">~</span>
-            <a-input-number v-model:value="searchParams.pegMax" placeholder="最大" style="width: 70px" />
+    <a-row :gutter="16">
+      <a-col :span="13">
+        <!-- 搜索表单与列表 -->
+        <a-card style="height: 100%; margin-bottom: 0;" title="估值指标列表">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
+            <a-form
+              layout="inline"
+              :model="searchParams"
+              @finish="handleSearch"
+              class="valuation-search-form"
+              style="width: 100%; display: flex; flex-wrap: wrap;"
+            >
+              <a-form-item label="代码">
+                <a-input v-model:value="searchParams.stockCode" placeholder="代码/名称" allow-clear style="width: 140px" />
+              </a-form-item>
+              <a-form-item label="PEG">
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <a-input-number v-model:value="searchParams.pegMin" placeholder="最小" style="width: 70px" />
+                  <span style="color: var(--color-text-secondary)">~</span>
+                  <a-input-number v-model:value="searchParams.pegMax" placeholder="最大" style="width: 70px" />
+                </div>
+              </a-form-item>
+              <a-form-item label="PE(TTM)">
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <a-input-number v-model:value="searchParams.peTtmMin" placeholder="最小" style="width: 70px" />
+                  <span style="color: var(--color-text-secondary)">~</span>
+                  <a-input-number v-model:value="searchParams.peTtmMax" placeholder="最大" style="width: 70px" />
+                </div>
+              </a-form-item>
+              <a-form-item label="PS(TTM)">
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <a-input-number v-model:value="searchParams.psTtmMin" placeholder="最小" style="width: 70px" />
+                  <span style="color: var(--color-text-secondary)">~</span>
+                  <a-input-number v-model:value="searchParams.psTtmMax" placeholder="最大" style="width: 70px" />
+                </div>
+              </a-form-item>
+              <a-form-item label="PB(MRQ)">
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <a-input-number v-model:value="searchParams.pbMrqMin" placeholder="最小" style="width: 70px" />
+                  <span style="color: var(--color-text-secondary)">~</span>
+                  <a-input-number v-model:value="searchParams.pbMrqMax" placeholder="最大" style="width: 70px" />
+                </div>
+              </a-form-item>
+              <a-form-item class="indicator-search-form-actions" style="margin-left: auto; margin-right: 0;">
+                <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
+                <a-button type="primary" ghost style="margin-left: 8px" @click="resetSearch">重置</a-button>
+              </a-form-item>
+            </a-form>
           </div>
-        </a-form-item>
-        <a-form-item label="PE(TTM)">
-          <div class="range-input-group">
-            <a-input-number v-model:value="searchParams.peTtmMin" placeholder="最小" style="width: 70px" />
-            <span style="color: var(--color-text-secondary)">~</span>
-            <a-input-number v-model:value="searchParams.peTtmMax" placeholder="最大" style="width: 70px" />
-          </div>
-        </a-form-item>
-        <a-form-item label="PS(TTM)">
-          <div class="range-input-group">
-            <a-input-number v-model:value="searchParams.psTtmMin" placeholder="最小" style="width: 70px" />
-            <span style="color: var(--color-text-secondary)">~</span>
-            <a-input-number v-model:value="searchParams.psTtmMax" placeholder="最大" style="width: 70px" />
-          </div>
-        </a-form-item>
-        <a-form-item label="PB(MRQ)">
-          <div class="range-input-group">
-            <a-input-number v-model:value="searchParams.pbMrqMin" placeholder="最小" style="width: 70px" />
-            <span style="color: var(--color-text-secondary)">~</span>
-            <a-input-number v-model:value="searchParams.pbMrqMax" placeholder="最大" style="width: 70px" />
-          </div>
-        </a-form-item>
-        <a-form-item class="indicator-search-form-actions">
-          <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
-          <a-button type="primary" ghost @click="resetSearch">重置</a-button>
-        </a-form-item>
-      </a-form>
-    </a-card>
 
-    <!-- Data Table -->
-    <a-card>
-      <a-table
-        :columns="columns"
-        :data-source="dataSource"
-        :loading="loading"
-        :pagination="pagination"
-        @change="handleTableChange"
-        row-key="id"
-        :scroll="{ x: 2350 }"
-        :expandable="{ columnWidth: 50 }"
-      >
-        <template #headerCell="{ column }">
-          <template v-if="column.dataIndex === 'pegRank'">
-             <span style="color: var(--color-text-secondary)">排名</span>
-          </template>
-        </template>
-        <template #bodyCell="{ column, text, record }">
-          <template v-if="column.dataIndex === 'stockCode'">
-            <a-tag class="stock-code-tag">{{ text }}</a-tag>
-          </template>
-          <template v-else-if="[
-            'peg', 'peLastYearA', 'peTtm', 'peThisYE', 'peNextYE', 'peNext2YE',
-            'psLastYA', 'psTtm', 'psThisYE', 'psNextYE', 'psNext2YE',
-            'pbLastYA', 'pbMrq', 'pceLastYA', 'pceTtm', 'pcfLastYA', 'pcfTtm', 'evEbitdaLastYA'
-          ].includes(column.dataIndex as string)">
-            <span>{{ formatNumber(text) }}</span>
-          </template>
-          <template v-else-if="column.key === 'operation'">
-            <a @click="showAddWatchlist(record)">加入自选</a>
-          </template>
-        </template>
+          <!-- 数据表格 -->
+          <a-table
+            :columns="columns"
+            :data-source="dataSource"
+            :loading="loading"
+            :pagination="pagination"
+            @change="handleTableChange"
+            row-key="id"
+            :custom-row="customRow"
+            :row-class-name="rowClassName"
+            :scroll="pagination.pageSize <= 15 ? { x: 'max-content' } : { x: 'max-content', y: 595 }" 
+            size="small"
+            class="valuation-table"
+          >
+            <template #headerCell="{ column }">
+              <template v-if="column.dataIndex === 'pegRank'">
+                 <span style="color: var(--color-text-secondary)">排名</span>
+              </template>
+            </template>
+            <template #bodyCell="{ column, text, record }">
+              <template v-if="column.dataIndex === 'stockCode'">
+                <a-tag class="stock-code-tag">{{ text }}</a-tag>
+              </template>
+              <template v-else-if="['peg', 'peTtm', 'psTtm', 'pbMrq'].includes(column.dataIndex as string)">
+                <span>{{ formatNumber(text) }}</span>
+              </template>
+            </template>
+          </a-table>
+        </a-card>
+      </a-col>
 
-        <!-- 展开行：行业对比数据 -->
-        <template #expandedRowRender="{ record }">
-          <div class="industry-compare-panel valuation-industry-panel">
-            <div v-for="row in getIndustryRows(record)" :key="row.key" class="industry-compare-row">
-              <span class="industry-compare-cell"></span>
-              <span class="industry-compare-cell"></span>
-              <span class="industry-compare-cell"></span>
-              <span class="industry-compare-cell industry-compare-label">{{ row.label }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.peg) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.peLastYearA) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.peTtm) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.peThisYE) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.peNextYE) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.peNext2YE) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.psLastYA) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.psTtm) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.psThisYE) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.psNextYE) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.psNext2YE) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.pbLastYA) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.pbMrq) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.pceLastYA) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.pceTtm) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.pcfLastYA) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.pcfTtm) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.evEbitdaLastYA) }}</span>
-              <span class="industry-compare-cell"></span>
-            </div>
+      <a-col :span="11">
+        <!-- 详情与行业对比 -->
+        <a-card :title="selectedStock ? `${selectedStock.stockName} - 估值对比` : '估值对比'" style="height: 100%;">
+          <template #extra>
+            <a-button type="primary" @click="showAddWatchlist" :disabled="!selectedStock">加入自选</a-button>
+          </template>
+          <div v-if="selectedStock">
+            <a-table
+              :columns="detailColumns"
+              :data-source="detailTableData"
+              :pagination="false"
+              size="small"
+              bordered
+              class="detail-table"
+              :row-class-name="detailRowClassName"
+            >
+            </a-table>
           </div>
-        </template>
-      </a-table>
-    </a-card>
+          <a-empty v-else description="请选择股票查看对比详情" style="margin-top: 100px;" />
+        </a-card>
+      </a-col>
+    </a-row>
 
     <!-- 加入自选模态框 -->
     <a-modal
@@ -138,7 +125,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { getValuationMetricsPage, type StockValuationMetrics, type ValuationMetricsPageReqVO } from '@/api/indicator';
 import { getWatchlistGroups, addStockToWatchlist, type WatchlistGroupVO } from '@/api/watchlist';
 import { message } from 'ant-design-vue';
@@ -146,6 +133,7 @@ import { type TableProps } from 'ant-design-vue';
 
 const loading = ref(false);
 const dataSource = ref<StockValuationMetrics[]>([]);
+const selectedStock = ref<StockValuationMetrics | null>(null);
 
 const formatNumber = (val: any) => {
   if (val == null) return '-';
@@ -153,109 +141,73 @@ const formatNumber = (val: any) => {
   return isNaN(num) ? '-' : num.toFixed(2);
 };
 
-
 const columns: TableProps['columns'] = [
-  { title: '排名', dataIndex: 'pegRank', sorter: true, width: 120 },
-  { title: '代码', dataIndex: 'stockCode', width: 100 },
-  { title: '名称', dataIndex: 'stockName', width: 140 },
-  { title: 'PEG', dataIndex: 'peg', sorter: true, width: 100 },
-  {
-    title: '市盈率(PE)',
-    children: [
-      { title: '去年实际', dataIndex: 'peLastYearA', width: 100 },
-      { title: 'TTM', dataIndex: 'peTtm', sorter: true, width: 100 },
-      { title: '今年预测', dataIndex: 'peThisYE', width: 100 },
-      { title: '明年预测', dataIndex: 'peNextYE', width: 100 },
-      { title: '后年预测', dataIndex: 'peNext2YE', width: 100 },
-    ],
-  },
-  {
-    title: '市销率(PS)',
-    children: [
-      { title: '去年实际', dataIndex: 'psLastYA', width: 100 },
-      { title: 'TTM', dataIndex: 'psTtm', sorter: true, width: 100 },
-      { title: '今年预测', dataIndex: 'psThisYE', width: 100 },
-      { title: '明年预测', dataIndex: 'psNextYE', width: 100 },
-      { title: '后年预测', dataIndex: 'psNext2YE', width: 100 },
-    ],
-  },
-  {
-    title: '市净率(PB)',
-    children: [
-      { title: '去年实际', dataIndex: 'pbLastYA', width: 100 },
-      { title: 'MRQ', dataIndex: 'pbMrq', sorter: true, width: 100 },
-    ]
-  },
-  {
-    title: '市现率(PCE)',
-    children: [
-      { title: '去年实际', dataIndex: 'pceLastYA', width: 100 },
-      { title: 'TTM', dataIndex: 'pceTtm', width: 100 },
-    ]
-  },
-  {
-    title: '市现率(PCF)',
-    children: [
-      { title: '去年实际', dataIndex: 'pcfLastYA', width: 100 },
-      { title: 'TTM', dataIndex: 'pcfTtm', width: 100 },
-    ]
-  },
-  {
-    title: 'EV/EBITDA',
-    children: [
-      { title: '去年实际', dataIndex: 'evEbitdaLastYA', width: 120 },
-    ]
-  },
-  { title: '操作', key: 'operation', width: 100 },
+  { title: '排名', dataIndex: 'pegRank', sorter: true, width: 80 },
+  { title: '代码', dataIndex: 'stockCode', width: 80 },
+  { title: '名称', dataIndex: 'stockName', width: 100 },
+  { title: 'PEG', dataIndex: 'peg', sorter: true, width: 80 },
+  { title: '市盈率(TTM)', dataIndex: 'peTtm', sorter: true, width: 100 },
+  { title: '市销率(TTM)', dataIndex: 'psTtm', sorter: true, width: 100 },
+  { title: '市净率(MRQ)', dataIndex: 'pbMrq', sorter: true, width: 100 },
 ];
 
-const getIndustryRows = (record: StockValuationMetrics) => {
-  return [
-    {
-      key: 'avg',
-      label: '行业平均',
-      peg: record.pegIndustryAvg,
-      peLastYearA: record.peLastYearIndustryAvg,
-      peTtm: record.peTtmIndustryAvg,
-      peThisYE: record.peThisYEIndustryAvg,
-      peNextYE: record.peNextYEIndustryAvg,
-      peNext2YE: record.peNext2YEIndustryAvg,
-      psLastYA: record.psLastYAIndustryAvg,
-      psTtm: record.psTtmIndustryAvg,
-      psThisYE: record.psThisYEIndustryAvg,
-      psNextYE: record.psNextYEIndustryAvg,
-      psNext2YE: record.psNext2YEIndustryAvg,
-      pbLastYA: record.pbLastYAIndustryAvg,
-      pbMrq: record.pbMrqIndustryAvg,
-      pceLastYA: record.pceLastYAIndustryAvg,
-      pceTtm: record.pceTtmIndustryAvg,
-      pcfLastYA: record.pcfLastYAIndustryAvg,
-      pcfTtm: record.pcfTtmIndustryAvg,
-      evEbitdaLastYA: record.evEbitdaLastYAIndustryAvg,
-    },
-    {
-      key: 'med',
-      label: '行业中值',
-      peg: record.pegIndustryMed,
-      peLastYearA: record.peLastYearIndustryMed,
-      peTtm: record.peTtmIndustryMed,
-      peThisYE: record.peThisYEIndustryMed,
-      peNextYE: record.peNextYEIndustryMed,
-      peNext2YE: record.peNext2YEIndustryMed,
-      psLastYA: record.psLastYAIndustryMed,
-      psTtm: record.psTtmIndustryMed,
-      psThisYE: record.psThisYEIndustryMed,
-      psNextYE: record.psNextYEIndustryMed,
-      psNext2YE: record.psNext2YEIndustryMed,
-      pbLastYA: record.pbLastYAIndustryMed,
-      pbMrq: record.pbMrqIndustryMed,
-      pceLastYA: record.pceLastYAIndustryMed,
-      pceTtm: record.pceTtmIndustryMed,
-      pcfLastYA: record.pcfLastYAIndustryMed,
-      pcfTtm: record.pcfTtmIndustryMed,
-      evEbitdaLastYA: record.evEbitdaLastYAIndustryMed,
+const detailColumns: TableProps['columns'] = [
+  { 
+    title: '分析指标', 
+    dataIndex: 'metric',
+    customCell: (_, index) => {
+      if (index === 0) return { rowSpan: 1, class: 'metric-group-start-cell' };
+      if (index === 1) return { rowSpan: 5, class: 'metric-group-start-cell' };
+      if (index === 6) return { rowSpan: 5, class: 'metric-group-start-cell' };
+      if (index === 11) return { rowSpan: 2, class: 'metric-group-start-cell' };
+      if (index === 13) return { rowSpan: 2, class: 'metric-group-start-cell' };
+      if (index === 15) return { rowSpan: 2, class: 'metric-group-start-cell' };
+      if (index === 17) return { rowSpan: 1 };
+      return { rowSpan: 0 };
     }
+  },
+  { title: '期间', dataIndex: 'period' },
+  { title: '个股数据', dataIndex: 'stockValue' },
+  { title: '行业平均', dataIndex: 'industryAvg' },
+  { title: '行业中值', dataIndex: 'industryMed' },
+];
+
+const detailTableData = computed(() => {
+  if (!selectedStock.value) return [];
+  const s = selectedStock.value;
+  return [
+    { key: 'peg', metric: 'PEG', period: '-', stockValue: formatNumber(s.peg), industryAvg: formatNumber(s.pegIndustryAvg), industryMed: formatNumber(s.pegIndustryMed) },
+    
+    { key: 'pe_27E', metric: '市盈率(PE)', period: '27E', stockValue: formatNumber(s.peNext2YE), industryAvg: formatNumber(s.peNext2YEIndustryAvg), industryMed: formatNumber(s.peNext2YEIndustryMed) },
+    { key: 'pe_26E', metric: '市盈率(PE)', period: '26E', stockValue: formatNumber(s.peNextYE), industryAvg: formatNumber(s.peNextYEIndustryAvg), industryMed: formatNumber(s.peNextYEIndustryMed) },
+    { key: 'pe_25E', metric: '市盈率(PE)', period: '25E', stockValue: formatNumber(s.peThisYE), industryAvg: formatNumber(s.peThisYEIndustryAvg), industryMed: formatNumber(s.peThisYEIndustryMed) },
+    { key: 'pe_TTM', metric: '市盈率(PE)', period: 'TTM', stockValue: formatNumber(s.peTtm), industryAvg: formatNumber(s.peTtmIndustryAvg), industryMed: formatNumber(s.peTtmIndustryMed) },
+    { key: 'pe_24A', metric: '市盈率(PE)', period: '24A', stockValue: formatNumber(s.peLastYearA), industryAvg: formatNumber(s.peLastYearIndustryAvg), industryMed: formatNumber(s.peLastYearIndustryMed) },
+
+    { key: 'ps_27E', metric: '市销率(PS)', period: '27E', stockValue: formatNumber(s.psNext2YE), industryAvg: formatNumber(s.psNext2YEIndustryAvg), industryMed: formatNumber(s.psNext2YEIndustryMed) },
+    { key: 'ps_26E', metric: '市销率(PS)', period: '26E', stockValue: formatNumber(s.psNextYE), industryAvg: formatNumber(s.psNextYEIndustryAvg), industryMed: formatNumber(s.psNextYEIndustryMed) },
+    { key: 'ps_25E', metric: '市销率(PS)', period: '25E', stockValue: formatNumber(s.psThisYE), industryAvg: formatNumber(s.psThisYEIndustryAvg), industryMed: formatNumber(s.psThisYEIndustryMed) },
+    { key: 'ps_TTM', metric: '市销率(PS)', period: 'TTM', stockValue: formatNumber(s.psTtm), industryAvg: formatNumber(s.psTtmIndustryAvg), industryMed: formatNumber(s.psTtmIndustryMed) },
+    { key: 'ps_24A', metric: '市销率(PS)', period: '24A', stockValue: formatNumber(s.psLastYA), industryAvg: formatNumber(s.psLastYAIndustryAvg), industryMed: formatNumber(s.psLastYAIndustryMed) },
+
+    { key: 'pb_MRQ', metric: '市净率(PB)', period: 'MRQ', stockValue: formatNumber(s.pbMrq), industryAvg: formatNumber(s.pbMrqIndustryAvg), industryMed: formatNumber(s.pbMrqIndustryMed) },
+    { key: 'pb_24A', metric: '市净率(PB)', period: '24A', stockValue: formatNumber(s.pbLastYA), industryAvg: formatNumber(s.pbLastYAIndustryAvg), industryMed: formatNumber(s.pbLastYAIndustryMed) },
+
+    { key: 'pce_TTM', metric: '市现率(PCE)', period: 'TTM', stockValue: formatNumber(s.pceTtm), industryAvg: formatNumber(s.pceTtmIndustryAvg), industryMed: formatNumber(s.pceTtmIndustryMed) },
+    { key: 'pce_24A', metric: '市现率(PCE)', period: '24A', stockValue: formatNumber(s.pceLastYA), industryAvg: formatNumber(s.pceLastYAIndustryAvg), industryMed: formatNumber(s.pceLastYAIndustryMed) },
+
+    { key: 'pcf_TTM', metric: '市现率(PCF)', period: 'TTM', stockValue: formatNumber(s.pcfTtm), industryAvg: formatNumber(s.pcfTtmIndustryAvg), industryMed: formatNumber(s.pcfTtmIndustryMed) },
+    { key: 'pcf_24A', metric: '市现率(PCF)', period: '24A', stockValue: formatNumber(s.pcfLastYA), industryAvg: formatNumber(s.pcfLastYAIndustryAvg), industryMed: formatNumber(s.pcfLastYAIndustryMed) },
+
+    { key: 'ev_24A', metric: 'EV/EBITDA', period: '24A', stockValue: formatNumber(s.evEbitdaLastYA), industryAvg: formatNumber(s.evEbitdaLastYAIndustryAvg), industryMed: formatNumber(s.evEbitdaLastYAIndustryMed) },
   ];
+});
+
+const detailRowClassName = (_record: any, index: number) => {
+  if (index === 0 || index === 5 || index === 10 || index === 12 || index === 14 || index === 16) {
+    return 'metric-group-divider';
+  }
+  return '';
 };
 
 const searchParams = reactive<ValuationMetricsPageReqVO>({
@@ -272,7 +224,8 @@ const searchParams = reactive<ValuationMetricsPageReqVO>({
 
 const pagination = reactive({
   current: 1,
-  pageSize: 10,
+  pageSize: 15,
+  pageSizeOptions: ['15', '50', '100', '200'],
   total: 0,
   showSizeChanger: true,
   showQuickJumper: true,
@@ -294,6 +247,11 @@ const fetchData = async () => {
     if (data.success) {
       dataSource.value = data.data.content;
       pagination.total = data.data.totalElements;
+      if (dataSource.value.length > 0) {
+        selectedStock.value = dataSource.value[0] || null;
+      } else {
+        selectedStock.value = null;
+      }
     }
   } catch (error) {
     console.error('Failed to fetch valuation metrics data:', error);
@@ -309,8 +267,9 @@ const targetGroupId = ref<number | undefined>(undefined);
 const selectedStockCode = ref('');
 const watchlistGroups = ref<WatchlistGroupVO[]>([]);
 
-const showAddWatchlist = (record: StockValuationMetrics) => {
-  selectedStockCode.value = record.stockCode;
+const showAddWatchlist = () => {
+  if (!selectedStock.value) return;
+  selectedStockCode.value = selectedStock.value.stockCode;
   targetGroupId.value = undefined;
   watchlistVisible.value = true;
 };
@@ -344,10 +303,15 @@ const handleSearch = () => {
 };
 
 const resetSearch = () => {
-  Object.keys(searchParams).forEach(key => {
-      (searchParams as any)[key] = undefined;
-  });
   searchParams.stockCode = '';
+  searchParams.pegMin = undefined;
+  searchParams.pegMax = undefined;
+  searchParams.peTtmMin = undefined;
+  searchParams.peTtmMax = undefined;
+  searchParams.psTtmMin = undefined;
+  searchParams.psTtmMax = undefined;
+  searchParams.pbMrqMin = undefined;
+  searchParams.pbMrqMax = undefined;
   handleSearch();
 };
 
@@ -363,6 +327,19 @@ const handleTableChange: TableProps['onChange'] = (pag: any, _filters: any, sort
   }
 
   fetchData();
+};
+
+const rowClassName = (record: StockValuationMetrics) => {
+  return selectedStock.value?.id === record.id ? 'valuation-table-row-selected' : '';
+};
+
+const customRow = (record: StockValuationMetrics) => {
+  return {
+    onClick: () => {
+      selectedStock.value = record;
+    },
+    style: { cursor: 'pointer' }
+  };
 };
 
 onMounted(async () => {
@@ -395,58 +372,31 @@ onMounted(async () => {
     gap: 8px;
 }
 
-.range-input-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
 .valuation-metrics-container :deep(.ant-table-cell) {
     white-space: nowrap;
 }
 
-.valuation-metrics-container :deep(.ant-table-expanded-row > td) {
-    background: rgba(255, 255, 255, 0.02) !important;
-    padding: 0 !important;
+.valuation-table :deep(.ant-table-row:hover) {
+  background-color: #fafafa;
+}
+.valuation-table :deep(.ant-table-tbody > tr.valuation-table-row-selected > td),
+.valuation-table :deep(.ant-table-tbody > tr.valuation-table-row-selected:hover > td),
+.valuation-table :deep(.ant-table-tbody > tr.valuation-table-row-selected > td.ant-table-cell-row-hover) {
+  background: #f3f3f3 !important;
+  color: #1f2d3d;
+  font-weight: 600;
+  transition: none !important;
+}
+.valuation-table :deep(.valuation-table-row-selected > td:first-child) {
+  box-shadow: inset 3px 0 0 #6f6f6f;
 }
 
-.valuation-metrics-container :deep(.ant-table-expanded-row-fixed) {
-    padding: 0 !important;
-    position: static !important;
-    width: max-content !important;
-    min-width: 100% !important;
-    overflow: visible !important;
+.detail-table {
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.industry-compare-panel {
-    overflow: visible;
-    background: rgba(255, 255, 255, 0.02);
+.detail-table :deep(.metric-group-divider > td),
+.detail-table :deep(.metric-group-start-cell) {
+  border-bottom: 1px solid #bfbfbf !important;
 }
-
-.industry-compare-row {
-    display: grid;
-    align-items: center;
-    min-height: 36px;
-    color: var(--color-text-primary);
-}
-
-.valuation-industry-panel .industry-compare-row {
-    grid-template-columns: 50px 120px 100px 140px 100px repeat(5, 100px) repeat(5, 100px) repeat(2, 100px) repeat(2, 100px) repeat(2, 100px) 120px 100px;
-    min-width: 2350px;
-}
-
-.industry-compare-row + .industry-compare-row {
-    background: rgba(255, 255, 255, 0.01);
-}
-
-.industry-compare-cell {
-    padding: 0 16px;
-    line-height: 36px;
-    white-space: nowrap;
-}
-
-.industry-compare-label {
-    color: var(--color-text-secondary) !important;
-}
-
 </style>
