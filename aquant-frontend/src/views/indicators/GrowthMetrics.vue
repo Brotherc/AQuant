@@ -53,7 +53,7 @@
             row-key="id"
             :custom-row="customRow"
             :row-class-name="rowClassName"
-            :scroll="pagination.pageSize <= 15 ? { x: 'max-content' } : { x: 'max-content', y: 595 }" 
+            :scroll="{ x: 'max-content', y: 595 }" 
             size="small"
             class="growth-table"
           >
