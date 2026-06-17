@@ -1,109 +1,101 @@
 <template>
   <div class="growth-metrics-container">
-    <!-- Search Form -->
-    <a-card style="margin-bottom: 16px">
-      <a-form
-        layout="inline"
-        :model="searchParams"
-        @finish="handleSearch"
-        class="growth-search-form"
-      >
-        <a-form-item label="代码">
-          <a-input v-model:value="searchParams.stockCode" placeholder="代码/名称" allow-clear style="width: 120px" />
-        </a-form-item>
-        <a-form-item label="EPS 3年复合">
-          <div style="display: flex; align-items: center; gap: 8px">
-            <a-input-number v-model:value="searchParams.epsGrowth3yCagrMin" placeholder="最小" style="width: 80px" />
-            <span style="color: var(--color-text-secondary)">~</span>
-            <a-input-number v-model:value="searchParams.epsGrowth3yCagrMax" placeholder="最大" style="width: 80px" />
+    <a-row :gutter="16">
+      <a-col :span="13">
+        <!-- 搜索表单与列表 -->
+        <a-card style="height: 100%; margin-bottom: 0;" title="成长性指标列表">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
+            <a-form
+              layout="inline"
+              :model="searchParams"
+              @finish="handleSearch"
+              class="growth-search-form"
+              style="width: 100%; display: flex; flex-wrap: wrap;"
+            >
+              <a-form-item label="代码">
+                <a-input v-model:value="searchParams.stockCode" placeholder="代码/名称" allow-clear style="width: 140px" />
+              </a-form-item>
+              <a-form-item label="EPS 3年复合">
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <a-input-number v-model:value="searchParams.epsGrowth3yCagrMin" placeholder="最小" style="width: 70px" />
+                  <span style="color: var(--color-text-secondary)">~</span>
+                  <a-input-number v-model:value="searchParams.epsGrowth3yCagrMax" placeholder="最大" style="width: 70px" />
+                </div>
+              </a-form-item>
+              <a-form-item label="营收增长(TTM)">
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <a-input-number v-model:value="searchParams.revenueGrowthTtmMin" placeholder="最小" style="width: 70px" />
+                  <span style="color: var(--color-text-secondary)">~</span>
+                  <a-input-number v-model:value="searchParams.revenueGrowthTtmMax" placeholder="最大" style="width: 70px" />
+                </div>
+              </a-form-item>
+              <a-form-item label="净利增长(TTM)">
+                  <div style="display: flex; align-items: center; gap: 8px">
+                      <a-input-number v-model:value="searchParams.netProfitGrowthTtmMin" placeholder="最小" style="width: 70px" />
+                      <span style="color: var(--color-text-secondary)">~</span>
+                      <a-input-number v-model:value="searchParams.netProfitGrowthTtmMax" placeholder="最大" style="width: 70px" />
+                  </div>
+              </a-form-item>
+              <a-form-item class="indicator-search-form-actions" style="margin-left: auto; margin-right: 0;">
+                <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
+                <a-button type="primary" ghost style="margin-left: 8px" @click="resetSearch">重置</a-button>
+              </a-form-item>
+            </a-form>
           </div>
-        </a-form-item>
-        <a-form-item label="营收增长(TTM)">
-          <div style="display: flex; align-items: center; gap: 8px">
-            <a-input-number v-model:value="searchParams.revenueGrowthTtmMin" placeholder="最小" style="width: 80px" />
-            <span style="color: var(--color-text-secondary)">~</span>
-            <a-input-number v-model:value="searchParams.revenueGrowthTtmMax" placeholder="最大" style="width: 80px" />
-          </div>
-        </a-form-item>
-        <a-form-item label="净利增长(TTM)">
-            <div style="display: flex; align-items: center; gap: 8px">
-                <a-input-number v-model:value="searchParams.netProfitGrowthTtmMin" placeholder="最小" style="width: 80px" />
-                <span style="color: var(--color-text-secondary)">~</span>
-                <a-input-number v-model:value="searchParams.netProfitGrowthTtmMax" placeholder="最大" style="width: 80px" />
-            </div>
-        </a-form-item>
-        <a-form-item class="indicator-search-form-actions">
-          <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
-          <a-button type="primary" ghost @click="resetSearch">重置</a-button>
-        </a-form-item>
-      </a-form>
-    </a-card>
 
-    <!-- Data Table -->
-    <a-card>
-      <a-table
-        :columns="columns"
-        :data-source="dataSource"
-        :loading="loading"
-        :pagination="pagination"
-        @change="handleTableChange"
-        row-key="id"
-        :scroll="{ x: 2360 }"
-        :expandable="{ columnWidth: 50 }"
-      >
-        <template #headerCell="{ column }">
-          <template v-if="column.dataIndex === 'epsGrowth3yCagrRank'">
-             <span style="color: var(--color-text-secondary)">排名</span>
-          </template>
-        </template>
-        <template #bodyCell="{ column, text, record }">
-          <template v-if="column.dataIndex === 'stockCode'">
-            <a-tag class="stock-code-tag">{{ text }}</a-tag>
-          </template>
-          <template v-else-if="[
-            'epsGrowth3yCagr', 'epsGrowthLastYA', 'epsGrowthTtm', 'epsGrowthThisYE', 'epsGrowthNextYE', 'epsGrowthNext2YE',
-            'revenueGrowth3yCagr', 'revenueGrowthLastYA', 'revenueGrowthTtm', 'revenueGrowthThisYE', 'revenueGrowthNextYE', 'revenueGrowthNext2YE',
-            'netProfitGrowth3yCagr', 'netProfitGrowthLastYA', 'netProfitGrowthTtm', 'netProfitGrowthThisYE', 'netProfitGrowthNextYE', 'netProfitGrowthNext2YE'
-          ].includes(column.dataIndex as string)">
-            <span>{{ formatNumber(text) }}</span>
-          </template>
-          <template v-else-if="column.key === 'operation'">
-             <a @click="showAddWatchlist(record)">加入自选</a>
-          </template>
-        </template>
+          <!-- 数据表格 -->
+          <a-table
+            :columns="columns"
+            :data-source="dataSource"
+            :loading="loading"
+            :pagination="pagination"
+            @change="handleTableChange"
+            row-key="id"
+            :custom-row="customRow"
+            :row-class-name="rowClassName"
+            :scroll="pagination.pageSize <= 15 ? { x: 'max-content' } : { x: 'max-content', y: 595 }" 
+            size="small"
+            class="growth-table"
+          >
+            <template #headerCell="{ column }">
+              <template v-if="column.dataIndex === 'epsGrowth3yCagrRank'">
+                 <span style="color: var(--color-text-secondary)">排名</span>
+              </template>
+            </template>
+            <template #bodyCell="{ column, text, record }">
+              <template v-if="column.dataIndex === 'stockCode'">
+                <a-tag class="stock-code-tag">{{ text }}</a-tag>
+              </template>
+              <template v-else-if="['epsGrowthTtm', 'revenueGrowthTtm', 'netProfitGrowthTtm'].includes(column.dataIndex as string)">
+                <span>{{ formatNumber(text) }}%</span>
+              </template>
+            </template>
+          </a-table>
+        </a-card>
+      </a-col>
 
-        <!-- 展开行：行业对比数据 -->
-        <template #expandedRowRender="{ record }">
-          <div class="industry-compare-panel growth-industry-panel">
-            <div v-for="row in getIndustryRows(record)" :key="row.key" class="industry-compare-row">
-              <span class="industry-compare-cell"></span>
-              <span class="industry-compare-cell"></span>
-              <span class="industry-compare-cell"></span>
-              <span class="industry-compare-cell industry-compare-label">{{ row.label }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.epsGrowth3yCagr) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.epsGrowthLastYA) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.epsGrowthTtm) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.epsGrowthThisYE) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.epsGrowthNextYE) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.epsGrowthNext2YE) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.revenueGrowth3yCagr) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.revenueGrowthLastYA) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.revenueGrowthTtm) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.revenueGrowthThisYE) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.revenueGrowthNextYE) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.revenueGrowthNext2YE) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.netProfitGrowth3yCagr) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.netProfitGrowthLastYA) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.netProfitGrowthTtm) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.netProfitGrowthThisYE) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.netProfitGrowthNextYE) }}</span>
-              <span class="industry-compare-cell">{{ formatNumber(row.netProfitGrowthNext2YE) }}</span>
-              <span class="industry-compare-cell"></span>
-            </div>
+      <a-col :span="11">
+        <!-- 详情与行业对比 -->
+        <a-card :title="selectedStock ? `${selectedStock.stockName} - 成长性对比` : '成长性对比'" style="height: 100%;">
+          <template #extra>
+            <a-button type="primary" @click="showAddWatchlist" :disabled="!selectedStock">加入自选</a-button>
+          </template>
+          <div v-if="selectedStock">
+            <a-table
+              :columns="detailColumns"
+              :data-source="detailTableData"
+              :pagination="false"
+              size="small"
+              bordered
+              class="detail-table"
+              :row-class-name="detailRowClassName"
+            >
+            </a-table>
           </div>
-        </template>
-      </a-table>
-    </a-card>
+          <a-empty v-else description="请选择股票查看对比详情" style="margin-top: 100px;" />
+        </a-card>
+      </a-col>
+    </a-row>
 
     <!-- 加入自选模态框 -->
     <a-modal
@@ -126,7 +118,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { getGrowthMetricsPage, type StockGrowthMetrics, type GrowthMetricsPageReqVO } from '@/api/indicator';
 import { getWatchlistGroups, addStockToWatchlist, type WatchlistGroupVO } from '@/api/watchlist';
 import { message } from 'ant-design-vue';
@@ -134,6 +126,7 @@ import { type TableProps } from 'ant-design-vue';
 
 const loading = ref(false);
 const dataSource = ref<StockGrowthMetrics[]>([]);
+const selectedStock = ref<StockGrowthMetrics | null>(null);
 
 const formatNumber = (val: any) => {
   if (val == null) return '-';
@@ -141,93 +134,73 @@ const formatNumber = (val: any) => {
   return isNaN(num) ? '-' : num.toFixed(2);
 };
 
+const formatPercent = (val: any) => {
+  if (val == null) return '-';
+  const num = Number(val);
+  return isNaN(num) ? '-' : `${num.toFixed(2)}%`;
+}
+
 const columns: TableProps['columns'] = [
-  { title: '排名', dataIndex: 'epsGrowth3yCagrRank', sorter: true, width: 120 },
-  { title: '代码', dataIndex: 'stockCode', width: 100 },
-  { title: '名称', dataIndex: 'stockName', width: 140 },
-  {
-    title: '基本每股收益增长率(%)',
-    children: [
-      { title: '3年复合', dataIndex: 'epsGrowth3yCagr', sorter: true, width: 110 },
-      { title: '24A', dataIndex: 'epsGrowthLastYA', width: 100 },
-      { title: 'TTM', dataIndex: 'epsGrowthTtm', sorter: true, width: 100 },
-      { title: '25E', dataIndex: 'epsGrowthThisYE', width: 100 },
-      { title: '26E', dataIndex: 'epsGrowthNextYE', width: 100 },
-      { title: '27E', dataIndex: 'epsGrowthNext2YE', width: 100 },
-    ],
-  },
-  {
-    title: '营业收入增长率(%)',
-    children: [
-      { title: '3年复合', dataIndex: 'revenueGrowth3yCagr', width: 110 },
-      { title: '24A', dataIndex: 'revenueGrowthLastYA', width: 100 },
-      { title: 'TTM', dataIndex: 'revenueGrowthTtm', sorter: true, width: 100 },
-      { title: '25E', dataIndex: 'revenueGrowthThisYE', width: 100 },
-      { title: '26E', dataIndex: 'revenueGrowthNextYE', width: 100 },
-      { title: '27E', dataIndex: 'revenueGrowthNext2YE', width: 100 },
-    ],
-  },
-  {
-    title: '净利润增长率(%)',
-    children: [
-      { title: '3年复合', dataIndex: 'netProfitGrowth3yCagr', width: 110 },
-      { title: '24A', dataIndex: 'netProfitGrowthLastYA', width: 100 },
-      { title: 'TTM', dataIndex: 'netProfitGrowthTtm', sorter: true, width: 100 },
-      { title: '25E', dataIndex: 'netProfitGrowthThisYE', width: 100 },
-      { title: '26E', dataIndex: 'netProfitGrowthNextYE', width: 100 },
-      { title: '27E', dataIndex: 'netProfitGrowthNext2YE', width: 100 },
-    ]
-  },
-  { title: '操作', key: 'operation', width: 100 },
+  { title: '排名', dataIndex: 'epsGrowth3yCagrRank', sorter: true, width: 80 },
+  { title: '代码', dataIndex: 'stockCode', width: 80 },
+  { title: '名称', dataIndex: 'stockName', width: 100 },
+  { title: '每股收益(TTM)', dataIndex: 'epsGrowthTtm', sorter: true, width: 120 },
+  { title: '营收增长(TTM)', dataIndex: 'revenueGrowthTtm', sorter: true, width: 120 },
+  { title: '净利增长(TTM)', dataIndex: 'netProfitGrowthTtm', sorter: true, width: 120 },
 ];
 
-const getIndustryRows = (record: StockGrowthMetrics) => {
-  return [
-    {
-      key: 'avg',
-      label: '行业平均',
-      epsGrowth3yCagr: record.epsGrowth3yCagrIndustryAvg,
-      epsGrowthLastYA: record.epsGrowthLastYAIndustryAvg,
-      epsGrowthTtm: record.epsGrowthTtmIndustryAvg,
-      epsGrowthThisYE: record.epsGrowthThisYEIndustryAvg,
-      epsGrowthNextYE: record.epsGrowthNextYEIndustryAvg,
-      epsGrowthNext2YE: record.epsGrowthNext2YEIndustryAvg,
-      revenueGrowth3yCagr: record.revenueGrowth3yCagrIndustryAvg,
-      revenueGrowthLastYA: record.revenueGrowthLastYAIndustryAvg,
-      revenueGrowthTtm: record.revenueGrowthTtmIndustryAvg,
-      revenueGrowthThisYE: record.revenueGrowthThisYEIndustryAvg,
-      revenueGrowthNextYE: record.revenueGrowthNextYEIndustryAvg,
-      revenueGrowthNext2YE: record.revenueGrowthNext2YEIndustryAvg,
-      netProfitGrowth3yCagr: record.netProfitGrowth3yCagrIndustryAvg,
-      netProfitGrowthLastYA: record.netProfitGrowthLastYAIndustryAvg,
-      netProfitGrowthTtm: record.netProfitGrowthTtmIndustryAvg,
-      netProfitGrowthThisYE: record.netProfitGrowthThisYEIndustryAvg,
-      netProfitGrowthNextYE: record.netProfitGrowthNextYEIndustryAvg,
-      netProfitGrowthNext2YE: record.netProfitGrowthNext2YEIndustryAvg,
-    },
-    {
-      key: 'med',
-      label: '行业中值',
-      epsGrowth3yCagr: record.epsGrowth3yCagrIndustryMed,
-      epsGrowthLastYA: record.epsGrowthLastYAIndustryMed,
-      epsGrowthTtm: record.epsGrowthTtmIndustryMed,
-      epsGrowthThisYE: record.epsGrowthThisYEIndustryMed,
-      epsGrowthNextYE: record.epsGrowthNextYEIndustryMed,
-      epsGrowthNext2YE: record.epsGrowthNext2YEIndustryMed,
-      revenueGrowth3yCagr: record.revenueGrowth3yCagrIndustryMed,
-      revenueGrowthLastYA: record.revenueGrowthLastYAIndustryMed,
-      revenueGrowthTtm: record.revenueGrowthTtmIndustryMed,
-      revenueGrowthThisYE: record.revenueGrowthThisYEIndustryMed,
-      revenueGrowthNextYE: record.revenueGrowthNextYEIndustryMed,
-      revenueGrowthNext2YE: record.revenueGrowthNext2YEIndustryMed,
-      netProfitGrowth3yCagr: record.netProfitGrowth3yCagrIndustryMed,
-      netProfitGrowthLastYA: record.netProfitGrowthLastYAIndustryMed,
-      netProfitGrowthTtm: record.netProfitGrowthTtmIndustryMed,
-      netProfitGrowthThisYE: record.netProfitGrowthThisYEIndustryMed,
-      netProfitGrowthNextYE: record.netProfitGrowthNextYEIndustryMed,
-      netProfitGrowthNext2YE: record.netProfitGrowthNext2YEIndustryMed,
+const detailColumns: TableProps['columns'] = [
+  { 
+    title: '分析指标', 
+    dataIndex: 'metric',
+    customCell: (_, index) => {
+      if (index === 0 || index === 6) {
+        return { rowSpan: 6, class: 'metric-group-start-cell' };
+      }
+      if (index === 12) {
+        return { rowSpan: 6 };
+      }
+      return { rowSpan: 0 };
     }
+  },
+  { title: '期间', dataIndex: 'period' },
+  { title: '个股数据', dataIndex: 'stockValue' },
+  { title: '行业平均', dataIndex: 'industryAvg' },
+  { title: '行业中值', dataIndex: 'industryMed' },
+];
+
+const detailTableData = computed(() => {
+  if (!selectedStock.value) return [];
+  const s = selectedStock.value;
+  return [
+    { key: 'eps_27E', metric: '基本每股收益增长率', period: '27E', stockValue: formatPercent(s.epsGrowthNext2YE), industryAvg: formatPercent(s.epsGrowthNext2YEIndustryAvg), industryMed: formatPercent(s.epsGrowthNext2YEIndustryMed) },
+    { key: 'eps_26E', metric: '基本每股收益增长率', period: '26E', stockValue: formatPercent(s.epsGrowthNextYE), industryAvg: formatPercent(s.epsGrowthNextYEIndustryAvg), industryMed: formatPercent(s.epsGrowthNextYEIndustryMed) },
+    { key: 'eps_25E', metric: '基本每股收益增长率', period: '25E', stockValue: formatPercent(s.epsGrowthThisYE), industryAvg: formatPercent(s.epsGrowthThisYEIndustryAvg), industryMed: formatPercent(s.epsGrowthThisYEIndustryMed) },
+    { key: 'eps_TTM', metric: '基本每股收益增长率', period: 'TTM', stockValue: formatPercent(s.epsGrowthTtm), industryAvg: formatPercent(s.epsGrowthTtmIndustryAvg), industryMed: formatPercent(s.epsGrowthTtmIndustryMed) },
+    { key: 'eps_24A', metric: '基本每股收益增长率', period: '24A', stockValue: formatPercent(s.epsGrowthLastYA), industryAvg: formatPercent(s.epsGrowthLastYAIndustryAvg), industryMed: formatPercent(s.epsGrowthLastYAIndustryMed) },
+    { key: 'eps_3y', metric: '基本每股收益增长率', period: '3年复合', stockValue: formatPercent(s.epsGrowth3yCagr), industryAvg: formatPercent(s.epsGrowth3yCagrIndustryAvg), industryMed: formatPercent(s.epsGrowth3yCagrIndustryMed) },
+
+    { key: 'rev_27E', metric: '营业收入增长率', period: '27E', stockValue: formatPercent(s.revenueGrowthNext2YE), industryAvg: formatPercent(s.revenueGrowthNext2YEIndustryAvg), industryMed: formatPercent(s.revenueGrowthNext2YEIndustryMed) },
+    { key: 'rev_26E', metric: '营业收入增长率', period: '26E', stockValue: formatPercent(s.revenueGrowthNextYE), industryAvg: formatPercent(s.revenueGrowthNextYEIndustryAvg), industryMed: formatPercent(s.revenueGrowthNextYEIndustryMed) },
+    { key: 'rev_25E', metric: '营业收入增长率', period: '25E', stockValue: formatPercent(s.revenueGrowthThisYE), industryAvg: formatPercent(s.revenueGrowthThisYEIndustryAvg), industryMed: formatPercent(s.revenueGrowthThisYEIndustryMed) },
+    { key: 'rev_TTM', metric: '营业收入增长率', period: 'TTM', stockValue: formatPercent(s.revenueGrowthTtm), industryAvg: formatPercent(s.revenueGrowthTtmIndustryAvg), industryMed: formatPercent(s.revenueGrowthTtmIndustryMed) },
+    { key: 'rev_24A', metric: '营业收入增长率', period: '24A', stockValue: formatPercent(s.revenueGrowthLastYA), industryAvg: formatPercent(s.revenueGrowthLastYAIndustryAvg), industryMed: formatPercent(s.revenueGrowthLastYAIndustryMed) },
+    { key: 'rev_3y', metric: '营业收入增长率', period: '3年复合', stockValue: formatPercent(s.revenueGrowth3yCagr), industryAvg: formatPercent(s.revenueGrowth3yCagrIndustryAvg), industryMed: formatPercent(s.revenueGrowth3yCagrIndustryMed) },
+
+    { key: 'net_27E', metric: '净利润增长率', period: '27E', stockValue: formatPercent(s.netProfitGrowthNext2YE), industryAvg: formatPercent(s.netProfitGrowthNext2YEIndustryAvg), industryMed: formatPercent(s.netProfitGrowthNext2YEIndustryMed) },
+    { key: 'net_26E', metric: '净利润增长率', period: '26E', stockValue: formatPercent(s.netProfitGrowthNextYE), industryAvg: formatPercent(s.netProfitGrowthNextYEIndustryAvg), industryMed: formatPercent(s.netProfitGrowthNextYEIndustryMed) },
+    { key: 'net_25E', metric: '净利润增长率', period: '25E', stockValue: formatPercent(s.netProfitGrowthThisYE), industryAvg: formatPercent(s.netProfitGrowthThisYEIndustryAvg), industryMed: formatPercent(s.netProfitGrowthThisYEIndustryMed) },
+    { key: 'net_TTM', metric: '净利润增长率', period: 'TTM', stockValue: formatPercent(s.netProfitGrowthTtm), industryAvg: formatPercent(s.netProfitGrowthTtmIndustryAvg), industryMed: formatPercent(s.netProfitGrowthTtmIndustryMed) },
+    { key: 'net_24A', metric: '净利润增长率', period: '24A', stockValue: formatPercent(s.netProfitGrowthLastYA), industryAvg: formatPercent(s.netProfitGrowthLastYAIndustryAvg), industryMed: formatPercent(s.netProfitGrowthLastYAIndustryMed) },
+    { key: 'net_3y', metric: '净利润增长率', period: '3年复合', stockValue: formatPercent(s.netProfitGrowth3yCagr), industryAvg: formatPercent(s.netProfitGrowth3yCagrIndustryAvg), industryMed: formatPercent(s.netProfitGrowth3yCagrIndustryMed) },
   ];
+});
+
+const detailRowClassName = (_record: any, index: number) => {
+  if (index === 5 || index === 11) {
+    return 'metric-group-divider';
+  }
+  return '';
 };
 
 const searchParams = reactive<GrowthMetricsPageReqVO>({
@@ -242,7 +215,8 @@ const searchParams = reactive<GrowthMetricsPageReqVO>({
 
 const pagination = reactive({
   current: 1,
-  pageSize: 10,
+  pageSize: 15,
+  pageSizeOptions: ['15', '50', '100', '200'],
   total: 0,
   showSizeChanger: true,
   showQuickJumper: true,
@@ -264,6 +238,11 @@ const fetchData = async () => {
     if (data.success) {
       dataSource.value = data.data.content;
       pagination.total = data.data.totalElements;
+      if (dataSource.value.length > 0) {
+        selectedStock.value = dataSource.value[0] || null;
+      } else {
+        selectedStock.value = null;
+      }
     }
   } catch (error) {
     console.error('Failed to fetch growth metrics data:', error);
@@ -279,8 +258,9 @@ const targetGroupId = ref<number | undefined>(undefined);
 const selectedStockCode = ref('');
 const watchlistGroups = ref<WatchlistGroupVO[]>([]);
 
-const showAddWatchlist = (record: StockGrowthMetrics) => {
-  selectedStockCode.value = record.stockCode;
+const showAddWatchlist = () => {
+  if (!selectedStock.value) return;
+  selectedStockCode.value = selectedStock.value.stockCode;
   targetGroupId.value = undefined;
   watchlistVisible.value = true;
 };
@@ -314,10 +294,13 @@ const handleSearch = () => {
 };
 
 const resetSearch = () => {
-  Object.keys(searchParams).forEach(key => {
-      (searchParams as any)[key] = undefined;
-  });
   searchParams.stockCode = '';
+  searchParams.epsGrowth3yCagrMin = undefined;
+  searchParams.epsGrowth3yCagrMax = undefined;
+  searchParams.revenueGrowthTtmMin = undefined;
+  searchParams.revenueGrowthTtmMax = undefined;
+  searchParams.netProfitGrowthTtmMin = undefined;
+  searchParams.netProfitGrowthTtmMax = undefined;
   handleSearch();
 };
 
@@ -333,6 +316,19 @@ const handleTableChange: TableProps['onChange'] = (pag: any, _filters: any, sort
   }
 
   fetchData();
+};
+
+const rowClassName = (record: StockGrowthMetrics) => {
+  return selectedStock.value?.id === record.id ? 'growth-table-row-selected' : '';
+};
+
+const customRow = (record: StockGrowthMetrics) => {
+  return {
+    onClick: () => {
+      selectedStock.value = record;
+    },
+    style: { cursor: 'pointer' }
+  };
 };
 
 onMounted(async () => {
@@ -369,48 +365,27 @@ onMounted(async () => {
     white-space: nowrap;
 }
 
-.growth-metrics-container :deep(.ant-table-expanded-row > td) {
-    background: rgba(255, 255, 255, 0.02) !important;
-    padding: 0 !important;
+.growth-table :deep(.ant-table-row:hover) {
+  background-color: #fafafa;
+}
+.growth-table :deep(.ant-table-tbody > tr.growth-table-row-selected > td),
+.growth-table :deep(.ant-table-tbody > tr.growth-table-row-selected:hover > td),
+.growth-table :deep(.ant-table-tbody > tr.growth-table-row-selected > td.ant-table-cell-row-hover) {
+  background: #f3f3f3 !important;
+  color: #1f2d3d;
+  font-weight: 600;
+  transition: none !important;
+}
+.growth-table :deep(.growth-table-row-selected > td:first-child) {
+  box-shadow: inset 3px 0 0 #6f6f6f;
 }
 
-.growth-metrics-container :deep(.ant-table-expanded-row-fixed) {
-    padding: 0 !important;
-    position: static !important;
-    width: max-content !important;
-    min-width: 100% !important;
-    overflow: visible !important;
+.detail-table {
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.industry-compare-panel {
-    overflow: visible;
-    background: rgba(255, 255, 255, 0.02);
+.detail-table :deep(.metric-group-divider > td),
+.detail-table :deep(.metric-group-start-cell) {
+  border-bottom: 1px solid #bfbfbf !important;
 }
-
-.industry-compare-row {
-    display: grid;
-    align-items: center;
-    min-height: 36px;
-    color: var(--color-text-primary);
-}
-
-.growth-industry-panel .industry-compare-row {
-    grid-template-columns: 50px 120px 100px 140px repeat(3, 110px 100px 100px 100px 100px 100px) 100px;
-    min-width: 2360px;
-}
-
-.industry-compare-row + .industry-compare-row {
-    background: rgba(255, 255, 255, 0.01);
-}
-
-.industry-compare-cell {
-    padding: 0 16px;
-    line-height: 36px;
-    white-space: nowrap;
-}
-
-.industry-compare-label {
-    color: var(--color-text-secondary) !important;
-}
-
 </style>
