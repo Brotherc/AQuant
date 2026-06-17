@@ -13,7 +13,7 @@
               style="width: 100%; display: flex; flex-wrap: wrap;"
             >
               <a-form-item label="代码">
-                <a-input v-model:value="searchParams.stockCode" placeholder="输入代码" allow-clear style="width: 100px" />
+                <a-input v-model:value="searchParams.stockCode" placeholder="输入代码" allow-clear style="width: 140px" />
               </a-form-item>
               <a-form-item label="ROE-3年平均">
                 <div style="display: flex; align-items: center; gap: 8px">
