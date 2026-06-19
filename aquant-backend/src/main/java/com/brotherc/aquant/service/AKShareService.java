@@ -15,8 +15,10 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -491,7 +493,7 @@ public class AKShareService {
                 .get()
                 .build();
 
-        List<FundOpenFundDailyEm> list;
+        List<Map<String, String>> list;
 
         try (Response response = okHttpClient.newCall(request).execute()) {
             if (!response.isSuccessful() || response.body() == null) {
@@ -499,7 +501,7 @@ public class AKShareService {
                 throw new RuntimeException("fund_open_fund_daily_em请求失败");
             }
 
-            list = objectMapper.readValue(response.body().string(), new TypeReference<>() {
+            list = objectMapper.readValue(response.body().string(), new TypeReference<List<Map<String, String>>>() {
             });
 
         } catch (IOException e) {
@@ -507,7 +509,93 @@ public class AKShareService {
             throw new RuntimeException("fund_open_fund_daily_em请求失败");
         }
 
-        return list;
+        return list.stream().map(map -> {
+            FundOpenFundDailyEm item = new FundOpenFundDailyEm();
+            String fundCodeValue = map.get("基金代码");
+            item.setFundCode(fundCodeValue == null ? null : fundCodeValue.trim());
+
+            String fundNameValue = map.get("基金简称");
+            item.setFundName(fundNameValue == null ? null : fundNameValue.trim());
+
+            String dailyGrowthValue = map.get("日增长值");
+            if (dailyGrowthValue != null) {
+                String text = dailyGrowthValue.trim();
+                if (StringUtils.isNotBlank(text) && !"-".equals(text)) {
+                    try {
+                        item.setDailyGrowthValue(new BigDecimal(text));
+                    } catch (NumberFormatException e) {
+                        log.warn("数值转换失败，value={}", dailyGrowthValue);
+                    }
+                }
+            }
+
+            String dailyGrowthRate = map.get("日增长率");
+            if (dailyGrowthRate != null) {
+                String text = dailyGrowthRate.trim();
+                if (StringUtils.isNotBlank(text) && !"-".equals(text)) {
+                    try {
+                        item.setDailyGrowthRate(new BigDecimal(text));
+                    } catch (NumberFormatException e) {
+                        log.warn("数值转换失败，value={}", dailyGrowthRate);
+                    }
+                }
+            }
+
+            String purchaseStatusValue = map.get("申购状态");
+            item.setPurchaseStatus(purchaseStatusValue == null ? null : purchaseStatusValue.trim());
+
+            String redemptionStatusValue = map.get("赎回状态");
+            item.setRedemptionStatus(redemptionStatusValue == null ? null : redemptionStatusValue.trim());
+
+            String feeValue = map.get("手续费");
+            item.setFee(feeValue == null ? null : feeValue.trim());
+
+            map.keySet().stream()
+                    .map(key -> {
+                        if (key == null || key.length() < 14) {
+                            return null;
+                        }
+                        if (!key.endsWith("-单位净值") && !key.endsWith("-累计净值")) {
+                            return null;
+                        }
+                        try {
+                            return LocalDate.parse(key.substring(0, 10));
+                        } catch (Exception e) {
+                            return null;
+                        }
+                    })
+                    .filter(Objects::nonNull)
+                    .max(LocalDate::compareTo)
+                    .ifPresent(latestDate -> {
+                        String dateText = latestDate.toString();
+
+                        String unitNetValue = map.get(dateText + "-单位净值");
+                        if (unitNetValue != null) {
+                            String text = unitNetValue.trim();
+                            if (StringUtils.isNotBlank(text) && !"-".equals(text)) {
+                                try {
+                                    item.setUnitNetValue(new BigDecimal(text));
+                                } catch (NumberFormatException e) {
+                                    log.warn("数值转换失败，value={}", unitNetValue);
+                                }
+                            }
+                        }
+
+                        String cumulativeNetValue = map.get(dateText + "-累计净值");
+                        if (cumulativeNetValue != null) {
+                            String text = cumulativeNetValue.trim();
+                            if (StringUtils.isNotBlank(text) && !"-".equals(text)) {
+                                try {
+                                    item.setCumulativeNetValue(new BigDecimal(text));
+                                } catch (NumberFormatException e) {
+                                    log.warn("数值转换失败，value={}", cumulativeNetValue);
+                                }
+                            }
+                        }
+                    });
+
+            return item;
+        }).toList();
     }
 
 }
