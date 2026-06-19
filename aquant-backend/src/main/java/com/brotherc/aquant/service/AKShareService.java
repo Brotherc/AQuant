@@ -482,4 +482,32 @@ public class AKShareService {
         return list;
     }
 
+    public List<FundOpenFundDailyEm> fundOpenFundDailyEm() {
+        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/fund_open_fund_daily_em")
+                .newBuilder();
+
+        Request request = new Request.Builder()
+                .url(builder.build())
+                .get()
+                .build();
+
+        List<FundOpenFundDailyEm> list;
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                log.info("失败响应: {}", response);
+                throw new RuntimeException("fund_open_fund_daily_em请求失败");
+            }
+
+            list = objectMapper.readValue(response.body().string(), new TypeReference<>() {
+            });
+
+        } catch (IOException e) {
+            log.error("fund_open_fund_daily_em请求失败", e);
+            throw new RuntimeException("fund_open_fund_daily_em请求失败");
+        }
+
+        return list;
+    }
+
 }
