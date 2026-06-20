@@ -23,4 +23,8 @@ public interface StockFundPortfolioHoldingRepository extends JpaRepository<Stock
     @Modifying
     void deleteByFundCodeAndReportYearAndReportQuarter(String fundCode, Integer reportYear, Integer reportQuarter);
 
+    StockFundPortfolioHolding findFirstByFundCodeOrderByReportYearDescReportQuarterDesc(String fundCode);
+
+    List<StockFundPortfolioHolding> findByFundCodeAndReportYearAndReportQuarterOrderBySeqNoAsc(String fundCode, Integer reportYear, Integer reportQuarter);
+
 }

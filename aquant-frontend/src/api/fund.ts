@@ -60,3 +60,24 @@ export function getFundNetValues(fundCode: string) {
     params: { fundCode }
   })
 }
+
+export interface StockFundPortfolioHoldingVO {
+  id: number
+  fundCode: string
+  reportYear: number
+  reportQuarter: number
+  seqNo: number
+  stockCode: string
+  stockName: string
+  netValueRatio: number
+  holdShares: number
+  marketValue: number
+}
+
+export function getLatestFundHoldings(fundCode: string) {
+  return request<ResponseDTO<StockFundPortfolioHoldingVO[]>>({
+    url: '/stockFund/portfolio/latest',
+    method: 'GET',
+    params: { fundCode }
+  })
+}

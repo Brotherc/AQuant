@@ -4,6 +4,8 @@ import com.brotherc.aquant.entity.StockFundNetValue;
 import com.brotherc.aquant.model.dto.common.ResponseDTO;
 import com.brotherc.aquant.model.vo.stockfund.StockFundInfoPageReqVO;
 import com.brotherc.aquant.model.vo.stockfund.StockFundInfoVO;
+import com.brotherc.aquant.entity.StockFundPortfolioHolding;
+import com.brotherc.aquant.service.StockFundPortfolioHoldingService;
 import com.brotherc.aquant.service.StockFundInfoService;
 import com.brotherc.aquant.service.StockFundNetValueService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,6 +31,7 @@ public class StockFundController {
 
     private final StockFundInfoService stockFundInfoService;
     private final StockFundNetValueService stockFundNetValueService;
+    private final StockFundPortfolioHoldingService stockFundPortfolioHoldingService;
 
     @Operation(summary = "分页查询基金基本信息")
     @GetMapping("/page")
@@ -43,6 +46,13 @@ public class StockFundController {
     public ResponseDTO<List<StockFundNetValue>> getFundNetValues(
             @RequestParam String fundCode) {
         return ResponseDTO.success(stockFundNetValueService.getFundNetValues(fundCode));
+    }
+
+    @Operation(summary = "获取基金最新持仓")
+    @GetMapping("/portfolio/latest")
+    public ResponseDTO<List<StockFundPortfolioHolding>> getLatestFundHoldings(
+            @RequestParam String fundCode) {
+        return ResponseDTO.success(stockFundPortfolioHoldingService.getLatestFundHoldings(fundCode));
     }
 
 }

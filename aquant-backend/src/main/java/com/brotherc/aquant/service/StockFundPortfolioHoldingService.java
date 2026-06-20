@@ -62,4 +62,17 @@ public class StockFundPortfolioHoldingService {
         }
     }
 
+    public List<StockFundPortfolioHolding> getLatestFundHoldings(String fundCode) {
+        if (StringUtils.isBlank(fundCode)) {
+            return List.of();
+        }
+        StockFundPortfolioHolding latest = stockFundPortfolioHoldingRepository.findFirstByFundCodeOrderByReportYearDescReportQuarterDesc(fundCode);
+        if (latest == null) {
+            return List.of();
+        }
+        return stockFundPortfolioHoldingRepository.findByFundCodeAndReportYearAndReportQuarterOrderBySeqNoAsc(
+                fundCode, latest.getReportYear(), latest.getReportQuarter()
+        );
+    }
+
 }

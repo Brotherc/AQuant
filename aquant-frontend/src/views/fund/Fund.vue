@@ -54,6 +54,21 @@
               <a-descriptions-item label="手续费">{{ selectedFund.feeRate != null ? selectedFund.feeRate + '%' : '-' }}</a-descriptions-item>
             </a-descriptions>
             <FundNetValueChart :fundCode="selectedFund.fundCode" />
+            <div v-if="holdingList.length > 0" style="margin-top: 24px;">
+              <h4 style="margin-bottom: 12px; font-weight: 600;">
+                最新持仓明细 ({{ holdingList[0].reportYear }}年第{{ holdingList[0].reportQuarter }}季度)
+              </h4>
+              <a-table
+                :columns="holdingColumns"
+                :data-source="holdingList"
+                :loading="holdingLoading"
+                :pagination="false"
+                row-key="id"
+                size="small"
+                bordered
+              >
+              </a-table>
+            </div>
           </template>
           <template v-else>
             <div style="display: flex; justify-content: center; align-items: center; min-height: 400px;">
@@ -67,14 +82,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
-import { getFundPage } from '@/api/fund'
-import type { FundInfoPageReqVO, FundInfoVO } from '@/api/fund'
+import { ref, reactive, onMounted, watch } from 'vue'
+import { getFundPage, getLatestFundHoldings } from '@/api/fund'
+import type { FundInfoPageReqVO, FundInfoVO, StockFundPortfolioHoldingVO } from '@/api/fund'
 import FundNetValueChart from './components/FundNetValueChart.vue'
 
 const loading = ref(false)
 const dataList = ref<FundInfoVO[]>([])
 const selectedFund = ref<FundInfoVO | null>(null)
+
+const holdingList = ref<StockFundPortfolioHoldingVO[]>([])
+const holdingLoading = ref(false)
+
+const holdingColumns = [
+  { title: '序号', dataIndex: 'seqNo', width: 60, align: 'center' },
+  { title: '股票代码', dataIndex: 'stockCode', width: 100 },
+  { title: '股票名称', dataIndex: 'stockName' },
+  { title: '占净值(%)', dataIndex: 'netValueRatio', width: 100, align: 'right', customRender: ({ text }: any) => text != null ? text.toFixed(2) : '-' },
+  { title: '持股数(万股)', dataIndex: 'holdShares', width: 120, align: 'right', customRender: ({ text }: any) => text != null ? text.toFixed(2) : '-' },
+  { title: '市值(万元)', dataIndex: 'marketValue', width: 120, align: 'right', customRender: ({ text }: any) => text != null ? text.toFixed(2) : '-' }
+]
 
 const formatAmount = (val: number | null | undefined) => {
   if (val == null) return '-'
@@ -86,7 +113,7 @@ const formatAmount = (val: number | null | undefined) => {
 
 const queryParams = reactive<FundInfoPageReqVO>({
   page: 0,
-  size: 10,
+  size: 20,
   fundName: '',
   fundCode: '',
   fundType: undefined,
@@ -128,7 +155,8 @@ const fundTypeOptions = [
 
 const pagination = reactive({
   current: 1,
-  pageSize: 10,
+  pageSize: 20,
+  pageSizeOptions: ['20', '50', '100', '200'],
   total: 0,
   showSizeChanger: true,
   showTotal: (total: number) => `共 ${total} 条`
@@ -206,6 +234,27 @@ const customRow = (record: FundInfoVO) => {
 const rowClassName = (record: FundInfoVO) => {
   return selectedFund.value?.id === record.id ? 'fund-table-row-selected' : ''
 }
+
+watch(selectedFund, async (newVal) => {
+  if (newVal) {
+    holdingLoading.value = true
+    try {
+      const res = await getLatestFundHoldings(newVal.fundCode)
+      if (res.data && res.data.success) {
+        holdingList.value = res.data.data
+      } else {
+        holdingList.value = []
+      }
+    } catch (error) {
+      console.error('Failed to load fund holdings:', error)
+      holdingList.value = []
+    } finally {
+      holdingLoading.value = false
+    }
+  } else {
+    holdingList.value = []
+  }
+})
 
 onMounted(() => {
   loadData()
