@@ -15,6 +15,7 @@ import com.brotherc.aquant.strategy.DualMovingAverageStrategy;
 import com.brotherc.aquant.strategy.MomentumStrategy;
 import com.brotherc.aquant.repository.StockWatchlistStockRepository;
 import com.brotherc.aquant.entity.StockWatchlistStock;
+import com.brotherc.aquant.utils.UserContext;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,9 +45,10 @@ public class StockStrategyService {
     private final StockWatchlistGroupRepository stockWatchlistGroupRepository;
     private final StockStrategySnapshotService stockStrategySnapshotService;
 
-    public Page<StockTradeSignalVO> dualMA(DualMAReqVO reqVO, Pageable pageable, Long userId) {
+    public Page<StockTradeSignalVO> dualMA(DualMAReqVO reqVO, Pageable pageable) {
         Set<String> watchlistCodes = null;
         if (reqVO.getWatchlistGroupId() != null) {
+            Long userId = UserContext.requireCurrentUserId();
             stockWatchlistGroupRepository.findByIdAndUserId(reqVO.getWatchlistGroupId(), userId)
                     .orElseThrow(() -> new BusinessException(ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND));
             watchlistCodes = stockWatchlistStockRepository
@@ -153,9 +155,10 @@ public class StockStrategyService {
         return result != null ? result : Comparator.comparing(StockTradeSignalVO::getCode);
     }
 
-    public Page<StockTradeBacktestVO> dualMABacktest(DualMABacktestReqVO reqVO, Pageable pageable, Long userId) {
+    public Page<StockTradeBacktestVO> dualMABacktest(DualMABacktestReqVO reqVO, Pageable pageable) {
         java.util.Set<String> watchlistCodes = null;
         if (reqVO.getWatchlistGroupId() != null) {
+            Long userId = UserContext.requireCurrentUserId();
             stockWatchlistGroupRepository.findByIdAndUserId(reqVO.getWatchlistGroupId(), userId)
                     .orElseThrow(() -> new BusinessException(ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND));
             watchlistCodes = stockWatchlistStockRepository
@@ -275,9 +278,10 @@ public class StockStrategyService {
 
     // ==================== 动量策略 ====================
 
-    public Page<StockTradeSignalVO> momentum(MomentumReqVO reqVO, Pageable pageable, Long userId) {
+    public Page<StockTradeSignalVO> momentum(MomentumReqVO reqVO, Pageable pageable) {
         java.util.Set<String> watchlistCodes = null;
         if (reqVO.getWatchlistGroupId() != null) {
+            Long userId = UserContext.requireCurrentUserId();
             stockWatchlistGroupRepository.findByIdAndUserId(reqVO.getWatchlistGroupId(), userId)
                     .orElseThrow(() -> new BusinessException(ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND));
             watchlistCodes = stockWatchlistStockRepository
@@ -380,9 +384,10 @@ public class StockStrategyService {
         return result != null ? result : Comparator.comparing(StockTradeSignalVO::getCode);
     }
 
-    public Page<StockTradeBacktestVO> momentumBacktest(MomentumBacktestReqVO reqVO, Pageable pageable, Long userId) {
+    public Page<StockTradeBacktestVO> momentumBacktest(MomentumBacktestReqVO reqVO, Pageable pageable) {
         Set<String> watchlistCodes = null;
         if (reqVO.getWatchlistGroupId() != null) {
+            Long userId = UserContext.requireCurrentUserId();
             stockWatchlistGroupRepository.findByIdAndUserId(reqVO.getWatchlistGroupId(), userId)
                     .orElseThrow(() -> new BusinessException(ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND));
             watchlistCodes = stockWatchlistStockRepository

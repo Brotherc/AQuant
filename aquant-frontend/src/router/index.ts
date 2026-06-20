@@ -1,5 +1,6 @@
 
 import { createRouter, createWebHistory } from 'vue-router'
+import { Modal } from 'ant-design-vue';
 import BasicLayout from '@/layout/BasicLayout.vue'
 
 const router = createRouter({
@@ -22,7 +23,8 @@ const router = createRouter({
                         {
                             path: 'index',
                             name: 'Watchlist',
-                            component: () => import('@/views/watchlist/Watchlist.vue')
+                            component: () => import('@/views/watchlist/Watchlist.vue'),
+                            meta: { requiresAuth: true }
                         }
                     ]
                 },
@@ -133,7 +135,8 @@ const router = createRouter({
                             path: 'my',
                             name: 'MyArticles',
                             component: () => import('@/views/article/ArticleList.vue'),
-                            props: { isMyArticles: true }
+                            props: { isMyArticles: true },
+                            meta: { requiresAuth: true }
                         },
                         {
                             path: 'detail/:id',
@@ -143,12 +146,14 @@ const router = createRouter({
                         {
                             path: 'create',
                             name: 'ArticleCreate',
-                            component: () => import('@/views/article/ArticleEdit.vue')
+                            component: () => import('@/views/article/ArticleEdit.vue'),
+                            meta: { requiresAuth: true }
                         },
                         {
                             path: 'edit/:id',
                             name: 'ArticleEdit',
-                            component: () => import('@/views/article/ArticleEdit.vue')
+                            component: () => import('@/views/article/ArticleEdit.vue'),
+                            meta: { requiresAuth: true }
                         }
                     ]
                 }
@@ -156,5 +161,41 @@ const router = createRouter({
         }
     ]
 })
+
+let authPromptVisible = false;
+
+router.beforeEach((to, from) => {
+    if (to.meta.requiresAuth && !localStorage.getItem('token')) {
+        return new Promise((resolve) => {
+            if (authPromptVisible) {
+                resolve(false);
+                return;
+            }
+
+            authPromptVisible = true;
+            const hasPreviousRoute = from.matched.length > 0;
+
+            Modal.confirm({
+                title: '请先登录',
+                content: '当前页面需要登录后才能访问。',
+                okText: '去登录',
+                cancelText: hasPreviousRoute ? '取消' : '返回首页',
+                centered: true,
+                onOk: () => {
+                    resolve({
+                        path: '/login',
+                        query: { redirect: to.fullPath }
+                    });
+                },
+                onCancel: () => {
+                    resolve(hasPreviousRoute ? false : { path: '/stock-data/index' });
+                },
+                afterClose: () => {
+                    authPromptVisible = false;
+                }
+            });
+        });
+    }
+});
 
 export default router

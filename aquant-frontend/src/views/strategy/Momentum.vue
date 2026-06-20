@@ -77,7 +77,14 @@
             </a-select>
           </a-form-item>
           <a-form-item label="自选分组">
-            <a-select v-model:value="queryParams.watchlistGroupId" placeholder="全部" allow-clear style="width: 130px">
+            <a-select
+              v-model:value="queryParams.watchlistGroupId"
+              placeholder="全部"
+              allow-clear
+              style="width: 130px"
+              :disabled="!isLoggedIn"
+              :loading="watchlistGroupsLoading"
+            >
               <a-select-option v-for="group in watchlistGroups" :key="group.id" :value="group.id">
                 {{ group.name }}
               </a-select-option>
@@ -213,6 +220,8 @@ const loading = ref(false);
 const dataSource = ref<any[]>([]);
 const backtestLastTime = ref<string>();
 const reliabilityOptions = ['高', '中', '低', '低(方差0)', '样本不足'];
+const isLoggedIn = ref(!!localStorage.getItem('token'));
+const watchlistGroupsLoading = ref(false);
 const queryParams = reactive<any>({
   market: 'sh',
   code: '',
@@ -225,6 +234,23 @@ const queryParams = reactive<any>({
 });
 
 const watchlistGroups = ref<WatchlistGroupVO[]>([]);
+
+const loadWatchlistGroups = async () => {
+  if (!isLoggedIn.value || watchlistGroupsLoading.value) {
+    return;
+  }
+  watchlistGroupsLoading.value = true;
+  try {
+    const res = await getWatchlistGroups();
+    if (res.data.success) {
+      watchlistGroups.value = res.data.data;
+    }
+  } catch (error) {
+    console.error('加载自选分组失败:', error);
+  } finally {
+    watchlistGroupsLoading.value = false;
+  }
+};
 
 const pagination = reactive({
   current: 1,
@@ -434,6 +460,7 @@ const handleChart = (record: StockTradeSignalVO) => {
 };
 
 onMounted(async () => {
+  isLoggedIn.value = !!localStorage.getItem('token');
   if (searchFormWrapperRef.value && typeof ResizeObserver !== 'undefined') {
     searchFormResizeObserver = new ResizeObserver(() => {
       updateBacktestSubmitWrapped();
@@ -442,13 +469,8 @@ onMounted(async () => {
   }
   updateBacktestSubmitWrapped();
   fetchData();
-  try {
-    const res = await getWatchlistGroups();
-    if (res.data.success) {
-      watchlistGroups.value = res.data.data;
-    }
-  } catch (error) {
-    console.error('加载自选分组失败:', error);
+  if (isLoggedIn.value) {
+    await loadWatchlistGroups();
   }
 });
 

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { message } from 'ant-design-vue';
+import router from '@/router';
 
 // Create axios instance
 const service = axios.create({
@@ -9,6 +10,34 @@ const service = axios.create({
         indexes: null
     }
 });
+
+let authRedirecting = false;
+
+const handleAuthFailure = (messageText: string) => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('nickname');
+
+    if (!authRedirecting) {
+        authRedirecting = true;
+        message.error(messageText || '登录状态已失效，请重新登录');
+
+        const currentPath = router.currentRoute.value.fullPath;
+        const redirectQuery = currentPath && currentPath !== '/login'
+            ? { redirect: currentPath }
+            : undefined;
+
+        router.replace({
+            path: '/login',
+            query: redirectQuery
+        }).finally(() => {
+            authRedirecting = false;
+        });
+    }
+
+    const authError = new Error(messageText || '登录已失效') as Error & { isAuthFailure?: boolean };
+    authError.isAuthFailure = true;
+    return Promise.reject(authError);
+};
 
 // Request interceptor - 自动附加 JWT Token
 service.interceptors.request.use(
@@ -33,13 +62,7 @@ service.interceptors.response.use(
         if (data && typeof data === 'object' && 'success' in data) {
             if (!data.success && data.code !== 0 && data.code !== 200) {
                 if (data.code === 1000206 || data.code === 1000204) {
-                    message.error(data.message || '登录状态已失效，请重新登录');
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('nickname');
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
-                    return Promise.reject(new Error(data.message || '登录已失效'));
+                    return handleAuthFailure(data.message || '登录状态已失效，请重新登录');
                 }
                 message.error(data.message || '系统异常');
             }
@@ -48,10 +71,7 @@ service.interceptors.response.use(
     },
     (error) => {
         if (error.response?.status === 401) {
-            // Token 无效 → 静默清除，不打扰用户
-            localStorage.removeItem('token');
-            localStorage.removeItem('nickname');
-            return Promise.reject(error);
+            return handleAuthFailure('登录状态已失效，请重新登录');
         }
         console.error('Response Error:', error);
         message.error(error.message || '网络连接失败');

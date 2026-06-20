@@ -3,7 +3,6 @@ package com.brotherc.aquant.controller;
 import com.brotherc.aquant.model.dto.common.ResponseDTO;
 import com.brotherc.aquant.model.vo.strategy.*;
 import com.brotherc.aquant.service.StockStrategyService;
-import com.brotherc.aquant.utils.UserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -24,29 +23,25 @@ public class StockStrategyController {
     @Operation(summary = "双均线策略")
     @GetMapping("/dualMA")
     public ResponseDTO<Page<StockTradeSignalVO>> dualMA(DualMAReqVO reqVO, Pageable pageable) {
-        Long userId = UserContext.requireCurrentUserId();
-        return ResponseDTO.success(stockStrategyService.dualMA(reqVO, pageable, userId));
+        return ResponseDTO.success(stockStrategyService.dualMA(reqVO, pageable));
     }
 
     @Operation(summary = "双均线策略回测")
     @GetMapping("/dualMABacktest")
     public ResponseDTO<Page<StockTradeBacktestVO>> dualMABacktest(DualMABacktestReqVO reqVO, Pageable pageable) {
-        Long userId = UserContext.requireCurrentUserId();
-        return ResponseDTO.success(stockStrategyService.dualMABacktest(reqVO, pageable, userId));
+        return ResponseDTO.success(stockStrategyService.dualMABacktest(reqVO, pageable));
     }
 
     @Operation(summary = "动量策略")
     @GetMapping("/momentum")
     public ResponseDTO<Page<StockTradeSignalVO>> momentum(MomentumReqVO reqVO, Pageable pageable) {
-        Long userId = UserContext.requireCurrentUserId();
-        return ResponseDTO.success(stockStrategyService.momentum(reqVO, pageable, userId));
+        return ResponseDTO.success(stockStrategyService.momentum(reqVO, pageable));
     }
 
     @Operation(summary = "动量策略回测")
     @GetMapping("/momentumBacktest")
     public ResponseDTO<Page<StockTradeBacktestVO>> momentumBacktest(MomentumBacktestReqVO reqVO, Pageable pageable) {
-        Long userId = UserContext.requireCurrentUserId();
-        return ResponseDTO.success(stockStrategyService.momentumBacktest(reqVO, pageable, userId));
+        return ResponseDTO.success(stockStrategyService.momentumBacktest(reqVO, pageable));
     }
 
 }

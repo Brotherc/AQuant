@@ -135,6 +135,7 @@ let observer: IntersectionObserver | null = null;
 // 加载文章列表
 const loadArticles = async (append = false) => {
   if (loading.value) return;
+  if (props.isMyArticles && !localStorage.getItem('token')) return;
   
   loading.value = true;
   try {
@@ -180,7 +181,9 @@ const loadArticles = async (append = false) => {
     }
   } catch (error) {
     console.error('加载文章列表失败:', error);
-    message.error('加载文章列表失败');
+    if (!(error as { isAuthFailure?: boolean } | undefined)?.isAuthFailure) {
+      message.error('加载文章列表失败');
+    }
   } finally {
     loading.value = false;
   }

@@ -129,12 +129,13 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, ref, h } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { message } from 'ant-design-vue';
 import { UserOutlined, LockOutlined, LineChartOutlined, StockOutlined, BellOutlined, ExperimentOutlined } from '@ant-design/icons-vue';
 import { login, resetPassword, sendResetCode } from '@/api/auth';
 
 const router = useRouter();
+const route = useRoute();
 const loading = ref(false);
 const loginForm = ref({ username: '', password: '' });
 const resetModalVisible = ref(false);
@@ -158,7 +159,10 @@ const handleLogin = async () => {
       localStorage.setItem('token', data.token);
       localStorage.setItem('nickname', data.nickname || data.username);
       message.success('登录成功');
-      router.push('/');
+      const redirect = typeof route.query.redirect === 'string' && route.query.redirect
+        ? route.query.redirect
+        : '/';
+      router.push(redirect);
     }
   } catch (e) {
     // handled by interceptor
