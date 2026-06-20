@@ -45,6 +45,7 @@ public class JwtAuthFilter implements Filter {
             "/stockIndicator/**",
             "/stockDividend/**",
             "/stockStrategy/**",
+            "/stockFund/**",
 
             // --- 系统工具 ---
             "/doc.html",
