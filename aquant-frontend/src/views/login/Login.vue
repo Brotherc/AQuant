@@ -485,9 +485,15 @@ onBeforeUnmount(() => {
 }
 
 .verify-row {
-  display: grid;
-  grid-template-columns: 1fr 128px;
+  display: flex;
+  align-items: stretch;
   gap: 12px;
+}
+
+.verify-row .ant-btn {
+  width: 128px;
+  height: auto;
+  padding: 0;
 }
 
 /* 浅灰蓝主题输入框样式 */
