@@ -638,7 +638,11 @@ public class StockSyncTask {
     }
 
     private void syncFundPortfolioHoldings(LocalDateTime syncTime) {
-        List<StockFundInfo> stockFundInfos = stockFundInfoRepository.findAll();
+        List<StockFundInfo> stockFundInfos = stockFundInfoRepository.findAll().stream()
+                .filter(Objects::nonNull)
+                .filter(stockFundInfo -> StringUtils.isNotBlank(stockFundInfo.getFundCode()))
+                .filter(this::isOverseasFund)
+                .toList();
         if (CollectionUtils.isEmpty(stockFundInfos)) {
             return;
         }
@@ -646,7 +650,6 @@ public class StockSyncTask {
         FundHoldingSyncWindow syncWindow = buildLatestFundHoldingSyncWindow(syncTime.toLocalDate());
         List<String> fundCodes = stockFundInfos.stream()
                 .map(StockFundInfo::getFundCode)
-                .filter(StringUtils::isNotBlank)
                 .distinct()
                 .toList();
         if (CollectionUtils.isEmpty(fundCodes)) {
@@ -662,9 +665,6 @@ public class StockSyncTask {
         int emptyCount = 0;
 
         for (StockFundInfo stockFundInfo : stockFundInfos) {
-            if (stockFundInfo == null || StringUtils.isBlank(stockFundInfo.getFundCode())) {
-                continue;
-            }
             if (existedFundCodes.contains(stockFundInfo.getFundCode())) {
                 continue;
             }
