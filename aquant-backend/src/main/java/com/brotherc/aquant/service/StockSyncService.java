@@ -144,87 +144,87 @@ public class StockSyncService {
 
             // 同步计算杜邦分析、成长性、估值等数据
             List<StockZhGrowthComparisonEm> stockZhGrowthComparisonEms = aKShareService.stockZhGrowthComparisonEm(stock.getCode());
-            List<StockZhDupontComparisonEm> stockZhDupontComparisonEms = aKShareService.stockZhDupontComparisonEm(stock.getCode());
-
             stockGrowthMetricsService.save(stock.getCode(), stock.getName(), stockZhGrowthComparisonEms);
-            stockDupontAnalysisService.save(stock.getCode(), stock.getName(), stockZhDupontComparisonEms);
 
             List<StockZhValuationComparisonEm> stockZhValuationComparisonEms;
             try {
                 stockZhValuationComparisonEms = aKShareService.stockZhValuationComparisonEm(stock.getCode());
                 stockValuationMetricsService.save(stock.getCode(), stock.getName(), stockZhValuationComparisonEms);
+
+                List<StockZhDupontComparisonEm> stockZhDupontComparisonEms = aKShareService.stockZhDupontComparisonEm(stock.getCode());
+                stockDupontAnalysisService.save(stock.getCode(), stock.getName(), stockZhDupontComparisonEms);
+
+                List<StockZhADaily> stockZhAHists = aKShareService.stockZhADaily(stock.getCode(), null, null, "qfq");
+
+                // 1. 最大收盘
+                BigDecimal maxClose = stockZhAHists.stream()
+                        .map(StockZhADaily::getClose)
+                        .max(Comparator.naturalOrder())
+                        .orElse(BigDecimal.ZERO);
+
+                // 2. 最小收盘
+                BigDecimal minClose = stockZhAHists.stream()
+                        .map(StockZhADaily::getClose)
+                        .min(Comparator.naturalOrder())
+                        .orElse(BigDecimal.ZERO);
+
+                // 3. 最大最小差值
+                BigDecimal diff = maxClose.subtract(minClose);
+
+                // 4. 最新一条收盘（假设 list 最后一个是最新的）
+                BigDecimal latestClose = stockZhAHists.get(stockZhAHists.size() - 1).getClose();
+
+                // 5. 计算百分比：(latest - min) / diff * 100
+                BigDecimal percent = BigDecimal.ZERO;
+                if (diff.compareTo(BigDecimal.ZERO) != 0) {
+                    percent = latestClose.subtract(minClose)
+                            .divide(diff, 4, RoundingMode.HALF_UP) // 保留4位小数
+                            .multiply(new BigDecimal("100"));
+                }
+
+                stock.setHistoryHightPrice(maxClose);
+                stock.setHistoryLowPrice(minClose);
+                stock.setPir(percent);
+
+                log.info(" pir: " + percent);
+
+                stockQuoteRepository.save(stock);
+
+                // 4. 每同步一条更新 stock_sync 表
+                stockSync.setValue(stock.getId().toString());
+                stockSyncRepository.save(stockSync);
+
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+                LocalDate start = LocalDate.parse("2021-01-01", formatter);
+                LocalDate end = LocalDate.parse("2026-02-23", formatter);
+
+                List<StockQuoteHistory> filteredList = stockZhAHists.stream()
+                        .filter(daily -> {
+                            LocalDate tradeDate = LocalDate.parse(daily.getDate().substring(0, 10), formatter);
+                            return !tradeDate.isBefore(start) && !tradeDate.isAfter(end);
+                        }).map(o -> {
+                            StockQuoteHistory stockQuoteHistory = new StockQuoteHistory();
+                            stockQuoteHistory.setCode(stock.getCode());
+                            stockQuoteHistory.setName(stock.getName());
+                            stockQuoteHistory.setOpenPrice(o.getOpen());
+                            stockQuoteHistory.setClosePrice(o.getClose());
+                            stockQuoteHistory.setHighPrice(o.getHigh());
+                            stockQuoteHistory.setLowPrice(o.getLow());
+                            stockQuoteHistory.setVolume(o.getVolume());
+                            stockQuoteHistory.setTurnover(o.getAmount());
+                            stockQuoteHistory.setQuoteTime("15:00:00");
+                            String tradeDate = o.getDate().substring(0, 10);
+                            stockQuoteHistory.setTradeDate(tradeDate);
+                            stockQuoteHistory.setCreatedAt(LocalDateTime.now());
+                            return stockQuoteHistory;
+                        })
+                        .toList();
+
+                stockQuoteHistoryRepository.saveAll(filteredList);
             } catch (Exception e) {
                 log.error("stock_zh_a_growth_comparison请求失败", e);
             }
-
-            List<StockZhADaily> stockZhAHists = aKShareService.stockZhADaily(stock.getCode(), null, null, "qfq");
-
-            // 1. 最大收盘
-            BigDecimal maxClose = stockZhAHists.stream()
-                    .map(StockZhADaily::getClose)
-                    .max(Comparator.naturalOrder())
-                    .orElse(BigDecimal.ZERO);
-
-            // 2. 最小收盘
-            BigDecimal minClose = stockZhAHists.stream()
-                    .map(StockZhADaily::getClose)
-                    .min(Comparator.naturalOrder())
-                    .orElse(BigDecimal.ZERO);
-
-            // 3. 最大最小差值
-            BigDecimal diff = maxClose.subtract(minClose);
-
-            // 4. 最新一条收盘（假设 list 最后一个是最新的）
-            BigDecimal latestClose = stockZhAHists.get(stockZhAHists.size() - 1).getClose();
-
-            // 5. 计算百分比：(latest - min) / diff * 100
-            BigDecimal percent = BigDecimal.ZERO;
-            if (diff.compareTo(BigDecimal.ZERO) != 0) {
-                percent = latestClose.subtract(minClose)
-                        .divide(diff, 4, RoundingMode.HALF_UP) // 保留4位小数
-                        .multiply(new BigDecimal("100"));
-            }
-
-            stock.setHistoryHightPrice(maxClose);
-            stock.setHistoryLowPrice(minClose);
-            stock.setPir(percent);
-
-            log.info(" pir: " + percent);
-
-            stockQuoteRepository.save(stock);
-
-            // 4. 每同步一条更新 stock_sync 表
-            stockSync.setValue(stock.getId().toString());
-            stockSyncRepository.save(stockSync);
-
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
-            LocalDate start = LocalDate.parse("2021-01-01", formatter);
-            LocalDate end = LocalDate.parse("2026-02-23", formatter);
-
-            List<StockQuoteHistory> filteredList = stockZhAHists.stream()
-                    .filter(daily -> {
-                        LocalDate tradeDate = LocalDate.parse(daily.getDate().substring(0, 10), formatter);
-                        return !tradeDate.isBefore(start) && !tradeDate.isAfter(end);
-                    }).map(o -> {
-                        StockQuoteHistory stockQuoteHistory = new StockQuoteHistory();
-                        stockQuoteHistory.setCode(stock.getCode());
-                        stockQuoteHistory.setName(stock.getName());
-                        stockQuoteHistory.setOpenPrice(o.getOpen());
-                        stockQuoteHistory.setClosePrice(o.getClose());
-                        stockQuoteHistory.setHighPrice(o.getHigh());
-                        stockQuoteHistory.setLowPrice(o.getLow());
-                        stockQuoteHistory.setVolume(o.getVolume());
-                        stockQuoteHistory.setTurnover(o.getAmount());
-                        stockQuoteHistory.setQuoteTime("15:00:00");
-                        String tradeDate = o.getDate().substring(0, 10);
-                        stockQuoteHistory.setTradeDate(tradeDate);
-                        stockQuoteHistory.setCreatedAt(LocalDateTime.now());
-                        return stockQuoteHistory;
-                    })
-                    .toList();
-
-            stockQuoteHistoryRepository.saveAll(filteredList);
         }
 
         log.info("本次同步完成，最后同步到ID：" + stockList.get(stockList.size() - 1).getId());
