@@ -432,9 +432,9 @@ public class StockSyncTask {
                 if (!CollectionUtils.isEmpty(detailList)) {
                     stockSyncService.stockBoardIndustryHistory(sectorName, detailList, timestamp);
                 }
-                log.info("补齐板块历史行情完成，sectorName={}, start={}, end={}", sectorName, historyStart, historyEnd);
+                log.info("同步板块历史K线完成，sectorName={}, start={}, end={}", sectorName, historyStart, historyEnd);
             } catch (Exception e) {
-                log.error("补齐板块历史行情失败，sectorName={}, end={}", sectorName, historyEnd, e);
+                log.error("同步板块历史K线失败，sectorName={}, end={}", sectorName, historyEnd, e);
             }
 
             if (!sleepAfterBoardRequest()) {
