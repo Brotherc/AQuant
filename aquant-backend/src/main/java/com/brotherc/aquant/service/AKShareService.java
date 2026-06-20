@@ -626,4 +626,34 @@ public class AKShareService {
         return list;
     }
 
+    public List<FundPortfolioHoldEm> fundPortfolioHoldEm(String symbol, String date) {
+        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/fund_portfolio_hold_em")
+                .newBuilder()
+                .addQueryParameter("symbol", symbol)
+                .addQueryParameter("date", date);
+
+        Request request = new Request.Builder()
+                .url(builder.build())
+                .get()
+                .build();
+
+        List<FundPortfolioHoldEm> list;
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                log.info("失败响应: {}", response);
+                throw new RuntimeException("fund_portfolio_hold_em请求失败");
+            }
+
+            list = objectMapper.readValue(response.body().string(), new TypeReference<>() {
+            });
+
+        } catch (IOException e) {
+            log.error("fund_portfolio_hold_em请求失败", e);
+            throw new RuntimeException("fund_portfolio_hold_em请求失败");
+        }
+
+        return list;
+    }
+
 }
