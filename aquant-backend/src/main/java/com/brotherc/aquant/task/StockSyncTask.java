@@ -9,6 +9,7 @@ import com.brotherc.aquant.model.dto.akshare.*;
 import com.brotherc.aquant.repository.*;
 import com.brotherc.aquant.service.AKShareService;
 import com.brotherc.aquant.service.StockFundNetValueService;
+import com.brotherc.aquant.service.StockFundPortfolioHoldingService;
 import com.brotherc.aquant.service.StockQuoteHistoryService;
 import com.brotherc.aquant.service.StockQuoteService;
 import com.brotherc.aquant.service.StockStrategySnapshotService;
@@ -51,6 +52,7 @@ public class StockSyncTask {
     private final StockIndustryBoardHistoryRepository stockIndustryBoardHistoryRepository;
     private final StockFundInfoRepository stockFundInfoRepository;
     private final StockFundNetValueService stockFundNetValueService;
+    private final StockFundPortfolioHoldingService stockFundPortfolioHoldingService;
 
     /**
      * 项目完全启动后，异步执行一次
@@ -98,9 +100,9 @@ public class StockSyncTask {
         syncStockBoard();
         log.info("同步股票板块数据完成");
 
-        log.info("同步基金基本信息开始");
+        log.info("同步基金数据开始");
         syncFundInfo();
-        log.info("同步基金基本信息完成");
+        log.info("同步基金数据完成");
 
         log.info("同步股票分红数据开始");
         syncStockDividend();
@@ -548,6 +550,7 @@ public class StockSyncTask {
         }
 
         backfillMissingFundNetValues(historyTargets, latestClosedTradeDay);
+        syncFundPortfolioHoldings(syncTime);
     }
 
     private boolean shouldRefreshLatestFund(StockSync stockSync, LocalDateTime syncTime) {
@@ -634,6 +637,129 @@ public class StockSyncTask {
         }
     }
 
+    private void syncFundPortfolioHoldings(LocalDateTime syncTime) {
+        List<StockFundInfo> stockFundInfos = stockFundInfoRepository.findAll();
+        if (CollectionUtils.isEmpty(stockFundInfos)) {
+            return;
+        }
+
+        FundHoldingSyncWindow syncWindow = buildLatestFundHoldingSyncWindow(syncTime.toLocalDate());
+        List<String> fundCodes = stockFundInfos.stream()
+                .map(StockFundInfo::getFundCode)
+                .filter(StringUtils::isNotBlank)
+                .distinct()
+                .toList();
+        if (CollectionUtils.isEmpty(fundCodes)) {
+            return;
+        }
+
+        Set<String> existedFundCodes = new HashSet<>(
+                stockFundPortfolioHoldingService.findSyncedFundCodes(
+                        fundCodes, syncWindow.getReportYear(), syncWindow.getReportQuarter()
+                )
+        );
+        int syncedCount = 0;
+        int emptyCount = 0;
+
+        for (StockFundInfo stockFundInfo : stockFundInfos) {
+            if (stockFundInfo == null || StringUtils.isBlank(stockFundInfo.getFundCode())) {
+                continue;
+            }
+            if (existedFundCodes.contains(stockFundInfo.getFundCode())) {
+                continue;
+            }
+
+            try {
+                List<FundPortfolioHoldEm> holdings = aKShareService
+                        .fundPortfolioHoldEm(stockFundInfo.getFundCode(), syncWindow.getRequestDate());
+                List<FundPortfolioHoldEm> quarterHoldings = filterFundPortfolioHoldingsByQuarter(
+                        holdings, syncWindow.getReportYear(), syncWindow.getReportQuarter()
+                );
+                if (CollectionUtils.isEmpty(quarterHoldings)) {
+                    emptyCount++;
+                    continue;
+                }
+
+                stockFundPortfolioHoldingService.saveFundPortfolioHoldings(
+                        stockFundInfo.getFundCode(),
+                        syncWindow.getReportYear(),
+                        syncWindow.getReportQuarter(),
+                        quarterHoldings
+                );
+                syncedCount++;
+                log.info("同步基金持仓完成，fundCode={}, fundName={}, reportYear={}, reportQuarter={}",
+                        stockFundInfo.getFundCode(),
+                        stockFundInfo.getFundName(),
+                        syncWindow.getReportYear(),
+                        syncWindow.getReportQuarter());
+            } catch (Exception e) {
+                log.error("同步基金持仓失败，fundCode={}, fundName={}, reportYear={}, reportQuarter={}",
+                        stockFundInfo.getFundCode(),
+                        stockFundInfo.getFundName(),
+                        syncWindow.getReportYear(),
+                        syncWindow.getReportQuarter(),
+                        e);
+            }
+        }
+
+        log.info("基金持仓同步结束，reportYear={}, reportQuarter={}, totalFundCount={}, existedFundCount={}, syncedFundCount={}, emptyFundCount={}",
+                syncWindow.getReportYear(),
+                syncWindow.getReportQuarter(),
+                fundCodes.size(),
+                existedFundCodes.size(),
+                syncedCount,
+                emptyCount);
+    }
+
+    private FundHoldingSyncWindow buildLatestFundHoldingSyncWindow(LocalDate currentDate) {
+        LocalDate currentQuarterEnd = getQuarterEnd(currentDate);
+        LocalDate latestCompletedQuarterEnd = currentDate.isAfter(currentQuarterEnd)
+                ? currentQuarterEnd
+                : getQuarterEnd(currentDate.minusMonths(3));
+        return new FundHoldingSyncWindow(
+                String.valueOf(latestCompletedQuarterEnd.getYear()),
+                latestCompletedQuarterEnd.getYear(),
+                ((latestCompletedQuarterEnd.getMonthValue() - 1) / 3) + 1
+        );
+    }
+
+    private List<FundPortfolioHoldEm> filterFundPortfolioHoldingsByQuarter(
+            List<FundPortfolioHoldEm> holdings, Integer reportYear, Integer reportQuarter
+    ) {
+        if (CollectionUtils.isEmpty(holdings) || reportYear == null || reportQuarter == null) {
+            return Collections.emptyList();
+        }
+
+        String expectedQuarterText = reportYear + "年" + reportQuarter + "季度";
+        List<FundPortfolioHoldEm> result = new ArrayList<>();
+        for (FundPortfolioHoldEm holding : holdings) {
+            if (holding == null || StringUtils.isBlank(holding.getQuarter())) {
+                continue;
+            }
+            if (holding.getQuarter().contains(expectedQuarterText)) {
+                result.add(holding);
+            }
+        }
+        return result;
+    }
+
+    private LocalDate getQuarterEnd(LocalDate date) {
+        int month = date.getMonthValue();
+        Month endMonth;
+
+        if (month <= 3) {
+            endMonth = Month.MARCH;
+        } else if (month <= 6) {
+            endMonth = Month.JUNE;
+        } else if (month <= 9) {
+            endMonth = Month.SEPTEMBER;
+        } else {
+            endMonth = Month.DECEMBER;
+        }
+
+        return LocalDate.of(date.getYear(), endMonth, endMonth.length(date.isLeapYear()));
+    }
+
     private static final class FundHistorySyncTarget {
 
         private final String fundCode;
@@ -650,6 +776,31 @@ public class StockSyncTask {
 
         private String getFundName() {
             return fundName;
+        }
+    }
+
+    private static final class FundHoldingSyncWindow {
+
+        private final String requestDate;
+        private final Integer reportYear;
+        private final Integer reportQuarter;
+
+        private FundHoldingSyncWindow(String requestDate, Integer reportYear, Integer reportQuarter) {
+            this.requestDate = requestDate;
+            this.reportYear = reportYear;
+            this.reportQuarter = reportQuarter;
+        }
+
+        private String getRequestDate() {
+            return requestDate;
+        }
+
+        private Integer getReportYear() {
+            return reportYear;
+        }
+
+        private Integer getReportQuarter() {
+            return reportQuarter;
         }
     }
 
