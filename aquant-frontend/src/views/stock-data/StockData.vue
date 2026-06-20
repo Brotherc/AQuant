@@ -70,7 +70,7 @@
         <!-- 图表与详情 -->
         <a-card :title="currentStockName ? `股票详情 - ${currentStockName}` : '股票详情'" style="height: 100%;">
           <template #extra>
-            <a-button type="primary" @click="showAddWatchlist" :disabled="!selectedStock">加入自选</a-button>
+            <a-button type="primary" @click="showAddWatchlist" :disabled="!selectedStock || !isLoggedIn">加入自选</a-button>
           </template>
           <div v-if="selectedStock" style="margin-bottom: 24px;">
             <a-descriptions bordered :column="3" size="small">
@@ -105,7 +105,7 @@
     >
       <a-form layout="vertical">
         <a-form-item label="选择分组">
-          <a-select v-model:value="targetGroupId" placeholder="请选择自选分组">
+          <a-select v-model:value="targetGroupId" placeholder="请选择自选分组" :loading="watchlistGroupsLoading">
             <a-select-option v-for="group in watchlistGroups" :key="group.id" :value="group.id">
               {{ group.name }}
             </a-select-option>
@@ -128,6 +128,7 @@ import { SyncOutlined } from '@ant-design/icons-vue';
 // 刷新状态
 const refreshLoading = ref(false);
 const lastRefreshTime = ref('');
+const isLoggedIn = ref(!!localStorage.getItem('token'));
 
 // 图表与选中状态
 const currentStockCode = ref('');
@@ -256,17 +257,32 @@ const handleTableChange: TableProps['onChange'] = (pag: any, _filters: any, sort
 // Watchlist Modal
 const watchlistVisible = ref(false);
 const addLoading = ref(false);
+const watchlistGroupsLoading = ref(false);
 const targetGroupId = ref<number | undefined>(undefined);
 const selectedStockCode = ref('');
 const watchlistGroups = ref<WatchlistGroupVO[]>([]);
 
-const showAddWatchlist = () => {
+const showAddWatchlist = async () => {
+  if (!isLoggedIn.value) {
+    return;
+  }
   const record = selectedStock.value;
   if (!record || !record.code) return;
   
   selectedStockCode.value = record.code;
   targetGroupId.value = undefined;
   watchlistVisible.value = true;
+  watchlistGroupsLoading.value = true;
+  try {
+    const res = await getWatchlistGroups();
+    if (res.data.success) {
+      watchlistGroups.value = res.data.data;
+    }
+  } catch (error) {
+    console.error('加载自选分组失败:', error);
+  } finally {
+    watchlistGroupsLoading.value = false;
+  }
 };
 
 const handleConfirmAdd = async () => {
@@ -311,15 +327,7 @@ const customRow = (record: StockQuoteVO) => {
 onMounted(async () => {
   fetchData();
   fetchRefreshTime();
-  // 加载自选分组
-  try {
-    const res = await getWatchlistGroups();
-    if (res.data.success) {
-      watchlistGroups.value = res.data.data;
-    }
-  } catch (error) {
-    console.error('加载自选分组失败:', error);
-  }
+  isLoggedIn.value = !!localStorage.getItem('token');
 });
 </script>
 

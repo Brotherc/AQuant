@@ -24,7 +24,14 @@
                 <a-input-number v-model:value="searchParams.minAvgDividend" placeholder="0" style="width: 80px" :min="0" :step="0.01" />
               </a-form-item>
               <a-form-item label="自选分组">
-                <a-select v-model:value="searchParams.watchlistGroupId" placeholder="全部" style="width: 120px" allow-clear>
+                <a-select
+                  v-model:value="searchParams.watchlistGroupId"
+                  placeholder="全部"
+                  style="width: 120px"
+                  allow-clear
+                  :disabled="!isLoggedIn"
+                  :loading="watchlistGroupsLoading"
+                >
                   <a-select-option v-for="group in watchlistGroups" :key="group.id" :value="group.id">
                     {{ group.name }}
                   </a-select-option>
@@ -68,7 +75,7 @@
       <a-col :span="11">
         <a-card :title="selectedStock ? `${selectedStock.stockName} - 财务与分红详情` : '财务与分红详情'" style="height: 100%;">
           <template #extra>
-            <a-button type="primary" @click="showAddWatchlist" :disabled="!selectedStock">加入自选</a-button>
+            <a-button type="primary" @click="showAddWatchlist" :disabled="!selectedStock || !isLoggedIn">加入自选</a-button>
           </template>
           <div v-if="selectedStock">
             <a-descriptions size="small" bordered :column="2" style="margin-bottom: 16px;">
@@ -106,7 +113,7 @@
     >
       <a-form layout="vertical">
         <a-form-item label="选择分组">
-          <a-select v-model:value="targetGroupId" placeholder="请选择自选分组">
+          <a-select v-model:value="targetGroupId" placeholder="请选择自选分组" :loading="watchlistGroupsLoading">
             <a-select-option v-for="group in watchlistGroups" :key="group.id" :value="group.id">
               {{ group.name }}
             </a-select-option>
@@ -127,6 +134,7 @@ import type { TableProps } from 'ant-design-vue';
 const loading = ref(false);
 const dataSource = ref<StockDividendStatVO[]>([]);
 const selectedStock = ref<StockDividendStatVO | null>(null);
+const isLoggedIn = ref(!!localStorage.getItem('token'));
 
 const detailLoading = ref(false);
 const detailList = ref<StockDividendDetailVO[]>([]);
@@ -139,6 +147,7 @@ const searchParams = reactive<StockDividendStatPageReqVO>({
 });
 
 const watchlistGroups = ref<WatchlistGroupVO[]>([]);
+const watchlistGroupsLoading = ref(false);
 
 const pagination = reactive({
   current: 1,
@@ -190,11 +199,32 @@ const addLoading = ref(false);
 const targetGroupId = ref<number | undefined>(undefined);
 const selectedStockCode = ref('');
 
-const showAddWatchlist = () => {
+const loadWatchlistGroups = async () => {
+  if (!isLoggedIn.value || watchlistGroupsLoading.value) {
+    return;
+  }
+  watchlistGroupsLoading.value = true;
+  try {
+    const res = await getWatchlistGroups();
+    if (res.data.success) {
+      watchlistGroups.value = res.data.data;
+    }
+  } catch (error) {
+    console.error('加载自选分组失败:', error);
+  } finally {
+    watchlistGroupsLoading.value = false;
+  }
+};
+
+const showAddWatchlist = async () => {
+  if (!isLoggedIn.value) return;
   if (!selectedStock.value) return;
   selectedStockCode.value = selectedStock.value.stockCode;
   targetGroupId.value = undefined;
   watchlistVisible.value = true;
+  if (watchlistGroups.value.length === 0) {
+    await loadWatchlistGroups();
+  }
 };
 
 const handleConfirmAdd = async () => {
@@ -308,13 +338,9 @@ watch(selectedStock, async (newVal) => {
 
 onMounted(async () => {
   fetchData();
-  try {
-    const res = await getWatchlistGroups();
-    if (res.data.success) {
-      watchlistGroups.value = res.data.data;
-    }
-  } catch (error) {
-    console.error('加载自选分组失败:', error);
+  isLoggedIn.value = !!localStorage.getItem('token');
+  if (isLoggedIn.value) {
+    await loadWatchlistGroups();
   }
 });
 </script>

@@ -78,7 +78,7 @@
         <!-- 详情与行业对比 -->
         <a-card :title="selectedStock ? `${selectedStock.stockName} - 成长性对比` : '成长性对比'" style="height: 100%;">
           <template #extra>
-            <a-button type="primary" @click="showAddWatchlist" :disabled="!selectedStock">加入自选</a-button>
+            <a-button type="primary" @click="showAddWatchlist" :disabled="!selectedStock || !isLoggedIn">加入自选</a-button>
           </template>
           <div v-if="selectedStock">
             <a-table
@@ -106,7 +106,7 @@
     >
       <a-form layout="vertical">
         <a-form-item label="选择分组">
-          <a-select v-model:value="targetGroupId" placeholder="请选择自选分组">
+          <a-select v-model:value="targetGroupId" placeholder="请选择自选分组" :loading="watchlistGroupsLoading">
             <a-select-option v-for="group in watchlistGroups" :key="group.id" :value="group.id">
               {{ group.name }}
             </a-select-option>
@@ -127,6 +127,7 @@ import { type TableProps } from 'ant-design-vue';
 const loading = ref(false);
 const dataSource = ref<StockGrowthMetrics[]>([]);
 const selectedStock = ref<StockGrowthMetrics | null>(null);
+const isLoggedIn = ref(!!localStorage.getItem('token'));
 
 const formatNumber = (val: any) => {
   if (val == null) return '-';
@@ -254,15 +255,28 @@ const fetchData = async () => {
 // Watchlist Modal
 const watchlistVisible = ref(false);
 const addLoading = ref(false);
+const watchlistGroupsLoading = ref(false);
 const targetGroupId = ref<number | undefined>(undefined);
 const selectedStockCode = ref('');
 const watchlistGroups = ref<WatchlistGroupVO[]>([]);
 
-const showAddWatchlist = () => {
+const showAddWatchlist = async () => {
+  if (!isLoggedIn.value) return;
   if (!selectedStock.value) return;
   selectedStockCode.value = selectedStock.value.stockCode;
   targetGroupId.value = undefined;
   watchlistVisible.value = true;
+  watchlistGroupsLoading.value = true;
+  try {
+    const res = await getWatchlistGroups();
+    if (res.data.success) {
+      watchlistGroups.value = res.data.data;
+    }
+  } catch (error) {
+    console.error('加载自选分组失败:', error);
+  } finally {
+    watchlistGroupsLoading.value = false;
+  }
 };
 
 const handleConfirmAdd = async () => {
@@ -333,15 +347,7 @@ const customRow = (record: StockGrowthMetrics) => {
 
 onMounted(async () => {
   fetchData();
-  // 加载自选分组
-  try {
-    const res = await getWatchlistGroups();
-    if (res.data.success) {
-      watchlistGroups.value = res.data.data;
-    }
-  } catch (error) {
-    console.error('加载自选分组失败:', error);
-  }
+  isLoggedIn.value = !!localStorage.getItem('token');
 });
 </script>
 
