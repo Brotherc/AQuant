@@ -1,6 +1,7 @@
 package com.brotherc.aquant.service;
 
 import com.brotherc.aquant.entity.StockFundInfo;
+import com.brotherc.aquant.model.dto.akshare.FundPurchaseEm;
 import com.brotherc.aquant.model.dto.akshare.FundNameEm;
 import com.brotherc.aquant.model.vo.stockfund.StockFundInfoPageReqVO;
 import com.brotherc.aquant.model.vo.stockfund.StockFundInfoVO;
@@ -31,14 +32,27 @@ public class StockFundInfoService {
     private final StockFundInfoRepository stockFundInfoRepository;
 
     @Transactional(rollbackFor = Exception.class)
-    public void saveFundInfos(List<FundNameEm> fundNameEms) {
-        if (!CollectionUtils.isEmpty(fundNameEms)) {
-            List<StockFundInfo> allExisting = stockFundInfoRepository.findAll();
-            Map<String, StockFundInfo> existingMap = allExisting.stream()
-                    .collect(Collectors.toMap(StockFundInfo::getFundCode, Function.identity(), (a, b) -> a));
+    public void saveFundInfos(List<FundNameEm> fundNameEms, List<FundPurchaseEm> fundPurchaseEms) {
+        if (CollectionUtils.isEmpty(fundNameEms) && CollectionUtils.isEmpty(fundPurchaseEms)) {
+            return;
+        }
 
-            List<StockFundInfo> toSave = new ArrayList<>();
+        List<StockFundInfo> allExisting = stockFundInfoRepository.findAll();
+        Map<String, StockFundInfo> existingMap = allExisting.stream()
+                .collect(Collectors.toMap(StockFundInfo::getFundCode, Function.identity(), (a, b) -> a));
+
+        Map<String, FundPurchaseEm> purchaseMap = CollectionUtils.isEmpty(fundPurchaseEms)
+                ? Map.of()
+                : fundPurchaseEms.stream()
+                .filter(item -> item != null && StringUtils.isNotBlank(item.getFundCode()))
+                .collect(Collectors.toMap(FundPurchaseEm::getFundCode, Function.identity(), (a, b) -> a));
+
+        List<StockFundInfo> toSave = new ArrayList<>();
+        if (!CollectionUtils.isEmpty(fundNameEms)) {
             for (FundNameEm em : fundNameEms) {
+                if (em == null || StringUtils.isBlank(em.getFundCode())) {
+                    continue;
+                }
                 StockFundInfo info = existingMap.get(em.getFundCode());
                 if (info == null) {
                     info = new StockFundInfo();
@@ -48,11 +62,37 @@ public class StockFundInfoService {
                 info.setFundName(em.getFundName());
                 info.setFundType(em.getFundType());
                 info.setPinyinFull(em.getPinyinFull());
-                toSave.add(info);
-            }
 
-            stockFundInfoRepository.saveAll(toSave);
+                FundPurchaseEm purchase = purchaseMap.get(em.getFundCode());
+                if (purchase != null) {
+                    info.setPurchaseStartAmount(purchase.getPurchaseStartAmount());
+                    info.setDailyLimitAmount(purchase.getDailyLimitAmount());
+                    info.setFeeRate(purchase.getFeeRate());
+                }
+                toSave.add(info);
+                existingMap.put(info.getFundCode(), info);
+            }
         }
+
+        if (!CollectionUtils.isEmpty(fundPurchaseEms)) {
+            for (FundPurchaseEm purchase : fundPurchaseEms) {
+                if (purchase == null || StringUtils.isBlank(purchase.getFundCode()) ||
+                        existingMap.containsKey(purchase.getFundCode())) {
+                    continue;
+                }
+                StockFundInfo info = new StockFundInfo();
+                info.setFundCode(purchase.getFundCode());
+                info.setFundName(purchase.getFundName());
+                info.setFundType(purchase.getFundType());
+                info.setPurchaseStartAmount(purchase.getPurchaseStartAmount());
+                info.setDailyLimitAmount(purchase.getDailyLimitAmount());
+                info.setFeeRate(purchase.getFeeRate());
+                toSave.add(info);
+                existingMap.put(info.getFundCode(), info);
+            }
+        }
+
+        stockFundInfoRepository.saveAll(toSave);
     }
 
     public Page<StockFundInfoVO> getPage(StockFundInfoPageReqVO reqVO, Pageable pageable) {

@@ -59,9 +59,11 @@ public class StockSyncService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void syncFundInfo(List<FundNameEm> fundNameEms, StockSync stockSync, long timestamp) {
-        if (!CollectionUtils.isEmpty(fundNameEms)) {
-            stockFundInfoService.saveFundInfos(fundNameEms);
+    public void syncFundInfo(
+            List<FundNameEm> fundNameEms, List<FundPurchaseEm> fundPurchaseEms, StockSync stockSync, long timestamp
+    ) {
+        if (!CollectionUtils.isEmpty(fundNameEms) || !CollectionUtils.isEmpty(fundPurchaseEms)) {
+            stockFundInfoService.saveFundInfos(fundNameEms, fundPurchaseEms);
             save(stockSync, StockSyncConstant.STOCK_FUND_INFO_LATEST, timestamp);
         }
     }
