@@ -32,7 +32,7 @@
             :row-key="getRowKey"
             :row-class-name="rowClassName"
             :custom-row="customRow"
-            :scroll="pagination.pageSize <= 20 ? undefined : { y: 760 }"
+            :scroll="{ y: 760 }"
             size="small"
             class="fund-table"
           >
