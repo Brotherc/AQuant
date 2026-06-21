@@ -10,7 +10,7 @@
                 <span class="page-sync-meta__label">最后同步时间:</span>
                 <span class="page-sync-meta__value">{{ lastRefreshTime }}</span>
               </div>
-              <a-button type="primary" ghost shape="circle" @click="handleRefresh" :loading="refreshLoading" size="small" title="刷新">
+              <a-button type="primary" ghost shape="circle" @click="handleRefresh" :loading="refreshLoading" size="small" title="刷新" style="display: inline-flex; align-items: center; justify-content: center;">
                 <template #icon><SyncOutlined /></template>
               </a-button>
             </div>
