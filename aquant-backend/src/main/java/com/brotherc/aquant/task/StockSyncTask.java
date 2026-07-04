@@ -21,7 +21,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.util.CollectionUtils;
@@ -36,23 +35,22 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class StockSyncTask {
 
-    private static final LocalTime A_SHARE_MARKET_OPEN_TIME = LocalTime.of(9, 30);
-    private static final LocalTime A_SHARE_MARKET_CLOSE_TIME = LocalTime.of(15, 0);
-
     private final StockHelper stockHelper;
     private final AKShareService aKShareService;
+
     private final StockQuoteService stockQuoteService;
     private final StockQuoteHistoryService stockQuoteHistoryService;
     private final StockSyncService stockSyncService;
     private final StockStrategySnapshotService stockStrategySnapshotService;
+    private final StockFundNetValueService stockFundNetValueService;
+    private final StockFundPortfolioHoldingService stockFundPortfolioHoldingService;
+
     private final StockSyncRepository stockSyncRepository;
     private final StockQuoteRepository stockQuoteRepository;
     private final StockQuoteHistoryRepository stockQuoteHistoryRepository;
     private final StockIndustryBoardRepository stockIndustryBoardRepository;
     private final StockIndustryBoardHistoryRepository stockIndustryBoardHistoryRepository;
     private final StockFundInfoRepository stockFundInfoRepository;
-    private final StockFundNetValueService stockFundNetValueService;
-    private final StockFundPortfolioHoldingService stockFundPortfolioHoldingService;
 
     /**
      * 项目完全启动后，异步执行一次
@@ -66,34 +64,11 @@ public class StockSyncTask {
         stockStrategySnapshotService.refreshMomentumBacktestSnapshots();
     }
 
-    /**
-     * 每天下午 5 点执行
-     */
-    @Scheduled(cron = "0 0 20 * * ?")
-    public void scheduledTask() {
-        syncStackDtaLatest();
-    }
-
-    /**
-     * 每天晚间清理一次退市股票数据
-     */
-    @Scheduled(cron = "0 10 20 * * ?")
-    public void scheduledClearDelistedStockData() {
-        clearDelistedStockData();
-    }
-
-    /**
-     * 每天晚间生成双均线回测快照
-     */
-    @Scheduled(cron = "0 0 21 * * ?")
-    public void scheduledRefreshDualMaBacktestSnapshots() {
-        stockStrategySnapshotService.refreshDualMaBacktestSnapshots();
-        stockStrategySnapshotService.refreshMomentumBacktestSnapshots();
-    }
-
     private void syncStackDtaLatest() {
+        LocalDateTime now = LocalDateTime.now();
+
         log.info("同步股票行情数据开始");
-        syncStackQuote();
+        syncStackQuote(now);
         log.info("同步股票行情数据完成");
 
         log.info("同步股票板块数据开始");
@@ -112,18 +87,20 @@ public class StockSyncTask {
     /**
      * 同步股票行情数据
      */
-    public void syncStackQuote() {
+    public void syncStackQuote(LocalDateTime now) {
+        // 获取【股票行情】最新同步时间
         StockSync stockSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_DAILY_LATEST);
-        long timestamp = System.currentTimeMillis();
-        LocalDateTime syncTime = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime();
-        LocalDate latestClosedTradeDay = stockHelper.latestClosedTradeDay(syncTime);
-        boolean shouldRefreshLatestQuote = shouldRefreshLatestQuote(stockSync, syncTime);
-        boolean latestQuoteRefreshed = false;
-        List<StockHistorySyncTarget> historyTargets = Collections.emptyList();
+        // 获取最近一个收盘交易日
+        LocalDate latestClosedTradeDay = stockHelper.latestClosedTradeDay(now);
+
+        boolean shouldRefreshLatestQuote = shouldRefreshLatestQuote(stockSync, now);
+
+        List<StockHistorySyncTarget> localHistoryTargets = stockQuoteRepository.findAll().stream()
+                .map(stockQuote -> new StockHistorySyncTarget(stockQuote.getCode(), stockQuote.getName()))
+                .toList();
 
         if (!shouldRefreshLatestQuote) {
-            historyTargets = loadHistoryTargetsFromLocalQuotes();
-            if (CollectionUtils.isEmpty(historyTargets)) {
+            if (CollectionUtils.isEmpty(localHistoryTargets)) {
                 log.warn("股票最新行情同步标记已满足，但本地 stock_quote 为空，重新拉取实时行情");
                 shouldRefreshLatestQuote = true;
             } else {
@@ -131,106 +108,78 @@ public class StockSyncTask {
             }
         }
 
+        boolean latestQuoteRefreshed = false;
         if (shouldRefreshLatestQuote) {
-            List<StockZhASpot> stockZhASpots = distinctSpotList(aKShareService.stockZhASpot());
+            List<StockZhASpot> stockZhASpots = aKShareService.stockZhASpot();
             if (CollectionUtils.isEmpty(stockZhASpots)) {
                 log.warn("获取A股最新行情为空，无法刷新 stock_quote，尝试使用本地股票清单补齐历史行情");
-                historyTargets = loadHistoryTargetsFromLocalQuotes();
             } else {
-                stockSyncService.stockQuote(stockZhASpots, stockSync, timestamp);
+                stockSyncService.stockQuote(stockZhASpots, stockSync, now);
                 latestQuoteRefreshed = true;
-                historyTargets = toHistoryTargetsFromSpots(stockZhASpots);
+                localHistoryTargets = stockZhASpots.stream()
+                        .map(stockZhASpot -> new StockHistorySyncTarget(stockZhASpot.get代码(), stockZhASpot.get名称()))
+                        .toList();
             }
         }
 
-        LocalDate historyEndDate = latestQuoteRefreshed && stockHelper.isClosedDailyQuoteAvailable(syncTime)
+        LocalDate historyEndDate = latestQuoteRefreshed && stockHelper.isClosedDailyQuoteAvailable(now)
                 ? latestClosedTradeDay.minusDays(1)
                 : latestClosedTradeDay;
-        backfillMissingStockQuoteHistory(historyTargets, historyEndDate, syncTime);
+        backfillMissingStockQuoteHistory(localHistoryTargets, historyEndDate, now);
     }
 
-    private List<StockZhASpot> distinctSpotList(List<StockZhASpot> stockZhASpots) {
-        if (CollectionUtils.isEmpty(stockZhASpots)) {
-            return Collections.emptyList();
-        }
-
-        Map<String, StockZhASpot> spotMap = new LinkedHashMap<>();
-        for (StockZhASpot stockZhASpot : stockZhASpots) {
-            if (stockZhASpot != null && stockZhASpot.get代码() != null) {
-                spotMap.put(stockZhASpot.get代码(), stockZhASpot);
-            }
-        }
-        return new ArrayList<>(spotMap.values());
-    }
-
-    private boolean shouldRefreshLatestQuote(StockSync stockSync, LocalDateTime syncTime) {
-        if (stockHelper.isTradeDay(syncTime.toLocalDate()) &&
-                !syncTime.toLocalTime().isBefore(A_SHARE_MARKET_OPEN_TIME) &&
-                syncTime.toLocalTime().isBefore(A_SHARE_MARKET_CLOSE_TIME)) {
+    /**
+     * 判断当前是否需要刷新 {@code stock_quote} 最新行情。
+     *
+     * <pre>
+     * 时间区间示意（交易日）:
+     *
+     *   00:00 -------- 09:30 ---------------- 15:00 ---------------- 24:00
+     *     |              |                      |                      |
+     *     | 开盘前       | 盘中                 | 收盘后               |
+     *     |              |                      |                      |
+     *     | 水位=当天00:00| 直接刷新（return true） | 水位=最近收盘日15:00 |
+     *
+     * 时间区间示意（非交易日）:
+     *
+     *   00:00 ---------------------------------------------------- 24:00
+     *     |                                                        |
+     *     | 整天都按“最近一个已收盘交易日 15:00”作为同步水位判断       |
+     *
+     * 规则说明:
+     * 1. 交易日盘中（09:30 <= t < 15:00）每次执行都刷新，保证看到的是最新盘口快照。
+     * 2. 没有同步标记时，视为尚未同步，直接刷新。
+     * 3. 非盘中场景通过比较“上次同步时间”和“当前应覆盖的同步水位”决定是否刷新。
+     * 4. 代码中的最后一个兜底分支理论上只会在临界时刻或规则调整后命中。
+     * </pre>
+     */
+    private boolean shouldRefreshLatestQuote(StockSync stockSync, LocalDateTime now) {
+        // 盘中每次执行都刷新最新行情，避免用户主动触发时看到的还是旧快照。
+        if (stockHelper.isTradeDay(now.toLocalDate()) &&
+                !now.toLocalTime().isBefore(StockSyncConstant.A_SHARE_MARKET_OPEN_TIME) &&
+                now.toLocalTime().isBefore(StockSyncConstant.A_SHARE_MARKET_CLOSE_TIME)) {
             return true;
         }
 
-        Long lastTimestamp = parseSyncTimestamp(stockSync, "股票行情");
+        // 没有可用的同步标记时，按“尚未同步”处理。
+        Long lastTimestamp = StockUtils.parseSyncTimestamp(stockSync);
         if (lastTimestamp == null) {
             return true;
         }
 
-        return lastTimestamp < getLatestQuoteSyncWatermark(syncTime);
-    }
-
-    private Long parseSyncTimestamp(StockSync stockSync, String syncLabel) {
-        if (stockSync == null || stockSync.getValue() == null) {
-            return null;
-        }
-        try {
-            return Long.valueOf(stockSync.getValue());
-        } catch (NumberFormatException e) {
-            log.warn("{}同步标记值非法，将重新同步，name={}, value={}", syncLabel, stockSync.getName(), stockSync.getValue());
-            return null;
-        }
-    }
-
-    private long getLatestQuoteSyncWatermark(LocalDateTime syncTime) {
+        // 非盘中场景按“应当已经同步到哪个时间点”来判断是否需要再拉一次最新行情：
+        // 1. 已有最近一个收盘交易日的日线数据时，以该交易日 15:00 作为同步水位；
+        // 2. 交易日开盘前，只要今天已经同步过一次即可，因此水位取今天 00:00；
+        // 3. 其余临界时段直接以当前时间为水位，避免误判为已覆盖。
         LocalDateTime watermark;
-        if (stockHelper.isClosedDailyQuoteAvailable(syncTime)) {
-            watermark = stockHelper.latestClosedTradeDay(syncTime).atTime(A_SHARE_MARKET_CLOSE_TIME);
-        } else if (syncTime.toLocalTime().isBefore(A_SHARE_MARKET_OPEN_TIME)) {
-            watermark = syncTime.toLocalDate().atStartOfDay();
+        if (stockHelper.isClosedDailyQuoteAvailable(now)) {
+            watermark = stockHelper.latestClosedTradeDay(now).atTime(StockSyncConstant.A_SHARE_MARKET_CLOSE_TIME);
+        } else if (now.toLocalTime().isBefore(StockSyncConstant.A_SHARE_MARKET_OPEN_TIME)) {
+            watermark = now.toLocalDate().atStartOfDay();
         } else {
-            watermark = syncTime;
+            watermark = now;
         }
-        return watermark.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-    }
-
-    private List<StockHistorySyncTarget> toHistoryTargetsFromSpots(List<StockZhASpot> stockZhASpots) {
-        if (CollectionUtils.isEmpty(stockZhASpots)) {
-            return Collections.emptyList();
-        }
-
-        Map<String, StockHistorySyncTarget> targetMap = new LinkedHashMap<>();
-        for (StockZhASpot stockZhASpot : stockZhASpots) {
-            if (stockZhASpot != null && stockZhASpot.get代码() != null) {
-                targetMap.put(stockZhASpot.get代码(),
-                        new StockHistorySyncTarget(stockZhASpot.get代码(), stockZhASpot.get名称()));
-            }
-        }
-        return new ArrayList<>(targetMap.values());
-    }
-
-    private List<StockHistorySyncTarget> loadHistoryTargetsFromLocalQuotes() {
-        List<StockQuote> stockQuotes = stockQuoteRepository.findAll();
-        if (CollectionUtils.isEmpty(stockQuotes)) {
-            return Collections.emptyList();
-        }
-
-        Map<String, StockHistorySyncTarget> targetMap = new LinkedHashMap<>();
-        for (StockQuote stockQuote : stockQuotes) {
-            if (stockQuote != null && stockQuote.getCode() != null) {
-                targetMap.put(stockQuote.getCode(),
-                        new StockHistorySyncTarget(stockQuote.getCode(), stockQuote.getName()));
-            }
-        }
-        return new ArrayList<>(targetMap.values());
+        return lastTimestamp < watermark.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
     }
 
     private void backfillMissingStockQuoteHistory(
@@ -333,12 +282,12 @@ public class StockSyncTask {
 
     private boolean shouldRefreshLatestBoard(StockSync stockSync, LocalDateTime syncTime) {
         if (stockHelper.isTradeDay(syncTime.toLocalDate()) &&
-                !syncTime.toLocalTime().isBefore(A_SHARE_MARKET_OPEN_TIME) &&
-                syncTime.toLocalTime().isBefore(A_SHARE_MARKET_CLOSE_TIME)) {
+                !syncTime.toLocalTime().isBefore(StockSyncConstant.A_SHARE_MARKET_OPEN_TIME) &&
+                syncTime.toLocalTime().isBefore(StockSyncConstant.A_SHARE_MARKET_CLOSE_TIME)) {
             return true;
         }
 
-        Long lastTimestamp = parseSyncTimestamp(stockSync, "板块行情");
+        Long lastTimestamp = StockUtils.parseSyncTimestamp(stockSync);
         if (lastTimestamp == null) {
             return true;
         }
@@ -348,7 +297,7 @@ public class StockSyncTask {
 
     private long getLatestClosedTradeDaySyncWatermark(LocalDateTime syncTime) {
         return stockHelper.latestClosedTradeDay(syncTime)
-                .atTime(A_SHARE_MARKET_CLOSE_TIME)
+                .atTime(StockSyncConstant.A_SHARE_MARKET_CLOSE_TIME)
                 .atZone(ZoneId.systemDefault())
                 .toInstant()
                 .toEpochMilli();
@@ -555,12 +504,12 @@ public class StockSyncTask {
 
     private boolean shouldRefreshLatestFund(StockSync stockSync, LocalDateTime syncTime) {
         if (stockHelper.isTradeDay(syncTime.toLocalDate()) &&
-                !syncTime.toLocalTime().isBefore(A_SHARE_MARKET_OPEN_TIME) &&
-                syncTime.toLocalTime().isBefore(A_SHARE_MARKET_CLOSE_TIME)) {
+                !syncTime.toLocalTime().isBefore(StockSyncConstant.A_SHARE_MARKET_OPEN_TIME) &&
+                syncTime.toLocalTime().isBefore(StockSyncConstant.A_SHARE_MARKET_CLOSE_TIME)) {
             return true;
         }
 
-        Long lastTimestamp = parseSyncTimestamp(stockSync, "基金基础信息");
+        Long lastTimestamp = StockUtils.parseSyncTimestamp(stockSync);
         if (lastTimestamp == null) {
             return true;
         }

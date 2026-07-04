@@ -1,5 +1,7 @@
 package com.brotherc.aquant.utils;
 
+import com.brotherc.aquant.entity.StockSync;
+
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -130,6 +132,17 @@ public class StockUtils {
         // 下午 13:00 - 15:00
         boolean afternoon = !now.isBefore(LocalTime.of(13, 0)) && !now.isAfter(LocalTime.of(15, 0));
         return morning || afternoon;
+    }
+
+    public static Long parseSyncTimestamp(StockSync stockSync) {
+        if (stockSync == null || stockSync.getValue() == null) {
+            return null;
+        }
+        try {
+            return Long.valueOf(stockSync.getValue());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
 }

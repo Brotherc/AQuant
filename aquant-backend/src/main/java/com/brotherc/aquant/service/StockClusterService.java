@@ -11,6 +11,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -22,7 +24,7 @@ public class StockClusterService {
 
     public Page<StockQuoteVO> stockQuotePage(StockQuotePageReqVO reqVO, Pageable pageable) {
         if (reqVO.getRefresh()) {
-            stockSyncTask.syncStackQuote();
+            stockSyncTask.syncStackQuote(LocalDateTime.now());
         }
         return stockQuoteService.getPage(reqVO, pageable);
     }

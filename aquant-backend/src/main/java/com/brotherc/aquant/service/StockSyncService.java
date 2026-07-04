@@ -45,15 +45,15 @@ public class StockSyncService {
     private final StockFundInfoService stockFundInfoService;
 
     @Transactional(rollbackFor = Exception.class)
-    public void stockQuote(List<StockZhASpot> stockZhASpotList, StockSync stockDailyLatest, long timestamp) {
+    public void stockQuote(List<StockZhASpot> stockZhASpotList, StockSync stockDailyLatest, LocalDateTime now) {
         if (!CollectionUtils.isEmpty(stockZhASpotList)) {
-            LocalDateTime now = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime();
 
             // 更新A股股票最新行情
             stockQuoteService.save(stockZhASpotList, now);
             // 更新A股股票历史行情
             stockQuoteHistoryService.save(stockZhASpotList, now);
             // 更新最后一次股票同步时间
+            long timestamp = now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
             save(stockDailyLatest, StockSyncConstant.STOCK_DAILY_LATEST, timestamp);
         }
     }
