@@ -31,7 +31,7 @@ public class StockClusterService {
 
     public Page<StockIndustryBoardVO> stockIndustryBoardPage(StockIndustryBoardPageReqVO reqVO, Pageable pageable) {
         if (reqVO.getRefresh()) {
-            stockSyncTask.syncStockBoard();
+            stockSyncTask.syncStockBoard(LocalDateTime.now());
         }
         return stockIndustryBoardService.stockIndustryBoardPage(reqVO, pageable);
 

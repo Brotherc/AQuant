@@ -333,19 +333,18 @@ public class StockSyncService {
 
     @Transactional(rollbackFor = Exception.class)
     public void stockBoardIndustryLatest(
-            List<StockBoardIndustrySummaryThs> stockBoardList, StockSync stocBoardSync, long timestamp
+            List<StockBoardIndustrySummaryThs> stockBoardList, StockSync stocBoardSync, LocalDateTime now
     ) {
         if (!CollectionUtils.isEmpty(stockBoardList)) {
-            LocalDateTime now = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime();
             stockIndustryBoardService.save(stockBoardList, now);
+            long timestamp = now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
             save(stocBoardSync, StockSyncConstant.STOCK_BOARD_INDUSTRY_LATEST, timestamp);
         }
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void stockBoardIndustryHistory(String boardName, List<StockBoardIndustryIndexThs> stockBoardDetailList, long timestamp) {
+    public void stockBoardIndustryHistory(String boardName, List<StockBoardIndustryIndexThs> stockBoardDetailList, LocalDateTime now) {
         if (!CollectionUtils.isEmpty(stockBoardDetailList)) {
-            LocalDateTime now = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime();
             stockIndustryBoardHistoryService.save(boardName, stockBoardDetailList, now);
         }
     }

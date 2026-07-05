@@ -74,7 +74,7 @@ public class StockSyncTask {
         log.info("同步股票行情数据完成");
 
         log.info("同步股票板块数据开始");
-        syncStockBoard();
+        syncStockBoard(now);
         log.info("同步股票板块数据完成");
 
         log.info("同步基金数据开始");
@@ -287,10 +287,8 @@ public class StockSyncTask {
         return maxTradeDateMap;
     }
 
-    public void syncStockBoard() {
+    public void syncStockBoard(LocalDateTime syncTime) {
         StockSync stockSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_BOARD_INDUSTRY_LATEST);
-        long timestamp = System.currentTimeMillis();
-        LocalDateTime syncTime = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime();
         LocalDate latestClosedTradeDay = stockHelper.latestClosedTradeDay(syncTime);
         boolean shouldRefreshLatestBoard = shouldRefreshLatestBoard(stockSync, syncTime);
         List<BoardHistorySyncTarget> historyTargets = Collections.emptyList();
@@ -311,12 +309,12 @@ public class StockSyncTask {
                 log.warn("获取板块最新行情为空，无法刷新 stock_industry_board，尝试使用本地板块清单补齐历史行情");
                 historyTargets = loadBoardHistoryTargetsFromLocalBoards();
             } else {
-                stockSyncService.stockBoardIndustryLatest(stockBoardList, stockSync, timestamp);
+                stockSyncService.stockBoardIndustryLatest(stockBoardList, stockSync, syncTime);
                 historyTargets = toBoardHistoryTargetsFromSummaries(stockBoardList);
             }
         }
 
-        backfillMissingStockBoardHistory(historyTargets, latestClosedTradeDay, timestamp);
+        backfillMissingStockBoardHistory(historyTargets, latestClosedTradeDay, syncTime);
     }
 
     private boolean shouldRefreshLatestBoard(StockSync stockSync, LocalDateTime syncTime) {
@@ -380,7 +378,7 @@ public class StockSyncTask {
     }
 
     private void backfillMissingStockBoardHistory(
-            List<BoardHistorySyncTarget> boardTargets, LocalDate historyEndDate, long timestamp
+            List<BoardHistorySyncTarget> boardTargets, LocalDate historyEndDate, LocalDateTime timestamp
     ) {
         if (CollectionUtils.isEmpty(boardTargets)) {
             return;
