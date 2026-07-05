@@ -287,15 +287,18 @@ public class StockSyncTask {
         return maxTradeDateMap;
     }
 
-    public void syncStockBoard(LocalDateTime syncTime) {
+    public void syncStockBoard(LocalDateTime now) {
+        // 获取【板块行情】最新同步时间
         StockSync stockSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_BOARD_INDUSTRY_LATEST);
-        LocalDate latestClosedTradeDay = stockHelper.latestClosedTradeDay(syncTime);
-        boolean shouldRefreshLatestBoard = shouldRefreshLatestBoard(stockSync, syncTime);
-        List<BoardHistorySyncTarget> historyTargets = Collections.emptyList();
+        // 获取最近一个收盘交易日
+        LocalDate latestClosedTradeDay = stockHelper.latestClosedTradeDay(now);
+
+        boolean shouldRefreshLatestBoard = shouldRefreshLatestBoard(stockSync, now);
+
+        List<String> localHistoryTargets = stockIndustryBoardRepository.findAll().stream().map(StockIndustryBoard::getSectorName).toList();
 
         if (!shouldRefreshLatestBoard) {
-            historyTargets = loadBoardHistoryTargetsFromLocalBoards();
-            if (CollectionUtils.isEmpty(historyTargets)) {
+            if (CollectionUtils.isEmpty(localHistoryTargets)) {
                 log.warn("板块同步标记已满足，但本地 stock_industry_board 为空，重新拉取板块行情");
                 shouldRefreshLatestBoard = true;
             } else {
@@ -304,23 +307,26 @@ public class StockSyncTask {
         }
 
         if (shouldRefreshLatestBoard) {
-            List<StockBoardIndustrySummaryThs> stockBoardList = distinctStockBoardList(aKShareService.stockBoardIndustrySummaryThs());
+            List<StockBoardIndustrySummaryThs> stockBoardList = aKShareService.stockBoardIndustrySummaryThs().stream()
+                    .filter(stockBoard -> stockBoard != null && stockBoard.getSectorName() != null)
+                    .toList();
             if (CollectionUtils.isEmpty(stockBoardList)) {
                 log.warn("获取板块最新行情为空，无法刷新 stock_industry_board，尝试使用本地板块清单补齐历史行情");
-                historyTargets = loadBoardHistoryTargetsFromLocalBoards();
             } else {
-                stockSyncService.stockBoardIndustryLatest(stockBoardList, stockSync, syncTime);
-                historyTargets = toBoardHistoryTargetsFromSummaries(stockBoardList);
+                stockSyncService.stockBoardIndustryLatest(stockBoardList, stockSync, now);
+                localHistoryTargets = stockBoardList.stream()
+                        .map(StockBoardIndustrySummaryThs::getSectorName)
+                        .toList();
             }
         }
 
-        backfillMissingStockBoardHistory(historyTargets, latestClosedTradeDay, syncTime);
+        backfillMissingStockBoardHistory(localHistoryTargets, latestClosedTradeDay, now);
     }
 
-    private boolean shouldRefreshLatestBoard(StockSync stockSync, LocalDateTime syncTime) {
-        if (stockHelper.isTradeDay(syncTime.toLocalDate()) &&
-                !syncTime.toLocalTime().isBefore(StockSyncConstant.A_SHARE_MARKET_OPEN_TIME) &&
-                syncTime.toLocalTime().isBefore(StockSyncConstant.A_SHARE_MARKET_CLOSE_TIME)) {
+    private boolean shouldRefreshLatestBoard(StockSync stockSync, LocalDateTime now) {
+        if (stockHelper.isTradeDay(now.toLocalDate()) &&
+                !now.toLocalTime().isBefore(StockSyncConstant.A_SHARE_MARKET_OPEN_TIME) &&
+                now.toLocalTime().isBefore(StockSyncConstant.A_SHARE_MARKET_CLOSE_TIME)) {
             return true;
         }
 
@@ -329,65 +335,17 @@ public class StockSyncTask {
             return true;
         }
 
-        return lastTimestamp < stockHelper.getLatestClosedTradeDaySyncWatermark(syncTime);
-    }
-
-    private List<StockBoardIndustrySummaryThs> distinctStockBoardList(List<StockBoardIndustrySummaryThs> stockBoardList) {
-        if (CollectionUtils.isEmpty(stockBoardList)) {
-            return Collections.emptyList();
-        }
-
-        Map<String, StockBoardIndustrySummaryThs> boardMap = new LinkedHashMap<>();
-        for (StockBoardIndustrySummaryThs stockBoard : stockBoardList) {
-            if (stockBoard != null && stockBoard.getSectorName() != null) {
-                boardMap.put(stockBoard.getSectorName(), stockBoard);
-            }
-        }
-        return new ArrayList<>(boardMap.values());
-    }
-
-    private List<BoardHistorySyncTarget> toBoardHistoryTargetsFromSummaries(
-            List<StockBoardIndustrySummaryThs> stockBoardList
-    ) {
-        if (CollectionUtils.isEmpty(stockBoardList)) {
-            return Collections.emptyList();
-        }
-
-        Map<String, BoardHistorySyncTarget> targetMap = new LinkedHashMap<>();
-        for (StockBoardIndustrySummaryThs stockBoard : stockBoardList) {
-            if (stockBoard != null && stockBoard.getSectorName() != null) {
-                targetMap.put(stockBoard.getSectorName(), new BoardHistorySyncTarget(stockBoard.getSectorName()));
-            }
-        }
-        return new ArrayList<>(targetMap.values());
-    }
-
-    private List<BoardHistorySyncTarget> loadBoardHistoryTargetsFromLocalBoards() {
-        List<StockIndustryBoard> stockIndustryBoards = stockIndustryBoardRepository.findAll();
-        if (CollectionUtils.isEmpty(stockIndustryBoards)) {
-            return Collections.emptyList();
-        }
-
-        Map<String, BoardHistorySyncTarget> targetMap = new LinkedHashMap<>();
-        for (StockIndustryBoard stockIndustryBoard : stockIndustryBoards) {
-            if (stockIndustryBoard != null && stockIndustryBoard.getSectorName() != null) {
-                targetMap.put(stockIndustryBoard.getSectorName(), new BoardHistorySyncTarget(stockIndustryBoard.getSectorName()));
-            }
-        }
-        return new ArrayList<>(targetMap.values());
+        return lastTimestamp < stockHelper.getLatestClosedTradeDaySyncWatermark(now);
     }
 
     private void backfillMissingStockBoardHistory(
-            List<BoardHistorySyncTarget> boardTargets, LocalDate historyEndDate, LocalDateTime timestamp
+            List<String> sectorNames, LocalDate historyEndDate, LocalDateTime timestamp
     ) {
-        if (CollectionUtils.isEmpty(boardTargets)) {
+        if (CollectionUtils.isEmpty(sectorNames)) {
             return;
         }
 
-        List<String> sectorNames = boardTargets.stream()
-                .map(BoardHistorySyncTarget::sectorName)
-                .filter(Objects::nonNull)
-                .toList();
+        sectorNames = sectorNames.stream().filter(Objects::nonNull).toList();
         if (CollectionUtils.isEmpty(sectorNames)) {
             return;
         }
@@ -395,8 +353,7 @@ public class StockSyncTask {
         Map<String, String> maxTradeDateMap = findBoardMaxTradeDateMap(sectorNames, historyEndDate);
         String historyEnd = historyEndDate.toString();
 
-        for (BoardHistorySyncTarget boardTarget : boardTargets) {
-            String sectorName = boardTarget.sectorName();
+        for (String sectorName : sectorNames) {
             String maxTradeDate = maxTradeDateMap.get(sectorName);
             LocalDate historyStartDate = maxTradeDate == null ? null : LocalDate.parse(maxTradeDate).plusDays(1);
 
@@ -445,9 +402,6 @@ public class StockSyncTask {
             log.warn("线程被中断，提前结束行业板块行情同步");
             return false;
         }
-    }
-
-    private record BoardHistorySyncTarget(String sectorName) {
     }
 
     /**
