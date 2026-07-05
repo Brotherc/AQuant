@@ -186,8 +186,6 @@ public class StockSyncService {
                 stock.setHistoryLowPrice(minClose);
                 stock.setPir(percent);
 
-                log.info(" pir: " + percent);
-
                 stockQuoteRepository.save(stock);
 
                 // 4. 每同步一条更新 stock_sync 表

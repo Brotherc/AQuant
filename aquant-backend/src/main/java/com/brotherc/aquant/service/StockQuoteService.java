@@ -95,7 +95,6 @@ public class StockQuoteService {
                         .divide(diff, 4, RoundingMode.HALF_UP) // 保留4位小数
                         .multiply(new BigDecimal("100"));
             }
-            log.info(" pir: " + percent);
             sq.setPir(percent);
         }
     }
