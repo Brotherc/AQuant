@@ -1,5 +1,6 @@
 package com.brotherc.aquant.utils;
 
+import com.brotherc.aquant.constant.StockSyncConstant;
 import com.brotherc.aquant.repository.StockTradeCalendarRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -75,6 +76,25 @@ public class StockHelper {
 
         // 如果没有同步过或上一次同步时间在今天3点之前
         return noSync || inTradeTime;
+    }
+
+    public boolean hasTradeDayBetween(LocalDate startDate, LocalDate endDate) {
+        LocalDate date = startDate;
+        while (!date.isAfter(endDate)) {
+            if (isTradeDay(date)) {
+                return true;
+            }
+            date = date.plusDays(1);
+        }
+        return false;
+    }
+
+    public long getLatestClosedTradeDaySyncWatermark(LocalDateTime syncTime) {
+        return latestClosedTradeDay(syncTime)
+                .atTime(StockSyncConstant.A_SHARE_MARKET_CLOSE_TIME)
+                .atZone(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli();
     }
 
 }

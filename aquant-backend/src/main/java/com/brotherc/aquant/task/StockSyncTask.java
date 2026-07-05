@@ -23,6 +23,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.CollectionUtils;
 
 import java.time.*;
@@ -37,6 +38,7 @@ public class StockSyncTask {
 
     private final StockHelper stockHelper;
     private final AKShareService aKShareService;
+    private final TransactionTemplate transactionTemplate;
 
     private final StockQuoteService stockQuoteService;
     private final StockQuoteHistoryService stockQuoteHistoryService;
@@ -95,12 +97,14 @@ public class StockSyncTask {
 
         boolean shouldRefreshLatestQuote = shouldRefreshLatestQuote(stockSync, now);
 
-        List<StockHistorySyncTarget> localHistoryTargets = stockQuoteRepository.findAll().stream()
-                .map(stockQuote -> new StockHistorySyncTarget(stockQuote.getCode(), stockQuote.getName()))
-                .toList();
+        Map<String, String> localHistoryTargetMap = stockQuoteRepository.findAll().stream().collect(
+                LinkedHashMap::new,
+                (map, stockQuote) -> map.put(stockQuote.getCode(), stockQuote.getName()),
+                Map::putAll
+        );
 
         if (!shouldRefreshLatestQuote) {
-            if (CollectionUtils.isEmpty(localHistoryTargets)) {
+            if (CollectionUtils.isEmpty(localHistoryTargetMap)) {
                 log.warn("股票最新行情同步标记已满足，但本地 stock_quote 为空，重新拉取实时行情");
                 shouldRefreshLatestQuote = true;
             } else {
@@ -109,23 +113,44 @@ public class StockSyncTask {
         }
 
         boolean latestQuoteRefreshed = false;
+        List<StockZhASpot> stockZhASpots = Collections.emptyList();
         if (shouldRefreshLatestQuote) {
-            List<StockZhASpot> stockZhASpots = aKShareService.stockZhASpot();
+            stockZhASpots = aKShareService.stockZhASpot();
             if (CollectionUtils.isEmpty(stockZhASpots)) {
                 log.warn("获取A股最新行情为空，无法刷新 stock_quote，尝试使用本地股票清单补齐历史行情");
             } else {
-                stockSyncService.stockQuote(stockZhASpots, stockSync, now);
                 latestQuoteRefreshed = true;
-                localHistoryTargets = stockZhASpots.stream()
-                        .map(stockZhASpot -> new StockHistorySyncTarget(stockZhASpot.get代码(), stockZhASpot.get名称()))
-                        .toList();
+                localHistoryTargetMap = stockZhASpots.stream().collect(
+                        LinkedHashMap::new,
+                        (map, stockZhASpot) -> map.put(stockZhASpot.get代码(), stockZhASpot.get名称()),
+                        Map::putAll
+                );
             }
         }
 
-        LocalDate historyEndDate = latestQuoteRefreshed && stockHelper.isClosedDailyQuoteAvailable(now)
-                ? latestClosedTradeDay.minusDays(1)
-                : latestClosedTradeDay;
-        backfillMissingStockQuoteHistory(localHistoryTargets, historyEndDate, now);
+        if (latestQuoteRefreshed) {
+            stockQuoteService.save(stockZhASpots, now);
+        }
+
+        boolean shouldWriteLatestHistory = latestQuoteRefreshed && stockHelper.isClosedDailyQuoteAvailable(now);
+        LocalDate historyEndDate = shouldWriteLatestHistory ? latestClosedTradeDay.minusDays(1) : latestClosedTradeDay;
+
+        Map<String, StockZhASpot> latestSpotMap = stockZhASpots.stream().collect(
+                LinkedHashMap::new,
+                (map, stockZhASpot) -> map.put(stockZhASpot.get代码(), stockZhASpot),
+                Map::putAll
+        );
+        backfillMissingStockQuoteHistory(localHistoryTargetMap, historyEndDate, now, latestSpotMap, shouldWriteLatestHistory);
+
+        if (latestQuoteRefreshed) {
+            long timestamp = now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+            if (stockSync == null) {
+                stockSync = new StockSync();
+                stockSync.setName(StockSyncConstant.STOCK_DAILY_LATEST);
+            }
+            stockSync.setValue(String.valueOf(timestamp));
+            stockSyncRepository.save(stockSync);
+        }
     }
 
     /**
@@ -182,42 +207,70 @@ public class StockSyncTask {
         return lastTimestamp < watermark.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
     }
 
+    /**
+     * 根据本地已有的 {@code stock_quote_history} 最大交易日，按股票逐只补齐缺失的前复权日线。
+     *
+     * <p>核心思路：</p>
+     * <ol>
+     *     <li>先批量查出每只股票在历史表里已经同步到哪一天，避免对每只股票单独查库。</li>
+     *     <li>补齐起点取“已同步最大交易日 + 1 天”；如果该股票历史表里还没有数据，则从第三方接口可返回的最早日期开始拉。</li>
+     *     <li>如果起止区间之间根本没有交易日，则直接跳过，避免发起没有意义的第三方请求。</li>
+     * </ol>
+     */
     private void backfillMissingStockQuoteHistory(
-            List<StockHistorySyncTarget> historyTargets, LocalDate historyEndDate, LocalDateTime syncTime
+            Map<String, String> historyTargetMap, LocalDate historyEndDate, LocalDateTime syncTime,
+            Map<String, StockZhASpot> latestSpotMap, boolean shouldWriteLatestHistory
     ) {
-        if (CollectionUtils.isEmpty(historyTargets)) {
+        // 没有待补齐的股票时直接返回。
+        if (CollectionUtils.isEmpty(historyTargetMap)) {
             return;
         }
 
-        List<String> codes = historyTargets.stream()
-                .map(StockHistorySyncTarget::code)
-                .filter(Objects::nonNull)
-                .toList();
+        // 先抽出股票代码列表，后面要用它一次性查询“每只股票当前已落库的最大交易日”。
+        List<String> codes = historyTargetMap.keySet().stream().filter(Objects::nonNull).toList();
         if (CollectionUtils.isEmpty(codes)) {
             return;
         }
 
+        // 批量查库拿到每只股票已同步到的最后一个交易日
         Map<String, String> maxTradeDateMap = findMaxTradeDateMap(codes, historyEndDate);
         String historyEnd = historyEndDate.toString();
 
-        for (StockHistorySyncTarget historyTarget : historyTargets) {
-            String code = historyTarget.code();
+        for (Map.Entry<String, String> entry : historyTargetMap.entrySet()) {
+            String code = entry.getKey();
+            String name = entry.getValue();
             String maxTradeDate = maxTradeDateMap.get(code);
+            StockZhASpot latestSpot = latestSpotMap.get(code);
+            // 已有历史数据时，从“最后一条历史记录的下一天”开始补；没有历史数据则全量拉取。
             LocalDate historyStartDate = maxTradeDate == null ? null : LocalDate.parse(maxTradeDate).plusDays(1);
+            boolean shouldBackfill = historyStartDate == null ||
+                    (!historyStartDate.isAfter(historyEndDate) && stockHelper.hasTradeDayBetween(historyStartDate, historyEndDate));
 
-            if (historyStartDate != null &&
-                    (historyStartDate.isAfter(historyEndDate) || !hasTradeDayBetween(historyStartDate, historyEndDate))) {
+            // 当前股票既没有历史缺口要补，也不需要写入最新已收盘日时，直接跳过。
+            if (!shouldBackfill && (!shouldWriteLatestHistory || latestSpot == null)) {
                 continue;
             }
 
+            // start 传 null 表示让第三方接口按默认最早范围返回，用于该股票首次落历史数据的场景。
+            String historyStart = historyStartDate == null ? null : historyStartDate.toString();
             try {
-                String historyStart = historyStartDate == null ? null : historyStartDate.toString();
-                List<StockZhADaily> stockZhAHists = aKShareService
-                        .stockZhADaily(code, historyStart, historyEnd, "qfq");
-                stockQuoteHistoryService.save(stockZhAHists, code, historyTarget.name(), syncTime);
-                log.info("补齐股票历史行情完成，code={}, start={}, end={}", code, historyStart, historyEnd);
+                transactionTemplate.executeWithoutResult(status -> {
+                    if (shouldBackfill) {
+                        List<StockZhADaily> stockZhAHists = aKShareService
+                                .stockZhADaily(code, historyStart, historyEnd, "qfq");
+                        // 历史表保存时统一带上本次同步时间，便于后续排查某批次落库结果。
+                        stockQuoteHistoryService.save(stockZhAHists, code, name, syncTime);
+                    }
+
+                    if (shouldWriteLatestHistory && latestSpot != null) {
+                        stockQuoteHistoryService.save(Collections.singletonList(latestSpot), syncTime);
+                    }
+                });
+                log.info("同步单只股票历史行情完成，code={}, start={}, end={}, wroteLatest={}",
+                        code, historyStart, historyEnd, shouldWriteLatestHistory && latestSpot != null);
             } catch (Exception e) {
-                log.error("补齐股票历史行情失败，code={}, end={}", code, historyEnd, e);
+                log.error("同步单只股票历史行情失败，code={}, start={}, end={}, wroteLatest={}",
+                        code, historyStart, historyEnd, shouldWriteLatestHistory && latestSpot != null, e);
             }
         }
     }
@@ -232,20 +285,6 @@ public class StockSyncTask {
             }
         }
         return maxTradeDateMap;
-    }
-
-    private boolean hasTradeDayBetween(LocalDate startDate, LocalDate endDate) {
-        LocalDate date = startDate;
-        while (!date.isAfter(endDate)) {
-            if (stockHelper.isTradeDay(date)) {
-                return true;
-            }
-            date = date.plusDays(1);
-        }
-        return false;
-    }
-
-    private record StockHistorySyncTarget(String code, String name) {
     }
 
     public void syncStockBoard() {
@@ -292,15 +331,7 @@ public class StockSyncTask {
             return true;
         }
 
-        return lastTimestamp < getLatestClosedTradeDaySyncWatermark(syncTime);
-    }
-
-    private long getLatestClosedTradeDaySyncWatermark(LocalDateTime syncTime) {
-        return stockHelper.latestClosedTradeDay(syncTime)
-                .atTime(StockSyncConstant.A_SHARE_MARKET_CLOSE_TIME)
-                .atZone(ZoneId.systemDefault())
-                .toInstant()
-                .toEpochMilli();
+        return lastTimestamp < stockHelper.getLatestClosedTradeDaySyncWatermark(syncTime);
     }
 
     private List<StockBoardIndustrySummaryThs> distinctStockBoardList(List<StockBoardIndustrySummaryThs> stockBoardList) {
@@ -372,7 +403,7 @@ public class StockSyncTask {
             LocalDate historyStartDate = maxTradeDate == null ? null : LocalDate.parse(maxTradeDate).plusDays(1);
 
             if (historyStartDate != null &&
-                    (historyStartDate.isAfter(historyEndDate) || !hasTradeDayBetween(historyStartDate, historyEndDate))) {
+                    (historyStartDate.isAfter(historyEndDate) || !stockHelper.hasTradeDayBetween(historyStartDate, historyEndDate))) {
                 continue;
             }
 
@@ -514,7 +545,7 @@ public class StockSyncTask {
             return true;
         }
 
-        return lastTimestamp < getLatestClosedTradeDaySyncWatermark(syncTime);
+        return lastTimestamp < stockHelper.getLatestClosedTradeDaySyncWatermark(syncTime);
     }
 
     private List<FundHistorySyncTarget> loadOverseasFundHistoryTargetsFromLocalFunds() {
