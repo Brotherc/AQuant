@@ -78,7 +78,7 @@ public class StockSyncTask {
         log.info("同步股票板块数据完成");
 
         log.info("同步基金数据开始");
-        syncFundInfo();
+        syncFundInfo(now);
         log.info("同步基金数据完成");
 
         log.info("同步股票分红数据开始");
@@ -451,17 +451,24 @@ public class StockSyncTask {
     /**
      * 同步基金基本信息
      */
-    public void syncFundInfo() {
+    public void syncFundInfo(LocalDateTime now) {
+        // 获取【基金净值】最新同步时间
         StockSync stockSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_FUND_INFO_LATEST);
-        long timestamp = System.currentTimeMillis();
-        LocalDateTime syncTime = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime();
-        LocalDate latestClosedTradeDay = stockHelper.latestClosedTradeDay(syncTime);
-        boolean shouldRefreshLatestFund = shouldRefreshLatestFund(stockSync, syncTime);
-        List<FundHistorySyncTarget> historyTargets = Collections.emptyList();
+        // 获取最近一个收盘交易日
+        LocalDate latestClosedTradeDay = stockHelper.latestClosedTradeDay(now);
+
+        boolean shouldRefreshLatestFund = shouldRefreshLatestFund(stockSync, now);
+
+        Map<String, String> localHistoryTargets = stockFundInfoRepository.findAll().stream()
+                .filter(stockFundInfo -> StockUtils.isOverseasFund(stockFundInfo.getFundType(), stockFundInfo.getFundName()))
+                .collect(LinkedHashMap::new,
+                        (map, stockFundInfo) ->
+                                map.put(stockFundInfo.getFundCode(), stockFundInfo.getFundName()),
+                        Map::putAll
+                );
 
         if (!shouldRefreshLatestFund) {
-            historyTargets = loadOverseasFundHistoryTargetsFromLocalFunds();
-            if (CollectionUtils.isEmpty(historyTargets)) {
+            if (CollectionUtils.isEmpty(localHistoryTargets)) {
                 log.warn("基金同步标记已满足，但本地 stock_fund_info 为空，重新拉取基金基本信息");
                 shouldRefreshLatestFund = true;
             } else {
@@ -469,20 +476,29 @@ public class StockSyncTask {
             }
         }
 
+        boolean latestFundRefreshed = false;
         if (shouldRefreshLatestFund) {
             List<FundNameEm> fundNameEms = aKShareService.fundNameEm();
             List<FundPurchaseEm> fundPurchaseEms = aKShareService.fundPurchaseEm();
             if (CollectionUtils.isEmpty(fundNameEms) && CollectionUtils.isEmpty(fundPurchaseEms)) {
                 log.warn("获取到的基金基础数据为空，尝试使用本地基金清单补齐海外基金历史净值");
-                historyTargets = loadOverseasFundHistoryTargetsFromLocalFunds();
             } else {
+                long timestamp = now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
                 stockSyncService.syncFundInfo(fundNameEms, fundPurchaseEms, stockSync, timestamp);
-                historyTargets = loadOverseasFundHistoryTargetsFromLocalFunds();
+                latestFundRefreshed = true;
             }
         }
 
-        backfillMissingFundNetValues(historyTargets, latestClosedTradeDay);
-        syncFundPortfolioHoldings(syncTime);
+        if (latestFundRefreshed) {
+            localHistoryTargets = stockFundInfoRepository.findAll().stream()
+                    .filter(stockFundInfo -> StockUtils.isOverseasFund(stockFundInfo.getFundType(), stockFundInfo.getFundName()))
+                    .collect(LinkedHashMap::new,
+                            (map, stockFundInfo) -> map.put(stockFundInfo.getFundCode(), stockFundInfo.getFundName()),
+                            Map::putAll);
+        }
+
+        backfillMissingFundNetValues(localHistoryTargets, latestClosedTradeDay);
+        syncFundPortfolioHoldings(now);
     }
 
     private boolean shouldRefreshLatestFund(StockSync stockSync, LocalDateTime syncTime) {
@@ -500,71 +516,28 @@ public class StockSyncTask {
         return lastTimestamp < stockHelper.getLatestClosedTradeDaySyncWatermark(syncTime);
     }
 
-    private List<FundHistorySyncTarget> loadOverseasFundHistoryTargetsFromLocalFunds() {
-        List<StockFundInfo> stockFundInfos = stockFundInfoRepository.findAll();
-        if (CollectionUtils.isEmpty(stockFundInfos)) {
-            return Collections.emptyList();
-        }
-
-        List<FundHistorySyncTarget> targets = new ArrayList<>();
-        for (StockFundInfo stockFundInfo : stockFundInfos) {
-            if (stockFundInfo == null || StringUtils.isBlank(stockFundInfo.getFundCode())) {
-                continue;
-            }
-            if (isOverseasFund(stockFundInfo)) {
-                targets.add(new FundHistorySyncTarget(stockFundInfo.getFundCode(), stockFundInfo.getFundName()));
-            }
-        }
-        return targets;
-    }
-
-    private boolean isOverseasFund(StockFundInfo stockFundInfo) {
-        String fundType = stockFundInfo.getFundType();
-        if (StringUtils.isNotBlank(fundType)) {
-            if (fundType.startsWith("QDII") || "指数型-海外股票".equals(fundType)) {
-                return true;
-            }
-        }
-
-        String fundName = stockFundInfo.getFundName();
-        String[] keywords = {"QDII", "纳斯达克", "标普", "美国", "全球", "海外", "美元"};
-        for (String keyword : keywords) {
-            if (StringUtils.containsIgnoreCase(fundName, keyword) || StringUtils.containsIgnoreCase(fundType, keyword)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private void backfillMissingFundNetValues(List<FundHistorySyncTarget> historyTargets, LocalDate latestClosedTradeDay) {
+    private void backfillMissingFundNetValues(Map<String, String> historyTargets, LocalDate latestClosedTradeDay) {
         if (CollectionUtils.isEmpty(historyTargets)) {
             return;
         }
 
-        List<String> fundCodes = historyTargets.stream()
-                .map(FundHistorySyncTarget::getFundCode)
-                .filter(StringUtils::isNotBlank)
-                .toList();
-        if (CollectionUtils.isEmpty(fundCodes)) {
-            return;
-        }
+        List<String> fundCodes = historyTargets.keySet().stream().toList();
 
         Map<String, LocalDateTime> maxNavDateMap = stockFundNetValueService.findMaxNavDateMap(fundCodes);
-        for (FundHistorySyncTarget historyTarget : historyTargets) {
-            LocalDateTime maxNavDate = maxNavDateMap.get(historyTarget.getFundCode());
+        for (Map.Entry<String, String> historyTarget : historyTargets.entrySet()) {
+            String fundCode = historyTarget.getKey();
+            String fundName = historyTarget.getValue();
+            LocalDateTime maxNavDate = maxNavDateMap.get(fundCode);
             if (maxNavDate != null && !maxNavDate.toLocalDate().isBefore(latestClosedTradeDay)) {
                 continue;
             }
 
             try {
-                List<FundOpenFundInfoEm> fundNetValues = aKShareService
-                        .fundOpenFundInfoEm(historyTarget.getFundCode(), "单位净值走势", null);
-                stockFundNetValueService.saveFundNetValues(historyTarget.getFundCode(), fundNetValues);
-                log.info("同步海外基金历史净值完成，fundCode={}, fundName={}",
-                        historyTarget.getFundCode(), historyTarget.getFundName());
+                List<FundOpenFundInfoEm> fundNetValues = aKShareService.fundOpenFundInfoEm(fundCode, "单位净值走势", null);
+                stockFundNetValueService.saveFundNetValues(fundCode, fundNetValues);
+                log.info("同步海外基金历史净值完成，fundCode={}, fundName={}", fundCode, fundName);
             } catch (Exception e) {
-                log.error("同步海外基金历史净值失败，fundCode={}, fundName={}",
-                        historyTarget.getFundCode(), historyTarget.getFundName(), e);
+                log.error("同步海外基金历史净值失败，fundCode={}, fundName={}", fundCode, fundName, e);
             }
         }
     }
@@ -573,7 +546,7 @@ public class StockSyncTask {
         List<StockFundInfo> stockFundInfos = stockFundInfoRepository.findAll().stream()
                 .filter(Objects::nonNull)
                 .filter(stockFundInfo -> StringUtils.isNotBlank(stockFundInfo.getFundCode()))
-                .filter(this::isOverseasFund)
+                .filter(o -> StockUtils.isOverseasFund(o.getFundType(), o.getFundName()))
                 .toList();
         if (CollectionUtils.isEmpty(stockFundInfos)) {
             return;
@@ -691,26 +664,6 @@ public class StockSyncTask {
 
         return LocalDate.of(date.getYear(), endMonth, endMonth.length(date.isLeapYear()));
     }
-
-    private static final class FundHistorySyncTarget {
-
-        private final String fundCode;
-        private final String fundName;
-
-        private FundHistorySyncTarget(String fundCode, String fundName) {
-            this.fundCode = fundCode;
-            this.fundName = fundName;
-        }
-
-        private String getFundCode() {
-            return fundCode;
-        }
-
-        private String getFundName() {
-            return fundName;
-        }
-    }
-
     private static final class FundHoldingSyncWindow {
 
         private final String requestDate;

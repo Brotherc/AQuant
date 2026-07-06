@@ -1,6 +1,7 @@
 package com.brotherc.aquant.utils;
 
 import com.brotherc.aquant.entity.StockSync;
+import org.apache.commons.lang3.StringUtils;
 
 import java.time.*;
 import java.time.format.DateTimeFormatter;
@@ -143,6 +144,22 @@ public class StockUtils {
         } catch (NumberFormatException e) {
             return null;
         }
+    }
+
+    public static boolean isOverseasFund(String fundType, String fundName) {
+        if (StringUtils.isNotBlank(fundType)) {
+            if (fundType.startsWith("QDII") || "指数型-海外股票".equals(fundType)) {
+                return true;
+            }
+        }
+
+        String[] keywords = {"QDII", "纳斯达克", "标普", "美国", "全球", "海外", "美元"};
+        for (String keyword : keywords) {
+            if (StringUtils.containsIgnoreCase(fundName, keyword) || StringUtils.containsIgnoreCase(fundType, keyword)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }

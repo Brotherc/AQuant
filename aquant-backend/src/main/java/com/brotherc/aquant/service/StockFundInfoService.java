@@ -41,18 +41,16 @@ public class StockFundInfoService {
         Map<String, StockFundInfo> existingMap = allExisting.stream()
                 .collect(Collectors.toMap(StockFundInfo::getFundCode, Function.identity(), (a, b) -> a));
 
-        Map<String, FundPurchaseEm> purchaseMap = CollectionUtils.isEmpty(fundPurchaseEms)
-                ? Map.of()
-                : fundPurchaseEms.stream()
-                .filter(item -> item != null && StringUtils.isNotBlank(item.getFundCode()))
-                .collect(Collectors.toMap(FundPurchaseEm::getFundCode, Function.identity(), (a, b) -> a));
+        Map<String, FundPurchaseEm> purchaseMap = Map.of();
+        if (!CollectionUtils.isEmpty(fundPurchaseEms)) {
+            purchaseMap = fundPurchaseEms.stream().collect(
+                    Collectors.toMap(FundPurchaseEm::getFundCode, Function.identity(), (a, b) -> a)
+            );
+        }
 
         List<StockFundInfo> toSave = new ArrayList<>();
         if (!CollectionUtils.isEmpty(fundNameEms)) {
             for (FundNameEm em : fundNameEms) {
-                if (em == null || StringUtils.isBlank(em.getFundCode())) {
-                    continue;
-                }
                 StockFundInfo info = existingMap.get(em.getFundCode());
                 if (info == null) {
                     info = new StockFundInfo();
@@ -76,8 +74,7 @@ public class StockFundInfoService {
 
         if (!CollectionUtils.isEmpty(fundPurchaseEms)) {
             for (FundPurchaseEm purchase : fundPurchaseEms) {
-                if (purchase == null || StringUtils.isBlank(purchase.getFundCode()) ||
-                        existingMap.containsKey(purchase.getFundCode())) {
+                if (existingMap.containsKey(purchase.getFundCode())) {
                     continue;
                 }
                 StockFundInfo info = new StockFundInfo();
