@@ -429,7 +429,16 @@ public class StockSyncTask {
      * 清理 stock_quote 和 stock_quote_history 中已经退市的股票数据
      */
     public void clearDelistedStockData() {
-        List<StockQuote> delistedStocks = stockQuoteRepository.findByNameContaining("退市");
+        List<StockQuote> delistedStocks = stockQuoteRepository.findAll().stream()
+                .filter(stockQuote -> {
+                    String code = stockQuote.getCode().toLowerCase(Locale.ROOT);
+                    String name = stockQuote.getName();
+                    return name.contains("退市")
+                            || (code.startsWith("sz") && name.endsWith("退"))
+                            || (code.startsWith("bj") && name.endsWith("退"))
+                            || (code.startsWith("sh") && name.startsWith("退市"));
+                })
+                .toList();
         if (CollectionUtils.isEmpty(delistedStocks)) {
             log.info("未发现退市股票数据，无需清理");
             return;
