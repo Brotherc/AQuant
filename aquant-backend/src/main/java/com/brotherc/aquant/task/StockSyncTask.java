@@ -429,14 +429,27 @@ public class StockSyncTask {
      * 清理 stock_quote 和 stock_quote_history 中已经退市的股票数据
      */
     public void clearDelistedStockData() {
+        Set<String> szDelistedCodes = new HashSet<>();
+        try {
+            szDelistedCodes = aKShareService.stockInfoSzDelist("终止上市公司").stream()
+                    .map(StockInfoSzDelist::getStockCode)
+                    .filter(StringUtils::isNotBlank)
+                    .collect(HashSet::new, Set::add, Set::addAll);
+        } catch (Exception e) {
+            log.warn("获取深交所终止上市公司列表失败，退市清理回退到名称规则", e);
+        }
+        Set<String> szDelistedCodesFinal = szDelistedCodes;
+
         List<StockQuote> delistedStocks = stockQuoteRepository.findAll().stream()
                 .filter(stockQuote -> {
                     String code = stockQuote.getCode().toLowerCase(Locale.ROOT);
+                    String plainCode = code.length() > 2 ? code.substring(2) : code;
                     String name = stockQuote.getName();
                     return name.contains("退市")
                             || (code.startsWith("sz") && name.endsWith("退"))
                             || (code.startsWith("bj") && name.endsWith("退"))
-                            || (code.startsWith("sh") && name.startsWith("退市"));
+                            || (code.startsWith("sh") && name.startsWith("退市"))
+                            || (code.startsWith("sz") && szDelistedCodesFinal.contains(plainCode));
                 })
                 .toList();
         if (CollectionUtils.isEmpty(delistedStocks)) {
