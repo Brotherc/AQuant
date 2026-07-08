@@ -685,4 +685,33 @@ public class AKShareService {
         return list;
     }
 
+    public List<StockInfoShDelist> stockInfoShDelist(String symbol) {
+        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_info_sh_delist")
+                .newBuilder()
+                .addQueryParameter("symbol", symbol);
+
+        Request request = new Request.Builder()
+                .url(builder.build())
+                .get()
+                .build();
+
+        List<StockInfoShDelist> list;
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                log.info("失败响应: {}", response);
+                throw new RuntimeException("stock_info_sh_delist请求失败");
+            }
+
+            list = objectMapper.readValue(response.body().string(), new TypeReference<>() {
+            });
+
+        } catch (IOException e) {
+            log.error("stock_info_sh_delist请求失败", e);
+            throw new RuntimeException("stock_info_sh_delist请求失败");
+        }
+
+        return list;
+    }
+
 }
