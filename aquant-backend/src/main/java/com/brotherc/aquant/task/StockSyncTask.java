@@ -439,6 +439,16 @@ public class StockSyncTask {
             log.warn("获取深交所终止上市公司列表失败，退市清理回退到名称规则", e);
         }
         Set<String> szDelistedCodesFinal = szDelistedCodes;
+        Set<String> shDelistedCodes = new HashSet<>();
+        try {
+            shDelistedCodes = aKShareService.stockInfoShDelist("全部").stream()
+                    .filter(stockInfoShDelist -> StringUtils.contains(stockInfoShDelist.getCompanyName(), "退市"))
+                    .map(StockInfoShDelist::getCompanyCode)
+                    .collect(HashSet::new, Set::add, Set::addAll);
+        } catch (Exception e) {
+            log.warn("获取上交所退市公司列表失败，退市清理回退到名称规则", e);
+        }
+        Set<String> shDelistedCodesFinal = shDelistedCodes;
 
         List<StockQuote> delistedStocks = stockQuoteRepository.findAll().stream()
                 .filter(stockQuote -> {
@@ -449,7 +459,8 @@ public class StockSyncTask {
                             || (code.startsWith("sz") && name.endsWith("退"))
                             || (code.startsWith("bj") && name.endsWith("退"))
                             || (code.startsWith("sh") && name.startsWith("退市"))
-                            || (code.startsWith("sz") && szDelistedCodesFinal.contains(plainCode));
+                            || (code.startsWith("sz") && szDelistedCodesFinal.contains(plainCode))
+                            || (code.startsWith("sh") && shDelistedCodesFinal.contains(plainCode));
                 })
                 .toList();
         if (CollectionUtils.isEmpty(delistedStocks)) {
