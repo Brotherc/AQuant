@@ -60,8 +60,8 @@ public class StockSyncTask {
     @Async
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
-        syncStackDtaLatest();
         clearDelistedStockData();
+        syncStackDtaLatest();
         stockStrategySnapshotService.refreshDualMaBacktestSnapshots();
         stockStrategySnapshotService.refreshMomentumBacktestSnapshots();
     }
