@@ -43,6 +43,8 @@ public interface StockDividendRepository extends JpaRepository<StockDividend, Lo
             """)
     List<StockDividend> findDuplicateLatestAnnouncementDateRows();
 
+    List<StockDividend> findByPlanStatus(String planStatus);
+
     long deleteByIdIn(List<Long> ids);
 
 }

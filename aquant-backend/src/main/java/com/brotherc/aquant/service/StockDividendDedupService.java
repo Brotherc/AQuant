@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
@@ -37,19 +38,29 @@ public class StockDividendDedupService {
                         || row.getBonusShareRatio() != null
                         || row.getTransferShareRatio() != null;
 
-        List<Long> deleteIds = groupedRows.values().stream()
+        List<Long> duplicateWeakRowIds = groupedRows.values().stream()
                 .filter(rows -> rows.stream().anyMatch(hasCoreDividendFields))
                 .flatMap(rows -> rows.stream()
                         .filter(hasCoreDividendFields.negate())
                         .map(StockDividend::getId))
                 .toList();
+        List<Long> preDisclosureWeakRowIds = stockDividendRepository.findByPlanStatus("预披露").stream()
+                .filter(hasCoreDividendFields.negate())
+                .map(StockDividend::getId)
+                .toList();
+
+        List<Long> deleteIds = new ArrayList<>();
+        deleteIds.addAll(duplicateWeakRowIds);
+        deleteIds.addAll(preDisclosureWeakRowIds);
+        deleteIds = deleteIds.stream().distinct().toList();
         if (CollectionUtils.isEmpty(deleteIds)) {
             log.info("发现分红重复组合 {} 组，但未发现可安全删除的弱记录", groupedRows.size());
             return;
         }
 
         long deleted = stockDividendRepository.deleteByIdIn(deleteIds);
-        log.info("分红重复数据清理完成，重复组数: {}, 删除行数: {}", groupedRows.size(), deleted);
+        log.info("分红重复数据清理完成，重复组数: {}, 重复弱记录: {}, 预披露弱记录: {}, 删除行数: {}",
+                groupedRows.size(), duplicateWeakRowIds.size(), preDisclosureWeakRowIds.size(), deleted);
     }
 
 }
