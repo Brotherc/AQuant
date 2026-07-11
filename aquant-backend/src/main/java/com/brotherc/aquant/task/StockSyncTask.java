@@ -8,6 +8,7 @@ import com.brotherc.aquant.entity.StockSync;
 import com.brotherc.aquant.model.dto.akshare.*;
 import com.brotherc.aquant.repository.*;
 import com.brotherc.aquant.service.AKShareService;
+import com.brotherc.aquant.service.StockAbnormalService;
 import com.brotherc.aquant.service.StockFundNetValueService;
 import com.brotherc.aquant.service.StockFundPortfolioHoldingService;
 import com.brotherc.aquant.service.StockQuoteHistoryService;
@@ -41,6 +42,7 @@ public class StockSyncTask {
     private final TransactionTemplate transactionTemplate;
 
     private final StockQuoteService stockQuoteService;
+    private final StockAbnormalService stockAbnormalService;
     private final StockQuoteHistoryService stockQuoteHistoryService;
     private final StockSyncService stockSyncService;
     private final StockStrategySnapshotService stockStrategySnapshotService;
@@ -449,6 +451,7 @@ public class StockSyncTask {
             log.warn("获取上交所退市公司列表失败，退市清理回退到名称规则", e);
         }
         Set<String> shDelistedCodesFinal = shDelistedCodes;
+        Set<String> abnormalCodes = new HashSet<>(stockAbnormalService.findAllCodes());
 
         List<StockQuote> delistedStocks = stockQuoteRepository.findAll().stream()
                 .filter(stockQuote -> {
@@ -460,7 +463,8 @@ public class StockSyncTask {
                             || (code.startsWith("bj") && name.endsWith("退"))
                             || (code.startsWith("sh") && name.startsWith("退市"))
                             || (code.startsWith("sz") && szDelistedCodesFinal.contains(plainCode))
-                            || (code.startsWith("sh") && shDelistedCodesFinal.contains(plainCode));
+                            || (code.startsWith("sh") && shDelistedCodesFinal.contains(plainCode))
+                            || abnormalCodes.contains(stockQuote.getCode());
                 })
                 .toList();
         if (CollectionUtils.isEmpty(delistedStocks)) {
