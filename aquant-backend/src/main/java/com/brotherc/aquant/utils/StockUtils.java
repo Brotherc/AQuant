@@ -33,7 +33,7 @@ public class StockUtils {
         LocalDate cursor = currentQuarterEnd;
         while (!cursor.isBefore(lastYearQuarterEnd)) {
             result.add(cursor.format(FORMATTER));
-            cursor = cursor.minusMonths(3);
+            cursor = getQuarterEnd(cursor.minusMonths(3));
         }
 
         return result;
