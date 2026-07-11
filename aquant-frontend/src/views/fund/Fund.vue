@@ -86,6 +86,7 @@ import { ref, reactive, onMounted, watch } from 'vue'
 import { getFundPage, getLatestFundHoldings } from '@/api/fund'
 import type { FundInfoPageReqVO, FundInfoVO, StockFundPortfolioHoldingVO } from '@/api/fund'
 import FundNetValueChart from './components/FundNetValueChart.vue'
+import { formatAmount } from '@/utils/format'
 
 const loading = ref(false)
 const dataList = ref<FundInfoVO[]>([])
@@ -102,14 +103,6 @@ const holdingColumns = [
   { title: '持股数(万股)', dataIndex: 'holdShares', width: 120, align: 'right', customRender: ({ text }: any) => text != null ? text.toFixed(2) : '-' },
   { title: '市值(万元)', dataIndex: 'marketValue', width: 120, align: 'right', customRender: ({ text }: any) => text != null ? text.toFixed(2) : '-' }
 ]
-
-const formatAmount = (val: number | null | undefined) => {
-  if (val == null) return '-'
-  if (val >= 100000000) return (val / 100000000).toFixed(2).replace(/\.?0+$/, '') + '亿'
-  if (val >= 10000) return (val / 10000).toFixed(2).replace(/\.?0+$/, '') + '万'
-  if (val >= 1000) return (val / 1000).toFixed(2).replace(/\.?0+$/, '') + '千'
-  return val.toString()
-}
 
 const queryParams = reactive<FundInfoPageReqVO>({
   page: 0,

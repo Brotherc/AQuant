@@ -79,8 +79,8 @@
                   {{ selectedStock.changeAmount > 0 ? '+' : '' }}{{ selectedStock.changeAmount }}
                 </span>
               </a-descriptions-item>
-              <a-descriptions-item label="成交量">{{ selectedStock.volume }}</a-descriptions-item>
-              <a-descriptions-item label="成交额">{{ selectedStock.turnover }}</a-descriptions-item>
+              <a-descriptions-item label="成交量">{{ formatVolume(selectedStock.volume) }}</a-descriptions-item>
+              <a-descriptions-item label="成交额">{{ formatCurrencyAmount(selectedStock.turnover) }}</a-descriptions-item>
               <a-descriptions-item label="昨收">{{ selectedStock.prevClose }}</a-descriptions-item>
               <a-descriptions-item label="今开">{{ selectedStock.openPrice }}</a-descriptions-item>
               <a-descriptions-item label="最高">{{ selectedStock.highPrice }}</a-descriptions-item>
@@ -124,6 +124,7 @@ import { message } from 'ant-design-vue';
 import StockHistoryChart from './components/StockHistoryChart.vue';
 import type { TableProps } from 'ant-design-vue';
 import { SyncOutlined } from '@ant-design/icons-vue';
+import { formatCurrencyAmount, formatVolume } from '@/utils/format';
 
 // 刷新状态
 const refreshLoading = ref(false);
