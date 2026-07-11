@@ -31,4 +31,18 @@ public interface StockDividendRepository extends JpaRepository<StockDividend, Lo
 
     List<StockDividend> findByStockCodeIn(List<String> stockCodes);
 
+    @Query("""
+            select d from StockDividend d
+            where exists (
+                select 1 from StockDividend dup
+                where dup.stockCode = d.stockCode
+                  and dup.latestAnnouncementDate = d.latestAnnouncementDate
+                group by dup.stockCode, dup.latestAnnouncementDate
+                having count(dup) > 1
+            )
+            """)
+    List<StockDividend> findDuplicateLatestAnnouncementDateRows();
+
+    long deleteByIdIn(List<Long> ids);
+
 }

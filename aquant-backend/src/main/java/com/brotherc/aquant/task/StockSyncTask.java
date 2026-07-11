@@ -9,6 +9,7 @@ import com.brotherc.aquant.model.dto.akshare.*;
 import com.brotherc.aquant.repository.*;
 import com.brotherc.aquant.service.AKShareService;
 import com.brotherc.aquant.service.StockAbnormalService;
+import com.brotherc.aquant.service.StockDividendDedupService;
 import com.brotherc.aquant.service.StockFundNetValueService;
 import com.brotherc.aquant.service.StockFundPortfolioHoldingService;
 import com.brotherc.aquant.service.StockQuoteHistoryService;
@@ -43,6 +44,7 @@ public class StockSyncTask {
 
     private final StockQuoteService stockQuoteService;
     private final StockAbnormalService stockAbnormalService;
+    private final StockDividendDedupService stockDividendDedupService;
     private final StockQuoteHistoryService stockQuoteHistoryService;
     private final StockSyncService stockSyncService;
     private final StockStrategySnapshotService stockStrategySnapshotService;
@@ -414,17 +416,18 @@ public class StockSyncTask {
         Long lastTimestamp = Optional.ofNullable(stockDividendSync).map(StockSync::getValue).map(Long::valueOf).orElse(null);
 
         if (lastTimestamp == null || StockUtils.isAfterDate(lastTimestamp)) {
-            List<String> quarterEndDates = StockUtils.getQuarterEndDatesFromNowToLastYearStart();
+        List<String> quarterEndDates = StockUtils.getQuarterEndDatesFromNowToLastYearStart();
 
-            for (String date : quarterEndDates) {
-                try {
-                    List<StockFhpsEm> list = aKShareService.stockFhpsEm(date);
-                    stockSyncService.stockDividend(list, date, stockDividendSync);
-                } catch (Exception e) {
-                    log.error("同步股票分红数据失败:{}", date, e);
+        for (String date : quarterEndDates) {
+            try {
+                List<StockFhpsEm> list = aKShareService.stockFhpsEm(date);
+                stockSyncService.stockDividend(list, date, stockDividendSync);
+            } catch (Exception e) {
+                log.error("同步股票分红数据失败:{}", date, e);
                 }
             }
         }
+        stockDividendDedupService.clearDuplicateLatestAnnouncementDateRows();
     }
 
     /**
