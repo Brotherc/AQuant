@@ -580,18 +580,29 @@ public class StockSyncTask {
                 stockFundNetValueService.saveFundNetValues(fundCode, fundNetValues);
                 log.info("同步海外基金历史净值完成，fundCode={}, fundName={}", fundCode, fundName);
             } catch (Exception e) {
-                log.error("同步海外基金历史净值失败，fundCode={}, fundName={}", fundCode, fundName, e);
+                log.error("同步海外基金历史净值失败，fundCode={}, fundName={}", fundCode, fundName);
             }
         }
     }
 
     private void syncFundPortfolioHoldings(LocalDateTime syncTime) {
+        StockSync holdingSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_FUND_PORTFOLIO_HOLDING_LATEST);
+        Long lastSyncTimestamp = StockUtils.parseSyncTimestamp(holdingSync);
+        if (lastSyncTimestamp != null) {
+            LocalDate lastSyncDate = Instant.ofEpochMilli(lastSyncTimestamp).atZone(ZoneId.systemDefault()).toLocalDate();
+            if (lastSyncDate.equals(syncTime.toLocalDate())) {
+                log.info("基金持仓当天已同步，跳过本次同步，syncDate={}", lastSyncDate);
+                return;
+            }
+        }
+
         List<StockFundInfo> stockFundInfos = stockFundInfoRepository.findAll().stream()
                 .filter(Objects::nonNull)
                 .filter(stockFundInfo -> StringUtils.isNotBlank(stockFundInfo.getFundCode()))
                 .filter(o -> StockUtils.isOverseasFund(o.getFundType(), o.getFundName()))
                 .toList();
         if (CollectionUtils.isEmpty(stockFundInfos)) {
+            log.info("没有需要同步持仓的海外基金");
             return;
         }
 
@@ -601,6 +612,7 @@ public class StockSyncTask {
                 .distinct()
                 .toList();
         if (CollectionUtils.isEmpty(fundCodes)) {
+            log.info("海外基金缺少有效基金代码，无法同步基金持仓");
             return;
         }
 
@@ -609,8 +621,6 @@ public class StockSyncTask {
                         fundCodes, syncWindow.getReportYear(), syncWindow.getReportQuarter()
                 )
         );
-        int syncedCount = 0;
-        int emptyCount = 0;
 
         for (StockFundInfo stockFundInfo : stockFundInfos) {
             if (existedFundCodes.contains(stockFundInfo.getFundCode())) {
@@ -624,7 +634,6 @@ public class StockSyncTask {
                         holdings, syncWindow.getReportYear(), syncWindow.getReportQuarter()
                 );
                 if (CollectionUtils.isEmpty(quarterHoldings)) {
-                    emptyCount++;
                     continue;
                 }
 
@@ -634,12 +643,12 @@ public class StockSyncTask {
                         syncWindow.getReportQuarter(),
                         quarterHoldings
                 );
-                syncedCount++;
-                log.info("同步基金持仓完成，fundCode={}, fundName={}, reportYear={}, reportQuarter={}",
+                log.info("同步基金持仓完成，fundCode={}, fundName={}, reportYear={}, reportQuarter={}, holdingCount={}",
                         stockFundInfo.getFundCode(),
                         stockFundInfo.getFundName(),
                         syncWindow.getReportYear(),
-                        syncWindow.getReportQuarter());
+                        syncWindow.getReportQuarter(),
+                        quarterHoldings.size());
             } catch (Exception e) {
                 log.error("同步基金持仓失败，fundCode={}, fundName={}, reportYear={}, reportQuarter={}",
                         stockFundInfo.getFundCode(),
@@ -650,13 +659,13 @@ public class StockSyncTask {
             }
         }
 
-        log.info("基金持仓同步结束，reportYear={}, reportQuarter={}, totalFundCount={}, existedFundCount={}, syncedFundCount={}, emptyFundCount={}",
-                syncWindow.getReportYear(),
-                syncWindow.getReportQuarter(),
-                fundCodes.size(),
-                existedFundCodes.size(),
-                syncedCount,
-                emptyCount);
+        if (holdingSync == null) {
+            holdingSync = new StockSync();
+            holdingSync.setName(StockSyncConstant.STOCK_FUND_PORTFOLIO_HOLDING_LATEST);
+        }
+        long timestamp = syncTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+        holdingSync.setValue(String.valueOf(timestamp));
+        stockSyncRepository.save(holdingSync);
     }
 
     private FundHoldingSyncWindow buildLatestFundHoldingSyncWindow(LocalDate currentDate) {
