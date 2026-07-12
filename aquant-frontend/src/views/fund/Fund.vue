@@ -3,6 +3,12 @@
     <a-row :gutter="16" class="fund-row">
       <a-col :span="11">
         <a-card title="基金列表" :bordered="false" class="fund-card fund-list-card">
+          <template #extra>
+            <div v-if="lastRefreshTime" class="page-sync-meta fund-refresh-time">
+              <span class="page-sync-meta__label">最后同步时间:</span>
+              <span class="page-sync-meta__value">{{ lastRefreshTime }}</span>
+            </div>
+          </template>
           <a-form layout="inline" :model="queryParams" @finish="onSearch" class="fund-search-form">
             <a-form-item label="代码">
               <a-input v-model:value="queryParams.fundCode" placeholder="输入代码" allow-clear style="width: 140px" />
@@ -56,7 +62,7 @@
             <FundNetValueChart :fundCode="selectedFund.fundCode" />
             <div v-if="holdingList.length > 0" style="margin-top: 24px;">
               <h4 style="margin-bottom: 12px; font-weight: 600;">
-                最新持仓明细 ({{ holdingList[0].reportYear }}年第{{ holdingList[0].reportQuarter }}季度)
+                最新持仓明细 ({{ holdingList[0]?.reportYear }}年第{{ holdingList[0]?.reportQuarter }}季度)
               </h4>
               <a-table
                 :columns="holdingColumns"
@@ -83,7 +89,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch } from 'vue'
-import { getFundPage, getLatestFundHoldings } from '@/api/fund'
+import { getFundPage, getLatestFundHoldings, getStockFundInfoLatest } from '@/api/fund'
 import type { FundInfoPageReqVO, FundInfoVO, StockFundPortfolioHoldingVO } from '@/api/fund'
 import FundNetValueChart from './components/FundNetValueChart.vue'
 import { formatAmount } from '@/utils/format'
@@ -91,6 +97,7 @@ import { formatAmount } from '@/utils/format'
 const loading = ref(false)
 const dataList = ref<FundInfoVO[]>([])
 const selectedFund = ref<FundInfoVO | null>(null)
+const lastRefreshTime = ref('')
 
 const holdingList = ref<StockFundPortfolioHoldingVO[]>([])
 const holdingLoading = ref(false)
@@ -187,6 +194,17 @@ const loadData = async () => {
   }
 }
 
+const fetchRefreshTime = async () => {
+  try {
+    const res = await getStockFundInfoLatest()
+    if (res.data?.success) {
+      lastRefreshTime.value = res.data.data
+    }
+  } catch (error) {
+    console.error('Failed to fetch fund refresh time:', error)
+  }
+}
+
 const onSearch = () => {
   pagination.current = 1
   selectedFund.value = null // 搜索时清空右侧详情
@@ -200,7 +218,7 @@ const resetSearch = () => {
   onSearch()
 }
 
-const handleTableChange = (pag: any, filters: any, sorter: any) => {
+const handleTableChange = (pag: any, _filters: any, sorter: any) => {
   pagination.current = pag.current
   pagination.pageSize = pag.pageSize
   if (sorter.field && sorter.order) {
@@ -251,6 +269,7 @@ watch(selectedFund, async (newVal) => {
 
 onMounted(() => {
   loadData()
+  fetchRefreshTime()
 })
 </script>
 
@@ -281,6 +300,11 @@ onMounted(() => {
 }
 .fund-list-card {
   width: 100%;
+}
+.fund-refresh-time {
+  margin-left: 0;
+  font-size: 14px;
+  font-weight: normal;
 }
 .fund-search-form {
   margin-bottom: 16px;

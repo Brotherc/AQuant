@@ -81,3 +81,10 @@ export function getLatestFundHoldings(fundCode: string) {
     params: { fundCode }
   })
 }
+
+export function getStockFundInfoLatest() {
+  return request<ResponseDTO<string>>({
+    url: '/stockSync/stockFundInfoLatest',
+    method: 'GET'
+  })
+}

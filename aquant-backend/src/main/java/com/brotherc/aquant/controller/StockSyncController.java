@@ -31,4 +31,10 @@ public class StockSyncController {
         return ResponseDTO.success(stockSyncService.getStockBoardIndustryLatest());
     }
 
+    @Operation(summary = "获取最新同步时间【基金数据】")
+    @GetMapping("/stockFundInfoLatest")
+    public ResponseDTO<String> getStockFundInfoLatest() {
+        return ResponseDTO.success(stockSyncService.getStockFundInfoLatest());
+    }
+
 }
