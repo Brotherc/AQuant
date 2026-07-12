@@ -10,6 +10,7 @@ export interface FundInfoVO {
   purchaseStartAmount?: number
   dailyLimitAmount?: number
   feeRate?: number
+  latestNetValueReportDate?: string
 }
 
 export interface FundInfoPageReqVO {

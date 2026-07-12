@@ -52,6 +52,7 @@
             <a-descriptions bordered :column="2">
               <a-descriptions-item label="基金代码">{{ selectedFund.fundCode }}</a-descriptions-item>
               <a-descriptions-item label="基金简称">{{ selectedFund.fundName }}</a-descriptions-item>
+              <a-descriptions-item label="最新净值日期">{{ selectedFund.latestNetValueReportDate || '-' }}</a-descriptions-item>
               <a-descriptions-item label="基金类型">
                 <a-tag color="blue">{{ selectedFund.fundType }}</a-tag>
               </a-descriptions-item>
