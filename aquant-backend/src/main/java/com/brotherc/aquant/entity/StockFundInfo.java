@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -69,6 +70,12 @@ public class StockFundInfo {
      */
     @Column(name = "fee_rate")
     private BigDecimal feeRate;
+
+    /**
+     * 最新净值报告日期
+     */
+    @Column(name = "latest_net_value_report_date")
+    private LocalDate latestNetValueReportDate;
 
     /**
      * 创建时间

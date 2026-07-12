@@ -18,6 +18,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
+import java.time.LocalDate;
+import java.time.MonthDay;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +32,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class StockFundInfoService {
+
+    private static final DateTimeFormatter MONTH_DAY_FORMATTER = DateTimeFormatter.ofPattern("MM-dd");
 
     private final StockFundInfoRepository stockFundInfoRepository;
 
@@ -63,9 +69,7 @@ public class StockFundInfoService {
 
                 FundPurchaseEm purchase = purchaseMap.get(em.getFundCode());
                 if (purchase != null) {
-                    info.setPurchaseStartAmount(purchase.getPurchaseStartAmount());
-                    info.setDailyLimitAmount(purchase.getDailyLimitAmount());
-                    info.setFeeRate(purchase.getFeeRate());
+                    applyPurchaseInfo(info, purchase);
                 }
                 toSave.add(info);
                 existingMap.put(info.getFundCode(), info);
@@ -81,15 +85,36 @@ public class StockFundInfoService {
                 info.setFundCode(purchase.getFundCode());
                 info.setFundName(purchase.getFundName());
                 info.setFundType(purchase.getFundType());
-                info.setPurchaseStartAmount(purchase.getPurchaseStartAmount());
-                info.setDailyLimitAmount(purchase.getDailyLimitAmount());
-                info.setFeeRate(purchase.getFeeRate());
+                applyPurchaseInfo(info, purchase);
                 toSave.add(info);
                 existingMap.put(info.getFundCode(), info);
             }
         }
 
         stockFundInfoRepository.saveAll(toSave);
+    }
+
+    private void applyPurchaseInfo(StockFundInfo info, FundPurchaseEm purchase) {
+        info.setPurchaseStartAmount(purchase.getPurchaseStartAmount());
+        info.setDailyLimitAmount(purchase.getDailyLimitAmount());
+        info.setFeeRate(purchase.getFeeRate());
+        if (StringUtils.isBlank(purchase.getLatestNetValueReportTime())) {
+            return;
+        }
+
+        try {
+            LocalDate today = LocalDate.now();
+            LocalDate reportDate = MonthDay.parse(
+                    purchase.getLatestNetValueReportTime(), MONTH_DAY_FORMATTER
+            ).atYear(today.getYear());
+            if (reportDate.isAfter(today)) {
+                reportDate = reportDate.minusYears(1);
+            }
+            info.setLatestNetValueReportDate(reportDate);
+        } catch (DateTimeParseException e) {
+            log.warn("基金最新净值报告日期格式不正确，fundCode={}, reportTime={}",
+                    purchase.getFundCode(), purchase.getLatestNetValueReportTime());
+        }
     }
 
     public Page<StockFundInfoVO> getPage(StockFundInfoPageReqVO reqVO, Pageable pageable) {

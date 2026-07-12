@@ -499,11 +499,11 @@ public class StockSyncTask {
 
         boolean shouldRefreshLatestFund = shouldRefreshLatestFund(stockSync, now);
 
-        Map<String, String> localHistoryTargets = stockFundInfoRepository.findAll().stream()
+        Map<String, StockFundInfo> localHistoryTargets = stockFundInfoRepository.findAll().stream()
                 .filter(stockFundInfo -> StockUtils.isOverseasFund(stockFundInfo.getFundType(), stockFundInfo.getFundName()))
                 .collect(LinkedHashMap::new,
                         (map, stockFundInfo) ->
-                                map.put(stockFundInfo.getFundCode(), stockFundInfo.getFundName()),
+                                map.put(stockFundInfo.getFundCode(), stockFundInfo),
                         Map::putAll
                 );
 
@@ -533,7 +533,7 @@ public class StockSyncTask {
             localHistoryTargets = stockFundInfoRepository.findAll().stream()
                     .filter(stockFundInfo -> StockUtils.isOverseasFund(stockFundInfo.getFundType(), stockFundInfo.getFundName()))
                     .collect(LinkedHashMap::new,
-                            (map, stockFundInfo) -> map.put(stockFundInfo.getFundCode(), stockFundInfo.getFundName()),
+                            (map, stockFundInfo) -> map.put(stockFundInfo.getFundCode(), stockFundInfo),
                             Map::putAll);
         }
 
@@ -556,7 +556,7 @@ public class StockSyncTask {
         return lastTimestamp < stockHelper.getLatestClosedTradeDaySyncWatermark(syncTime);
     }
 
-    private void backfillMissingFundNetValues(Map<String, String> historyTargets, LocalDate latestClosedTradeDay) {
+    private void backfillMissingFundNetValues(Map<String, StockFundInfo> historyTargets, LocalDate latestClosedTradeDay) {
         if (CollectionUtils.isEmpty(historyTargets)) {
             return;
         }
@@ -564,11 +564,14 @@ public class StockSyncTask {
         List<String> fundCodes = historyTargets.keySet().stream().toList();
 
         Map<String, LocalDateTime> maxNavDateMap = stockFundNetValueService.findMaxNavDateMap(fundCodes);
-        for (Map.Entry<String, String> historyTarget : historyTargets.entrySet()) {
+        for (Map.Entry<String, StockFundInfo> historyTarget : historyTargets.entrySet()) {
             String fundCode = historyTarget.getKey();
-            String fundName = historyTarget.getValue();
+            StockFundInfo fundInfo = historyTarget.getValue();
+            String fundName = fundInfo.getFundName();
+            LocalDate expectedNavDate = fundInfo.getLatestNetValueReportDate() == null ?
+                    latestClosedTradeDay : fundInfo.getLatestNetValueReportDate();
             LocalDateTime maxNavDate = maxNavDateMap.get(fundCode);
-            if (maxNavDate != null && !maxNavDate.toLocalDate().isBefore(latestClosedTradeDay)) {
+            if (maxNavDate != null && !maxNavDate.toLocalDate().isBefore(expectedNavDate)) {
                 continue;
             }
 
