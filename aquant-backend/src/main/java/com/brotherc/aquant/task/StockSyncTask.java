@@ -311,9 +311,15 @@ public class StockSyncTask {
         }
 
         if (shouldRefreshLatestBoard) {
-            List<StockBoardIndustrySummaryThs> stockBoardList = aKShareService.stockBoardIndustrySummaryThs().stream()
-                    .filter(stockBoard -> stockBoard != null && stockBoard.getSectorName() != null)
-                    .toList();
+            List<StockBoardIndustrySummaryThs> stockBoardList;
+            try {
+                stockBoardList = aKShareService.stockBoardIndustrySummaryThs().stream()
+                        .filter(stockBoard -> stockBoard != null && stockBoard.getSectorName() != null)
+                        .toList();
+            } catch (Exception e) {
+                log.error("获取板块最新行情失败，终止本次板块同步，syncTime={}", now, e);
+                return;
+            }
             if (CollectionUtils.isEmpty(stockBoardList)) {
                 log.warn("获取板块最新行情为空，无法刷新 stock_industry_board，尝试使用本地板块清单补齐历史行情");
             } else {
