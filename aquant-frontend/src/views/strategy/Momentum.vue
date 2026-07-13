@@ -339,11 +339,21 @@ const normalizeBacktestSortState = (sorts: string[]) => {
 
   const normalized = sorts.filter((sortItem) => {
     const [field] = sortItem.split(',');
-    return momentumBacktestSortFields.has(field);
+    return !!field && momentumBacktestSortFields.has(field);
   });
 
   return normalized.length > 0 ? normalized : ['totalReturn,desc'];
 };
+
+const getEffectiveSortState = (sorts: string[]) => {
+  if (analysisMode.value === 'backtest') {
+    return normalizeBacktestSortState(sorts);
+  }
+  return sorts.length > 0 ? sorts : ['momentumValue,desc'];
+};
+
+const isSameSortState = (left: string[], right: string[]) =>
+  left.length === right.length && left.every((item, index) => item === right[index]);
 
 const updateBacktestSubmitWrapped = () => {
   nextTick(() => {
@@ -407,10 +417,11 @@ const fetchData = async () => {
     }
 
     if (responseData.success || responseData.code === 0) {
-      dataSource.value = responseData.data.content;
+      const content = responseData.data.content as any[];
+      dataSource.value = content;
       pagination.total = responseData.data.totalElements;
       backtestLastTime.value = analysisMode.value === 'backtest'
-        ? responseData.data.content.find((item: any) => item.lastTime)?.lastTime
+        ? content.find((item) => item.lastTime)?.lastTime
         : undefined;
     }
   } catch (error) {
@@ -437,18 +448,22 @@ const handleSearch = () => {
 
 const handleTableChange = (pag: any, _filters: any, sorter: any) => {
   pagination.pageSize = pag.pageSize;
-  
+
+  const previousSortState = getEffectiveSortState(sortState.value);
+  let nextSortState: string[];
   if (sorter.field && sorter.order) {
-    pagination.current = 1;
     const order = sorter.order === 'ascend' ? 'asc' : 'desc';
-    const nextSortState = [`${sorter.field},${order}`];
-    sortState.value = analysisMode.value === 'backtest'
-      ? normalizeBacktestSortState(nextSortState)
-      : nextSortState;
+    const rawSortState = [`${sorter.field},${order}`];
+    nextSortState = analysisMode.value === 'backtest'
+      ? normalizeBacktestSortState(rawSortState)
+      : rawSortState;
   } else {
-    pagination.current = pag.current;
-    sortState.value = analysisMode.value === 'backtest' ? ['totalReturn,desc'] : [];
+    nextSortState = analysisMode.value === 'backtest' ? ['totalReturn,desc'] : [];
   }
+
+  const nextEffectiveSortState = getEffectiveSortState(nextSortState);
+  pagination.current = isSameSortState(previousSortState, nextEffectiveSortState) ? pag.current : 1;
+  sortState.value = nextSortState;
 
   fetchData();
 };
