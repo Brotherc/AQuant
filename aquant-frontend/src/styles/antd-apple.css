@@ -768,6 +768,17 @@
   font-weight: var(--font-weight-semibold);
 }
 
+.ant-pagination-item-active:hover,
+.ant-pagination-item-active:focus {
+  background: var(--color-accent) !important;
+  border-color: var(--color-accent) !important;
+}
+
+.ant-pagination-item-active:hover a,
+.ant-pagination-item-active:focus a {
+  color: var(--color-text-inverse) !important;
+}
+
 /* 分页文字颜色 */
 .ant-pagination-total-text {
   color: var(--color-text-secondary) !important;
