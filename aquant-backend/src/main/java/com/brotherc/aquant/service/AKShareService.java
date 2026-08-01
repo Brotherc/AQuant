@@ -203,6 +203,36 @@ public class AKShareService {
         }
     }
 
+    /**
+     * 获取东方财富-业绩报表数据
+     * <p>
+     * <a href="https://akshare.akfamily.xyz/data/stock/stock.html#id148">东方财富-业绩报表</a>
+     *
+     * @param date 报告期，格式为 "YYYYMMDD"（如 "20231231"），通常为季度末日
+     * @return A股上市公司业绩报表数据
+     */
+    public List<StockYjbbEm> stockYjbbEm(String date) {
+        Request request = new Request.Builder()
+                .url(akshareAddress + "/api/public/stock_yjbb_em?date=" + date)
+                .get()
+                .build();
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                log.info("失败响应: {}", response);
+                throw new RuntimeException("stock_yjbb_em请求失败");
+            }
+
+            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
+            });
+
+        } catch (IOException e) {
+            log.error("stock_yjbb_em请求失败", e);
+            throw new RuntimeException("stock_yjbb_em请求失败");
+        }
+    }
+
+
     public List<StockBoardIndustryNameEm> stockBoardIndustryNameEm() {
         Request request = new Request.Builder()
                 .url(akshareAddress + "/api/public/stock_board_industry_name_em")
