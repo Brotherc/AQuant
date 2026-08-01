@@ -1,8 +1,11 @@
 package com.brotherc.aquant.service;
 
+import com.brotherc.aquant.entity.StockQuote;
 import com.brotherc.aquant.entity.StockPerformanceReport;
 import com.brotherc.aquant.model.dto.akshare.StockYjbbEm;
 import com.brotherc.aquant.repository.StockPerformanceReportRepository;
+import com.brotherc.aquant.repository.StockQuoteRepository;
+import com.brotherc.aquant.utils.StockUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -14,7 +17,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -24,6 +30,7 @@ public class StockPerformanceReportService {
     private static final DateTimeFormatter REPORT_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final StockPerformanceReportRepository stockPerformanceReportRepository;
+    private final StockQuoteRepository stockQuoteRepository;
 
     public boolean existsByReportDate(String reportDate) {
         return stockPerformanceReportRepository.existsByReportDate(LocalDate.parse(reportDate, REPORT_DATE_FORMATTER));
@@ -40,11 +47,23 @@ public class StockPerformanceReportService {
         }
 
         LocalDate parsedReportDate = LocalDate.parse(reportDate, REPORT_DATE_FORMATTER);
+        Set<String> validStockCodes = findValidStockCodes(stockYjbbEms);
+        if (CollectionUtils.isEmpty(validStockCodes)) {
+            log.warn("股票业绩报表未匹配到当前股票池，跳过保存，reportDate={}, sourceCount={}",
+                    reportDate, stockYjbbEms.size());
+            return;
+        }
+
         stockPerformanceReportRepository.deleteByReportDate(parsedReportDate);
 
         List<StockPerformanceReport> saveList = new ArrayList<>();
+        int filteredCount = 0;
         for (StockYjbbEm stockYjbbEm : stockYjbbEms) {
             if (stockYjbbEm == null || StringUtils.isBlank(stockYjbbEm.getStockCode())) {
+                continue;
+            }
+            if (!validStockCodes.contains(stockYjbbEm.getStockCode())) {
+                filteredCount++;
                 continue;
             }
             StockPerformanceReport entity = new StockPerformanceReport();
@@ -80,6 +99,28 @@ public class StockPerformanceReportService {
         if (!saveList.isEmpty()) {
             stockPerformanceReportRepository.saveAll(saveList);
         }
+        if (filteredCount > 0) {
+            log.info("股票业绩报表已过滤非当前股票池数据，reportDate={}, filteredCount={}, savedCount={}",
+                    reportDate, filteredCount, saveList.size());
+        }
+    }
+
+    private Set<String> findValidStockCodes(List<StockYjbbEm> stockYjbbEms) {
+        Set<String> reportStockCodes = stockYjbbEms.stream()
+                .filter(stockYjbbEm -> stockYjbbEm != null && StringUtils.isNotBlank(stockYjbbEm.getStockCode()))
+                .map(StockYjbbEm::getStockCode)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (CollectionUtils.isEmpty(reportStockCodes)) {
+            return Set.of();
+        }
+
+        List<String> quoteCodes = reportStockCodes.stream().map(StockUtils::wrapExchangePrefix).toList();
+        Set<String> existsQuoteCodeSet = stockQuoteRepository.findByCodeIn(quoteCodes).stream()
+                .map(StockQuote::getCode)
+                .collect(Collectors.toSet());
+        return reportStockCodes.stream()
+                .filter(stockCode -> existsQuoteCodeSet.contains(StockUtils.wrapExchangePrefix(stockCode)))
+                .collect(Collectors.toSet());
     }
 
 }

@@ -162,4 +162,19 @@ public class StockUtils {
         return false;
     }
 
+    public static boolean isPerformanceReportDisclosureWindow(LocalDate currentDate, LocalDate reportDate) {
+        LocalDate deadline;
+        int month = reportDate.getMonthValue();
+        if (month == 3) {
+            deadline = LocalDate.of(reportDate.getYear(), Month.APRIL, 30);
+        } else if (month == 6) {
+            deadline = LocalDate.of(reportDate.getYear(), Month.AUGUST, 31);
+        } else if (month == 9) {
+            deadline = LocalDate.of(reportDate.getYear(), Month.OCTOBER, 31);
+        } else {
+            deadline = LocalDate.of(reportDate.getYear() + 1, Month.APRIL, 30);
+        }
+        return currentDate.isAfter(reportDate) && !currentDate.isAfter(deadline);
+    }
+
 }
