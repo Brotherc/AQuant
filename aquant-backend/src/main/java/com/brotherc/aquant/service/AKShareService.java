@@ -232,6 +232,37 @@ public class AKShareService {
         }
     }
 
+    public List<StockHoldChangeCninfo> stockHoldChangeCninfo() {
+        return stockHoldChangeCninfo("全部");
+    }
+
+    public List<StockHoldChangeCninfo> stockHoldChangeCninfo(String symbol) {
+        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_hold_change_cninfo")
+                .newBuilder();
+        if (StringUtils.isNotBlank(symbol)) {
+            builder.addQueryParameter("symbol", symbol);
+        }
+
+        Request request = new Request.Builder()
+                .url(builder.build())
+                .get()
+                .build();
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                log.info("失败响应: {}", response);
+                throw new RuntimeException("stock_hold_change_cninfo请求失败");
+            }
+
+            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
+            });
+
+        } catch (IOException e) {
+            log.error("stock_hold_change_cninfo请求失败", e);
+            throw new RuntimeException("stock_hold_change_cninfo请求失败");
+        }
+    }
+
 
     public List<StockBoardIndustryNameEm> stockBoardIndustryNameEm() {
         Request request = new Request.Builder()
