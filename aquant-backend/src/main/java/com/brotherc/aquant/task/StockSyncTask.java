@@ -15,6 +15,7 @@ import com.brotherc.aquant.service.StockFundPortfolioHoldingService;
 import com.brotherc.aquant.service.StockPerformanceReportService;
 import com.brotherc.aquant.service.StockQuoteHistoryService;
 import com.brotherc.aquant.service.StockQuoteService;
+import com.brotherc.aquant.service.StockShareChangeService;
 import com.brotherc.aquant.service.StockStrategySnapshotService;
 import com.brotherc.aquant.service.StockSyncService;
 import com.brotherc.aquant.utils.StockHelper;
@@ -53,6 +54,7 @@ public class StockSyncTask {
     private final StockFundNetValueService stockFundNetValueService;
     private final StockFundPortfolioHoldingService stockFundPortfolioHoldingService;
     private final StockPerformanceReportService stockPerformanceReportService;
+    private final StockShareChangeService stockShareChangeService;
 
     private final StockSyncRepository stockSyncRepository;
     private final StockQuoteRepository stockQuoteRepository;
@@ -79,6 +81,10 @@ public class StockSyncTask {
         log.info("同步股票行情数据开始");
         syncStackQuote(now);
         log.info("同步股票行情数据完成");
+
+        log.info("同步股票股本变动数据开始");
+        syncStockShareChange(now);
+        log.info("同步股票股本变动数据完成");
 
         log.info("同步股票板块数据开始");
         syncStockBoard(now);
@@ -296,6 +302,36 @@ public class StockSyncTask {
             }
         }
         return maxTradeDateMap;
+    }
+
+    private void syncStockShareChange(LocalDateTime now) {
+        StockSync stockShareChangeSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_SHARE_CHANGE_LATEST);
+        Long lastTimestamp = StockUtils.parseSyncTimestamp(stockShareChangeSync);
+        if (lastTimestamp != null && !StockUtils.isAfterDate(lastTimestamp)) {
+            log.info("股票股本变动当天已同步，跳过本次同步");
+            return;
+        }
+
+        try {
+            List<StockHoldChangeCninfo> stockHoldChanges = aKShareService.stockHoldChangeCninfo();
+            int savedCount = stockShareChangeService.replaceAll(stockHoldChanges);
+            if (savedCount <= 0) {
+                log.warn("股票股本变动未保存有效数据，不更新同步水位");
+                return;
+            }
+
+            if (stockShareChangeSync == null) {
+                stockShareChangeSync = new StockSync();
+                stockShareChangeSync.setName(StockSyncConstant.STOCK_SHARE_CHANGE_LATEST);
+            }
+            long timestamp = now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+            stockShareChangeSync.setValue(String.valueOf(timestamp));
+            stockSyncRepository.save(stockShareChangeSync);
+            log.info("同步股票股本变动完成，sourceCount={}, savedCount={}",
+                    stockHoldChanges == null ? 0 : stockHoldChanges.size(), savedCount);
+        } catch (Exception e) {
+            log.error("同步股票股本变动失败", e);
+        }
     }
 
     public void syncStockBoard(LocalDateTime now) {
