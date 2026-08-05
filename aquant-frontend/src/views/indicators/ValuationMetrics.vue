@@ -1,61 +1,63 @@
 <template>
   <div class="valuation-metrics-container">
+    <!-- 顶部搜索表单卡片 -->
+    <a-card style="margin-bottom: 16px;">
+      <a-form
+        layout="inline"
+        :model="searchParams"
+        @finish="handleSearch"
+        class="valuation-search-form"
+        style="width: 100%; display: flex; flex-wrap: wrap;"
+      >
+        <a-form-item label="代码">
+          <a-input v-model:value="searchParams.stockCode" placeholder="代码/名称" allow-clear style="width: 140px" />
+        </a-form-item>
+        <a-form-item label="PEG">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <a-input-number v-model:value="searchParams.pegMin" placeholder="最小" style="width: 70px" />
+            <span style="color: var(--color-text-secondary)">~</span>
+            <a-input-number v-model:value="searchParams.pegMax" placeholder="最大" style="width: 70px" />
+          </div>
+        </a-form-item>
+        <a-form-item label="PE(TTM)">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <a-input-number v-model:value="searchParams.peTtmMin" placeholder="最小" style="width: 70px" />
+            <span style="color: var(--color-text-secondary)">~</span>
+            <a-input-number v-model:value="searchParams.peTtmMax" placeholder="最大" style="width: 70px" />
+          </div>
+        </a-form-item>
+        <a-form-item label="PS(TTM)">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <a-input-number v-model:value="searchParams.psTtmMin" placeholder="最小" style="width: 70px" />
+            <span style="color: var(--color-text-secondary)">~</span>
+            <a-input-number v-model:value="searchParams.psTtmMax" placeholder="最大" style="width: 70px" />
+          </div>
+        </a-form-item>
+        <a-form-item label="PB(MRQ)">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <a-input-number v-model:value="searchParams.pbMrqMin" placeholder="最小" style="width: 70px" />
+            <span style="color: var(--color-text-secondary)">~</span>
+            <a-input-number v-model:value="searchParams.pbMrqMax" placeholder="最大" style="width: 70px" />
+          </div>
+        </a-form-item>
+        <a-form-item label="PCF(TTM)">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <a-input-number v-model:value="searchParams.pcfTtmMin" placeholder="最小" style="width: 70px" />
+            <span style="color: var(--color-text-secondary)">~</span>
+            <a-input-number v-model:value="searchParams.pcfTtmMax" placeholder="最大" style="width: 70px" />
+          </div>
+        </a-form-item>
+        <a-form-item class="indicator-search-form-actions" style="margin-left: auto; margin-right: 0;">
+          <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
+          <a-button type="primary" ghost style="margin-left: 8px" @click="resetSearch">重置</a-button>
+        </a-form-item>
+      </a-form>
+    </a-card>
+
     <a-row :gutter="16">
       <a-col :span="13">
-        <!-- 搜索表单与列表 -->
+        <!-- 列表卡片 -->
         <a-card style="height: 100%; margin-bottom: 0;" title="估值指标列表">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
-            <a-form
-              layout="inline"
-              :model="searchParams"
-              @finish="handleSearch"
-              class="valuation-search-form"
-              style="width: 100%; display: flex; flex-wrap: wrap;"
-            >
-              <a-form-item label="代码">
-                <a-input v-model:value="searchParams.stockCode" placeholder="代码/名称" allow-clear style="width: 140px" />
-              </a-form-item>
-              <a-form-item label="PEG">
-                <div style="display: flex; align-items: center; gap: 8px">
-                  <a-input-number v-model:value="searchParams.pegMin" placeholder="最小" style="width: 70px" />
-                  <span style="color: var(--color-text-secondary)">~</span>
-                  <a-input-number v-model:value="searchParams.pegMax" placeholder="最大" style="width: 70px" />
-                </div>
-              </a-form-item>
-              <a-form-item label="PE(TTM)">
-                <div style="display: flex; align-items: center; gap: 8px">
-                  <a-input-number v-model:value="searchParams.peTtmMin" placeholder="最小" style="width: 70px" />
-                  <span style="color: var(--color-text-secondary)">~</span>
-                  <a-input-number v-model:value="searchParams.peTtmMax" placeholder="最大" style="width: 70px" />
-                </div>
-              </a-form-item>
-              <a-form-item label="PS(TTM)">
-                <div style="display: flex; align-items: center; gap: 8px">
-                  <a-input-number v-model:value="searchParams.psTtmMin" placeholder="最小" style="width: 70px" />
-                  <span style="color: var(--color-text-secondary)">~</span>
-                  <a-input-number v-model:value="searchParams.psTtmMax" placeholder="最大" style="width: 70px" />
-                </div>
-              </a-form-item>
-              <a-form-item label="PB(MRQ)">
-                <div style="display: flex; align-items: center; gap: 8px">
-                  <a-input-number v-model:value="searchParams.pbMrqMin" placeholder="最小" style="width: 70px" />
-                  <span style="color: var(--color-text-secondary)">~</span>
-                  <a-input-number v-model:value="searchParams.pbMrqMax" placeholder="最大" style="width: 70px" />
-                </div>
-              </a-form-item>
-              <a-form-item label="PCF(TTM)">
-                <div style="display: flex; align-items: center; gap: 8px">
-                  <a-input-number v-model:value="searchParams.pcfTtmMin" placeholder="最小" style="width: 70px" />
-                  <span style="color: var(--color-text-secondary)">~</span>
-                  <a-input-number v-model:value="searchParams.pcfTtmMax" placeholder="最大" style="width: 70px" />
-                </div>
-              </a-form-item>
-              <a-form-item class="indicator-search-form-actions" style="margin-left: auto; margin-right: 0;">
-                <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
-                <a-button type="primary" ghost style="margin-left: 8px" @click="resetSearch">重置</a-button>
-              </a-form-item>
-            </a-form>
-          </div>
 
           <!-- 数据表格 -->
           <a-table
