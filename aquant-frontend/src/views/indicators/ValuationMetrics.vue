@@ -172,7 +172,7 @@ const detailColumns: TableProps['columns'] = [
       if (index === 1) return { rowSpan: 2, class: 'metric-group-start-cell' };
       if (index === 3) return { rowSpan: 2, class: 'metric-group-start-cell' };
       if (index === 5) return { rowSpan: 2, class: 'metric-group-start-cell' };
-      if (index === 7) return { rowSpan: 2, class: 'metric-group-start-cell' };
+      if (index === 7) return { rowSpan: 2 };
       return { rowSpan: 0 };
     }
   },
