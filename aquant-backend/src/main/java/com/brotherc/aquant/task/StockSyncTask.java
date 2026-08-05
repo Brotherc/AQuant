@@ -10,6 +10,7 @@ import com.brotherc.aquant.repository.*;
 import com.brotherc.aquant.service.AKShareService;
 import com.brotherc.aquant.service.StockAbnormalService;
 import com.brotherc.aquant.service.StockDividendDedupService;
+import com.brotherc.aquant.service.StockValuationMetricsService;
 import com.brotherc.aquant.service.StockFundNetValueService;
 import com.brotherc.aquant.service.StockFundPortfolioHoldingService;
 import com.brotherc.aquant.service.StockPerformanceReportService;
@@ -51,6 +52,7 @@ public class StockSyncTask {
     private final StockQuoteHistoryService stockQuoteHistoryService;
     private final StockSyncService stockSyncService;
     private final StockStrategySnapshotService stockStrategySnapshotService;
+    private final StockValuationMetricsService stockValuationMetricsService;
     private final StockFundNetValueService stockFundNetValueService;
     private final StockFundPortfolioHoldingService stockFundPortfolioHoldingService;
     private final StockPerformanceReportService stockPerformanceReportService;
@@ -71,6 +73,7 @@ public class StockSyncTask {
     public void onApplicationReady() {
         clearDelistedStockData();
         syncStackDtaLatest();
+        stockValuationMetricsService.refreshValuationMetrics();
         stockStrategySnapshotService.refreshDualMaBacktestSnapshots();
         stockStrategySnapshotService.refreshMomentumBacktestSnapshots();
     }
@@ -550,7 +553,7 @@ public class StockSyncTask {
         Map<String, Boolean> result = new LinkedHashMap<>();
         if (!stockPerformanceReportService.hasAnyReport()) {
             LocalDate cursor = latestCompletedQuarterEnd;
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < 12; i++) {
                 result.put(cursor.format(DateTimeFormatter.BASIC_ISO_DATE), true);
                 cursor = getQuarterEnd(cursor.minusMonths(3));
             }
@@ -562,6 +565,8 @@ public class StockSyncTask {
         addPerformanceReportTarget(result, getQuarterEnd(latestCompletedQuarterEnd.minusMonths(3)), false);
         addPerformanceReportTarget(result, latestCompletedQuarterEnd.minusYears(1), false);
         addPerformanceReportTarget(result, LocalDate.of(latestCompletedQuarterEnd.getYear() - 1, Month.DECEMBER, 31), false);
+        addPerformanceReportTarget(result, latestCompletedQuarterEnd.minusYears(2), false);
+        addPerformanceReportTarget(result, LocalDate.of(latestCompletedQuarterEnd.getYear() - 2, Month.DECEMBER, 31), false);
         return result;
     }
 

@@ -43,6 +43,13 @@
                   <a-input-number v-model:value="searchParams.pbMrqMax" placeholder="最大" style="width: 70px" />
                 </div>
               </a-form-item>
+              <a-form-item label="PCF(TTM)">
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <a-input-number v-model:value="searchParams.pcfTtmMin" placeholder="最小" style="width: 70px" />
+                  <span style="color: var(--color-text-secondary)">~</span>
+                  <a-input-number v-model:value="searchParams.pcfTtmMax" placeholder="最大" style="width: 70px" />
+                </div>
+              </a-form-item>
               <a-form-item class="indicator-search-form-actions" style="margin-left: auto; margin-right: 0;">
                 <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
                 <a-button type="primary" ghost style="margin-left: 8px" @click="resetSearch">重置</a-button>
@@ -64,16 +71,11 @@
             size="small"
             class="valuation-table"
           >
-            <template #headerCell="{ column }">
-              <template v-if="column.dataIndex === 'pegRank'">
-                 <span style="color: var(--color-text-secondary)">排名</span>
-              </template>
-            </template>
-            <template #bodyCell="{ column, text, record }">
+            <template #bodyCell="{ column, text }">
               <template v-if="column.dataIndex === 'stockCode'">
                 <a-tag class="stock-code-tag">{{ text }}</a-tag>
               </template>
-              <template v-else-if="['peg', 'peTtm', 'psTtm', 'pbMrq'].includes(column.dataIndex as string)">
+              <template v-else-if="['peg', 'peTtm', 'peAnnual', 'psTtm', 'psAnnual', 'pbMrq', 'pbAnnual', 'pcfTtm', 'pcfAnnual'].includes(column.dataIndex as string)">
                 <span>{{ formatNumber(text) }}</span>
               </template>
             </template>
@@ -91,6 +93,7 @@
             <a-table
               :columns="detailColumns"
               :data-source="detailTableData"
+              :loading="detailLoading"
               :pagination="false"
               size="small"
               bordered
@@ -126,14 +129,22 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue';
-import { getValuationMetricsPage, type StockValuationMetrics, type ValuationMetricsPageReqVO } from '@/api/indicator';
+import {
+  getValuationMetricsDetail,
+  getValuationMetricsPage,
+  type CalculatedValuationMetrics,
+  type CalculatedValuationMetricsPage,
+  type ValuationMetricsPageReqVO
+} from '@/api/indicator';
 import { getWatchlistGroups, addStockToWatchlist, type WatchlistGroupVO } from '@/api/watchlist';
 import { message } from 'ant-design-vue';
 import { type TableProps } from 'ant-design-vue';
 
 const loading = ref(false);
-const dataSource = ref<StockValuationMetrics[]>([]);
-const selectedStock = ref<StockValuationMetrics | null>(null);
+const detailLoading = ref(false);
+const dataSource = ref<CalculatedValuationMetricsPage[]>([]);
+const selectedStock = ref<CalculatedValuationMetricsPage | null>(null);
+const valuationDetail = ref<CalculatedValuationMetrics | null>(null);
 const isLoggedIn = ref(!!localStorage.getItem('token'));
 
 const formatNumber = (val: any) => {
@@ -143,13 +154,13 @@ const formatNumber = (val: any) => {
 };
 
 const columns: TableProps['columns'] = [
-  { title: '排名', dataIndex: 'pegRank', sorter: true, width: 80 },
   { title: '代码', dataIndex: 'stockCode', width: 80 },
   { title: '名称', dataIndex: 'stockName', width: 100 },
   { title: 'PEG', dataIndex: 'peg', sorter: true, width: 80 },
   { title: '市盈率(TTM)', dataIndex: 'peTtm', sorter: true, width: 100 },
   { title: '市销率(TTM)', dataIndex: 'psTtm', sorter: true, width: 100 },
   { title: '市净率(MRQ)', dataIndex: 'pbMrq', sorter: true, width: 100 },
+  { title: '市现率(TTM)', dataIndex: 'pcfTtm', sorter: true, width: 100 },
 ];
 
 const detailColumns: TableProps['columns'] = [
@@ -158,12 +169,10 @@ const detailColumns: TableProps['columns'] = [
     dataIndex: 'metric',
     customCell: (_, index) => {
       if (index === 0) return { rowSpan: 1, class: 'metric-group-start-cell' };
-      if (index === 1) return { rowSpan: 5, class: 'metric-group-start-cell' };
-      if (index === 6) return { rowSpan: 5, class: 'metric-group-start-cell' };
-      if (index === 11) return { rowSpan: 2, class: 'metric-group-start-cell' };
-      if (index === 13) return { rowSpan: 2, class: 'metric-group-start-cell' };
-      if (index === 15) return { rowSpan: 2, class: 'metric-group-start-cell' };
-      if (index === 17) return { rowSpan: 1 };
+      if (index === 1) return { rowSpan: 2, class: 'metric-group-start-cell' };
+      if (index === 3) return { rowSpan: 2, class: 'metric-group-start-cell' };
+      if (index === 5) return { rowSpan: 2, class: 'metric-group-start-cell' };
+      if (index === 7) return { rowSpan: 2, class: 'metric-group-start-cell' };
       return { rowSpan: 0 };
     }
   },
@@ -174,38 +183,27 @@ const detailColumns: TableProps['columns'] = [
 ];
 
 const detailTableData = computed(() => {
-  if (!selectedStock.value) return [];
-  const s = selectedStock.value;
+  if (!valuationDetail.value) return [];
+  const s = valuationDetail.value;
   return [
-    { key: 'peg', metric: 'PEG', period: '-', stockValue: formatNumber(s.peg), industryAvg: formatNumber(s.pegIndustryAvg), industryMed: formatNumber(s.pegIndustryMed) },
-    
-    { key: 'pe_27E', metric: '市盈率(PE)', period: '27E', stockValue: formatNumber(s.peNext2YE), industryAvg: formatNumber(s.peNext2YEIndustryAvg), industryMed: formatNumber(s.peNext2YEIndustryMed) },
-    { key: 'pe_26E', metric: '市盈率(PE)', period: '26E', stockValue: formatNumber(s.peNextYE), industryAvg: formatNumber(s.peNextYEIndustryAvg), industryMed: formatNumber(s.peNextYEIndustryMed) },
-    { key: 'pe_25E', metric: '市盈率(PE)', period: '25E', stockValue: formatNumber(s.peThisYE), industryAvg: formatNumber(s.peThisYEIndustryAvg), industryMed: formatNumber(s.peThisYEIndustryMed) },
-    { key: 'pe_TTM', metric: '市盈率(PE)', period: 'TTM', stockValue: formatNumber(s.peTtm), industryAvg: formatNumber(s.peTtmIndustryAvg), industryMed: formatNumber(s.peTtmIndustryMed) },
-    { key: 'pe_24A', metric: '市盈率(PE)', period: '24A', stockValue: formatNumber(s.peLastYearA), industryAvg: formatNumber(s.peLastYearIndustryAvg), industryMed: formatNumber(s.peLastYearIndustryMed) },
+    { key: 'peg', metric: 'PEG', period: '-', stockValue: formatNumber(s.peg), industryAvg: formatNumber(s.pegIndustryAverage), industryMed: formatNumber(s.pegIndustryMedian) },
 
-    { key: 'ps_27E', metric: '市销率(PS)', period: '27E', stockValue: formatNumber(s.psNext2YE), industryAvg: formatNumber(s.psNext2YEIndustryAvg), industryMed: formatNumber(s.psNext2YEIndustryMed) },
-    { key: 'ps_26E', metric: '市销率(PS)', period: '26E', stockValue: formatNumber(s.psNextYE), industryAvg: formatNumber(s.psNextYEIndustryAvg), industryMed: formatNumber(s.psNextYEIndustryMed) },
-    { key: 'ps_25E', metric: '市销率(PS)', period: '25E', stockValue: formatNumber(s.psThisYE), industryAvg: formatNumber(s.psThisYEIndustryAvg), industryMed: formatNumber(s.psThisYEIndustryMed) },
-    { key: 'ps_TTM', metric: '市销率(PS)', period: 'TTM', stockValue: formatNumber(s.psTtm), industryAvg: formatNumber(s.psTtmIndustryAvg), industryMed: formatNumber(s.psTtmIndustryMed) },
-    { key: 'ps_24A', metric: '市销率(PS)', period: '24A', stockValue: formatNumber(s.psLastYA), industryAvg: formatNumber(s.psLastYAIndustryAvg), industryMed: formatNumber(s.psLastYAIndustryMed) },
+    { key: 'pe_TTM', metric: '市盈率(PE)', period: 'TTM', stockValue: formatNumber(s.peTtm), industryAvg: formatNumber(s.peTtmIndustryAverage), industryMed: formatNumber(s.peTtmIndustryMedian) },
+    { key: 'pe_annual', metric: '市盈率(PE)', period: '25A', stockValue: formatNumber(s.peAnnual), industryAvg: formatNumber(s.peAnnualIndustryAverage), industryMed: formatNumber(s.peAnnualIndustryMedian) },
 
-    { key: 'pb_MRQ', metric: '市净率(PB)', period: 'MRQ', stockValue: formatNumber(s.pbMrq), industryAvg: formatNumber(s.pbMrqIndustryAvg), industryMed: formatNumber(s.pbMrqIndustryMed) },
-    { key: 'pb_24A', metric: '市净率(PB)', period: '24A', stockValue: formatNumber(s.pbLastYA), industryAvg: formatNumber(s.pbLastYAIndustryAvg), industryMed: formatNumber(s.pbLastYAIndustryMed) },
+    { key: 'ps_TTM', metric: '市销率(PS)', period: 'TTM', stockValue: formatNumber(s.psTtm), industryAvg: formatNumber(s.psTtmIndustryAverage), industryMed: formatNumber(s.psTtmIndustryMedian) },
+    { key: 'ps_annual', metric: '市销率(PS)', period: '25A', stockValue: formatNumber(s.psAnnual), industryAvg: formatNumber(s.psAnnualIndustryAverage), industryMed: formatNumber(s.psAnnualIndustryMedian) },
 
-    { key: 'pce_TTM', metric: '市现率(PCE)', period: 'TTM', stockValue: formatNumber(s.pceTtm), industryAvg: formatNumber(s.pceTtmIndustryAvg), industryMed: formatNumber(s.pceTtmIndustryMed) },
-    { key: 'pce_24A', metric: '市现率(PCE)', period: '24A', stockValue: formatNumber(s.pceLastYA), industryAvg: formatNumber(s.pceLastYAIndustryAvg), industryMed: formatNumber(s.pceLastYAIndustryMed) },
+    { key: 'pb_MRQ', metric: '市净率(PB)', period: 'MRQ', stockValue: formatNumber(s.pbMrq), industryAvg: formatNumber(s.pbMrqIndustryAverage), industryMed: formatNumber(s.pbMrqIndustryMedian) },
+    { key: 'pb_annual', metric: '市净率(PB)', period: '25A', stockValue: formatNumber(s.pbAnnual), industryAvg: formatNumber(s.pbAnnualIndustryAverage), industryMed: formatNumber(s.pbAnnualIndustryMedian) },
 
-    { key: 'pcf_TTM', metric: '市现率(PCF)', period: 'TTM', stockValue: formatNumber(s.pcfTtm), industryAvg: formatNumber(s.pcfTtmIndustryAvg), industryMed: formatNumber(s.pcfTtmIndustryMed) },
-    { key: 'pcf_24A', metric: '市现率(PCF)', period: '24A', stockValue: formatNumber(s.pcfLastYA), industryAvg: formatNumber(s.pcfLastYAIndustryAvg), industryMed: formatNumber(s.pcfLastYAIndustryMed) },
-
-    { key: 'ev_24A', metric: 'EV/EBITDA', period: '24A', stockValue: formatNumber(s.evEbitdaLastYA), industryAvg: formatNumber(s.evEbitdaLastYAIndustryAvg), industryMed: formatNumber(s.evEbitdaLastYAIndustryMed) },
+    { key: 'pcf_TTM', metric: '市现率(PCF)', period: 'TTM', stockValue: formatNumber(s.pcfTtm), industryAvg: formatNumber(s.pcfTtmIndustryAverage), industryMed: formatNumber(s.pcfTtmIndustryMedian) },
+    { key: 'pcf_annual', metric: '市现率(PCF)', period: '25A', stockValue: formatNumber(s.pcfAnnual), industryAvg: formatNumber(s.pcfAnnualIndustryAverage), industryMed: formatNumber(s.pcfAnnualIndustryMedian) },
   ];
 });
 
 const detailRowClassName = (_record: any, index: number) => {
-  if (index === 0 || index === 5 || index === 10 || index === 12 || index === 14 || index === 16) {
+  if (index === 0 || index === 2 || index === 4 || index === 6) {
     return 'metric-group-divider';
   }
   return '';
@@ -221,6 +219,8 @@ const searchParams = reactive<ValuationMetricsPageReqVO>({
   psTtmMax: undefined,
   pbMrqMin: undefined,
   pbMrqMax: undefined,
+  pcfTtmMin: undefined,
+  pcfTtmMax: undefined,
 });
 
 const pagination = reactive({
@@ -233,7 +233,7 @@ const pagination = reactive({
   showTotal: (total: number) => `共 ${total} 条数据`,
 });
 
-const sortState = ref<string[]>(['pegRank,asc']);
+const sortState = ref<string[]>(['peg,asc']);
 
 const fetchData = async () => {
   loading.value = true;
@@ -250,14 +250,33 @@ const fetchData = async () => {
       pagination.total = data.data.totalElements;
       if (dataSource.value.length > 0) {
         selectedStock.value = dataSource.value[0] || null;
+        if (selectedStock.value) {
+          fetchDetail(selectedStock.value.stockCode);
+        }
       } else {
         selectedStock.value = null;
+        valuationDetail.value = null;
       }
     }
   } catch (error) {
     console.error('Failed to fetch valuation metrics data:', error);
   } finally {
     loading.value = false;
+  }
+};
+
+const fetchDetail = async (stockCode: string) => {
+  detailLoading.value = true;
+  try {
+    const res = await getValuationMetricsDetail(stockCode);
+    if (res.data.success) {
+      valuationDetail.value = res.data.data;
+    }
+  } catch (error) {
+    console.error('Failed to fetch valuation metrics detail:', error);
+    valuationDetail.value = null;
+  } finally {
+    detailLoading.value = false;
   }
 };
 
@@ -343,14 +362,15 @@ const handleTableChange: TableProps['onChange'] = (pag: any, _filters: any, sort
   fetchData();
 };
 
-const rowClassName = (record: StockValuationMetrics) => {
+const rowClassName = (record: CalculatedValuationMetricsPage) => {
   return selectedStock.value?.id === record.id ? 'valuation-table-row-selected' : '';
 };
 
-const customRow = (record: StockValuationMetrics) => {
+const customRow = (record: CalculatedValuationMetricsPage) => {
   return {
     onClick: () => {
       selectedStock.value = record;
+      fetchDetail(record.stockCode);
     },
     style: { cursor: 'pointer' }
   };

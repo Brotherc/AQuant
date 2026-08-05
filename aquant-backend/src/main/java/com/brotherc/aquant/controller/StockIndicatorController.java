@@ -2,8 +2,9 @@ package com.brotherc.aquant.controller;
 
 import com.brotherc.aquant.entity.StockDupontAnalysis;
 import com.brotherc.aquant.entity.StockGrowthMetrics;
-import com.brotherc.aquant.entity.StockValuationMetrics;
 import com.brotherc.aquant.model.dto.common.ResponseDTO;
+import com.brotherc.aquant.model.vo.stockindicator.CalculatedValuationMetricsPageVO;
+import com.brotherc.aquant.model.vo.stockindicator.CalculatedValuationMetricsVO;
 import com.brotherc.aquant.model.vo.stockindicator.DupontAnalysisPageReqVO;
 import com.brotherc.aquant.model.vo.stockindicator.GrowthMetricsPageReqVO;
 import com.brotherc.aquant.model.vo.stockindicator.ValuationMetricsPageReqVO;
@@ -20,6 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Validated
@@ -42,9 +44,15 @@ public class StockIndicatorController {
 
     @Operation(summary = "估值指标分页查询")
     @GetMapping("/valuationMetrics/page")
-    public ResponseDTO<Page<StockValuationMetrics>> valuationMetricsPage(
+    public ResponseDTO<Page<CalculatedValuationMetricsPageVO>> valuationMetricsPage(
             @Valid @ParameterObject ValuationMetricsPageReqVO reqVO, @ParameterObject Pageable pageable) {
         return ResponseDTO.success(stockValuationMetricsService.pageQuery(reqVO, pageable));
+    }
+
+    @Operation(summary = "估值指标详情查询")
+    @GetMapping("/valuationMetrics/detail")
+    public ResponseDTO<CalculatedValuationMetricsVO> valuationMetricsDetail(@RequestParam String stockCode) {
+        return ResponseDTO.success(stockValuationMetricsService.detail(stockCode));
     }
 
     @Operation(summary = "成长性指标分页查询")

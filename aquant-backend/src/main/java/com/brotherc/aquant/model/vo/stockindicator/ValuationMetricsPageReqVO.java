@@ -36,4 +36,10 @@ public class ValuationMetricsPageReqVO {
     @Schema(description = "市净率(MRQ)【最大值】")
     private BigDecimal pbMrqMax;
 
+    @Schema(description = "市现率(TTM)【最小值】")
+    private BigDecimal pcfTtmMin;
+
+    @Schema(description = "市现率(TTM)【最大值】")
+    private BigDecimal pcfTtmMax;
+
 }

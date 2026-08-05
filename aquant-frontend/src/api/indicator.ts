@@ -74,66 +74,54 @@ export const getDupontAnalysisPage = (params: DupontAnalysisPageReqVO & { page: 
     });
 };
 
-export interface StockValuationMetrics {
+export interface CalculatedValuationMetricsPage {
     id: number;
     stockCode: string;
     stockName: string;
     peg: number;
-    pegIndustryMed: number;
-    pegIndustryAvg: number;
-    pegRank: number;
-    peLastYearA: number;
-    peLastYearIndustryMed: number;
-    peLastYearIndustryAvg: number;
     peTtm: number;
-    peTtmIndustryMed: number;
-    peTtmIndustryAvg: number;
-    peThisYE: number;
-    peThisYEIndustryMed: number;
-    peThisYEIndustryAvg: number;
-    peNextYE: number;
-    peNextYEIndustryMed: number;
-    peNextYEIndustryAvg: number;
-    peNext2YE: number;
-    peNext2YEIndustryMed: number;
-    peNext2YEIndustryAvg: number;
-    psLastYA: number;
-    psLastYAIndustryMed: number;
-    psLastYAIndustryAvg: number;
+    peAnnual?: number;
     psTtm: number;
-    psTtmIndustryMed: number;
-    psTtmIndustryAvg: number;
-    psThisYE: number;
-    psThisYEIndustryMed: number;
-    psThisYEIndustryAvg: number;
-    psNextYE: number;
-    psNextYEIndustryMed: number;
-    psNextYEIndustryAvg: number;
-    psNext2YE: number;
-    psNext2YEIndustryMed: number;
-    psNext2YEIndustryAvg: number;
-    pbLastYA: number;
-    pbLastYAIndustryMed: number;
-    pbLastYAIndustryAvg: number;
+    psAnnual?: number;
     pbMrq: number;
-    pbMrqIndustryMed: number;
-    pbMrqIndustryAvg: number;
-    pceLastYA: number;
-    pceLastYAIndustryMed: number;
-    pceLastYAIndustryAvg: number;
-    pceTtm: number;
-    pceTtmIndustryMed: number;
-    pceTtmIndustryAvg: number;
-    pcfLastYA: number;
-    pcfLastYAIndustryMed: number;
-    pcfLastYAIndustryAvg: number;
+    pbAnnual?: number;
+    pcfTtm?: number;
+    pcfAnnual?: number;
+    calculatedAt: string;
+}
+
+export interface CalculatedValuationMetrics {
+    id: number;
+    stockCode: string;
+    stockName: string;
+    peg: number;
+    pegIndustryMedian: number;
+    pegIndustryAverage: number;
+    peTtm: number;
+    peTtmIndustryMedian: number;
+    peTtmIndustryAverage: number;
+    peAnnual: number;
+    peAnnualIndustryMedian: number;
+    peAnnualIndustryAverage: number;
+    psTtm: number;
+    psTtmIndustryMedian: number;
+    psTtmIndustryAverage: number;
+    psAnnual: number;
+    psAnnualIndustryMedian: number;
+    psAnnualIndustryAverage: number;
+    pbMrq: number;
+    pbMrqIndustryMedian: number;
+    pbMrqIndustryAverage: number;
+    pbAnnual: number;
+    pbAnnualIndustryMedian: number;
+    pbAnnualIndustryAverage: number;
     pcfTtm: number;
-    pcfTtmIndustryMed: number;
-    pcfTtmIndustryAvg: number;
-    evEbitdaLastYA: number;
-    evEbitdaLastYAIndustryMed: number;
-    evEbitdaLastYAIndustryAvg: number;
-    createdAt: string;
+    pcfTtmIndustryMedian: number;
+    pcfTtmIndustryAverage: number;
+    pcfAnnual: number;
+    pcfAnnualIndustryMedian: number;
+    pcfAnnualIndustryAverage: number;
+    calculatedAt: string;
 }
 
 export interface ValuationMetricsPageReqVO {
@@ -146,14 +134,22 @@ export interface ValuationMetricsPageReqVO {
     psTtmMax?: number;
     pbMrqMin?: number;
     pbMrqMax?: number;
+    pcfTtmMin?: number;
+    pcfTtmMax?: number;
 }
 
 export const getValuationMetricsPage = (params: ValuationMetricsPageReqVO & { page: number; size: number; sort?: string[] }) => {
-    return api.get<ResponseDTO<PageResult<StockValuationMetrics>>>('/stockIndicator/valuationMetrics/page', {
+    return api.get<ResponseDTO<PageResult<CalculatedValuationMetricsPage>>>('/stockIndicator/valuationMetrics/page', {
         params,
         paramsSerializer: {
             indexes: null
         }
+    });
+};
+
+export const getValuationMetricsDetail = (stockCode: string) => {
+    return api.get<ResponseDTO<CalculatedValuationMetrics>>('/stockIndicator/valuationMetrics/detail', {
+        params: { stockCode }
     });
 };
 
