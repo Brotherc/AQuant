@@ -1,5 +1,29 @@
 <template>
   <div class="fund-container">
+    <!-- 顶部独立搜索表单卡片 -->
+    <a-card style="margin-bottom: 16px;">
+      <a-form layout="inline" :model="queryParams" @finish="onSearch" class="fund-search-form" style="width: 100%; display: flex; flex-wrap: wrap;">
+        <a-form-item label="代码">
+          <a-input v-model:value="queryParams.fundCode" placeholder="输入代码" allow-clear style="width: 140px" />
+        </a-form-item>
+        <a-form-item label="简称">
+          <a-input v-model:value="queryParams.fundName" placeholder="输入名称" allow-clear style="width: 140px" />
+        </a-form-item>
+        <a-form-item label="类型">
+          <a-select v-model:value="queryParams.fundType" placeholder="选择类型" allow-clear style="width: 140px" :options="fundTypeOptions" />
+        </a-form-item>
+        <a-form-item>
+          <a-checkbox v-model:checked="queryParams.includeUsStock">
+            包含海外
+          </a-checkbox>
+        </a-form-item>
+        <a-form-item class="fund-search-actions" style="margin-left: auto; margin-right: 0;">
+          <a-button type="primary" @click="onSearch" :loading="loading">查 询</a-button>
+          <a-button type="primary" ghost style="margin-left: 8px" @click="resetSearch">重 置</a-button>
+        </a-form-item>
+      </a-form>
+    </a-card>
+
     <a-row :gutter="16" class="fund-row">
       <a-col :span="11">
         <a-card title="基金列表" :bordered="false" class="fund-card fund-list-card">
@@ -9,26 +33,6 @@
               <span class="page-sync-meta__value">{{ lastRefreshTime }}</span>
             </div>
           </template>
-          <a-form layout="inline" :model="queryParams" @finish="onSearch" class="fund-search-form">
-            <a-form-item label="代码">
-              <a-input v-model:value="queryParams.fundCode" placeholder="输入代码" allow-clear style="width: 140px" />
-            </a-form-item>
-            <a-form-item label="简称">
-              <a-input v-model:value="queryParams.fundName" placeholder="输入名称" allow-clear style="width: 140px" />
-            </a-form-item>
-            <a-form-item label="类型">
-              <a-select v-model:value="queryParams.fundType" placeholder="选择类型" allow-clear style="width: 140px" :options="fundTypeOptions" />
-            </a-form-item>
-            <a-form-item>
-              <a-checkbox v-model:checked="queryParams.includeUsStock">
-                包含海外
-              </a-checkbox>
-            </a-form-item>
-            <a-form-item class="fund-search-actions">
-              <a-button type="primary" @click="onSearch" :loading="loading">查 询</a-button>
-              <a-button type="primary" ghost @click="resetSearch">重 置</a-button>
-            </a-form-item>
-          </a-form>
           <a-table
             :columns="columns"
             :data-source="dataList"
