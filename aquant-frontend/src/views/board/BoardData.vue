@@ -1,8 +1,21 @@
 <template>
-  <div>
+  <div class="board-data-container">
+    <!-- 顶部独立搜索表单卡片 -->
+    <a-card style="margin-bottom: 16px;">
+      <a-form layout="inline" :model="searchParams" @finish="handleSearch" class="board-search-form" style="width: 100%; display: flex; flex-wrap: wrap;">
+        <a-form-item label="名称">
+          <a-input v-model:value="searchParams.boardName" placeholder="输入名称" allow-clear style="width: 140px" />
+        </a-form-item>
+        <a-form-item class="board-search-actions" style="margin-left: auto; margin-right: 0;">
+          <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
+          <a-button type="primary" ghost style="margin-left: 8px" @click="resetSearch">重置</a-button>
+        </a-form-item>
+      </a-form>
+    </a-card>
+
     <a-row :gutter="16">
       <a-col :span="11">
-        <!-- 搜索表单 -->
+        <!-- 板块列表卡片 -->
         <a-card style="height: 100%;" title="板块列表">
           <template #extra>
             <div style="display: flex; align-items: center; gap: 12px; font-weight: normal; font-size: 14px;">
@@ -15,19 +28,6 @@
               </a-button>
             </div>
           </template>
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
-
-            <!-- 右侧：查询条件 -->
-            <a-form layout="inline" :model="searchParams" @finish="handleSearch" class="board-search-form" style="flex: auto; display: flex; flex-wrap: wrap;">
-              <a-form-item label="名称">
-                <a-input v-model:value="searchParams.boardName" placeholder="输入名称" allow-clear style="width: 120px" />
-              </a-form-item>
-              <a-form-item class="board-search-actions" style="margin-left: auto; margin-right: 0;">
-                <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
-                <a-button type="primary" ghost style="margin-left: 8px" @click="resetSearch">重置</a-button>
-              </a-form-item>
-            </a-form>
-          </div>
           
           <!-- 数据表格 -->
           <a-table
