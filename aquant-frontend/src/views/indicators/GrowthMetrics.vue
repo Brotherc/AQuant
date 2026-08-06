@@ -1,47 +1,49 @@
 <template>
   <div class="growth-metrics-container">
+    <!-- 顶部独立搜索表单卡片 -->
+    <a-card style="margin-bottom: 16px;">
+      <a-form
+        layout="inline"
+        :model="searchParams"
+        @finish="handleSearch"
+        class="growth-search-form"
+        style="width: 100%; display: flex; flex-wrap: wrap;"
+      >
+        <a-form-item label="代码">
+          <a-input v-model:value="searchParams.stockCode" placeholder="代码/名称" allow-clear style="width: 140px" />
+        </a-form-item>
+        <a-form-item label="EPS 3年复合">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <a-input-number v-model:value="searchParams.epsGrowth3yCagrMin" placeholder="最小" style="width: 70px" />
+            <span style="color: var(--color-text-secondary)">~</span>
+            <a-input-number v-model:value="searchParams.epsGrowth3yCagrMax" placeholder="最大" style="width: 70px" />
+          </div>
+        </a-form-item>
+        <a-form-item label="营收增长(TTM)">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <a-input-number v-model:value="searchParams.revenueGrowthTtmMin" placeholder="最小" style="width: 70px" />
+            <span style="color: var(--color-text-secondary)">~</span>
+            <a-input-number v-model:value="searchParams.revenueGrowthTtmMax" placeholder="最大" style="width: 70px" />
+          </div>
+        </a-form-item>
+        <a-form-item label="净利增长(TTM)">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <a-input-number v-model:value="searchParams.netProfitGrowthTtmMin" placeholder="最小" style="width: 70px" />
+            <span style="color: var(--color-text-secondary)">~</span>
+            <a-input-number v-model:value="searchParams.netProfitGrowthTtmMax" placeholder="最大" style="width: 70px" />
+          </div>
+        </a-form-item>
+        <a-form-item class="indicator-search-form-actions" style="margin-left: auto; margin-right: 0;">
+          <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
+          <a-button type="primary" ghost style="margin-left: 8px" @click="resetSearch">重置</a-button>
+        </a-form-item>
+      </a-form>
+    </a-card>
+
     <a-row :gutter="16">
       <a-col :span="13">
-        <!-- 搜索表单与列表 -->
+        <!-- 列表卡片 -->
         <a-card style="height: 100%; margin-bottom: 0;" title="成长性指标列表">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
-            <a-form
-              layout="inline"
-              :model="searchParams"
-              @finish="handleSearch"
-              class="growth-search-form"
-              style="width: 100%; display: flex; flex-wrap: wrap;"
-            >
-              <a-form-item label="代码">
-                <a-input v-model:value="searchParams.stockCode" placeholder="代码/名称" allow-clear style="width: 140px" />
-              </a-form-item>
-              <a-form-item label="EPS 3年复合">
-                <div style="display: flex; align-items: center; gap: 8px">
-                  <a-input-number v-model:value="searchParams.epsGrowth3yCagrMin" placeholder="最小" style="width: 70px" />
-                  <span style="color: var(--color-text-secondary)">~</span>
-                  <a-input-number v-model:value="searchParams.epsGrowth3yCagrMax" placeholder="最大" style="width: 70px" />
-                </div>
-              </a-form-item>
-              <a-form-item label="营收增长(TTM)">
-                <div style="display: flex; align-items: center; gap: 8px">
-                  <a-input-number v-model:value="searchParams.revenueGrowthTtmMin" placeholder="最小" style="width: 70px" />
-                  <span style="color: var(--color-text-secondary)">~</span>
-                  <a-input-number v-model:value="searchParams.revenueGrowthTtmMax" placeholder="最大" style="width: 70px" />
-                </div>
-              </a-form-item>
-              <a-form-item label="净利增长(TTM)">
-                  <div style="display: flex; align-items: center; gap: 8px">
-                      <a-input-number v-model:value="searchParams.netProfitGrowthTtmMin" placeholder="最小" style="width: 70px" />
-                      <span style="color: var(--color-text-secondary)">~</span>
-                      <a-input-number v-model:value="searchParams.netProfitGrowthTtmMax" placeholder="最大" style="width: 70px" />
-                  </div>
-              </a-form-item>
-              <a-form-item class="indicator-search-form-actions" style="margin-left: auto; margin-right: 0;">
-                <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
-                <a-button type="primary" ghost style="margin-left: 8px" @click="resetSearch">重置</a-button>
-              </a-form-item>
-            </a-form>
-          </div>
 
           <!-- 数据表格 -->
           <a-table
