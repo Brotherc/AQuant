@@ -69,10 +69,28 @@
             row-key="id"
             :custom-row="customRow"
             :row-class-name="rowClassName"
-            :scroll="{ x: 'max-content', y: 595 }" 
+            :scroll="{ x: 770, y: 595 }" 
             size="small"
             class="valuation-table"
           >
+            <template #headerCell="{ column }">
+              <template v-if="column.dataIndex === 'pbMrq'">
+                <span>
+                  市净率(MRQ)
+                  <a-tooltip title="计算公式：市净率(MRQ) = 最新股价 / 最新一期财报的每股净资产 (Most Recent Quarter)">
+                    <QuestionCircleOutlined style="margin-left: 4px; color: var(--color-text-secondary); cursor: pointer;" />
+                  </a-tooltip>
+                </span>
+              </template>
+              <template v-else-if="column.dataIndex === 'pcfTtm'">
+                <span>
+                  市现率(TTM)
+                  <a-tooltip title="计算公式：市现率(TTM) = 最新股价 / 每股经营活动现金流量(TTM)">
+                    <QuestionCircleOutlined style="margin-left: 4px; color: var(--color-text-secondary); cursor: pointer;" />
+                  </a-tooltip>
+                </span>
+              </template>
+            </template>
             <template #bodyCell="{ column, text }">
               <template v-if="column.dataIndex === 'stockCode'">
                 <a-tag class="stock-code-tag">{{ text }}</a-tag>
@@ -141,6 +159,7 @@ import {
 import { getWatchlistGroups, addStockToWatchlist, type WatchlistGroupVO } from '@/api/watchlist';
 import { message } from 'ant-design-vue';
 import { type TableProps } from 'ant-design-vue';
+import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 
 const loading = ref(false);
 const detailLoading = ref(false);
@@ -156,13 +175,13 @@ const formatNumber = (val: any) => {
 };
 
 const columns: TableProps['columns'] = [
-  { title: '代码', dataIndex: 'stockCode', width: 80 },
-  { title: '名称', dataIndex: 'stockName', width: 100 },
-  { title: 'PEG', dataIndex: 'peg', sorter: true, width: 80 },
-  { title: '市盈率(TTM)', dataIndex: 'peTtm', sorter: true, width: 100 },
-  { title: '市销率(TTM)', dataIndex: 'psTtm', sorter: true, width: 100 },
-  { title: '市净率(MRQ)', dataIndex: 'pbMrq', sorter: true, width: 100 },
-  { title: '市现率(TTM)', dataIndex: 'pcfTtm', sorter: true, width: 100 },
+  { title: '代码', dataIndex: 'stockCode', width: 90 },
+  { title: '名称', dataIndex: 'stockName', width: 110 },
+  { title: 'PEG', dataIndex: 'peg', sorter: true, width: 90 },
+  { title: '市盈率(TTM)', dataIndex: 'peTtm', sorter: true, width: 110 },
+  { title: '市销率(TTM)', dataIndex: 'psTtm', sorter: true, width: 110 },
+  { title: '市净率(MRQ)', dataIndex: 'pbMrq', sorter: true, width: 130 },
+  { title: '市现率(TTM)', dataIndex: 'pcfTtm', sorter: true, width: 130 },
 ];
 
 const detailColumns: TableProps['columns'] = [
