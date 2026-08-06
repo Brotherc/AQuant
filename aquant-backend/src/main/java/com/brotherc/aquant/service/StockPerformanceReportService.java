@@ -17,8 +17,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -47,7 +49,12 @@ public class StockPerformanceReportService {
         }
 
         LocalDate parsedReportDate = LocalDate.parse(reportDate, REPORT_DATE_FORMATTER);
-        Set<String> validStockCodes = findValidStockCodes(stockYjbbEms);
+        List<StockYjbbEm> validSourceList = stockYjbbEms.stream()
+                .filter(stockYjbbEm -> stockYjbbEm != null && StringUtils.isNotBlank(stockYjbbEm.getStockCode()))
+                .toList();
+        Map<String, StockYjbbEm> uniqueReportMap = validSourceList.stream()
+                .collect(LinkedHashMap::new, (map, stockYjbbEm) -> map.putIfAbsent(stockYjbbEm.getStockCode(), stockYjbbEm), Map::putAll);
+        Set<String> validStockCodes = findValidStockCodes(new ArrayList<>(uniqueReportMap.values()));
         if (CollectionUtils.isEmpty(validStockCodes)) {
             log.warn("股票业绩报表未匹配到当前股票池，跳过保存，reportDate={}, sourceCount={}",
                     reportDate, stockYjbbEms.size());
@@ -55,13 +62,11 @@ public class StockPerformanceReportService {
         }
 
         stockPerformanceReportRepository.deleteByReportDate(parsedReportDate);
+        stockPerformanceReportRepository.flush();
 
         List<StockPerformanceReport> saveList = new ArrayList<>();
         int filteredCount = 0;
-        for (StockYjbbEm stockYjbbEm : stockYjbbEms) {
-            if (stockYjbbEm == null || StringUtils.isBlank(stockYjbbEm.getStockCode())) {
-                continue;
-            }
+        for (StockYjbbEm stockYjbbEm : uniqueReportMap.values()) {
             if (!validStockCodes.contains(stockYjbbEm.getStockCode())) {
                 filteredCount++;
                 continue;
@@ -102,6 +107,11 @@ public class StockPerformanceReportService {
         if (filteredCount > 0) {
             log.info("股票业绩报表已过滤非当前股票池数据，reportDate={}, filteredCount={}, savedCount={}",
                     reportDate, filteredCount, saveList.size());
+        }
+        int duplicateCount = validSourceList.size() - uniqueReportMap.size();
+        if (duplicateCount > 0) {
+            log.info("股票业绩报表已过滤重复股票代码数据，reportDate={}, duplicateCount={}, savedCount={}",
+                    reportDate, duplicateCount, saveList.size());
         }
     }
 
