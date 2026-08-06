@@ -1,54 +1,57 @@
 <template>
   <div class="dividend-container">
+    <!-- 顶部独立搜索表单卡片 -->
+    <a-card style="margin-bottom: 16px;">
+      <a-form
+        :model="searchParams"
+        @finish="handleSearch"
+        layout="inline"
+        class="dividend-search-form"
+        style="width: 100%; display: flex; flex-wrap: wrap;"
+      >
+        <a-form-item label="代码">
+          <a-input v-model:value="searchParams.stockCode" placeholder="股票代码" allow-clear style="width: 140px" />
+        </a-form-item>
+        <a-form-item label="名称">
+          <a-input v-model:value="searchParams.stockName" placeholder="股票名称" allow-clear style="width: 100px" />
+        </a-form-item>
+        <a-form-item label="近N年">
+          <a-input-number v-model:value="searchParams.recentYears" placeholder="3" style="width: 80px" :min="1" />
+        </a-form-item>
+        <a-form-item label="最低分红">
+          <a-input-number v-model:value="searchParams.minAvgDividend" placeholder="0" style="width: 80px" :min="0" :step="0.01" />
+        </a-form-item>
+        <a-form-item label="自选分组">
+          <a-select
+            v-model:value="searchParams.watchlistGroupId"
+            placeholder="全部"
+            style="width: 120px"
+            allow-clear
+            :disabled="!isLoggedIn"
+            :loading="watchlistGroupsLoading"
+          >
+            <a-select-option v-for="group in watchlistGroups" :key="group.id" :value="group.id">
+              {{ group.name }}
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item label="PEG">
+          <a-select v-model:value="searchParams.pegRange" placeholder="全部" style="width: 100px" allow-clear>
+            <a-select-option value="1">0 - 0.5</a-select-option>
+            <a-select-option value="2">0.5 - 1.0</a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item class="indicator-search-form-actions" style="margin-left: auto; margin-right: 0;">
+          <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
+          <a-button type="primary" ghost style="margin-left: 8px" @click="resetSearch">重置</a-button>
+        </a-form-item>
+      </a-form>
+    </a-card>
+
     <a-row :gutter="16">
       <a-col :span="13">
+        <!-- 列表卡片 -->
         <a-card style="height: 100%; margin-bottom: 0;" title="分红数据列表">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
-            <a-form
-              :model="searchParams"
-              @finish="handleSearch"
-              layout="inline"
-              class="dividend-search-form"
-              style="width: 100%; display: flex; flex-wrap: wrap;"
-            >
-              <a-form-item label="代码">
-                <a-input v-model:value="searchParams.stockCode" placeholder="股票代码" allow-clear style="width: 140px" />
-              </a-form-item>
-              <a-form-item label="名称">
-                <a-input v-model:value="searchParams.stockName" placeholder="股票名称" allow-clear style="width: 100px" />
-              </a-form-item>
-              <a-form-item label="近N年">
-                <a-input-number v-model:value="searchParams.recentYears" placeholder="3" style="width: 80px" :min="1" />
-              </a-form-item>
-              <a-form-item label="最低分红">
-                <a-input-number v-model:value="searchParams.minAvgDividend" placeholder="0" style="width: 80px" :min="0" :step="0.01" />
-              </a-form-item>
-              <a-form-item label="自选分组">
-                <a-select
-                  v-model:value="searchParams.watchlistGroupId"
-                  placeholder="全部"
-                  style="width: 120px"
-                  allow-clear
-                  :disabled="!isLoggedIn"
-                  :loading="watchlistGroupsLoading"
-                >
-                  <a-select-option v-for="group in watchlistGroups" :key="group.id" :value="group.id">
-                    {{ group.name }}
-                  </a-select-option>
-                </a-select>
-              </a-form-item>
-              <a-form-item label="PEG">
-                <a-select v-model:value="searchParams.pegRange" placeholder="全部" style="width: 100px" allow-clear>
-                  <a-select-option value="1">0 - 0.5</a-select-option>
-                  <a-select-option value="2">0.5 - 1.0</a-select-option>
-                </a-select>
-              </a-form-item>
-              <a-form-item class="indicator-search-form-actions" style="margin-left: auto; margin-right: 0;">
-                <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
-                <a-button type="primary" ghost style="margin-left: 8px" @click="resetSearch">重置</a-button>
-              </a-form-item>
-            </a-form>
-          </div>
 
           <a-table
             :columns="columns"
