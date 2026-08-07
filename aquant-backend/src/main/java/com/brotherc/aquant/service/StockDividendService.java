@@ -3,6 +3,7 @@ package com.brotherc.aquant.service;
 import com.brotherc.aquant.entity.StockDividend;
 import com.brotherc.aquant.entity.StockQuote;
 import com.brotherc.aquant.model.dto.akshare.StockFhpsDetailEm;
+import com.brotherc.aquant.model.dto.akshare.StockFhpsDetailThs;
 import com.brotherc.aquant.model.vo.stockdividend.StockDividendDetailReqVO;
 import com.brotherc.aquant.model.vo.stockdividend.StockDividendDetailVO;
 import com.brotherc.aquant.model.vo.stockdividend.StockDividendStatPageReqVO;
@@ -292,40 +293,87 @@ public class StockDividendService {
             try {
                 String stockCode = reqVO.getStockCode();
                 String cleanSymbol = stockCode.length() > 6 ? stockCode.substring(2) : stockCode;
-                List<StockFhpsDetailEm> detailEms = akShareService.stockFhpsDetailEm(cleanSymbol);
+                Set<StockDividend> updatedSet = new HashSet<>();
 
-                if (!CollectionUtils.isEmpty(detailEms)) {
-                    List<StockDividend> updatedList = new ArrayList<>();
-                    for (StockDividend target : targets) {
-                        StockFhpsDetailEm match = findMatchingDetail(target, detailEms);
-                        if (match != null) {
-                            LocalDate newRecordDate = DateUtils.parseLocalDate(match.getRecordDate());
-                            LocalDate newExDividendDate = DateUtils.parseLocalDate(match.getExDividendDate());
-                            boolean updated = false;
+                // 1. 尝试从 stockFhpsDetailEm 补充
+                try {
+                    List<StockFhpsDetailEm> detailEms = akShareService.stockFhpsDetailEm(cleanSymbol);
+                    if (!CollectionUtils.isEmpty(detailEms)) {
+                        for (StockDividend target : targets) {
+                            StockFhpsDetailEm match = findMatchingDetailEm(target, detailEms);
+                            if (match != null) {
+                                LocalDate newRecordDate = DateUtils.parseLocalDate(match.getRecordDate());
+                                LocalDate newExDividendDate = DateUtils.parseLocalDate(match.getExDividendDate());
+                                boolean updated = false;
 
-                            if (newRecordDate != null && target.getRecordDate() == null) {
-                                target.setRecordDate(newRecordDate);
-                                updated = true;
-                            }
-                            if (newExDividendDate != null && target.getExDividendDate() == null) {
-                                target.setExDividendDate(newExDividendDate);
-                                updated = true;
-                            }
-                            if (StringUtils.isNotBlank(match.getPlanStatus()) && !Objects.equals(target.getPlanStatus(), match.getPlanStatus())) {
-                                target.setPlanStatus(match.getPlanStatus());
-                                updated = true;
-                            }
+                                if (newRecordDate != null && target.getRecordDate() == null) {
+                                    target.setRecordDate(newRecordDate);
+                                    updated = true;
+                                }
+                                if (newExDividendDate != null && target.getExDividendDate() == null) {
+                                    target.setExDividendDate(newExDividendDate);
+                                    updated = true;
+                                }
+                                if (StringUtils.isNotBlank(match.getPlanStatus()) && !Objects.equals(target.getPlanStatus(), match.getPlanStatus())) {
+                                    target.setPlanStatus(match.getPlanStatus());
+                                    updated = true;
+                                }
 
-                            if (updated) {
-                                updatedList.add(target);
+                                if (updated) {
+                                    updatedSet.add(target);
+                                }
                             }
                         }
                     }
-                    if (!updatedList.isEmpty()) {
-                        stockDividendRepository.saveAll(updatedList);
-                        log.info("从 stock_fhps_detail_em 成功补全股票 {} 的股权登记日/除权除息日/方案进度, 更新了 {} 条记录",
-                                reqVO.getStockCode(), updatedList.size());
+                } catch (Exception e) {
+                    log.error("从 stockFhpsDetailEm 补充分红数据失败, stockCode={}", reqVO.getStockCode(), e);
+                }
+
+                // 2. 如果依然存在股权登记日或除权除息日为空的记录，从 stockFhpsDetailThs 进一步补充
+                List<StockDividend> thsTargets = targets.stream()
+                        .filter(d -> d.getRecordDate() == null || d.getExDividendDate() == null)
+                        .toList();
+
+                if (!thsTargets.isEmpty()) {
+                    try {
+                        List<StockFhpsDetailThs> detailThsList = akShareService.stockFhpsDetailThs(cleanSymbol);
+                        if (!CollectionUtils.isEmpty(detailThsList)) {
+                            for (StockDividend target : thsTargets) {
+                                StockFhpsDetailThs match = findMatchingDetailThs(target, detailThsList);
+                                if (match != null) {
+                                    LocalDate newRecordDate = DateUtils.parseLocalDate(match.getAShareRecordDate());
+                                    LocalDate newExDividendDate = DateUtils.parseLocalDate(match.getAShareExDividendDate());
+                                    boolean updated = false;
+
+                                    if (newRecordDate != null && target.getRecordDate() == null) {
+                                        target.setRecordDate(newRecordDate);
+                                        updated = true;
+                                    }
+                                    if (newExDividendDate != null && target.getExDividendDate() == null) {
+                                        target.setExDividendDate(newExDividendDate);
+                                        updated = true;
+                                    }
+                                    String thsStatus = convertThsPlanStatus(match.getPlanStatus());
+                                    if (StringUtils.isNotBlank(thsStatus) && !Objects.equals(target.getPlanStatus(), thsStatus)) {
+                                        target.setPlanStatus(thsStatus);
+                                        updated = true;
+                                    }
+
+                                    if (updated) {
+                                        updatedSet.add(target);
+                                    }
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.error("从 stockFhpsDetailThs 补充分红数据失败, stockCode={}", reqVO.getStockCode(), e);
                     }
+                }
+
+                if (!updatedSet.isEmpty()) {
+                    stockDividendRepository.saveAll(updatedSet);
+                    log.info("结合 EM 与 THS 成功补全股票 {} 的股权登记日/除权除息日/方案进度, 共更新了 {} 条记录",
+                            reqVO.getStockCode(), updatedSet.size());
                 }
             } catch (Exception e) {
                 log.error("尝试补全股票 {} 的股权登记日/除权除息日失败", reqVO.getStockCode(), e);
@@ -347,7 +395,7 @@ public class StockDividendService {
                 .toList();
     }
 
-    private StockFhpsDetailEm findMatchingDetail(StockDividend target, List<StockFhpsDetailEm> detailEms) {
+    private StockFhpsDetailEm findMatchingDetailEm(StockDividend target, List<StockFhpsDetailEm> detailEms) {
         for (StockFhpsDetailEm em : detailEms) {
             LocalDate emAnnouncementDate = DateUtils.parseLocalDate(em.getLatestAnnouncementDate());
             if (emAnnouncementDate == null) {
@@ -367,6 +415,43 @@ public class StockDividendService {
             }
         }
         return null;
+    }
+
+    private StockFhpsDetailThs findMatchingDetailThs(StockDividend target, List<StockFhpsDetailThs> detailThsList) {
+        if (target.getLatestAnnouncementDate() == null) {
+            return null;
+        }
+        // 按照实施公告日进行精准匹配
+        for (StockFhpsDetailThs ths : detailThsList) {
+            LocalDate thsNoticeDate = DateUtils.parseLocalDate(ths.getImplementationNoticeDate());
+            if (thsNoticeDate != null && target.getLatestAnnouncementDate().equals(thsNoticeDate)) {
+                return ths;
+            }
+        }
+        // 兜底：若实施公告日为空或未匹配成功，尝试按股东大会预案公告日 / 董事会日期匹配
+        for (StockFhpsDetailThs ths : detailThsList) {
+            LocalDate thsDate = DateUtils.parseLocalDate(ths.getShareholdersMeetingProposalDate());
+            if (thsDate == null) {
+                thsDate = DateUtils.parseLocalDate(ths.getBoardDate());
+            }
+            if (thsDate != null && target.getLatestAnnouncementDate().equals(thsDate)) {
+                return ths;
+            }
+        }
+        return null;
+    }
+
+    private String convertThsPlanStatus(String rawStatus) {
+        if (StringUtils.isBlank(rawStatus)) {
+            return rawStatus;
+        }
+        if ("实施方案".equals(rawStatus)) {
+            return "实施分配";
+        }
+        if ("董事会预案".equals(rawStatus)) {
+            return "董事会决议通过";
+        }
+        return rawStatus;
     }
 
 }
