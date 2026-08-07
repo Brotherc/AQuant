@@ -2,6 +2,7 @@ package com.brotherc.aquant.service;
 
 import com.brotherc.aquant.entity.StockDividend;
 import com.brotherc.aquant.entity.StockQuote;
+import com.brotherc.aquant.model.dto.akshare.StockFhpsDetailEm;
 import com.brotherc.aquant.model.vo.stockdividend.StockDividendDetailReqVO;
 import com.brotherc.aquant.model.vo.stockdividend.StockDividendDetailVO;
 import com.brotherc.aquant.model.vo.stockdividend.StockDividendStatPageReqVO;
@@ -15,7 +16,9 @@ import com.brotherc.aquant.entity.StockDupontAnalysis;
 import com.brotherc.aquant.model.projection.StockDividendProjection;
 import com.brotherc.aquant.repository.StockWatchlistStockRepository;
 import com.brotherc.aquant.entity.StockWatchlistStock;
+import com.brotherc.aquant.utils.DateUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
@@ -23,6 +26,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -30,6 +34,7 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class StockDividendService {
@@ -39,6 +44,7 @@ public class StockDividendService {
     private final StockValuationMetricsRepository stockValuationMetricsRepository;
     private final StockDupontAnalysisRepository stockDupontAnalysisRepository;
     private final StockWatchlistStockRepository stockWatchlistStockRepository;
+    private final AKShareService akShareService;
 
     public Page<StockDividendStatVO> pageDividendStats(StockDividendStatPageReqVO reqVO, Pageable pageable) {
         List<StockDividendStatVO> all = calcDividendStats(reqVO.getRecentYears(), reqVO.getMinAvgDividend(),
@@ -271,6 +277,61 @@ public class StockDividendService {
     public List<StockDividendDetailVO> getDetailByCode(StockDividendDetailReqVO reqVO) {
         List<StockDividend> list = stockDividendRepository
                 .findByStockCodeOrderByLatestAnnouncementDateDesc(reqVO.getStockCode());
+        if (CollectionUtils.isEmpty(list)) {
+            return Collections.emptyList();
+        }
+
+        int currentYear = LocalDate.now().getYear();
+        List<StockDividend> targets = list.stream()
+                .filter(d -> d.getLatestAnnouncementDate() != null
+                        && d.getLatestAnnouncementDate().getYear() != currentYear
+                        && (d.getRecordDate() == null || d.getExDividendDate() == null))
+                .toList();
+
+        if (!targets.isEmpty()) {
+            try {
+                String stockCode = reqVO.getStockCode();
+                String cleanSymbol = stockCode.length() > 6 ? stockCode.substring(2) : stockCode;
+                List<StockFhpsDetailEm> detailEms = akShareService.stockFhpsDetailEm(cleanSymbol);
+
+                if (!CollectionUtils.isEmpty(detailEms)) {
+                    List<StockDividend> updatedList = new ArrayList<>();
+                    for (StockDividend target : targets) {
+                        StockFhpsDetailEm match = findMatchingDetail(target, detailEms);
+                        if (match != null) {
+                            LocalDate newRecordDate = DateUtils.parseLocalDate(match.getRecordDate());
+                            LocalDate newExDividendDate = DateUtils.parseLocalDate(match.getExDividendDate());
+                            boolean updated = false;
+
+                            if (newRecordDate != null && target.getRecordDate() == null) {
+                                target.setRecordDate(newRecordDate);
+                                updated = true;
+                            }
+                            if (newExDividendDate != null && target.getExDividendDate() == null) {
+                                target.setExDividendDate(newExDividendDate);
+                                updated = true;
+                            }
+                            if (StringUtils.isNotBlank(match.getPlanStatus()) && !Objects.equals(target.getPlanStatus(), match.getPlanStatus())) {
+                                target.setPlanStatus(match.getPlanStatus());
+                                updated = true;
+                            }
+
+                            if (updated) {
+                                updatedList.add(target);
+                            }
+                        }
+                    }
+                    if (!updatedList.isEmpty()) {
+                        stockDividendRepository.saveAll(updatedList);
+                        log.info("从 stock_fhps_detail_em 成功补全股票 {} 的股权登记日/除权除息日/方案进度, 更新了 {} 条记录",
+                                reqVO.getStockCode(), updatedList.size());
+                    }
+                }
+            } catch (Exception e) {
+                log.error("尝试补全股票 {} 的股权登记日/除权除息日失败", reqVO.getStockCode(), e);
+            }
+        }
+
         return list.stream()
                 .sorted(
                         Comparator.comparing(StockDividend::getLatestAnnouncementDate,
@@ -284,6 +345,28 @@ public class StockDividendService {
                     return vo;
                 })
                 .toList();
+    }
+
+    private StockFhpsDetailEm findMatchingDetail(StockDividend target, List<StockFhpsDetailEm> detailEms) {
+        for (StockFhpsDetailEm em : detailEms) {
+            LocalDate emAnnouncementDate = DateUtils.parseLocalDate(em.getLatestAnnouncementDate());
+            if (emAnnouncementDate == null) {
+                emAnnouncementDate = DateUtils.parseLocalDate(em.getProposalAnnouncementDate());
+            }
+            if (target.getLatestAnnouncementDate() != null && target.getLatestAnnouncementDate().equals(emAnnouncementDate)) {
+                return em;
+            }
+        }
+        // 若按公告日没匹配上，尝试按报告期匹配
+        if (target.getReportDate() != null) {
+            for (StockFhpsDetailEm em : detailEms) {
+                LocalDate emReportDate = DateUtils.parseLocalDate(em.getReportDate());
+                if (emReportDate != null && target.getReportDate().startsWith(emReportDate.toString())) {
+                    return em;
+                }
+            }
+        }
+        return null;
     }
 
 }
