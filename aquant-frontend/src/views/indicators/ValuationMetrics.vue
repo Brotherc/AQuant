@@ -78,7 +78,7 @@
                 <span>
                   市净率(MRQ)
                   <a-tooltip title="计算公式：市净率(MRQ) = 最新股价 / 最新一期财报的每股净资产 (Most Recent Quarter)">
-                    <QuestionCircleOutlined style="margin-left: 4px; color: var(--color-text-secondary); cursor: pointer;" />
+                    <InfoCircleOutlined style="margin-left: 4px; color: var(--color-text-secondary); cursor: pointer;" />
                   </a-tooltip>
                 </span>
               </template>
@@ -86,7 +86,7 @@
                 <span>
                   市现率(TTM)
                   <a-tooltip title="计算公式：市现率(TTM) = 最新股价 / 每股经营活动现金流量(TTM)">
-                    <QuestionCircleOutlined style="margin-left: 4px; color: var(--color-text-secondary); cursor: pointer;" />
+                    <InfoCircleOutlined style="margin-left: 4px; color: var(--color-text-secondary); cursor: pointer;" />
                   </a-tooltip>
                 </span>
               </template>
@@ -159,7 +159,7 @@ import {
 import { getWatchlistGroups, addStockToWatchlist, type WatchlistGroupVO } from '@/api/watchlist';
 import { message } from 'ant-design-vue';
 import { type TableProps } from 'ant-design-vue';
-import { QuestionCircleOutlined } from '@ant-design/icons-vue';
+import { InfoCircleOutlined } from '@ant-design/icons-vue';
 
 const loading = ref(false);
 const detailLoading = ref(false);
