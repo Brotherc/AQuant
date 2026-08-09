@@ -17,8 +17,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import com.brotherc.aquant.entity.StockQuoteHistory;
+import com.brotherc.aquant.utils.StockUtils;
+import org.springframework.util.CollectionUtils;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.IsoFields;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -217,6 +222,108 @@ public class StockIndexService {
             }
 
             result.add(vo);
+        }
+
+        return result;
+    }
+
+    /**
+     * 获取大盘指数历史 K 线数据 (支持周期聚合)
+     *
+     * @param code      指数代码 (如 sh000001, sz399001)
+     * @param frequency 频率: 1d, 1w, 1M, 1Q, 1Y
+     */
+    public List<StockQuoteHistory> getIndexKlineHistory(String code, String frequency) {
+        if (StringUtils.isBlank(code)) {
+            return Collections.emptyList();
+        }
+
+        String rawCode = code;
+        String wrappedCode = StockUtils.wrapExchangePrefix(code);
+        List<StockIndexHistory> indexHistories = stockIndexHistoryRepository.findByIndexCodeOrderByTradeDateAsc(rawCode);
+        if (CollectionUtils.isEmpty(indexHistories) && !rawCode.equals(wrappedCode)) {
+            indexHistories = stockIndexHistoryRepository.findByIndexCodeOrderByTradeDateAsc(wrappedCode);
+        }
+        if (CollectionUtils.isEmpty(indexHistories)) {
+            String cleanCode = rawCode.replaceAll("^(sh|sz|bj)", "");
+            indexHistories = stockIndexHistoryRepository.findByIndexCodeOrderByTradeDateAsc(cleanCode);
+        }
+
+        if (CollectionUtils.isEmpty(indexHistories)) {
+            return Collections.emptyList();
+        }
+
+        // 转换为通用的 K 线模型 List<StockQuoteHistory>
+        List<StockQuoteHistory> dailyList = indexHistories.stream().map(h -> {
+            StockQuoteHistory sqh = new StockQuoteHistory();
+            sqh.setId(h.getId());
+            sqh.setCode(h.getIndexCode());
+            sqh.setName(h.getIndexName());
+            sqh.setTradeDate(h.getTradeDate() != null ? h.getTradeDate().toString() : "");
+            sqh.setOpenPrice(h.getOpenPrice());
+            sqh.setClosePrice(h.getClosePrice());
+            sqh.setHighPrice(h.getHighPrice());
+            sqh.setLowPrice(h.getLowPrice());
+            sqh.setVolume(h.getVolume());
+            sqh.setTurnover(h.getTurnover());
+            return sqh;
+        }).collect(Collectors.toList());
+
+        if ("1d".equals(frequency)) {
+            return dailyList;
+        }
+
+        // 周期聚合逻辑 (1w, 1M, 1Q, 1Y)
+        Map<String, List<StockQuoteHistory>> groupedMap = new LinkedHashMap<>();
+        for (StockQuoteHistory item : dailyList) {
+            String dateStr = item.getTradeDate();
+            if (StringUtils.isBlank(dateStr)) continue;
+            LocalDate date = LocalDate.parse(dateStr);
+            String key;
+            switch (frequency) {
+                case "1w" -> key = date.getYear() + "-W" + date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
+                case "1M" -> key = date.getYear() + "-" + date.getMonthValue();
+                case "1Q" -> key = date.getYear() + "-Q" + date.get(IsoFields.QUARTER_OF_YEAR);
+                case "1Y" -> key = String.valueOf(date.getYear());
+                default -> key = dateStr;
+            }
+            groupedMap.computeIfAbsent(key, k -> new ArrayList<>()).add(item);
+        }
+
+        List<StockQuoteHistory> result = new ArrayList<>();
+        for (List<StockQuoteHistory> group : groupedMap.values()) {
+            if (group.isEmpty()) continue;
+            StockQuoteHistory first = group.get(0);
+            StockQuoteHistory last = group.get(group.size() - 1);
+
+            StockQuoteHistory aggregated = new StockQuoteHistory();
+            aggregated.setCode(first.getCode());
+            aggregated.setName(first.getName());
+            aggregated.setTradeDate(last.getTradeDate());
+
+            aggregated.setOpenPrice(first.getOpenPrice());
+            aggregated.setClosePrice(last.getClosePrice());
+            aggregated.setHighPrice(group.stream()
+                    .map(StockQuoteHistory::getHighPrice)
+                    .filter(Objects::nonNull)
+                    .max(BigDecimal::compareTo)
+                    .orElse(BigDecimal.ZERO));
+            aggregated.setLowPrice(group.stream()
+                    .map(StockQuoteHistory::getLowPrice)
+                    .filter(Objects::nonNull)
+                    .min(BigDecimal::compareTo)
+                    .orElse(BigDecimal.ZERO));
+
+            aggregated.setVolume(group.stream()
+                    .map(StockQuoteHistory::getVolume)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add));
+            aggregated.setTurnover(group.stream()
+                    .map(StockQuoteHistory::getTurnover)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add));
+
+            result.add(aggregated);
         }
 
         return result;

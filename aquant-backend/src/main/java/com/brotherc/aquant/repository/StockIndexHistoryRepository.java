@@ -18,4 +18,6 @@ public interface StockIndexHistoryRepository extends JpaRepository<StockIndexHis
 
     List<StockIndexHistory> findByIndexCodeOrderByTradeDateDesc(String indexCode);
 
+    List<StockIndexHistory> findByIndexCodeOrderByTradeDateAsc(String indexCode);
+
 }

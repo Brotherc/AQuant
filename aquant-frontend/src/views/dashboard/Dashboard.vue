@@ -9,7 +9,7 @@
 
       <a-row :gutter="[12, 12]" class="index-cards-row">
         <a-col v-for="item in indexCards" :key="item.code" :xs="24" :sm="12" :md="8" :lg="4">
-          <div class="index-card" :class="{ 'is-up': (item.changePercent || 0) >= 0, 'is-down': (item.changePercent || 0) < 0 }">
+          <div class="index-card" :class="{ 'is-up': (item.changePercent || 0) >= 0, 'is-down': (item.changePercent || 0) < 0 }" @click="openIndexKlineModal(item)">
             <div class="index-card-header">
               <span class="index-name">{{ item.name }}</span>
               <span class="index-code">{{ item.code }}</span>
@@ -197,6 +197,22 @@
         </a-card>
       </a-col>
     </a-row>
+
+    <!-- 核心大盘指数行情 K线图 Modal 弹窗 -->
+    <a-modal
+      v-model:visible="indexModalVisible"
+      :title="selectedIndexCard ? `【${selectedIndexCard.name} (${selectedIndexCard.code})】行情K线图` : '大盘指数K线图'"
+      width="1000px"
+      :footer="null"
+      destroyOnClose
+    >
+      <div style="min-height: 500px;" v-if="selectedIndexCard">
+        <StockIndexHistoryChart
+          :stockCode="selectedIndexCard.code"
+          :stockName="selectedIndexCard.name"
+        />
+      </div>
+    </a-modal>
   </div>
 </template>
 
@@ -216,10 +232,19 @@ import {
 import { getFundFlowGraph, getFundFlowSummary, type FundFlowGraphData, type FundFlowSummaryData } from '@/api/fundFlow';
 import { getCoreIndexCards, type StockIndexCardVO } from '@/api/stockIndex';
 import { getMarketSentiment, type MarketSentimentVO } from '@/api/marketSentiment';
+import StockIndexHistoryChart from './components/StockIndexHistoryChart.vue';
 
 const loading = ref(false);
 const chartRef = ref<HTMLDivElement | null>(null);
 let chartInstance: echarts.ECharts | null = null;
+
+const indexModalVisible = ref(false);
+const selectedIndexCard = ref<StockIndexCardVO | null>(null);
+
+const openIndexKlineModal = (item: StockIndexCardVO) => {
+  selectedIndexCard.value = item;
+  indexModalVisible.value = true;
+};
 
 const summaryData = ref<FundFlowSummaryData | null>(null);
 const graphData = ref<FundFlowGraphData | null>(null);
@@ -802,6 +827,7 @@ onUnmounted(() => {
   transition: all 0.25s ease;
   position: relative;
   overflow: hidden;
+  cursor: pointer;
 }
 
 .index-card:hover {
