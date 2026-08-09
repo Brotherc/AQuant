@@ -7,18 +7,7 @@ import com.brotherc.aquant.entity.StockQuote;
 import com.brotherc.aquant.entity.StockSync;
 import com.brotherc.aquant.model.dto.akshare.*;
 import com.brotherc.aquant.repository.*;
-import com.brotherc.aquant.service.AKShareService;
-import com.brotherc.aquant.service.StockAbnormalService;
-import com.brotherc.aquant.service.StockDividendDedupService;
-import com.brotherc.aquant.service.StockValuationMetricsService;
-import com.brotherc.aquant.service.StockFundNetValueService;
-import com.brotherc.aquant.service.StockFundPortfolioHoldingService;
-import com.brotherc.aquant.service.StockPerformanceReportService;
-import com.brotherc.aquant.service.StockQuoteHistoryService;
-import com.brotherc.aquant.service.StockQuoteService;
-import com.brotherc.aquant.service.StockShareChangeService;
-import com.brotherc.aquant.service.StockStrategySnapshotService;
-import com.brotherc.aquant.service.StockSyncService;
+import com.brotherc.aquant.service.*;
 import com.brotherc.aquant.utils.StockHelper;
 import com.brotherc.aquant.utils.StockUtils;
 import lombok.RequiredArgsConstructor;
@@ -57,6 +46,7 @@ public class StockSyncTask {
     private final StockFundPortfolioHoldingService stockFundPortfolioHoldingService;
     private final StockPerformanceReportService stockPerformanceReportService;
     private final StockShareChangeService stockShareChangeService;
+    private final StockIndexService stockIndexService;
 
     private final StockSyncRepository stockSyncRepository;
     private final StockQuoteRepository stockQuoteRepository;
@@ -84,6 +74,10 @@ public class StockSyncTask {
         log.info("同步股票行情数据开始");
         syncStackQuote(now);
         log.info("同步股票行情数据完成");
+
+        log.info("同步指数数据开始");
+        syncStockIndex(now);
+        log.info("同步指数数据完成");
 
         log.info("同步股票股本变动数据开始");
         syncStockShareChange(now);
@@ -860,6 +854,52 @@ public class StockSyncTask {
 
         return LocalDate.of(date.getYear(), endMonth, endMonth.length(date.isLeapYear()));
     }
+
+    /**
+     * 同步 A 股主要股票指数行情及历史数据 (先完整补全历史日 K 线防断层，再刷新实时快照)
+     */
+    public void syncStockIndex(LocalDateTime now) {
+        StockSync stockSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_INDEX_LATEST);
+        boolean shouldRefresh = shouldRefreshLatestQuote(stockSync, now);
+
+        if (!shouldRefresh) {
+            log.info("指数最新行情及历史数据已覆盖当前同步窗口，跳过指数接口调用");
+            return;
+        }
+
+        // 1. 优先增量补全核心大盘指数的历史日 K 线数据 (幂等防断层)
+        Map<String, String> coreIndices = StockSyncConstant.CORE_INDICES;
+        for (Map.Entry<String, String> entry : coreIndices.entrySet()) {
+            String indexCode = entry.getKey();
+            String indexName = entry.getValue();
+            try {
+                List<StockZhIndexDaily> dailyList = aKShareService.stockZhIndexDaily(indexCode);
+                if (!CollectionUtils.isEmpty(dailyList)) {
+                    stockIndexService.saveIndexHistory(indexCode, indexName, dailyList, now);
+                }
+            } catch (Exception e) {
+                log.error("增量同步指数 [{}] 历史日 K 线数据异常", indexName, e);
+            }
+        }
+
+        // 2. 历史数据补全完成后，刷新全量指数实时行情快照 & 指定核心大盘指数当日带成交额的 K 线
+        List<StockZhIndexSpotSina> spotList = aKShareService.stockZhIndexSpotSina();
+        if (!CollectionUtils.isEmpty(spotList)) {
+            stockIndexService.saveIndexSpot(spotList, now);
+            stockIndexService.updateTodayHistoryFromSpot(spotList, coreIndices.keySet(), now);
+            log.info("同步指数实时行情完成，共 {} 条数据", spotList.size());
+        }
+
+        // 4. 更新同步水位标记
+        long timestamp = now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+        if (stockSync == null) {
+            stockSync = new StockSync();
+            stockSync.setName(StockSyncConstant.STOCK_INDEX_LATEST);
+        }
+        stockSync.setValue(String.valueOf(timestamp));
+        stockSyncRepository.save(stockSync);
+    }
+
     private static final class FundHoldingSyncWindow {
 
         private final String requestDate;
