@@ -125,6 +125,25 @@
             <a-spin :spinning="loading">
               <div ref="chartRef" class="graph-chart-container"></div>
             </a-spin>
+
+            <!-- 右下角绝对定位悬浮工具栏 -->
+            <div class="floating-zoom-toolbar">
+              <a-tooltip title="放大视图" placement="left">
+                <a-button type="text" class="zoom-btn" @click="handleZoomIn">
+                  <template #icon><plus-outlined /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="缩小视图" placement="left">
+                <a-button type="text" class="zoom-btn" @click="handleZoomOut">
+                  <template #icon><minus-outlined /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="重置视角" placement="left">
+                <a-button type="text" class="zoom-btn" @click="handleResetView">
+                  <template #icon><redo-outlined /></template>
+                </a-button>
+              </a-tooltip>
+            </div>
           </div>
         </a-card>
       </a-col>
@@ -189,7 +208,10 @@ import {
   RiseOutlined,
   FallOutlined,
   SyncOutlined,
-  InfoCircleOutlined
+  InfoCircleOutlined,
+  PlusOutlined,
+  MinusOutlined,
+  RedoOutlined
 } from '@ant-design/icons-vue';
 import { getFundFlowGraph, getFundFlowSummary, type FundFlowGraphData, type FundFlowSummaryData } from '@/api/fundFlow';
 import { getCoreIndexCards, type StockIndexCardVO } from '@/api/stockIndex';
@@ -436,6 +458,10 @@ const renderChart = () => {
       {
         type: 'graph',
         layout: 'force',
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
         data: nodes,
         links: links,
         categories: [
@@ -471,6 +497,96 @@ const renderChart = () => {
   chartInstance.setOption(option);
   // 确保图表在 setOption 后立即按最新容器高度重新计算 Viewport 尺寸
   chartInstance.resize();
+
+  if (chartRef.value) {
+    chartRef.value.removeEventListener('mousedown', handleGraphMouseDown);
+    chartRef.value.addEventListener('mousedown', handleGraphMouseDown);
+    chartRef.value.removeEventListener('wheel', handleGraphWheel);
+    chartRef.value.addEventListener('wheel', handleGraphWheel, { passive: false });
+    chartRef.value.style.cursor = 'grab';
+  }
+};
+
+let isDraggingGraph = false;
+let startGraphX = 0;
+let startGraphY = 0;
+
+const handleGraphMouseDown = (e: MouseEvent) => {
+  if (e.button !== 0 || !chartInstance) return;
+  isDraggingGraph = true;
+  startGraphX = e.clientX;
+  startGraphY = e.clientY;
+  if (chartRef.value) {
+    chartRef.value.style.cursor = 'grabbing';
+  }
+};
+
+const handleGraphMouseMove = (e: MouseEvent) => {
+  if (!isDraggingGraph || !chartInstance) return;
+  const dx = e.clientX - startGraphX;
+  const dy = e.clientY - startGraphY;
+  startGraphX = e.clientX;
+  startGraphY = e.clientY;
+
+  chartInstance.dispatchAction({
+    type: 'graphRoam',
+    dx: dx,
+    dy: dy
+  });
+};
+
+const handleGraphMouseUp = () => {
+  if (isDraggingGraph) {
+    isDraggingGraph = false;
+    if (chartRef.value) {
+      chartRef.value.style.cursor = 'grab';
+    }
+  }
+};
+
+const handleZoomIn = () => {
+  if (!chartInstance) return;
+  const width = chartInstance.getWidth();
+  const height = chartInstance.getHeight();
+  chartInstance.dispatchAction({
+    type: 'graphRoam',
+    zoom: 1.25,
+    originX: width / 2,
+    originY: height / 2
+  });
+};
+
+const handleZoomOut = () => {
+  if (!chartInstance) return;
+  const width = chartInstance.getWidth();
+  const height = chartInstance.getHeight();
+  chartInstance.dispatchAction({
+    type: 'graphRoam',
+    zoom: 0.8,
+    originX: width / 2,
+    originY: height / 2
+  });
+};
+
+const handleResetView = () => {
+  if (!chartInstance) return;
+  renderChart();
+};
+
+const handleGraphWheel = (e: WheelEvent) => {
+  if (!chartInstance) return;
+  e.preventDefault();
+  const zoom = e.deltaY < 0 ? 1.1 : 0.9;
+  const rect = chartRef.value?.getBoundingClientRect();
+  const originX = rect ? e.clientX - rect.left : 0;
+  const originY = rect ? e.clientY - rect.top : 0;
+
+  chartInstance.dispatchAction({
+    type: 'graphRoam',
+    zoom: zoom,
+    originX: originX,
+    originY: originY
+  });
 };
 
 const handleResize = () => {
@@ -482,10 +598,17 @@ const handleResize = () => {
 onMounted(() => {
   loadData();
   window.addEventListener('resize', handleResize);
+  window.addEventListener('mousemove', handleGraphMouseMove);
+  window.addEventListener('mouseup', handleGraphMouseUp);
 });
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize);
+  window.removeEventListener('mousemove', handleGraphMouseMove);
+  window.removeEventListener('mouseup', handleGraphMouseUp);
+  if (chartRef.value) {
+    chartRef.value.removeEventListener('wheel', handleGraphWheel);
+  }
   if (chartInstance) {
     chartInstance.dispose();
     chartInstance = null;
@@ -925,6 +1048,39 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   position: relative;
+}
+
+.floating-zoom-toolbar {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--color-divider, #e2e8f0);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 4px;
+  gap: 2px;
+}
+
+.zoom-btn {
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 6px !important;
+  color: #64748b !important;
+  font-size: 14px !important;
+  transition: all 0.2s ease !important;
+}
+
+.zoom-btn:hover {
+  background: rgba(241, 245, 249, 0.9) !important;
+  color: #3b82f6 !important;
 }
 
 .chart-wrapper :deep(.ant-spin-nested-loading),
