@@ -64,7 +64,15 @@
               <a-descriptions-item label="日累计限定金额">{{ selectedFund.dailyLimitAmount != null ? formatAmount(selectedFund.dailyLimitAmount) + '元' : '-' }}</a-descriptions-item>
               <a-descriptions-item label="手续费">{{ selectedFund.feeRate != null ? selectedFund.feeRate + '%' : '-' }}</a-descriptions-item>
             </a-descriptions>
-            <FundNetValueChart :fundCode="selectedFund.fundCode" />
+            <div class="fund-chart-header" style="margin-top: 18px; display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-weight: 600; font-size: 14px; color: var(--color-text-primary, #0f172a);">单位净值走势</span>
+              <a-tooltip title="放大查看走势">
+                <a-button type="text" size="small" @click="detailChartModalVisible = true" style="color: #64748b;">
+                  <template #icon><fullscreen-outlined style="font-size: 15px;" /></template>
+                </a-button>
+              </a-tooltip>
+            </div>
+            <FundNetValueChart :fundCode="selectedFund.fundCode" :showMA="false" style="height: 300px;" />
             <div v-if="holdingList.length > 0" style="margin-top: 24px;">
               <h4 style="margin-bottom: 12px; font-weight: 600;">
                 最新持仓明细 ({{ holdingList[0]?.reportYear }}年第{{ holdingList[0]?.reportQuarter }}季度)
@@ -89,17 +97,32 @@
         </a-card>
       </a-col>
     </a-row>
+
+    <!-- 走势详情 Modal 弹窗（包含 MA5/10/20/30/60 各个均线） -->
+    <a-modal
+      v-model:visible="detailChartModalVisible"
+      :title="selectedFund ? `${selectedFund.fundName} (${selectedFund.fundCode})` : '基金走势'"
+      width="960px"
+      :footer="null"
+      destroyOnClose
+    >
+      <div style="height: 480px; width: 100%;">
+        <FundNetValueChart v-if="selectedFund" :fundCode="selectedFund.fundCode" :showMA="true" />
+      </div>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch } from 'vue'
+import { FullscreenOutlined } from '@ant-design/icons-vue'
 import { getFundPage, getLatestFundHoldings, getStockFundInfoLatest } from '@/api/fund'
 import type { FundInfoPageReqVO, FundInfoVO, StockFundPortfolioHoldingVO } from '@/api/fund'
 import FundNetValueChart from './components/FundNetValueChart.vue'
 import { formatAmount } from '@/utils/format'
 
 const loading = ref(false)
+const detailChartModalVisible = ref(false)
 const dataList = ref<FundInfoVO[]>([])
 const selectedFund = ref<FundInfoVO | null>(null)
 const lastRefreshTime = ref('')
