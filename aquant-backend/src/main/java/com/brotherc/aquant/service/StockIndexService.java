@@ -1,9 +1,11 @@
 package com.brotherc.aquant.service;
 
+import com.brotherc.aquant.constant.StockSyncConstant;
 import com.brotherc.aquant.entity.StockIndexHistory;
 import com.brotherc.aquant.entity.StockIndexSpot;
 import com.brotherc.aquant.model.dto.akshare.StockZhIndexDaily;
 import com.brotherc.aquant.model.dto.akshare.StockZhIndexSpotSina;
+import com.brotherc.aquant.model.vo.index.StockIndexCardVO;
 import com.brotherc.aquant.repository.StockIndexHistoryRepository;
 import com.brotherc.aquant.repository.StockIndexSpotRepository;
 import com.brotherc.aquant.utils.DateUtils;
@@ -13,9 +15,12 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -150,6 +155,71 @@ public class StockIndexService {
             stockIndexHistoryRepository.saveAll(toSave);
             log.info("指数 [{}] 增量补全写入历史日 K 线 {} 条", indexName, toSave.size());
         }
+    }
+
+    /**
+     * 查询首页核心大盘指数卡片数据 (包含实时行情及历史迷你趋势线)
+     */
+    public List<StockIndexCardVO> getCoreIndexCards() {
+        List<String> targetCodes = List.of("sh000001", "sz399001", "sz399006", "sh000688", "sh000300", "sh000905");
+        Map<String, StockIndexSpot> spotMap = stockIndexSpotRepository.findByCodeIn(targetCodes).stream()
+                .collect(Collectors.toMap(StockIndexSpot::getCode, spot -> spot, (a, b) -> a));
+
+        List<StockIndexCardVO> result = new ArrayList<>();
+        for (String code : targetCodes) {
+            String name = StockSyncConstant.CORE_INDICES.getOrDefault(code, code);
+            StockIndexSpot spot = spotMap.get(code);
+
+            // 查询该指数近期 15 个交易日的收盘价序列
+            List<StockIndexHistory> historyList = stockIndexHistoryRepository.findByIndexCodeOrderByTradeDateDesc(code);
+            List<BigDecimal> historyPrices = historyList.stream()
+                    .limit(15)
+                    .map(StockIndexHistory::getClosePrice)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+
+            // 翻转使得序列按时间正序排列 (左旧右新)
+            Collections.reverse(historyPrices);
+
+            StockIndexCardVO vo = new StockIndexCardVO();
+            vo.setCode(code);
+            vo.setName(name);
+            vo.setHistoryPrices(historyPrices);
+
+            if (spot != null) {
+                vo.setLatestPrice(spot.getLatestPrice());
+                vo.setChangeAmount(spot.getChangeAmount());
+                vo.setChangePercent(spot.getChangePercent());
+                vo.setOpenPrice(spot.getOpenPrice());
+                vo.setHighPrice(spot.getHighPrice());
+                vo.setLowPrice(spot.getLowPrice());
+                vo.setPrevClose(spot.getPrevClose());
+                vo.setVolume(spot.getVolume());
+                vo.setTurnover(spot.getTurnover());
+            } else if (!historyList.isEmpty()) {
+                StockIndexHistory latestHist = historyList.get(0);
+                vo.setLatestPrice(latestHist.getClosePrice());
+                vo.setOpenPrice(latestHist.getOpenPrice());
+                vo.setHighPrice(latestHist.getHighPrice());
+                vo.setLowPrice(latestHist.getLowPrice());
+                vo.setVolume(latestHist.getVolume());
+                vo.setTurnover(latestHist.getTurnover());
+                if (historyList.size() > 1 && latestHist.getClosePrice() != null) {
+                    BigDecimal prevClose = historyList.get(1).getClosePrice();
+                    if (prevClose != null && prevClose.compareTo(BigDecimal.ZERO) > 0) {
+                        BigDecimal diff = latestHist.getClosePrice().subtract(prevClose);
+                        BigDecimal pct = diff.divide(prevClose, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100"));
+                        vo.setChangeAmount(diff);
+                        vo.setChangePercent(pct);
+                        vo.setPrevClose(prevClose);
+                    }
+                }
+            }
+
+            result.add(vo);
+        }
+
+        return result;
     }
 
 }
