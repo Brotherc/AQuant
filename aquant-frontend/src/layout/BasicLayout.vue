@@ -10,23 +10,33 @@
         <!-- 中间 Navigation 区 -->
         <div class="menu-box">
           <a-menu v-model:selectedKeys="selectedKeys" theme="light" mode="horizontal" class="c-menu">
-            <a-sub-menu
-              v-for="group in navigationGroups"
-              :key="group.key"
-              :popupClassName="group.popupClassName"
-            >
-              <template #title>
+            <template v-for="group in navigationGroups" :key="group.key">
+              <a-menu-item
+                v-if="group.path"
+                :key="group.path"
+                @click="handleNavigate(group.path)"
+              >
                 <component :is="group.icon" />
                 <span class="nav-text">{{ group.title }}</span>
-              </template>
-              <a-menu-item
-                v-for="child in group.children"
-                :key="child.key"
-                @click="handleNavigate(child.key)"
-              >
-                {{ child.label }}
               </a-menu-item>
-            </a-sub-menu>
+              <a-sub-menu
+                v-else
+                :key="group.key"
+                :popupClassName="group.popupClassName"
+              >
+                <template #title>
+                  <component :is="group.icon" />
+                  <span class="nav-text">{{ group.title }}</span>
+                </template>
+                <a-menu-item
+                  v-for="child in group.children"
+                  :key="child.key"
+                  @click="handleNavigate(child.key)"
+                >
+                  {{ child.label }}
+                </a-menu-item>
+              </a-sub-menu>
+            </template>
           </a-menu>
         </div>
 
@@ -119,21 +129,33 @@
         :selectedKeys="selectedKeys"
         v-model:openKeys="drawerOpenKeys"
       >
-        <a-sub-menu v-for="group in navigationGroups" :key="group.key">
-          <template #title>
+        <template v-for="group in navigationGroups" :key="group.key">
+          <a-menu-item
+            v-if="group.path"
+            :key="group.path"
+            @click="handleDrawerNavigate(group.path)"
+          >
             <span class="mobile-nav-title">
               <component :is="group.icon" />
               <span>{{ group.title }}</span>
             </span>
-          </template>
-          <a-menu-item
-            v-for="child in group.children"
-            :key="child.key"
-            @click="handleDrawerNavigate(child.key)"
-          >
-            {{ child.label }}
           </a-menu-item>
-        </a-sub-menu>
+          <a-sub-menu v-else :key="group.key">
+            <template #title>
+              <span class="mobile-nav-title">
+                <component :is="group.icon" />
+                <span>{{ group.title }}</span>
+              </span>
+            </template>
+            <a-menu-item
+              v-for="child in group.children"
+              :key="child.key"
+              @click="handleDrawerNavigate(child.key)"
+            >
+              {{ child.label }}
+            </a-menu-item>
+          </a-sub-menu>
+        </template>
       </a-menu>
     </a-drawer>
   </a-layout>
@@ -143,6 +165,7 @@
 import { computed, ref, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
+  DashboardOutlined,
   StockOutlined,
   LineChartOutlined,
   RadarChartOutlined,
@@ -165,8 +188,9 @@ type NavigationGroup = {
   key: string;
   title: string;
   icon: any;
-  popupClassName: string;
-  children: NavigationChild[];
+  popupClassName?: string;
+  children?: NavigationChild[];
+  path?: string;
 };
 
 const route = useRoute();
@@ -178,6 +202,12 @@ const navDrawerVisible = ref(false);
 const drawerOpenKeys = ref<string[]>([]);
 
 const navigationGroups: NavigationGroup[] = [
+  {
+    key: '/dashboard',
+    title: '大盘全景',
+    icon: DashboardOutlined,
+    path: '/dashboard'
+  },
   {
     key: '/watchlist',
     title: '自选股票',
@@ -232,10 +262,15 @@ const navigationGroups: NavigationGroup[] = [
 ];
 
 const currentRouteMeta = computed(() => {
+  if (route.path === '/dashboard') {
+    return undefined;
+  }
   for (const group of navigationGroups) {
-    const child = group.children.find((item) => item.key === route.path);
-    if (child) {
-      return { parent: group.title, child: child.label };
+    if (group.children) {
+      const child = group.children.find((item) => item.key === route.path);
+      if (child) {
+        return { parent: group.title, child: child.label };
+      }
     }
   }
   return undefined;
@@ -245,8 +280,10 @@ const currentRouteMeta = computed(() => {
 const syncMenuState = () => {
   const path = route.path;
   selectedKeys.value = [path];
-  const activeGroup = navigationGroups.find((group) => group.children.some((child) => child.key === path));
-  drawerOpenKeys.value = activeGroup ? [activeGroup.key] : [];
+  const activeGroup = navigationGroups.find((group) =>
+    group.path === path || (group.children && group.children.some((child) => child.key === path))
+  );
+  drawerOpenKeys.value = activeGroup && activeGroup.children ? [activeGroup.key] : [];
 };
 
 watch(() => route.path, () => {
@@ -390,52 +427,10 @@ const handleUpdateEmail = async () => {
 
 .c-menu {
   line-height: 64px;
-  border-bottom: none;
   background: transparent;
   flex: 1;
   justify-content: flex-end;
   font-size: 14px;
-}
-
-.c-menu :deep(.ant-menu-submenu) {
-  margin: 0 2px;
-  padding: 0 10px;
-}
-
-.c-menu :deep(.ant-menu-item) {
-  color: var(--color-text-secondary);
-  border-bottom: 2px solid transparent;
-  transition: all var(--transition-base) var(--transition-timing);
-  margin: 0;
-  padding: 0 20px;
-}
-
-.c-menu :deep(.ant-menu-item:hover) {
-  color: var(--color-text-primary);
-  background: transparent;
-}
-
-.c-menu :deep(.ant-menu-item-selected) {
-  color: var(--color-accent);
-  background: transparent;
-  border-bottom-color: var(--color-accent);
-  font-weight: var(--font-weight-semibold);
-}
-
-.c-menu :deep(.ant-menu-submenu-title) {
-  color: var(--color-text-secondary);
-  transition: all var(--transition-base) var(--transition-timing);
-  padding: 0 !important;
-}
-
-.c-menu :deep(.ant-menu-submenu-title:hover) {
-  color: var(--color-text-primary);
-  background: transparent;
-}
-
-.c-menu :deep(.ant-menu-submenu-selected .ant-menu-submenu-title) {
-  color: var(--color-accent);
-  font-weight: var(--font-weight-semibold);
 }
 
 .c-menu :deep(.ant-menu-submenu-title .anticon) {

@@ -14,8 +14,19 @@ const router = createRouter({
         {
             path: '/',
             component: BasicLayout,
-            redirect: '/stock-data/index',
+            redirect: '/dashboard',
             children: [
+                {
+                    path: 'dashboard',
+                    name: 'DashboardRoot',
+                    children: [
+                        {
+                            path: '',
+                            name: 'Dashboard',
+                            component: () => import('@/views/dashboard/Dashboard.vue')
+                        }
+                    ]
+                },
                 {
                     path: 'watchlist',
                     name: 'WatchlistRoot',
