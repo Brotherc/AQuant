@@ -1,80 +1,23 @@
 package com.brotherc.aquant.service;
 
 import com.brotherc.aquant.model.dto.akshare.*;
+import com.brotherc.aquant.service.akshare.AbstractAKShareService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.util.List;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
-public class AKShareService {
+public class AKShareService extends AbstractAKShareService {
 
-    @Value("${akshare-address}")
-    private String akshareAddress;
-
-    private final ObjectMapper objectMapper;
-    private final OkHttpClient okHttpClient;
-
-    /**
-     * 从 Request 的 URL 中自动解析并截取 API 名称（取 Path 的最后一个 segment，如 stock_zh_a_spot）
-     */
-    private String extractApiName(Request request) {
-        List<String> segments = request.url().pathSegments();
-        if (segments != null && !segments.isEmpty()) {
-            return segments.get(segments.size() - 1);
-        }
-        return request.url().encodedPath();
-    }
-
-    /**
-     * 通用 HTTP 请求处理：执行 Request 并自动转为目标 Java 对象
-     */
-    private <T> T executeRequest(Request request, TypeReference<T> typeReference) {
-        String apiName = extractApiName(request);
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("{} 失败响应: {}", apiName, response);
-                throw new RuntimeException(apiName + "请求失败");
-            }
-            return objectMapper.readValue(response.body().string(), typeReference);
-        } catch (IOException e) {
-            log.error("{} 请求失败", apiName, e);
-            throw new RuntimeException(apiName + "请求失败", e);
-        }
-    }
-
-    /**
-     * 通用 GET 请求重载（接收 String URL）
-     */
-    private <T> T executeGet(String url, TypeReference<T> typeReference) {
-        Request request = new Request.Builder()
-                .url(url)
-                .get()
-                .build();
-        return executeRequest(request, typeReference);
-    }
-
-    /**
-     * 通用 GET 请求重载（接收 HttpUrl 构造器）
-     */
-    private <T> T executeGet(HttpUrl httpUrl, TypeReference<T> typeReference) {
-        Request request = new Request.Builder()
-                .url(httpUrl)
-                .get()
-                .build();
-        return executeRequest(request, typeReference);
+    public AKShareService(ObjectMapper objectMapper, OkHttpClient okHttpClient) {
+        super(objectMapper, okHttpClient);
     }
 
     public List<StockZhASpot> stockZhASpot() {
@@ -86,24 +29,31 @@ public class AKShareService {
     }
 
     public List<StockZhIndexDaily> stockZhIndexDaily(String symbol) {
-        return executeGet(akshareAddress + "/api/public/stock_zh_index_daily?symbol=" + symbol, new TypeReference<>() {});
+        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_zh_index_daily")
+                .newBuilder()
+                .addQueryParameter("symbol", symbol);
+        return executeGet(builder.build(), new TypeReference<>() {});
     }
 
     public List<StockZhValuationComparisonEm> stockZhValuationComparisonEm(String symbol) {
-        return executeGet(akshareAddress + "/api/public/stock_zh_valuation_comparison_em?symbol=" + symbol.toUpperCase(), new TypeReference<>() {});
+        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_zh_valuation_comparison_em")
+                .newBuilder()
+                .addQueryParameter("symbol", symbol.toUpperCase());
+        return executeGet(builder.build(), new TypeReference<>() {});
     }
 
     public List<StockZhGrowthComparisonEm> stockZhGrowthComparisonEm(String symbol) {
-        return executeGet(akshareAddress + "/api/public/stock_zh_growth_comparison_em?symbol=" + symbol.toUpperCase(), new TypeReference<>() {});
+        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_zh_growth_comparison_em")
+                .newBuilder()
+                .addQueryParameter("symbol", symbol.toUpperCase());
+        return executeGet(builder.build(), new TypeReference<>() {});
     }
 
     public List<StockZhDupontComparisonEm> stockZhDupontComparisonEm(String symbol) {
-        return executeGet(akshareAddress + "/api/public/stock_zh_dupont_comparison_em?symbol=" + symbol.toUpperCase(), new TypeReference<>() {});
-    }
-
-    public List<StockZhAHist> stockZhAHist(String symbol) {
-        symbol = symbol.substring(2);
-        return executeGet(akshareAddress + "/api/public/stock_zh_a_hist?symbol=" + symbol + "&&adjust=hfq", new TypeReference<>() {});
+        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_zh_dupont_comparison_em")
+                .newBuilder()
+                .addQueryParameter("symbol", symbol.toUpperCase());
+        return executeGet(builder.build(), new TypeReference<>() {});
     }
 
     /**
@@ -142,7 +92,10 @@ public class AKShareService {
      * @return A股上市公司业绩报表数据
      */
     public List<StockYjbbEm> stockYjbbEm(String date) {
-        return executeGet(akshareAddress + "/api/public/stock_yjbb_em?date=" + date, new TypeReference<>() {});
+        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_yjbb_em")
+                .newBuilder()
+                .addQueryParameter("date", date);
+        return executeGet(builder.build(), new TypeReference<>() {});
     }
 
     public List<StockHoldChangeCninfo> stockHoldChangeCninfo() {
@@ -160,19 +113,31 @@ public class AKShareService {
     }
 
     public List<StockFhpsEm> stockFhpsEm(String date) {
-        return executeGet(akshareAddress + "/api/public/stock_fhps_em?date=" + date, new TypeReference<>() {});
+        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_fhps_em")
+                .newBuilder()
+                .addQueryParameter("date", date);
+        return executeGet(builder.build(), new TypeReference<>() {});
     }
 
     public List<StockFhpsDetailEm> stockFhpsDetailEm(String symbol) {
-        return executeGet(akshareAddress + "/api/public/stock_fhps_detail_em?symbol=" + symbol, new TypeReference<>() {});
+        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_fhps_detail_em")
+                .newBuilder()
+                .addQueryParameter("symbol", symbol);
+        return executeGet(builder.build(), new TypeReference<>() {});
     }
 
     public List<StockFhpsDetailThs> stockFhpsDetailThs(String symbol) {
-        return executeGet(akshareAddress + "/api/public/stock_fhps_detail_ths?symbol=" + symbol, new TypeReference<>() {});
+        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_fhps_detail_ths")
+                .newBuilder()
+                .addQueryParameter("symbol", symbol);
+        return executeGet(builder.build(), new TypeReference<>() {});
     }
 
     public List<StockBoardIndustryConsEm> stockBoardIndustryConsEm(String symbol) {
-        return executeGet(akshareAddress + "/api/public/stock_board_industry_cons_em?symbol=" + symbol, new TypeReference<>() {});
+        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_board_industry_cons_em")
+                .newBuilder()
+                .addQueryParameter("symbol", symbol);
+        return executeGet(builder.build(), new TypeReference<>() {});
     }
 
     public List<StockBoardIndustrySummaryThs> stockBoardIndustrySummaryThs() {
