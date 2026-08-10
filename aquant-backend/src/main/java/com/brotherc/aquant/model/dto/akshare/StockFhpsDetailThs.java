@@ -1,12 +1,11 @@
 package com.brotherc.aquant.model.dto.akshare;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
-/**
- * AKShare stock_fhps_detail_ths (同花顺个股分红派息详情) DTO
- */
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class StockFhpsDetailThs {
 
     @JsonProperty("报告期")

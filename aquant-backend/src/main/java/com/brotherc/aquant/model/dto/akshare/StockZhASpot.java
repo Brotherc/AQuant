@@ -1,10 +1,12 @@
 package com.brotherc.aquant.model.dto.akshare;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
 import java.math.BigDecimal;
 
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class StockZhASpot {
 
     private String 代码;

@@ -1,5 +1,6 @@
 package com.brotherc.aquant.model.dto.akshare;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -8,17 +9,12 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class StockInfoSzDelist {
 
-    /**
-     * 证券代码
-     */
     @JsonProperty("证券代码")
     private String stockCode;
 
-    /**
-     * 证券简称
-     */
     @JsonProperty("证券简称")
     private String stockName;
 
