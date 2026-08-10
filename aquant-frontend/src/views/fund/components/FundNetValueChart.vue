@@ -42,7 +42,7 @@ const calculateMA = (dayCount: number, data: number[]) => {
     }
     let sum = 0;
     for (let j = 0; j < dayCount; j++) {
-      sum += data[i - j];
+      sum += data[i - j] ?? 0;
     }
     result.push(Number((sum / dayCount).toFixed(4)));
   }
@@ -156,11 +156,13 @@ const renderChart = (data: StockFundNetValue[]) => {
     const validDates = dates.filter(Boolean);
     if (validDates.length > 0) {
       const latestStr = validDates[validDates.length - 1];
+      if (!latestStr) return;
       const latestDate = new Date(latestStr);
       if (!isNaN(latestDate.getTime())) {
         const oneYearAgo = new Date(latestDate);
         oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
         const oneYearAgoStr = oneYearAgo.toISOString().split('T')[0];
+        if (!oneYearAgoStr) return;
         
         const idx = dates.findIndex(d => d && d >= oneYearAgoStr);
         if (idx !== -1 && idx < dates.length) {

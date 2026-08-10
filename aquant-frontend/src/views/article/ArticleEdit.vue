@@ -90,8 +90,7 @@ import {
   getArticleDetail,
   createArticle,
   updateArticle,
-  type ArticleCreateReqVO,
-  type ArticleUpdateReqVO
+  type ArticleCreateReqVO
 } from '@/api/article';
 import TiptapEditor from '@/components/TiptapEditor.vue';
 
@@ -102,7 +101,7 @@ const router = useRouter();
 // 状态
 const loading = ref(false);
 const submitting = ref(false);
-const formData = reactive<ArticleCreateReqVO & { id?: number }>({
+const formData = reactive<ArticleCreateReqVO & { id?: number; visibility: number }>({
   title: '',
   content: '',
   visibility: 0

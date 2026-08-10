@@ -115,18 +115,18 @@
       <div class="group-section-sort-row" v-if="(groupStocks[group.id] || []).length > 0">
         <div class="sort-options">
           <span class="ctrl-label">排序：</span>
-          <span class="ctrl-item" :class="{ active: groupUiState[group.id].sortKey === 'default' }" @click="handleSortChange(group.id, 'default')">默认</span>
-          <span class="ctrl-item" :class="{ active: groupUiState[group.id].sortKey === 'latestPrice' }" @click="handleSortChange(group.id, 'latestPrice')">
-            最新价 <caret-up-outlined v-if="groupUiState[group.id].sortKey === 'latestPrice' && groupUiState[group.id].sortOrder === 'asc'"/><caret-down-outlined v-else />
+          <span class="ctrl-item" :class="{ active: getUiState(group.id).sortKey === 'default' }" @click="handleSortChange(group.id, 'default')">默认</span>
+          <span class="ctrl-item" :class="{ active: getUiState(group.id).sortKey === 'latestPrice' }" @click="handleSortChange(group.id, 'latestPrice')">
+            最新价 <caret-up-outlined v-if="getUiState(group.id).sortKey === 'latestPrice' && getUiState(group.id).sortOrder === 'asc'"/><caret-down-outlined v-else />
           </span>
-          <span class="ctrl-item" :class="{ active: groupUiState[group.id].sortKey === 'changePercent' }" @click="handleSortChange(group.id, 'changePercent')">
-            涨跌幅 <caret-up-outlined v-if="groupUiState[group.id].sortKey === 'changePercent' && groupUiState[group.id].sortOrder === 'asc'"/><caret-down-outlined v-else />
+          <span class="ctrl-item" :class="{ active: getUiState(group.id).sortKey === 'changePercent' }" @click="handleSortChange(group.id, 'changePercent')">
+            涨跌幅 <caret-up-outlined v-if="getUiState(group.id).sortKey === 'changePercent' && getUiState(group.id).sortOrder === 'asc'"/><caret-down-outlined v-else />
           </span>
-          <span class="ctrl-item" :class="{ active: groupUiState[group.id].sortKey === 'pe' }" @click="handleSortChange(group.id, 'pe')">
-            PE <caret-up-outlined v-if="groupUiState[group.id].sortKey === 'pe' && groupUiState[group.id].sortOrder === 'asc'"/><caret-down-outlined v-else />
+          <span class="ctrl-item" :class="{ active: getUiState(group.id).sortKey === 'pe' }" @click="handleSortChange(group.id, 'pe')">
+            PE <caret-up-outlined v-if="getUiState(group.id).sortKey === 'pe' && getUiState(group.id).sortOrder === 'asc'"/><caret-down-outlined v-else />
           </span>
-          <span class="ctrl-item" :class="{ active: groupUiState[group.id].sortKey === 'roe' }" @click="handleSortChange(group.id, 'roe')">
-            ROE <caret-up-outlined v-if="groupUiState[group.id].sortKey === 'roe' && groupUiState[group.id].sortOrder === 'asc'"/><caret-down-outlined v-else />
+          <span class="ctrl-item" :class="{ active: getUiState(group.id).sortKey === 'roe' }" @click="handleSortChange(group.id, 'roe')">
+            ROE <caret-up-outlined v-if="getUiState(group.id).sortKey === 'roe' && getUiState(group.id).sortOrder === 'asc'"/><caret-down-outlined v-else />
           </span>
         </div>
       </div>
@@ -174,15 +174,15 @@
                             移至最前
                           </a-menu-item>
                           <a-menu-item
-                            :disabled="groupUiState[group.id].sortKey !== 'default' || isFirstInGroup(group.id, stock.stockCode)"
-                            :title="groupUiState[group.id].sortKey !== 'default' ? '请先切换到默认排序以进行手动排序' : ''"
+                            :disabled="getUiState(group.id).sortKey !== 'default' || isFirstInGroup(group.id, stock.stockCode)"
+                            :title="getUiState(group.id).sortKey !== 'default' ? '请先切换到默认排序以进行手动排序' : ''"
                             @click="handleMove(group.id, stock.stockCode, 'up')"
                           >
                             往前移
                           </a-menu-item>
                           <a-menu-item
-                            :disabled="groupUiState[group.id].sortKey !== 'default' || isLastInGroup(group.id, stock.stockCode)"
-                            :title="groupUiState[group.id].sortKey !== 'default' ? '请先切换到默认排序以进行手动排序' : ''"
+                            :disabled="getUiState(group.id).sortKey !== 'default' || isLastInGroup(group.id, stock.stockCode)"
+                            :title="getUiState(group.id).sortKey !== 'default' ? '请先切换到默认排序以进行手动排序' : ''"
                             @click="handleMove(group.id, stock.stockCode, 'down')"
                           >
                             往后移
@@ -424,17 +424,14 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
-  CloseOutlined,
   PlusOutlined,
   CaretUpOutlined,
   CaretDownOutlined,
   SearchOutlined,
   EllipsisOutlined,
-  EditOutlined,
   BellOutlined,
   BellFilled,
-  QuestionCircleOutlined,
-  CloseCircleFilled
+  QuestionCircleOutlined
 } from '@ant-design/icons-vue';
 import MiniKlineChart from './components/MiniKlineChart.vue';
 import StockDetailView from './components/StockDetailView.vue';
@@ -491,6 +488,11 @@ const ensureUiState = (groupId: number) => {
       sortOrder: 'desc'
     };
   }
+};
+
+const getUiState = (groupId: number): GroupUiState => {
+  ensureUiState(groupId);
+  return groupUiState[groupId]!;
 };
 
 /** 分组区块 DOM 引用（用于滚动定位与 IntersectionObserver） */
@@ -561,7 +563,7 @@ const scheduleActiveGroupUpdate = () => {
 /**
  * 第一次出现在视口时：触发懒加载 + 更新 activeGroupId
  */
-const observeGroupSection = (groupId: number, el: HTMLElement) => {
+const observeGroupSection = (_groupId: number, el: HTMLElement) => {
   if (!intersectionObserver) return;
   intersectionObserver.observe(el);
 };
@@ -680,8 +682,7 @@ const handleExecuteMoveGroup = async () => {
 
 // 排序处理
 const handleSortChange = (groupId: number, key: string) => {
-  ensureUiState(groupId);
-  const state = groupUiState[groupId];
+  const state = getUiState(groupId);
   if (key === 'default') {
     state.sortKey = 'default';
     return;
@@ -695,8 +696,7 @@ const handleSortChange = (groupId: number, key: string) => {
 };
 
 const getSortedStocks = (groupId: number): WatchlistStockVO[] => {
-  ensureUiState(groupId);
-  const state = groupUiState[groupId];
+  const state = getUiState(groupId);
   let result = groupStocks[groupId] || [];
 
   if (globalSearchQuery.value) {

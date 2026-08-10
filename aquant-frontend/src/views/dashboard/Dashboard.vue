@@ -220,9 +220,6 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import * as echarts from 'echarts';
 import {
-  TransactionOutlined,
-  RiseOutlined,
-  FallOutlined,
   SyncOutlined,
   InfoCircleOutlined,
   PlusOutlined,
@@ -301,23 +298,6 @@ const formatAmount = (val: number | null | undefined): string => {
     return (val / 1e4).toFixed(2) + ' 万';
   }
   return val.toFixed(2) + ' 元';
-};
-
-const calcRiseRatio = (rise?: number | null, fall?: number | null): number => {
-  const r = rise || 0;
-  const f = fall || 0;
-  const total = r + f;
-  if (total === 0) return 50;
-  return Math.round((r / total) * 100);
-};
-
-const getTempColor = (temp?: number | null): string => {
-  const t = temp ?? 50;
-  if (t >= 80) return 'red';
-  if (t >= 60) return 'orange';
-  if (t >= 40) return 'blue';
-  if (t >= 20) return 'cyan';
-  return 'green';
 };
 
 const getSparklinePath = (prices?: number[]): string => {

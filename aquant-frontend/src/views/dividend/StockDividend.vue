@@ -66,7 +66,7 @@
             :custom-row="customRow"
             :row-class-name="rowClassName"
           >
-            <template #bodyCell="{ column, text, record }">
+            <template #bodyCell="{ column, text }">
               <template v-if="column.dataIndex === 'stockCode'">
                 <a-tag class="stock-code-tag">{{ text }}</a-tag>
               </template>

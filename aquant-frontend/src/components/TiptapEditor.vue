@@ -156,7 +156,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue';
+import { watch, onBeforeUnmount, computed } from 'vue';
 import { useEditor, EditorContent } from '@tiptap/vue-3';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -249,7 +249,7 @@ watch(
     if (!editor.value) return;
     const isSame = editor.value.getHTML() === value;
     if (isSame) return;
-    editor.value.commands.setContent(value, false);
+    editor.value.commands.setContent(value, { emitUpdate: false });
   }
 );
 

@@ -55,7 +55,7 @@
             <template #actions v-if="isMyArticles">
               <a-select
                 :value="item.visibility"
-                @change="(value) => handleVisibilityChange(item.id, value)"
+                @change="handleVisibilitySelectChange(item.id, $event)"
                 size="small"
                 style="width: 90px"
               >
@@ -95,13 +95,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, onUnmounted, nextTick } from 'vue';
+import { ref, onMounted, watch, onUnmounted, nextTick } from 'vue';
 import { message } from 'ant-design-vue';
 import { useRouter, useRoute } from 'vue-router';
 import {
   PlusOutlined,
   CalendarOutlined,
-  EditOutlined,
   UserOutlined,
   SearchOutlined
 } from '@ant-design/icons-vue';
@@ -207,7 +206,7 @@ const setupObserver = () => {
   if (loadMoreTrigger.value) {
     observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore.value && !loading.value) {
+        if (entries[0]?.isIntersecting && hasMore.value && !loading.value) {
           loadMore();
         }
       },
@@ -260,6 +259,10 @@ const handleDelete = async (id: number) => {
     console.error('删除文章失败:', error);
     message.error('删除失败');
   }
+};
+
+const handleVisibilitySelectChange = (articleId: number, value: unknown) => {
+  handleVisibilityChange(articleId, Number(value));
 };
 
 // 修改文章可见性

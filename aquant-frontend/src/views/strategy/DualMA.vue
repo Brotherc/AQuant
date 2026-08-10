@@ -269,7 +269,7 @@
 
 <script lang="ts" setup>
 import { ref, reactive, onMounted, computed } from 'vue';
-import { getDualMAPage, getDualMABacktestPage, type StockTradeSignalVO } from '@/api/stock';
+import { getDualMAPage, getDualMABacktestPage, type StockTradeBacktestVO, type StockTradeSignalVO } from '@/api/stock';
 import { getWatchlistGroups, type WatchlistGroupVO } from '@/api/watchlist';
 import StockHistoryChart from '@/views/stock-data/components/StockHistoryChart.vue';
 import { InfoCircleOutlined } from '@ant-design/icons-vue';
@@ -329,25 +329,6 @@ const currentStockName = ref('');
 
 // 排序状态
 const sortState = ref<string[]>([]);
-
-const pageModeMeta = computed(() => {
-  if (analysisMode.value === 'signal') {
-    return {
-      workbenchTitle: '信号筛选工作台',
-      workbenchHint: '按市场、代码、自选分组与均线参数组合筛选当日交叉信号。',
-      resultTitle: '实时信号结果',
-      resultHint: '聚焦今日发生交叉的标的，便于快速联动行情和自选观察。',
-    };
-  }
-
-  return {
-    workbenchTitle: '回测参数工作台',
-    workbenchHint: '固定两行筛选结构，用市场、标的范围和参数组合验证历史策略表现。',
-    resultTitle: '历史回测结果',
-    resultHint: '优先结合累计收益率、交易次数、胜率与显著性综合判断策略质量。',
-  };
-});
-const resultMetaLabel = computed(() => analysisMode.value === 'backtest' ? '默认排序：累计收益率' : '今日交叉扫描');
 
 const columns = computed(() => {
   const baseColumns = [
@@ -438,7 +419,7 @@ const fetchData = async () => {
       dataSource.value = responseData.data.content;
       pagination.total = responseData.data.totalElements;
       backtestLastTime.value = analysisMode.value === 'backtest'
-        ? responseData.data.content.find((item: any) => item.lastTime)?.lastTime
+        ? (responseData.data.content as StockTradeBacktestVO[]).find(item => item.lastTime)?.lastTime
         : undefined;
     }
   } catch (error) {

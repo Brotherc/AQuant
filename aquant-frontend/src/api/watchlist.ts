@@ -18,6 +18,7 @@ export interface WatchlistStockVO {
     pe?: number;
     peg?: number;
     roe?: number;
+    hasNotification?: boolean;
     recentDividends?: WatchlistDividendVO[];
 }
 
