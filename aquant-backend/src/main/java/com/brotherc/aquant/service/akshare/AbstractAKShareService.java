@@ -20,6 +20,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public abstract class AbstractAKShareService {
 
+    protected static final String SYMBOL = "symbol";
+
     @Value("${akshare-address}")
     protected String akshareAddress;
 

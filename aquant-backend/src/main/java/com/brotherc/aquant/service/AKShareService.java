@@ -29,31 +29,35 @@ public class AKShareService extends AbstractAKShareService {
     }
 
     public List<StockZhIndexDaily> stockZhIndexDaily(String symbol) {
-        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_zh_index_daily")
+        HttpUrl httpUrl = HttpUrl.get(akshareAddress + "/api/public/stock_zh_index_daily")
                 .newBuilder()
-                .addQueryParameter("symbol", symbol);
-        return executeGet(builder.build(), new TypeReference<>() {});
+                .addQueryParameter(SYMBOL, symbol)
+                .build();
+        return executeGet(httpUrl, new TypeReference<>() {});
     }
 
     public List<StockZhValuationComparisonEm> stockZhValuationComparisonEm(String symbol) {
-        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_zh_valuation_comparison_em")
+        HttpUrl httpUrl = HttpUrl.get(akshareAddress + "/api/public/stock_zh_valuation_comparison_em")
                 .newBuilder()
-                .addQueryParameter("symbol", symbol.toUpperCase());
-        return executeGet(builder.build(), new TypeReference<>() {});
+                .addQueryParameter(SYMBOL, symbol.toUpperCase())
+                .build();
+        return executeGet(httpUrl, new TypeReference<>() {});
     }
 
     public List<StockZhGrowthComparisonEm> stockZhGrowthComparisonEm(String symbol) {
-        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_zh_growth_comparison_em")
+        HttpUrl httpUrl = HttpUrl.get(akshareAddress + "/api/public/stock_zh_growth_comparison_em")
                 .newBuilder()
-                .addQueryParameter("symbol", symbol.toUpperCase());
-        return executeGet(builder.build(), new TypeReference<>() {});
+                .addQueryParameter(SYMBOL, symbol.toUpperCase())
+                .build();
+        return executeGet(httpUrl, new TypeReference<>() {});
     }
 
     public List<StockZhDupontComparisonEm> stockZhDupontComparisonEm(String symbol) {
-        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_zh_dupont_comparison_em")
+        HttpUrl httpUrl = HttpUrl.get(akshareAddress + "/api/public/stock_zh_dupont_comparison_em")
                 .newBuilder()
-                .addQueryParameter("symbol", symbol.toUpperCase());
-        return executeGet(builder.build(), new TypeReference<>() {});
+                .addQueryParameter(SYMBOL, symbol.toUpperCase())
+                .build();
+        return executeGet(httpUrl, new TypeReference<>() {});
     }
 
     /**
@@ -66,9 +70,9 @@ public class AKShareService extends AbstractAKShareService {
      * @return 历史行情日频率数据
      */
     public List<StockZhADaily> stockZhADaily(String symbol, String startDate, String endDate, String adjust) {
-        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_zh_a_daily")
+        HttpUrl.Builder builder = HttpUrl.get(akshareAddress + "/api/public/stock_zh_a_daily")
                 .newBuilder()
-                .addQueryParameter("symbol", symbol);
+                .addQueryParameter(SYMBOL, symbol);
 
         if (StringUtils.isNotBlank(startDate)) {
             builder.addQueryParameter("start_date", startDate);
@@ -92,10 +96,11 @@ public class AKShareService extends AbstractAKShareService {
      * @return A股上市公司业绩报表数据
      */
     public List<StockYjbbEm> stockYjbbEm(String date) {
-        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_yjbb_em")
+        HttpUrl httpUrl = HttpUrl.get(akshareAddress + "/api/public/stock_yjbb_em")
                 .newBuilder()
-                .addQueryParameter("date", date);
-        return executeGet(builder.build(), new TypeReference<>() {});
+                .addQueryParameter("date", date)
+                .build();
+        return executeGet(httpUrl, new TypeReference<>() {});
     }
 
     public List<StockHoldChangeCninfo> stockHoldChangeCninfo() {
@@ -103,41 +108,38 @@ public class AKShareService extends AbstractAKShareService {
     }
 
     public List<StockHoldChangeCninfo> stockHoldChangeCninfo(String symbol) {
-        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_hold_change_cninfo")
+        HttpUrl.Builder builder = HttpUrl.get(akshareAddress + "/api/public/stock_hold_change_cninfo")
                 .newBuilder();
+
         if (StringUtils.isNotBlank(symbol)) {
-            builder.addQueryParameter("symbol", symbol);
+            builder.addQueryParameter(SYMBOL, symbol);
         }
 
         return executeGet(builder.build(), new TypeReference<>() {});
     }
 
     public List<StockFhpsEm> stockFhpsEm(String date) {
-        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_fhps_em")
+        HttpUrl httpUrl = HttpUrl.get(akshareAddress + "/api/public/stock_fhps_em")
                 .newBuilder()
-                .addQueryParameter("date", date);
-        return executeGet(builder.build(), new TypeReference<>() {});
+                .addQueryParameter("date", date)
+                .build();
+        return executeGet(httpUrl, new TypeReference<>() {});
     }
 
     public List<StockFhpsDetailEm> stockFhpsDetailEm(String symbol) {
-        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_fhps_detail_em")
+        HttpUrl httpUrl = HttpUrl.get(akshareAddress + "/api/public/stock_fhps_detail_em")
                 .newBuilder()
-                .addQueryParameter("symbol", symbol);
-        return executeGet(builder.build(), new TypeReference<>() {});
+                .addQueryParameter(SYMBOL, symbol)
+                .build();
+        return executeGet(httpUrl, new TypeReference<>() {});
     }
 
     public List<StockFhpsDetailThs> stockFhpsDetailThs(String symbol) {
-        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_fhps_detail_ths")
+        HttpUrl httpUrl = HttpUrl.get(akshareAddress + "/api/public/stock_fhps_detail_ths")
                 .newBuilder()
-                .addQueryParameter("symbol", symbol);
-        return executeGet(builder.build(), new TypeReference<>() {});
-    }
-
-    public List<StockBoardIndustryConsEm> stockBoardIndustryConsEm(String symbol) {
-        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_board_industry_cons_em")
-                .newBuilder()
-                .addQueryParameter("symbol", symbol);
-        return executeGet(builder.build(), new TypeReference<>() {});
+                .addQueryParameter(SYMBOL, symbol)
+                .build();
+        return executeGet(httpUrl, new TypeReference<>() {});
     }
 
     public List<StockBoardIndustrySummaryThs> stockBoardIndustrySummaryThs() {
@@ -145,9 +147,9 @@ public class AKShareService extends AbstractAKShareService {
     }
 
     public List<StockBoardIndustryIndexThs> stockBoardIndustryIndexThs(String symbol, String startDate, String endDate) {
-        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_board_industry_index_ths")
+        HttpUrl.Builder builder = HttpUrl.get(akshareAddress + "/api/public/stock_board_industry_index_ths")
                 .newBuilder()
-                .addQueryParameter("symbol", symbol);
+                .addQueryParameter(SYMBOL, symbol);
 
         if (StringUtils.isNotBlank(startDate)) {
             builder.addQueryParameter("start_date", startDate);
@@ -160,18 +162,18 @@ public class AKShareService extends AbstractAKShareService {
     }
 
     public List<FundNameEm> fundNameEm() {
-        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/fund_name_em")
-                .newBuilder();
-
-        return executeGet(builder.build(), new TypeReference<>() {});
+        HttpUrl httpUrl = HttpUrl.get(akshareAddress + "/api/public/fund_name_em")
+                .newBuilder()
+                .build();
+        return executeGet(httpUrl, new TypeReference<>() {});
     }
 
     public List<FundOpenFundInfoEm> fundOpenFundInfoEm(String symbol, String indicator, String period) {
-        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/fund_open_fund_info_em")
+        HttpUrl.Builder builder = HttpUrl.get(akshareAddress + "/api/public/fund_open_fund_info_em")
                 .newBuilder();
 
         if (StringUtils.isNotBlank(symbol)) {
-            builder.addQueryParameter("symbol", symbol);
+            builder.addQueryParameter(SYMBOL, symbol);
         }
 
         if (StringUtils.isNotBlank(indicator)) {
@@ -186,35 +188,35 @@ public class AKShareService extends AbstractAKShareService {
     }
 
     public List<FundPurchaseEm> fundPurchaseEm() {
-        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/fund_purchase_em")
-                .newBuilder();
-
-        return executeGet(builder.build(), new TypeReference<>() {});
+        HttpUrl httpUrl = HttpUrl.get(akshareAddress + "/api/public/fund_purchase_em")
+                .newBuilder()
+                .build();
+        return executeGet(httpUrl, new TypeReference<>() {});
     }
 
     public List<FundPortfolioHoldEm> fundPortfolioHoldEm(String symbol, String date) {
-        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/fund_portfolio_hold_em")
+        HttpUrl httpUrl = HttpUrl.get(akshareAddress + "/api/public/fund_portfolio_hold_em")
                 .newBuilder()
-                .addQueryParameter("symbol", symbol)
-                .addQueryParameter("date", date);
-
-        return executeGet(builder.build(), new TypeReference<>() {});
+                .addQueryParameter(SYMBOL, symbol)
+                .addQueryParameter("date", date)
+                .build();
+        return executeGet(httpUrl, new TypeReference<>() {});
     }
 
     public List<StockInfoSzDelist> stockInfoSzDelist(String symbol) {
-        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_info_sz_delist")
+        HttpUrl httpUrl = HttpUrl.get(akshareAddress + "/api/public/stock_info_sz_delist")
                 .newBuilder()
-                .addQueryParameter("symbol", symbol);
-
-        return executeGet(builder.build(), new TypeReference<>() {});
+                .addQueryParameter(SYMBOL, symbol)
+                .build();
+        return executeGet(httpUrl, new TypeReference<>() {});
     }
 
     public List<StockInfoShDelist> stockInfoShDelist(String symbol) {
-        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_info_sh_delist")
+        HttpUrl httpUrl = HttpUrl.get(akshareAddress + "/api/public/stock_info_sh_delist")
                 .newBuilder()
-                .addQueryParameter("symbol", symbol);
-
-        return executeGet(builder.build(), new TypeReference<>() {});
+                .addQueryParameter(SYMBOL, symbol)
+                .build();
+        return executeGet(httpUrl, new TypeReference<>() {});
     }
 
 }
