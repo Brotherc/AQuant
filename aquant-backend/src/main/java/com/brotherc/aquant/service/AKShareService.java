@@ -14,11 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 
 @Slf4j
 @Service
@@ -31,153 +27,83 @@ public class AKShareService {
     private final ObjectMapper objectMapper;
     private final OkHttpClient okHttpClient;
 
-    public List<StockZhASpot> stockZhASpot() {
-        Request request = new Request.Builder()
-                .url(akshareAddress + "/api/public/stock_zh_a_spot")
-                .get()
-                .build();
+    /**
+     * 从 Request 的 URL 中自动解析并截取 API 名称（取 Path 的最后一个 segment，如 stock_zh_a_spot）
+     */
+    private String extractApiName(Request request) {
+        List<String> segments = request.url().pathSegments();
+        if (segments != null && !segments.isEmpty()) {
+            return segments.get(segments.size() - 1);
+        }
+        return request.url().encodedPath();
+    }
 
+    /**
+     * 通用 HTTP 请求处理：执行 Request 并自动转为目标 Java 对象
+     */
+    private <T> T executeRequest(Request request, TypeReference<T> typeReference) {
+        String apiName = extractApiName(request);
         try (Response response = okHttpClient.newCall(request).execute()) {
             if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("stock_zh_a_spot请求失败");
+                log.info("{} 失败响应: {}", apiName, response);
+                throw new RuntimeException(apiName + "请求失败");
             }
-
-            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
+            return objectMapper.readValue(response.body().string(), typeReference);
         } catch (IOException e) {
-            log.error("stock_zh_a_hist请求失败", e);
-            throw new RuntimeException("stock_zh_a_hist请求失败");
+            log.error("{} 请求失败", apiName, e);
+            throw new RuntimeException(apiName + "请求失败", e);
         }
+    }
+
+    /**
+     * 通用 GET 请求重载（接收 String URL）
+     */
+    private <T> T executeGet(String url, TypeReference<T> typeReference) {
+        Request request = new Request.Builder()
+                .url(url)
+                .get()
+                .build();
+        return executeRequest(request, typeReference);
+    }
+
+    /**
+     * 通用 GET 请求重载（接收 HttpUrl 构造器）
+     */
+    private <T> T executeGet(HttpUrl httpUrl, TypeReference<T> typeReference) {
+        Request request = new Request.Builder()
+                .url(httpUrl)
+                .get()
+                .build();
+        return executeRequest(request, typeReference);
+    }
+
+    public List<StockZhASpot> stockZhASpot() {
+        return executeGet(akshareAddress + "/api/public/stock_zh_a_spot", new TypeReference<>() {});
     }
 
     public List<StockZhIndexSpotSina> stockZhIndexSpotSina() {
-        Request request = new Request.Builder()
-                .url(akshareAddress + "/api/public/stock_zh_index_spot_sina")
-                .get()
-                .build();
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("stock_zh_index_spot_sina请求失败");
-            }
-
-            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("stock_zh_index_spot_sina请求失败", e);
-            throw new RuntimeException("stock_zh_index_spot_sina请求失败");
-        }
+        return executeGet(akshareAddress + "/api/public/stock_zh_index_spot_sina", new TypeReference<>() {});
     }
 
     public List<StockZhIndexDaily> stockZhIndexDaily(String symbol) {
-        Request request = new Request.Builder()
-                .url(akshareAddress + "/api/public/stock_zh_index_daily?symbol=" + symbol)
-                .get()
-                .build();
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("stock_zh_index_daily请求失败");
-            }
-
-            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("stock_zh_index_daily请求失败", e);
-            throw new RuntimeException("stock_zh_index_daily请求失败");
-        }
+        return executeGet(akshareAddress + "/api/public/stock_zh_index_daily?symbol=" + symbol, new TypeReference<>() {});
     }
 
     public List<StockZhValuationComparisonEm> stockZhValuationComparisonEm(String symbol) {
-        Request request = new Request.Builder()
-                .url(akshareAddress + "/api/public/stock_zh_valuation_comparison_em?symbol=" + symbol.toUpperCase())
-                .get()
-                .build();
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("stock_zh_valuation_comparison_em请求失败");
-            }
-
-            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("stock_zh_valuation_comparison_em请求失败", e);
-            throw new RuntimeException("stock_zh_valuation_comparison_em请求失败");
-        }
+        return executeGet(akshareAddress + "/api/public/stock_zh_valuation_comparison_em?symbol=" + symbol.toUpperCase(), new TypeReference<>() {});
     }
 
     public List<StockZhGrowthComparisonEm> stockZhGrowthComparisonEm(String symbol) {
-        Request request = new Request.Builder()
-                .url(akshareAddress + "/api/public/stock_zh_growth_comparison_em?symbol=" + symbol.toUpperCase())
-                .get()
-                .build();
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("stock_zh_growth_comparison_em请求失败");
-            }
-
-            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("stock_zh_growth_comparison_em请求失败", e);
-            throw new RuntimeException("stock_zh_growth_comparison_em请求失败");
-        }
+        return executeGet(akshareAddress + "/api/public/stock_zh_growth_comparison_em?symbol=" + symbol.toUpperCase(), new TypeReference<>() {});
     }
 
     public List<StockZhDupontComparisonEm> stockZhDupontComparisonEm(String symbol) {
-        Request request = new Request.Builder()
-                .url(akshareAddress + "/api/public/stock_zh_dupont_comparison_em?symbol=" + symbol.toUpperCase())
-                .get()
-                .build();
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("stock_zh_dupont_comparison_em请求失败");
-            }
-
-            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("stock_zh_dupont_comparison_em请求失败", e);
-            throw new RuntimeException("stock_zh_dupont_comparison_em请求失败");
-        }
+        return executeGet(akshareAddress + "/api/public/stock_zh_dupont_comparison_em?symbol=" + symbol.toUpperCase(), new TypeReference<>() {});
     }
 
     public List<StockZhAHist> stockZhAHist(String symbol) {
         symbol = symbol.substring(2);
-
-        Request request = new Request.Builder()
-                .url(akshareAddress + "/api/public/stock_zh_a_hist?symbol=" + symbol + "&&adjust=hfq")
-                .get()
-                .build();
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("stock_zh_a_hist请求失败");
-            }
-
-            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("stock_zh_a_hist请求失败", e);
-            throw new RuntimeException("stock_zh_a_hist请求失败");
-        }
+        return executeGet(akshareAddress + "/api/public/stock_zh_a_hist?symbol=" + symbol + "&&adjust=hfq", new TypeReference<>() {});
     }
 
     /**
@@ -204,45 +130,7 @@ public class AKShareService {
             builder.addQueryParameter("adjust", adjust);
         }
 
-        Request request = new Request.Builder()
-                .url(builder.build())
-                .get()
-                .build();
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("stock_zh_a_daily请求失败");
-            }
-
-            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("stock_zh_a_daily请求失败", e);
-            throw new RuntimeException("stock_zh_a_daily请求失败");
-        }
-    }
-
-    public List<StockHistoryDividend> stockHistoryDividend() {
-        Request request = new Request.Builder()
-                .url(akshareAddress + "/api/public/stock_history_dividend")
-                .get()
-                .build();
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("stock_history_dividend请求失败");
-            }
-
-            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("stock_history_dividend请求失败", e);
-            throw new RuntimeException("stock_history_dividend请求失败");
-        }
+        return executeGet(builder.build(), new TypeReference<>() {});
     }
 
     /**
@@ -254,24 +142,7 @@ public class AKShareService {
      * @return A股上市公司业绩报表数据
      */
     public List<StockYjbbEm> stockYjbbEm(String date) {
-        Request request = new Request.Builder()
-                .url(akshareAddress + "/api/public/stock_yjbb_em?date=" + date)
-                .get()
-                .build();
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("stock_yjbb_em请求失败");
-            }
-
-            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("stock_yjbb_em请求失败", e);
-            throw new RuntimeException("stock_yjbb_em请求失败");
-        }
+        return executeGet(akshareAddress + "/api/public/stock_yjbb_em?date=" + date, new TypeReference<>() {});
     }
 
     public List<StockHoldChangeCninfo> stockHoldChangeCninfo() {
@@ -285,215 +156,27 @@ public class AKShareService {
             builder.addQueryParameter("symbol", symbol);
         }
 
-        Request request = new Request.Builder()
-                .url(builder.build())
-                .get()
-                .build();
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("stock_hold_change_cninfo请求失败");
-            }
-
-            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("stock_hold_change_cninfo请求失败", e);
-            throw new RuntimeException("stock_hold_change_cninfo请求失败");
-        }
-    }
-
-
-    public List<StockBoardIndustryNameEm> stockBoardIndustryNameEm() {
-        Request request = new Request.Builder()
-                .url(akshareAddress + "/api/public/stock_board_industry_name_em")
-                .get()
-                .build();
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("stock_board_industry_name_em请求失败");
-            }
-
-            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("stock_board_industry_name_em请求失败", e);
-            throw new RuntimeException("stock_board_industry_name_em请求失败");
-        }
-    }
-
-    public StockBoardIndustrySpotEm stockBoardIndustrySpotEm(String symbol) {
-        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_board_industry_spot_em")
-                .newBuilder()
-                .addQueryParameter("symbol", symbol);
-
-        Request request = new Request.Builder()
-                .url(builder.build())
-                .get()
-                .build();
-
-        List<Map<String, Object>> list;
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("stock_board_industry_spot_em请求失败");
-            }
-
-            list = objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("stock_board_industry_spot_em请求失败", e);
-            throw new RuntimeException("stock_board_industry_spot_em请求失败");
-        }
-
-        return new StockBoardIndustrySpotEm(list);
-    }
-
-    public List<StockBoardIndustryHistEm> stockBoardIndustryHistEm(String symbol, String startDate, String endDate, String adjust) {
-        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_board_industry_hist_em")
-                .newBuilder()
-                .addQueryParameter("symbol", symbol);
-
-        if (StringUtils.isNotBlank(startDate)) {
-            builder.addQueryParameter("start_date", startDate);
-        }
-        if (StringUtils.isNotBlank(endDate)) {
-            builder.addQueryParameter("end_date", endDate);
-        }
-        if (StringUtils.isNotBlank(adjust)) {
-            builder.addQueryParameter("adjust", adjust);
-        }
-
-        Request request = new Request.Builder()
-                .url(builder.build())
-                .get()
-                .build();
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("stock_board_industry_hist_em请求失败");
-            }
-
-            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("stock_board_industry_hist_em请求失败", e);
-            throw new RuntimeException("stock_board_industry_hist_em请求失败");
-        }
+        return executeGet(builder.build(), new TypeReference<>() {});
     }
 
     public List<StockFhpsEm> stockFhpsEm(String date) {
-        Request request = new Request.Builder()
-                .url(akshareAddress + "/api/public/stock_fhps_em?date=" + date)
-                .get()
-                .build();
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("stock_fhps_em请求失败");
-            }
-
-            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("stock_fhps_em请求失败", e);
-            throw new RuntimeException("stock_fhps_em请求失败");
-        }
+        return executeGet(akshareAddress + "/api/public/stock_fhps_em?date=" + date, new TypeReference<>() {});
     }
 
     public List<StockFhpsDetailEm> stockFhpsDetailEm(String symbol) {
-        Request request = new Request.Builder()
-                .url(akshareAddress + "/api/public/stock_fhps_detail_em?symbol=" + symbol)
-                .get()
-                .build();
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("stock_fhps_detail_em请求失败");
-            }
-
-            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("stock_fhps_detail_em请求失败", e);
-            throw new RuntimeException("stock_fhps_detail_em请求失败");
-        }
+        return executeGet(akshareAddress + "/api/public/stock_fhps_detail_em?symbol=" + symbol, new TypeReference<>() {});
     }
 
     public List<StockFhpsDetailThs> stockFhpsDetailThs(String symbol) {
-        Request request = new Request.Builder()
-                .url(akshareAddress + "/api/public/stock_fhps_detail_ths?symbol=" + symbol)
-                .get()
-                .build();
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("stock_fhps_detail_ths请求失败");
-            }
-
-            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("stock_fhps_detail_ths请求失败", e);
-            throw new RuntimeException("stock_fhps_detail_ths请求失败");
-        }
+        return executeGet(akshareAddress + "/api/public/stock_fhps_detail_ths?symbol=" + symbol, new TypeReference<>() {});
     }
 
     public List<StockBoardIndustryConsEm> stockBoardIndustryConsEm(String symbol) {
-        Request request = new Request.Builder()
-                .url(akshareAddress + "/api/public/stock_board_industry_cons_em?symbol=" + symbol)
-                .get()
-                .build();
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("stock_board_industry_cons_em请求失败");
-            }
-
-            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("stock_board_industry_cons_em请求失败", e);
-            throw new RuntimeException("stock_board_industry_cons_em请求失败");
-        }
+        return executeGet(akshareAddress + "/api/public/stock_board_industry_cons_em?symbol=" + symbol, new TypeReference<>() {});
     }
 
     public List<StockBoardIndustrySummaryThs> stockBoardIndustrySummaryThs() {
-        Request request = new Request.Builder()
-                .url(akshareAddress + "/api/public/stock_board_industry_summary_ths")
-                .get()
-                .build();
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("stock_board_industry_summary_ths请求失败");
-            }
-
-            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("stock_board_industry_summary_ths请求失败", e);
-            throw new RuntimeException("stock_board_industry_summary_ths请求失败");
-        }
+        return executeGet(akshareAddress + "/api/public/stock_board_industry_summary_ths", new TypeReference<>() {});
     }
 
     public List<StockBoardIndustryIndexThs> stockBoardIndustryIndexThs(String symbol, String startDate, String endDate) {
@@ -508,85 +191,14 @@ public class AKShareService {
             builder.addQueryParameter("end_date", endDate);
         }
 
-        Request request = new Request.Builder()
-                .url(builder.build())
-                .get()
-                .build();
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("stock_board_industry_index_ths请求失败");
-            }
-
-            return objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("stock_board_industry_index_ths请求失败", e);
-            throw new RuntimeException("stock_board_industry_index_ths请求失败");
-        }
-    }
-
-    public StockIndividualInfoEm stockIndividualInfoEm(String symbol, BigDecimal timeout) {
-        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/stock_individual_info_em")
-                .newBuilder()
-                .addQueryParameter("symbol", symbol);
-
-        if (timeout != null) {
-            builder.addQueryParameter("timeout", timeout.toPlainString());
-        }
-
-        Request request = new Request.Builder()
-                .url(builder.build())
-                .get()
-                .build();
-
-        List<Map<String, Object>> list;
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("stock_individual_info_em请求失败");
-            }
-
-            list = objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("stock_individual_info_em请求失败", e);
-            throw new RuntimeException("stock_individual_info_em请求失败");
-        }
-
-        return new StockIndividualInfoEm(list);
+        return executeGet(builder.build(), new TypeReference<>() {});
     }
 
     public List<FundNameEm> fundNameEm() {
         HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/fund_name_em")
                 .newBuilder();
 
-        Request request = new Request.Builder()
-                .url(builder.build())
-                .get()
-                .build();
-
-        List<FundNameEm> list;
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("fund_name_em请求失败");
-            }
-
-            list = objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("fund_name_em请求失败", e);
-            throw new RuntimeException("fund_name_em请求失败");
-        }
-
-        return list;
+        return executeGet(builder.build(), new TypeReference<>() {});
     }
 
     public List<FundOpenFundInfoEm> fundOpenFundInfoEm(String symbol, String indicator, String period) {
@@ -605,170 +217,14 @@ public class AKShareService {
             builder.addQueryParameter("period", period);
         }
 
-        Request request = new Request.Builder()
-                .url(builder.build())
-                .get()
-                .build();
-
-        List<FundOpenFundInfoEm> list;
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("fund_open_fund_info_em请求失败");
-            }
-
-            list = objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("fund_open_fund_info_em请求失败", e);
-            throw new RuntimeException("fund_open_fund_info_em请求失败");
-        }
-
-        return list;
-    }
-
-    public List<FundOpenFundDailyEm> fundOpenFundDailyEm() {
-        HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/fund_open_fund_daily_em")
-                .newBuilder();
-
-        Request request = new Request.Builder()
-                .url(builder.build())
-                .get()
-                .build();
-
-        List<Map<String, String>> list;
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("fund_open_fund_daily_em请求失败");
-            }
-
-            list = objectMapper.readValue(response.body().string(), new TypeReference<List<Map<String, String>>>() {
-            });
-
-        } catch (IOException e) {
-            log.error("fund_open_fund_daily_em请求失败", e);
-            throw new RuntimeException("fund_open_fund_daily_em请求失败");
-        }
-
-        return list.stream().map(map -> {
-            FundOpenFundDailyEm item = new FundOpenFundDailyEm();
-            String fundCodeValue = map.get("基金代码");
-            item.setFundCode(fundCodeValue == null ? null : fundCodeValue.trim());
-
-            String fundNameValue = map.get("基金简称");
-            item.setFundName(fundNameValue == null ? null : fundNameValue.trim());
-
-            String dailyGrowthValue = map.get("日增长值");
-            if (dailyGrowthValue != null) {
-                String text = dailyGrowthValue.trim();
-                if (StringUtils.isNotBlank(text) && !"-".equals(text)) {
-                    try {
-                        item.setDailyGrowthValue(new BigDecimal(text));
-                    } catch (NumberFormatException e) {
-                        log.warn("数值转换失败，value={}", dailyGrowthValue);
-                    }
-                }
-            }
-
-            String dailyGrowthRate = map.get("日增长率");
-            if (dailyGrowthRate != null) {
-                String text = dailyGrowthRate.trim();
-                if (StringUtils.isNotBlank(text) && !"-".equals(text)) {
-                    try {
-                        item.setDailyGrowthRate(new BigDecimal(text));
-                    } catch (NumberFormatException e) {
-                        log.warn("数值转换失败，value={}", dailyGrowthRate);
-                    }
-                }
-            }
-
-            String purchaseStatusValue = map.get("申购状态");
-            item.setPurchaseStatus(purchaseStatusValue == null ? null : purchaseStatusValue.trim());
-
-            String redemptionStatusValue = map.get("赎回状态");
-            item.setRedemptionStatus(redemptionStatusValue == null ? null : redemptionStatusValue.trim());
-
-            String feeValue = map.get("手续费");
-            item.setFee(feeValue == null ? null : feeValue.trim());
-
-            map.keySet().stream()
-                    .map(key -> {
-                        if (key == null || key.length() < 14) {
-                            return null;
-                        }
-                        if (!key.endsWith("-单位净值") && !key.endsWith("-累计净值")) {
-                            return null;
-                        }
-                        try {
-                            return LocalDate.parse(key.substring(0, 10));
-                        } catch (Exception e) {
-                            return null;
-                        }
-                    })
-                    .filter(Objects::nonNull)
-                    .max(LocalDate::compareTo)
-                    .ifPresent(latestDate -> {
-                        String dateText = latestDate.toString();
-
-                        String unitNetValue = map.get(dateText + "-单位净值");
-                        if (unitNetValue != null) {
-                            String text = unitNetValue.trim();
-                            if (StringUtils.isNotBlank(text) && !"-".equals(text)) {
-                                try {
-                                    item.setUnitNetValue(new BigDecimal(text));
-                                } catch (NumberFormatException e) {
-                                    log.warn("数值转换失败，value={}", unitNetValue);
-                                }
-                            }
-                        }
-
-                        String cumulativeNetValue = map.get(dateText + "-累计净值");
-                        if (cumulativeNetValue != null) {
-                            String text = cumulativeNetValue.trim();
-                            if (StringUtils.isNotBlank(text) && !"-".equals(text)) {
-                                try {
-                                    item.setCumulativeNetValue(new BigDecimal(text));
-                                } catch (NumberFormatException e) {
-                                    log.warn("数值转换失败，value={}", cumulativeNetValue);
-                                }
-                            }
-                        }
-                    });
-
-            return item;
-        }).toList();
+        return executeGet(builder.build(), new TypeReference<>() {});
     }
 
     public List<FundPurchaseEm> fundPurchaseEm() {
         HttpUrl.Builder builder = HttpUrl.parse(akshareAddress + "/api/public/fund_purchase_em")
                 .newBuilder();
 
-        Request request = new Request.Builder()
-                .url(builder.build())
-                .get()
-                .build();
-
-        List<FundPurchaseEm> list;
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("fund_purchase_em请求失败");
-            }
-
-            list = objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("fund_purchase_em请求失败", e);
-            throw new RuntimeException("fund_purchase_em请求失败");
-        }
-
-        return list;
+        return executeGet(builder.build(), new TypeReference<>() {});
     }
 
     public List<FundPortfolioHoldEm> fundPortfolioHoldEm(String symbol, String date) {
@@ -777,28 +233,7 @@ public class AKShareService {
                 .addQueryParameter("symbol", symbol)
                 .addQueryParameter("date", date);
 
-        Request request = new Request.Builder()
-                .url(builder.build())
-                .get()
-                .build();
-
-        List<FundPortfolioHoldEm> list;
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("fund_portfolio_hold_em请求失败");
-            }
-
-            list = objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("fund_portfolio_hold_em请求失败", e);
-            throw new RuntimeException("fund_portfolio_hold_em请求失败");
-        }
-
-        return list;
+        return executeGet(builder.build(), new TypeReference<>() {});
     }
 
     public List<StockInfoSzDelist> stockInfoSzDelist(String symbol) {
@@ -806,28 +241,7 @@ public class AKShareService {
                 .newBuilder()
                 .addQueryParameter("symbol", symbol);
 
-        Request request = new Request.Builder()
-                .url(builder.build())
-                .get()
-                .build();
-
-        List<StockInfoSzDelist> list;
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("stock_info_sz_delist请求失败");
-            }
-
-            list = objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("stock_info_sz_delist请求失败", e);
-            throw new RuntimeException("stock_info_sz_delist请求失败");
-        }
-
-        return list;
+        return executeGet(builder.build(), new TypeReference<>() {});
     }
 
     public List<StockInfoShDelist> stockInfoShDelist(String symbol) {
@@ -835,28 +249,7 @@ public class AKShareService {
                 .newBuilder()
                 .addQueryParameter("symbol", symbol);
 
-        Request request = new Request.Builder()
-                .url(builder.build())
-                .get()
-                .build();
-
-        List<StockInfoShDelist> list;
-
-        try (Response response = okHttpClient.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.info("失败响应: {}", response);
-                throw new RuntimeException("stock_info_sh_delist请求失败");
-            }
-
-            list = objectMapper.readValue(response.body().string(), new TypeReference<>() {
-            });
-
-        } catch (IOException e) {
-            log.error("stock_info_sh_delist请求失败", e);
-            throw new RuntimeException("stock_info_sh_delist请求失败");
-        }
-
-        return list;
+        return executeGet(builder.build(), new TypeReference<>() {});
     }
 
 }
