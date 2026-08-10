@@ -1,8 +1,6 @@
 package com.brotherc.aquant.constant;
 
 import java.time.LocalTime;
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class StockSyncConstant {
