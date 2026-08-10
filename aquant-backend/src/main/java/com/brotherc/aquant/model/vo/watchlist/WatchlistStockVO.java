@@ -40,4 +40,25 @@ public class WatchlistStockVO {
     @Schema(description = "是否有通知配置")
     private Boolean hasNotification;
 
+    @Schema(description = "标的类型: STOCK-股票, FUND-基金")
+    private String targetType = "STOCK";
+
+    @Schema(description = "单位净值(基金)")
+    private BigDecimal unitNetValue;
+
+    @Schema(description = "累计净值(基金)")
+    private BigDecimal accumulatedNetValue;
+
+    @Schema(description = "日增长率(%)")
+    private BigDecimal dailyGrowthRate;
+
+    @Schema(description = "净值日期")
+    private String netValueDate;
+
+    @Schema(description = "基金类型")
+    private String fundType;
+
+    @Schema(description = "基金经理")
+    private String fundManager;
+
 }

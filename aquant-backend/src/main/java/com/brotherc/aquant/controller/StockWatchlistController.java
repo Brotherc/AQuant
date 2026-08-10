@@ -5,6 +5,7 @@ import com.brotherc.aquant.model.vo.watchlist.*;
 import com.brotherc.aquant.service.StockWatchlistService;
 import com.brotherc.aquant.utils.UserContext;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,9 +23,10 @@ public class StockWatchlistController {
 
     @Operation(summary = "获取所有自选分组")
     @GetMapping("/group/list")
-    public ResponseDTO<List<WatchlistGroupVO>> getAllGroups() {
+    public ResponseDTO<List<WatchlistGroupVO>> getAllGroups(
+            @Parameter(description = "分组类型: STOCK-股票自选, FUND-基金自选") @RequestParam(required = false) String type) {
         Long userId = UserContext.requireCurrentUserId();
-        return ResponseDTO.success(watchlistService.getAllGroups(userId));
+        return ResponseDTO.success(watchlistService.getAllGroups(userId, type));
     }
 
     @Operation(summary = "创建自选分组")

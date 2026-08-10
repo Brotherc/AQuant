@@ -93,6 +93,7 @@
               <span class="page-breadcrumb-current">{{ currentRouteMeta.child }}</span>
             </a-breadcrumb-item>
           </a-breadcrumb>
+          <div id="page-header-extra"></div>
         </div>
         <router-view />
       </div>
@@ -545,6 +546,9 @@ const handleUpdateEmail = async () => {
 }
 
 .page-context {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 16px;
   padding: 4px 0 2px;
   border-radius: var(--radius-lg);

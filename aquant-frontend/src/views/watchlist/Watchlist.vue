@@ -1,7 +1,15 @@
 <template>
   <div class="watchlist-container">
+    <!-- 穿透/传送资产类型 (股票 / 基金) 切换页签至顶部 [股票数据 / 我的自选] 面包屑行右侧 -->
+    <Teleport to="#page-header-extra" v-if="isMounted">
+      <a-radio-group v-model:value="currentAssetType" button-style="solid" size="small" @change="onAssetTypeChange">
+        <a-radio-button value="STOCK">股票自选</a-radio-button>
+        <a-radio-button value="FUND">基金自选</a-radio-button>
+      </a-radio-group>
+    </Teleport>
+
     <!-- 顶部分组导航与全局过滤 -->
-    <div class="watchlist-sticky-toolbar" v-if="groups.length > 0">
+    <div class="watchlist-sticky-toolbar">
       <div class="group-anchors-header">
         <div class="group-anchors-list" ref="anchorsListEl">
           <template v-for="(group, idx) in visibleGroups" :key="group.id">
@@ -113,7 +121,22 @@
         </div>
       </div>
       <div class="group-section-sort-row" v-if="(groupStocks[group.id] || []).length > 0">
-        <div class="sort-options">
+        <!-- 基金排序选项 -->
+        <div class="sort-options" v-if="currentAssetType === 'FUND'">
+          <span class="ctrl-label">排序：</span>
+          <span class="ctrl-item" :class="{ active: getUiState(group.id).sortKey === 'default' }" @click="handleSortChange(group.id, 'default')">默认</span>
+          <span class="ctrl-item" :class="{ active: getUiState(group.id).sortKey === 'latestPrice' }" @click="handleSortChange(group.id, 'latestPrice')">
+            单位净值 <caret-up-outlined v-if="getUiState(group.id).sortKey === 'latestPrice' && getUiState(group.id).sortOrder === 'asc'"/><caret-down-outlined v-else />
+          </span>
+          <span class="ctrl-item" :class="{ active: getUiState(group.id).sortKey === 'changePercent' }" @click="handleSortChange(group.id, 'changePercent')">
+            日增长率 <caret-up-outlined v-if="getUiState(group.id).sortKey === 'changePercent' && getUiState(group.id).sortOrder === 'asc'"/><caret-down-outlined v-else />
+          </span>
+          <span class="ctrl-item" :class="{ active: getUiState(group.id).sortKey === 'accumulatedNetValue' }" @click="handleSortChange(group.id, 'accumulatedNetValue')">
+            累计净值 <caret-up-outlined v-if="getUiState(group.id).sortKey === 'accumulatedNetValue' && getUiState(group.id).sortOrder === 'asc'"/><caret-down-outlined v-else />
+          </span>
+        </div>
+        <!-- 股票排序选项 -->
+        <div class="sort-options" v-else>
           <span class="ctrl-label">排序：</span>
           <span class="ctrl-item" :class="{ active: getUiState(group.id).sortKey === 'default' }" @click="handleSortChange(group.id, 'default')">默认</span>
           <span class="ctrl-item" :class="{ active: getUiState(group.id).sortKey === 'latestPrice' }" @click="handleSortChange(group.id, 'latestPrice')">
@@ -143,7 +166,11 @@
                 <!-- 头部：代码与名称，移除操作 -->
                 <div class="card-header">
                   <div class="stock-info">
-                    <span class="stock-name">{{ stock.stockName }}</span>
+                    <a-tooltip :title="stock.stockName" placement="topLeft">
+                      <span class="stock-name" :class="{ 'fund-name': currentAssetType === 'FUND' }">
+                        {{ stock.stockName }}
+                      </span>
+                    </a-tooltip>
                     <span class="stock-code">{{ stock.stockCode }}</span>
                   </div>
                   <div class="header-right">
@@ -217,13 +244,18 @@
                   </div>
                 </div>
 
-                <!-- 迷你K线 -->
-                <div class="kline-box">
+                <!-- 迷你K线 (仅股票) -->
+                <div class="kline-box" v-if="currentAssetType === 'STOCK'">
                   <MiniKlineChart :stockCode="stock.stockCode" />
                 </div>
 
-                <!-- 基本面数据 -->
-                <div class="fundamentals">
+                <!-- 迷你净值走势图 (仅基金) -->
+                <div class="kline-box" v-else>
+                  <MiniFundNetValueChart :fundCode="stock.stockCode" />
+                </div>
+
+                <!-- 基本面数据 (股票) -->
+                <div class="fundamentals" v-if="currentAssetType === 'STOCK'">
                   <div class="fund-item">
                     <span class="label">PE</span>
                     <span class="val">{{ stock.pe != null ? stock.pe.toFixed(2) : '-' }}</span>
@@ -238,8 +270,20 @@
                   </div>
                 </div>
 
-                <!-- 分红数据 -->
-                <template v-if="stock.recentDividends && stock.recentDividends.length > 0">
+                <!-- 基金核心指标 (基金) -->
+                <div class="fundamentals" v-else>
+                  <div class="fund-item">
+                    <span class="label">累计净值</span>
+                    <span class="val">{{ stock.accumulatedNetValue != null ? stock.accumulatedNetValue.toFixed(4) : '-' }}</span>
+                  </div>
+                  <div class="fund-item">
+                    <span class="label">净值日期</span>
+                    <span class="val">{{ stock.netValueDate || '-' }}</span>
+                  </div>
+                </div>
+
+                <!-- 分红数据 (仅股票) -->
+                <template v-if="currentAssetType === 'STOCK' && stock.recentDividends && stock.recentDividends.length > 0">
                   <div class="dividends-wrap">
                     <div v-for="(div, idx) in stock.recentDividends" :key="idx" class="dividend-row">
                       <span class="div-date">{{ formatReportDate(div.proposalAnnouncementDate) }}</span>
@@ -250,24 +294,24 @@
               </a-card>
             </div>
           </a-col>
-          <!-- 添加股票的常驻卡片 -->
+          <!-- 添加标的常驻卡片 -->
           <a-col :xs="24" :sm="24" :md="12" :lg="8" :xl="6">
             <a-card hoverable class="add-stock-card" size="small" @click="showAddStockModal(group.id)">
               <plus-outlined class="add-icon" />
-              <div class="add-text">添加股票</div>
+              <div class="add-text">{{ currentAssetType === 'FUND' ? '添加基金' : '添加股票' }}</div>
             </a-card>
           </a-col>
         </a-row>
       </a-spin>
     </div>
 
-    <!-- 新增股票 Modal -->
-    <a-modal v-model:visible="addStockModalVisible" title="添加自选股票" @ok="handleAddStock" :confirmLoading="addLoading">
+    <!-- 新增标的 Modal -->
+    <a-modal v-model:visible="addStockModalVisible" :title="currentAssetType === 'FUND' ? '添加自选基金' : '添加自选股票'" @ok="handleAddStock" :confirmLoading="addLoading">
       <a-form layout="vertical">
-        <a-form-item label="股票代码" required>
+        <a-form-item :label="currentAssetType === 'FUND' ? '基金代码' : '股票代码'" required>
           <a-input
             v-model:value="newStockCode"
-            placeholder="请输入 6 位股票代码，例如 600519"
+            :placeholder="currentAssetType === 'FUND' ? '请输入 6 位基金代码，例如 000001' : '请输入 6 位股票代码，例如 600519'"
             @pressEnter="handleAddStock"
           />
         </a-form-item>
@@ -294,13 +338,14 @@
 
     <a-modal
       v-model:visible="detailVisible"
-      title="股票详情"
-      :width="1000"
+      :title="currentAssetType === 'FUND' ? '基金详情' : '股票详情'"
+      :width="currentAssetType === 'FUND' ? '1400px' : '1000px'"
       :footer="null"
       centered
       destroyOnClose
     >
-      <StockDetailView v-if="selectedStock" :stock="selectedStock" />
+      <FundDetailView v-if="selectedStock && currentAssetType === 'FUND'" :stock="selectedStock" />
+      <StockDetailView v-else-if="selectedStock" :stock="selectedStock" />
     </a-modal>
 
     <!-- 修改分组 Modal -->
@@ -434,7 +479,9 @@ import {
   QuestionCircleOutlined
 } from '@ant-design/icons-vue';
 import MiniKlineChart from './components/MiniKlineChart.vue';
+import MiniFundNetValueChart from './components/MiniFundNetValueChart.vue';
 import StockDetailView from './components/StockDetailView.vue';
+import FundDetailView from './components/FundDetailView.vue';
 import {
   getWatchlistGroups,
   getWatchlistStocks,
@@ -712,8 +759,20 @@ const getSortedStocks = (groupId: number): WatchlistStockVO[] => {
   if (state.sortKey === 'default') return result;
 
   return [...result].sort((a, b) => {
-    let valA = (a as any)[state.sortKey];
-    let valB = (b as any)[state.sortKey];
+    let key = state.sortKey;
+    let valA = (a as any)[key];
+    let valB = (b as any)[key];
+
+    if (currentAssetType.value === 'FUND') {
+      if (key === 'latestPrice') {
+        valA = a.unitNetValue ?? a.latestPrice;
+        valB = b.unitNetValue ?? b.latestPrice;
+      } else if (key === 'changePercent') {
+        valA = a.dailyGrowthRate ?? a.changePercent;
+        valB = b.dailyGrowthRate ?? b.changePercent;
+      }
+    }
+
     if (valA == null || isNaN(valA)) valA = state.sortOrder === 'asc' ? Infinity : -Infinity;
     if (valB == null || isNaN(valB)) valB = state.sortOrder === 'asc' ? Infinity : -Infinity;
     return state.sortOrder === 'asc' ? valA - valB : valB - valA;
@@ -745,19 +804,29 @@ const formatReportDate = (dateStr: string | undefined | null) => {
   return dateStr;
 };
 
+const currentAssetType = ref<'STOCK' | 'FUND'>('STOCK');
+
+const onAssetTypeChange = () => {
+  activeGroupId.value = undefined;
+  fetchGroups();
+};
+
 const fetchGroups = async () => {
   groupsLoading.value = true;
   try {
-    const res = await getWatchlistGroups();
+    const res = await getWatchlistGroups(currentAssetType.value);
     if (res.data.success) {
       groups.value = res.data.data || [];
+      loadedGroups.clear();
       // 初始化每个分组的 ui 状态
       for (const g of groups.value) {
         ensureUiState(g.id);
       }
       // 默认 active 为第一个
-      if (groups.value.length > 0 && !activeGroupId.value) {
+      if (groups.value.length > 0) {
         activeGroupId.value = groups.value[0]!.id;
+      } else {
+        activeGroupId.value = undefined;
       }
     }
   } catch (error) {
@@ -808,7 +877,7 @@ const handleMoveGroup = async (groupId: number, action: 'UP' | 'DOWN') => {
 const onDeleteGroup = (targetKey: number) => {
   Modal.confirm({
     title: '确定删除该分组吗？',
-    content: '删除分组将同步移除该分组下的所有自选股票。',
+    content: '删除分组将同步移除该分组下的所有自选标的。',
     onOk: async () => {
       try {
         const res = await deleteWatchlistGroup(targetKey);
@@ -847,10 +916,14 @@ const handleCreateGroup = async () => {
   }
   createGroupLoading.value = true;
   try {
-    const res = await createWatchlistGroup(groupForm);
+    const res = await createWatchlistGroup({
+      name: groupForm.name,
+      type: currentAssetType.value
+    });
     if (res.data.success) {
       message.success('创建成功');
       groupModalVisible.value = false;
+      groupForm.name = '';
       await fetchGroups();
     }
   } catch (error) {
@@ -878,7 +951,7 @@ const handleAddStock = async () => {
     return;
   }
   if (!newStockCode.value || newStockCode.value.length < 6) {
-    message.warning('请输入正确的股票代码');
+    message.warning(currentAssetType.value === 'FUND' ? '请输入正确的 6 位基金代码' : '请输入正确的 6 位股票代码');
     return;
   }
   addLoading.value = true;
@@ -1127,7 +1200,10 @@ const handleDeleteNoti = async (item: any, index: number) => {
   }
 };
 
+const isMounted = ref(false);
+
 onMounted(async () => {
+  isMounted.value = true;
   initialActiveLocked = true;
   window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   initIntersectionObserver();
@@ -1776,8 +1852,21 @@ watch(() => groups.value.length, async () => {
 
 .stock-info {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+  margin-right: 8px;
+  overflow: hidden;
+}
+
+.stock-info :deep(.ant-tooltip-disabled-compatible-wrapper),
+.stock-info > span:first-child {
+  min-width: 0;
+  flex-shrink: 1;
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .stock-name {
@@ -1785,6 +1874,14 @@ watch(() => groups.value.length, async () => {
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   letter-spacing: -0.2px;
+}
+
+.stock-name.fund-name {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
 }
 
 .stock-code {
@@ -1797,6 +1894,7 @@ watch(() => groups.value.length, async () => {
   border-radius: 4px;
   border: 1px solid var(--color-border);
   letter-spacing: 0.5px;
+  flex-shrink: 0;
 }
 
 .more-icon {

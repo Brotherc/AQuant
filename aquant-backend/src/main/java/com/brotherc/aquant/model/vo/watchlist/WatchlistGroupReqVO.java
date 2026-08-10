@@ -12,4 +12,7 @@ public class WatchlistGroupReqVO {
     @NotBlank(message = "分组名称不能为空")
     private String name;
 
+    @Schema(description = "分组类型: STOCK-股票自选组, FUND-基金自选组")
+    private String type;
+
 }

@@ -12,10 +12,14 @@ public interface StockWatchlistGroupRepository extends JpaRepository<StockWatchl
 
     List<StockWatchlistGroup> findAllByUserIdOrderBySortNoAsc(Long userId);
 
+    List<StockWatchlistGroup> findAllByUserIdAndTypeOrderBySortNoAsc(Long userId, String type);
+
     Optional<StockWatchlistGroup> findById(Long id);
 
     Optional<StockWatchlistGroup> findByIdAndUserId(Long id, Long userId);
 
     boolean existsByUserIdAndName(Long userId, String name);
+
+    boolean existsByUserIdAndNameAndType(Long userId, String name, String type);
 
 }

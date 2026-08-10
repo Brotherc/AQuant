@@ -15,6 +15,9 @@ public class WatchlistGroupVO {
     @Schema(description = "分组名称")
     private String name;
 
+    @Schema(description = "分组类型: STOCK-股票自选组, FUND-基金自选组")
+    private String type;
+
     @Schema(description = "排序号")
     private Integer sortNo;
 

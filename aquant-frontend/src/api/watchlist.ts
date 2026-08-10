@@ -20,17 +20,27 @@ export interface WatchlistStockVO {
     roe?: number;
     hasNotification?: boolean;
     recentDividends?: WatchlistDividendVO[];
+    // 基金特有属性
+    targetType?: 'STOCK' | 'FUND';
+    unitNetValue?: number;
+    accumulatedNetValue?: number;
+    dailyGrowthRate?: number;
+    netValueDate?: string;
+    fundType?: string;
+    fundManager?: string;
 }
 
 export interface WatchlistGroupVO {
     id: number;
     name: string;
+    type?: string;
     sortNo: number;
     stocks?: WatchlistStockVO[];
 }
 
 export interface WatchlistGroupReqVO {
     name: string;
+    type?: string;
 }
 
 export interface WatchlistStockReqVO {
@@ -49,8 +59,8 @@ export interface WatchlistStockMoveReqVO {
     action: 'UP' | 'DOWN' | 'TOP';
 }
 
-export const getWatchlistGroups = () => {
-    return request.get<ResponseDTO<WatchlistGroupVO[]>>('/stockWatchlist/group/list');
+export const getWatchlistGroups = (type?: string) => {
+    return request.get<ResponseDTO<WatchlistGroupVO[]>>('/stockWatchlist/group/list', { params: { type } });
 };
 
 export const createWatchlistGroup = (data: WatchlistGroupReqVO) => {

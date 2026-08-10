@@ -9,10 +9,14 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import java.util.Collection;
+
 @Repository
 public interface StockFundNetValueRepository extends JpaRepository<StockFundNetValue, Long> {
 
     List<StockFundNetValue> findByFundCodeOrderByNavDateAsc(String fundCode);
+
+    List<StockFundNetValue> findByFundCodeInOrderByNavDateDesc(Collection<String> fundCodes);
 
     List<StockFundNetValue> findByFundCodeAndNavDateIn(String fundCode, List<LocalDateTime> navDates);
 

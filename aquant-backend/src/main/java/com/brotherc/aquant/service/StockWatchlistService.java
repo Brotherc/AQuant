@@ -20,19 +20,21 @@ import com.brotherc.aquant.repository.StockNotificationRepository;
 import com.brotherc.aquant.entity.StockValuationMetrics;
 import com.brotherc.aquant.entity.StockDupontAnalysis;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import com.brotherc.aquant.repository.StockDividendRepository;
 import com.brotherc.aquant.entity.StockDividend;
+import com.brotherc.aquant.entity.StockFundInfo;
+import com.brotherc.aquant.entity.StockFundNetValue;
+import com.brotherc.aquant.repository.StockFundInfoRepository;
+import com.brotherc.aquant.repository.StockFundNetValueRepository;
 import com.brotherc.aquant.model.vo.watchlist.WatchlistDividendVO;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -46,16 +48,24 @@ public class StockWatchlistService {
     private final StockDupontAnalysisRepository dupontAnalysisRepository;
     private final StockDividendRepository dividendRepository;
     private final StockNotificationRepository notificationRepository;
+    private final StockFundInfoRepository stockFundInfoRepository;
+    private final StockFundNetValueRepository stockFundNetValueRepository;
 
-    public List<WatchlistGroupVO> getAllGroups(Long userId) {
+    public List<WatchlistGroupVO> getAllGroups(Long userId, String type) {
         if (userId == null) {
             return new ArrayList<>();
         }
-        List<StockWatchlistGroup> groups = groupRepository.findAllByUserIdOrderBySortNoAsc(userId);
+        List<StockWatchlistGroup> groups;
+        if (StringUtils.isNotBlank(type)) {
+            groups = groupRepository.findAllByUserIdAndTypeOrderBySortNoAsc(userId, type);
+        } else {
+            groups = groupRepository.findAllByUserIdOrderBySortNoAsc(userId);
+        }
         return groups.stream().map(g -> {
             WatchlistGroupVO vo = new WatchlistGroupVO();
             vo.setId(g.getId());
             vo.setName(g.getName());
+            vo.setType(g.getType());
             vo.setSortNo(g.getSortNo());
             return vo;
         }).collect(Collectors.toList());
@@ -66,7 +76,7 @@ public class StockWatchlistService {
             return new ArrayList<>();
         }
         // 校验归属
-        groupRepository.findByIdAndUserId(groupId, userId)
+        StockWatchlistGroup group = groupRepository.findByIdAndUserId(groupId, userId)
                 .orElseThrow(() -> ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND.toException());
 
         List<StockWatchlistStock> watchlistStocks = stockRepository.findByGroupIdOrderBySortNoDesc(groupId);
@@ -78,6 +88,48 @@ public class StockWatchlistService {
                 .collect(Collectors.toList());
 
         List<String> notificationCodes = notificationRepository.findDistinctStockCodeByUserIdAndStockCodeIn(userId, codes6);
+
+        String groupType = group.getType();
+        if ("FUND".equalsIgnoreCase(groupType)) {
+            List<StockFundInfo> fundInfos = stockFundInfoRepository.findByFundCodeIn(codes6);
+            Map<String, StockFundInfo> infoMap = fundInfos.stream()
+                    .collect(Collectors.toMap(StockFundInfo::getFundCode, f -> f, (a, b) -> a));
+
+            List<StockFundNetValue> netValues = stockFundNetValueRepository.findByFundCodeInOrderByNavDateDesc(codes6);
+            Map<String, StockFundNetValue> latestNetValueMap = new java.util.HashMap<>();
+            for (StockFundNetValue nv : netValues) {
+                if (nv != null && nv.getFundCode() != null) {
+                    latestNetValueMap.putIfAbsent(nv.getFundCode(), nv);
+                }
+            }
+
+            return watchlistStocks.stream().map(ws -> {
+                WatchlistStockVO vo = new WatchlistStockVO();
+                vo.setTargetType("FUND");
+                vo.setStockCode(ws.getStockCode());
+                vo.setSortNo(ws.getSortNo());
+                vo.setHasNotification(notificationCodes.contains(ws.getStockCode()));
+
+                StockFundInfo fundInfo = infoMap.get(ws.getStockCode());
+                if (fundInfo != null) {
+                    vo.setStockName(fundInfo.getFundName());
+                    vo.setFundType(fundInfo.getFundType());
+                } else {
+                    vo.setStockName(ws.getStockCode());
+                }
+
+                StockFundNetValue netValue = latestNetValueMap.get(ws.getStockCode());
+                if (netValue != null) {
+                    vo.setUnitNetValue(netValue.getUnitNav());
+                    vo.setDailyGrowthRate(netValue.getDailyGrowthRate());
+                    vo.setNetValueDate(netValue.getNavDate() != null ? netValue.getNavDate().toLocalDate().toString() : null);
+                    vo.setLatestPrice(netValue.getUnitNav());
+                    vo.setChangePercent(netValue.getDailyGrowthRate());
+                }
+
+                return vo;
+            }).collect(Collectors.toList());
+        }
 
         // 智能补全并批量查询核心行情
         List<String> candidates = new ArrayList<>();
@@ -140,6 +192,7 @@ public class StockWatchlistService {
 
         return watchlistStocks.stream().map(ws -> {
             WatchlistStockVO vo = new WatchlistStockVO();
+            vo.setTargetType("STOCK");
             vo.setStockCode(ws.getStockCode());
             vo.setSortNo(ws.getSortNo());
             
@@ -173,12 +226,14 @@ public class StockWatchlistService {
         if (userId == null) {
             throw ExceptionEnum.AUTH_TOKEN_INVALID.toException();
         }
-        if (groupRepository.existsByUserIdAndName(userId, reqVO.getName())) {
+        String groupType = StringUtils.isNotBlank(reqVO.getType()) ? reqVO.getType() : "STOCK";
+        if (groupRepository.existsByUserIdAndNameAndType(userId, reqVO.getName(), groupType)) {
             throw new BusinessException(ExceptionEnum.WATCHLIST_GROUP_NAME_DUPLICATE);
         }
         StockWatchlistGroup group = new StockWatchlistGroup();
         group.setUserId(userId);
         group.setName(reqVO.getName());
+        group.setType(groupType);
         group.setCreatedAt(LocalDateTime.now());
         group.setUpdatedAt(LocalDateTime.now());
 
@@ -283,29 +338,36 @@ public class StockWatchlistService {
             throw ExceptionEnum.AUTH_TOKEN_INVALID.toException();
         }
         // 校验分组所有人
-        groupRepository.findByIdAndUserId(reqVO.getGroupId(), userId)
-                .orElseThrow(() -> ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND.toException());
+        StockWatchlistGroup group = groupRepository.findByIdAndUserId(reqVO.getGroupId(), userId)
+                .orElseThrow(ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND::toException);
 
         String inputCode = reqVO.getStockCode();
         String standardizedCode = inputCode.length() > 6 ? inputCode.substring(inputCode.length() - 6) : inputCode;
 
-        StockQuote quote = quoteRepository.findByCode(inputCode);
-        if (quote == null && inputCode.length() == 6) {
-            List<String> candidates = List.of("sh" + inputCode, "sz" + inputCode, "bj" + inputCode);
-            List<StockQuote> found = quoteRepository.findByCodeIn(candidates);
-            if (!found.isEmpty()) {
-                quote = found.get(0);
+        if ("FUND".equalsIgnoreCase(group.getType())) {
+            Optional<StockFundInfo> fundOpt = stockFundInfoRepository.findByFundCode(standardizedCode);
+            if (fundOpt.isEmpty() && (standardizedCode.length() != 6 || !standardizedCode.matches("\\d{6}"))) {
+                throw new BusinessException(ExceptionEnum.FUND_NOT_FOUND);
             }
-        }
-        if (quote == null) {
-            quote = quoteRepository.findAll().stream()
-                    .filter(q -> q.getCode().endsWith(standardizedCode))
-                    .findFirst()
-                    .orElse(null);
-        }
+        } else {
+            StockQuote quote = quoteRepository.findByCode(inputCode);
+            if (quote == null && inputCode.length() == 6) {
+                List<String> candidates = List.of("sh" + inputCode, "sz" + inputCode, "bj" + inputCode);
+                List<StockQuote> found = quoteRepository.findByCodeIn(candidates);
+                if (!found.isEmpty()) {
+                    quote = found.get(0);
+                }
+            }
+            if (quote == null) {
+                quote = quoteRepository.findAll().stream()
+                        .filter(q -> q.getCode().endsWith(standardizedCode))
+                        .findFirst()
+                        .orElse(null);
+            }
 
-        if (quote == null) {
-            throw new BusinessException(ExceptionEnum.STOCK_NOT_FOUND);
+            if (quote == null) {
+                throw new BusinessException(ExceptionEnum.STOCK_NOT_FOUND);
+            }
         }
 
         if (stockRepository.existsByGroupIdAndStockCode(reqVO.getGroupId(), standardizedCode)) {

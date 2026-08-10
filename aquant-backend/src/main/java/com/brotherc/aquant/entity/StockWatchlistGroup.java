@@ -36,6 +36,12 @@ public class StockWatchlistGroup {
     private Integer sortNo;
 
     /**
+     * 分组类型: STOCK-股票自选组, FUND-基金自选组
+     */
+    @Column(name = "type")
+    private String type = "STOCK";
+
+    /**
      * 创建时间
      */
     @Column(name = "created_at")
