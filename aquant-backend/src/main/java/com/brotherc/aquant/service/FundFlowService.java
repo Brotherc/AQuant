@@ -1,11 +1,11 @@
 package com.brotherc.aquant.service;
 
-import com.brotherc.aquant.entity.StockIndustryBoard;
+import com.brotherc.aquant.entity.industry.StockIndustryBoard;
 import com.brotherc.aquant.model.vo.fundflow.FundFlowGraphLinkVO;
 import com.brotherc.aquant.model.vo.fundflow.FundFlowGraphNodeVO;
 import com.brotherc.aquant.model.vo.fundflow.FundFlowGraphVO;
 import com.brotherc.aquant.model.vo.fundflow.FundFlowSummaryVO;
-import com.brotherc.aquant.repository.StockIndustryBoardRepository;
+import com.brotherc.aquant.repository.industry.StockIndustryBoardRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

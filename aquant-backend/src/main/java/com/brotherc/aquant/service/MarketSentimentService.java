@@ -1,8 +1,8 @@
 package com.brotherc.aquant.service;
 
-import com.brotherc.aquant.entity.StockQuote;
+import com.brotherc.aquant.entity.stock.StockQuote;
 import com.brotherc.aquant.model.vo.sentiment.MarketSentimentVO;
-import com.brotherc.aquant.repository.StockQuoteRepository;
+import com.brotherc.aquant.repository.stock.StockQuoteRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

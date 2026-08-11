@@ -1,8 +1,8 @@
 package com.brotherc.aquant.service.notification;
 
-import com.brotherc.aquant.entity.StockNotification;
-import com.brotherc.aquant.entity.StockQuoteHistory;
-import com.brotherc.aquant.entity.SysUser;
+import com.brotherc.aquant.entity.notification.StockNotification;
+import com.brotherc.aquant.entity.stock.StockQuoteHistory;
+import com.brotherc.aquant.entity.sys.SysUser;
 import com.brotherc.aquant.exception.BusinessException;
 import com.brotherc.aquant.enums.TradeSignal;
 import com.brotherc.aquant.exception.ExceptionEnum;
@@ -10,9 +10,9 @@ import com.brotherc.aquant.enums.NotificationType;
 import com.brotherc.aquant.enums.PriceAlertCondition;
 import com.brotherc.aquant.model.vo.notification.StockNotificationReqVO;
 import com.brotherc.aquant.model.vo.notification.StockNotificationVO;
-import com.brotherc.aquant.repository.StockNotificationRepository;
-import com.brotherc.aquant.repository.StockQuoteHistoryRepository;
-import com.brotherc.aquant.repository.SysUserRepository;
+import com.brotherc.aquant.repository.notification.StockNotificationRepository;
+import com.brotherc.aquant.repository.stock.StockQuoteHistoryRepository;
+import com.brotherc.aquant.repository.sys.SysUserRepository;
 import com.brotherc.aquant.utils.StockUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;

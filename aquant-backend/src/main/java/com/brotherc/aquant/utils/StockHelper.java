@@ -1,7 +1,7 @@
 package com.brotherc.aquant.utils;
 
 import com.brotherc.aquant.constant.StockConstant;
-import com.brotherc.aquant.repository.StockTradeCalendarRepository;
+import com.brotherc.aquant.repository.stock.StockTradeCalendarRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

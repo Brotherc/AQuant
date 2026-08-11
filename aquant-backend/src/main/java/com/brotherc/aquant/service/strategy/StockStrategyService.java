@@ -1,6 +1,6 @@
 package com.brotherc.aquant.service.strategy;
 
-import com.brotherc.aquant.entity.StockQuote;
+import com.brotherc.aquant.entity.stock.StockQuote;
 import com.brotherc.aquant.exception.BusinessException;
 import com.brotherc.aquant.exception.ExceptionEnum;
 import com.brotherc.aquant.model.vo.strategy.DualMAReqVO;
@@ -9,10 +9,10 @@ import com.brotherc.aquant.model.vo.strategy.MomentumReqVO;
 import com.brotherc.aquant.model.vo.strategy.MomentumBacktestReqVO;
 import com.brotherc.aquant.model.vo.strategy.StockTradeSignalVO;
 import com.brotherc.aquant.model.vo.strategy.StockTradeBacktestVO;
-import com.brotherc.aquant.repository.StockQuoteRepository;
-import com.brotherc.aquant.repository.StockWatchlistGroupRepository;
-import com.brotherc.aquant.repository.StockWatchlistStockRepository;
-import com.brotherc.aquant.entity.StockWatchlistStock;
+import com.brotherc.aquant.repository.stock.StockQuoteRepository;
+import com.brotherc.aquant.repository.watchlist.StockWatchlistGroupRepository;
+import com.brotherc.aquant.repository.watchlist.StockWatchlistStockRepository;
+import com.brotherc.aquant.entity.watchlist.StockWatchlistStock;
 import com.brotherc.aquant.utils.UserContext;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;

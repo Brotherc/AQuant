@@ -1,6 +1,6 @@
 package com.brotherc.aquant.utils;
 
-import com.brotherc.aquant.entity.StockSync;
+import com.brotherc.aquant.entity.sync.StockSync;
 import org.apache.commons.lang3.StringUtils;
 
 import java.time.*;

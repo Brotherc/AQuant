@@ -1,0 +1,56 @@
+package com.brotherc.aquant.entity.watchlist;
+
+import jakarta.persistence.*;
+import lombok.Data;
+
+import java.time.LocalDateTime;
+
+/**
+ * 自选分组表
+ */
+@Data
+@Entity
+@Table(name = "stock_watchlist_group")
+public class StockWatchlistGroup {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    /**
+     * 用户 ID
+     */
+    @Column(name = "user_id")
+    private Long userId;
+
+    /**
+     * 分组名称
+     */
+    @Column(name = "name")
+    private String name;
+
+    /**
+     * 排序号
+     */
+    @Column(name = "sort_no")
+    private Integer sortNo;
+
+    /**
+     * 分组类型: STOCK-股票自选组, FUND-基金自选组
+     */
+    @Column(name = "type")
+    private String type = "STOCK";
+
+    /**
+     * 创建时间
+     */
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    /**
+     * 更新时间
+     */
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+}

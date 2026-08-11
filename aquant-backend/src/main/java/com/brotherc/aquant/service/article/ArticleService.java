@@ -1,9 +1,9 @@
 package com.brotherc.aquant.service.article;
 
-import com.brotherc.aquant.entity.UserArticle;
+import com.brotherc.aquant.entity.article.UserArticle;
 import com.brotherc.aquant.exception.ExceptionEnum;
 import com.brotherc.aquant.model.vo.article.*;
-import com.brotherc.aquant.repository.ArticleRepository;
+import com.brotherc.aquant.repository.article.ArticleRepository;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;

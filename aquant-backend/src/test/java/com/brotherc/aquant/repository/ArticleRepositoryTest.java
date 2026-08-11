@@ -1,7 +1,8 @@
 package com.brotherc.aquant.repository;
 
-import com.brotherc.aquant.entity.SysUser;
-import com.brotherc.aquant.entity.UserArticle;
+import com.brotherc.aquant.entity.sys.SysUser;
+import com.brotherc.aquant.entity.article.UserArticle;
+import com.brotherc.aquant.repository.article.ArticleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

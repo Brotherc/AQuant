@@ -1,10 +1,10 @@
 package com.brotherc.aquant.service.indicator;
 
-import com.brotherc.aquant.entity.StockQuote;
-import com.brotherc.aquant.entity.StockPerformanceReport;
+import com.brotherc.aquant.entity.stock.StockQuote;
+import com.brotherc.aquant.entity.indicator.StockPerformanceReport;
 import com.brotherc.aquant.model.dto.akshare.StockYjbbEm;
-import com.brotherc.aquant.repository.StockPerformanceReportRepository;
-import com.brotherc.aquant.repository.StockQuoteRepository;
+import com.brotherc.aquant.repository.indicator.StockPerformanceReportRepository;
+import com.brotherc.aquant.repository.stock.StockQuoteRepository;
 import com.brotherc.aquant.utils.StockUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

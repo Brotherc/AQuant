@@ -1,9 +1,9 @@
 package com.brotherc.aquant.service.indicator;
 
-import com.brotherc.aquant.entity.StockDupontAnalysis;
+import com.brotherc.aquant.entity.indicator.StockDupontAnalysis;
 import com.brotherc.aquant.model.dto.akshare.StockZhDupontComparisonEm;
 import com.brotherc.aquant.model.vo.stockindicator.DupontAnalysisPageReqVO;
-import com.brotherc.aquant.repository.StockDupontAnalysisRepository;
+import com.brotherc.aquant.repository.indicator.StockDupontAnalysisRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;

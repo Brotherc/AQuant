@@ -1,17 +1,17 @@
 package com.brotherc.aquant.service.indicator;
 
-import com.brotherc.aquant.entity.StockPerformanceReport;
-import com.brotherc.aquant.entity.StockQuote;
-import com.brotherc.aquant.entity.StockShareChange;
-import com.brotherc.aquant.entity.StockValuationMetrics;
+import com.brotherc.aquant.entity.indicator.StockPerformanceReport;
+import com.brotherc.aquant.entity.stock.StockQuote;
+import com.brotherc.aquant.entity.stock.StockShareChange;
+import com.brotherc.aquant.entity.indicator.StockValuationMetrics;
 import com.brotherc.aquant.model.dto.akshare.StockZhValuationComparisonEm;
 import com.brotherc.aquant.model.vo.stockindicator.CalculatedValuationMetricsPageVO;
 import com.brotherc.aquant.model.vo.stockindicator.CalculatedValuationMetricsVO;
 import com.brotherc.aquant.model.vo.stockindicator.ValuationMetricsPageReqVO;
-import com.brotherc.aquant.repository.StockPerformanceReportRepository;
-import com.brotherc.aquant.repository.StockQuoteRepository;
-import com.brotherc.aquant.repository.StockShareChangeRepository;
-import com.brotherc.aquant.repository.StockValuationMetricsRepository;
+import com.brotherc.aquant.repository.indicator.StockPerformanceReportRepository;
+import com.brotherc.aquant.repository.stock.StockQuoteRepository;
+import com.brotherc.aquant.repository.stock.StockShareChangeRepository;
+import com.brotherc.aquant.repository.indicator.StockValuationMetricsRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

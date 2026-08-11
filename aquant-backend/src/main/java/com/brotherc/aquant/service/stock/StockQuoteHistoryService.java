@@ -1,9 +1,9 @@
 package com.brotherc.aquant.service.stock;
 
-import com.brotherc.aquant.entity.StockQuoteHistory;
+import com.brotherc.aquant.entity.stock.StockQuoteHistory;
 import com.brotherc.aquant.model.dto.akshare.StockZhADaily;
 import com.brotherc.aquant.model.dto.akshare.StockZhASpot;
-import com.brotherc.aquant.repository.StockQuoteHistoryRepository;
+import com.brotherc.aquant.repository.stock.StockQuoteHistoryRepository;
 import com.brotherc.aquant.utils.StockHelper;
 import com.brotherc.aquant.utils.StockUtils;
 import lombok.RequiredArgsConstructor;

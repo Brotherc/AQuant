@@ -1,7 +1,7 @@
 package com.brotherc.aquant.service.dividend;
 
-import com.brotherc.aquant.entity.StockDividend;
-import com.brotherc.aquant.repository.StockDividendRepository;
+import com.brotherc.aquant.entity.dividend.StockDividend;
+import com.brotherc.aquant.repository.dividend.StockDividendRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

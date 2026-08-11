@@ -1,7 +1,7 @@
 package com.brotherc.aquant.service.stock;
 
-import com.brotherc.aquant.entity.StockAbnormal;
-import com.brotherc.aquant.repository.StockAbnormalRepository;
+import com.brotherc.aquant.entity.stock.StockAbnormal;
+import com.brotherc.aquant.repository.stock.StockAbnormalRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;

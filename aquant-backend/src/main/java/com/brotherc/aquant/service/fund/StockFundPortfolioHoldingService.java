@@ -1,8 +1,8 @@
 package com.brotherc.aquant.service.fund;
 
-import com.brotherc.aquant.entity.StockFundPortfolioHolding;
+import com.brotherc.aquant.entity.fund.StockFundPortfolioHolding;
 import com.brotherc.aquant.model.dto.akshare.FundPortfolioHoldEm;
-import com.brotherc.aquant.repository.StockFundPortfolioHoldingRepository;
+import com.brotherc.aquant.repository.fund.StockFundPortfolioHoldingRepository;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;

@@ -1,8 +1,8 @@
 package com.brotherc.aquant.service.stock;
 
-import com.brotherc.aquant.entity.StockShareChange;
+import com.brotherc.aquant.entity.stock.StockShareChange;
 import com.brotherc.aquant.model.dto.akshare.StockHoldChangeCninfo;
-import com.brotherc.aquant.repository.StockShareChangeRepository;
+import com.brotherc.aquant.repository.stock.StockShareChangeRepository;
 import com.brotherc.aquant.utils.StockUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

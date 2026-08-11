@@ -1,8 +1,8 @@
 package com.brotherc.aquant.task;
 
-import com.brotherc.aquant.entity.StockNotification;
+import com.brotherc.aquant.entity.notification.StockNotification;
 import com.brotherc.aquant.model.dto.tencent.TencentStockQuote;
-import com.brotherc.aquant.repository.StockNotificationRepository;
+import com.brotherc.aquant.repository.notification.StockNotificationRepository;
 import com.brotherc.aquant.service.notification.StockNotificationService;
 import com.brotherc.aquant.service.stock.TencentFinanceService;
 import com.brotherc.aquant.utils.StockHelper;

@@ -1,11 +1,11 @@
 package com.brotherc.aquant.service.stock;
 
-import com.brotherc.aquant.entity.StockQuote;
+import com.brotherc.aquant.entity.stock.StockQuote;
 import com.brotherc.aquant.model.dto.akshare.StockZhASpot;
 import com.brotherc.aquant.model.vo.stockquote.StockQuotePageReqVO;
 import com.brotherc.aquant.model.vo.stockquote.StockQuoteVO;
-import com.brotherc.aquant.repository.StockQuoteHistoryRepository;
-import com.brotherc.aquant.repository.StockQuoteRepository;
+import com.brotherc.aquant.repository.stock.StockQuoteHistoryRepository;
+import com.brotherc.aquant.repository.stock.StockQuoteRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

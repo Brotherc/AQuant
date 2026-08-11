@@ -1,10 +1,10 @@
 package com.brotherc.aquant.controller;
 
-import com.brotherc.aquant.entity.StockFundNetValue;
+import com.brotherc.aquant.entity.fund.StockFundNetValue;
 import com.brotherc.aquant.model.dto.common.ResponseDTO;
 import com.brotherc.aquant.model.vo.stockfund.StockFundInfoPageReqVO;
 import com.brotherc.aquant.model.vo.stockfund.StockFundInfoVO;
-import com.brotherc.aquant.entity.StockFundPortfolioHolding;
+import com.brotherc.aquant.entity.fund.StockFundPortfolioHolding;
 import com.brotherc.aquant.service.fund.StockFundPortfolioHoldingService;
 import com.brotherc.aquant.service.fund.StockFundInfoService;
 import com.brotherc.aquant.service.fund.StockFundNetValueService;

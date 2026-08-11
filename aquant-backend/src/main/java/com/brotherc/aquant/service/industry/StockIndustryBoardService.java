@@ -1,10 +1,10 @@
 package com.brotherc.aquant.service.industry;
 
-import com.brotherc.aquant.entity.StockIndustryBoard;
+import com.brotherc.aquant.entity.industry.StockIndustryBoard;
 import com.brotherc.aquant.model.dto.akshare.StockBoardIndustrySummaryThs;
 import com.brotherc.aquant.model.vo.stockindustryboard.StockIndustryBoardPageReqVO;
 import com.brotherc.aquant.model.vo.stockindustryboard.StockIndustryBoardVO;
-import com.brotherc.aquant.repository.StockIndustryBoardRepository;
+import com.brotherc.aquant.repository.industry.StockIndustryBoardRepository;
 import com.brotherc.aquant.utils.StockHelper;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;

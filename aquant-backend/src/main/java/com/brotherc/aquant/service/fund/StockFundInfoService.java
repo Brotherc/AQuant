@@ -1,11 +1,11 @@
 package com.brotherc.aquant.service.fund;
 
-import com.brotherc.aquant.entity.StockFundInfo;
+import com.brotherc.aquant.entity.fund.StockFundInfo;
 import com.brotherc.aquant.model.dto.akshare.FundPurchaseEm;
 import com.brotherc.aquant.model.dto.akshare.FundNameEm;
 import com.brotherc.aquant.model.vo.stockfund.StockFundInfoPageReqVO;
 import com.brotherc.aquant.model.vo.stockfund.StockFundInfoVO;
-import com.brotherc.aquant.repository.StockFundInfoRepository;
+import com.brotherc.aquant.repository.fund.StockFundInfoRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

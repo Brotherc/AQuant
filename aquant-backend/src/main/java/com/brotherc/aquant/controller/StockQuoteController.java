@@ -1,6 +1,6 @@
 package com.brotherc.aquant.controller;
 
-import com.brotherc.aquant.entity.StockQuoteHistory;
+import com.brotherc.aquant.entity.stock.StockQuoteHistory;
 import com.brotherc.aquant.model.dto.common.ResponseDTO;
 import com.brotherc.aquant.model.vo.stockquote.StockQuotePageReqVO;
 import com.brotherc.aquant.model.vo.stockquote.StockQuoteVO;

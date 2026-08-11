@@ -1,11 +1,11 @@
 package com.brotherc.aquant.service.strategy;
 
-import com.brotherc.aquant.entity.StockQuote;
-import com.brotherc.aquant.repository.projection.StockQuoteHistoryProjection;
+import com.brotherc.aquant.entity.stock.StockQuote;
+import com.brotherc.aquant.model.dto.stockquote.StockQuoteHistoryProjection;
 import com.brotherc.aquant.enums.TradeSignal;
 import com.brotherc.aquant.model.vo.strategy.StockTradeBacktestVO;
 import com.brotherc.aquant.model.vo.strategy.StockTradeSignalVO;
-import com.brotherc.aquant.repository.StockQuoteHistoryRepository;
+import com.brotherc.aquant.repository.stock.StockQuoteHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.math3.stat.inference.TTest;
 import org.springframework.stereotype.Service;

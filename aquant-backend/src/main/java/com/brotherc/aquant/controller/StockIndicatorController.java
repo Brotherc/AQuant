@@ -1,7 +1,7 @@
 package com.brotherc.aquant.controller;
 
-import com.brotherc.aquant.entity.StockDupontAnalysis;
-import com.brotherc.aquant.entity.StockGrowthMetrics;
+import com.brotherc.aquant.entity.indicator.StockDupontAnalysis;
+import com.brotherc.aquant.entity.indicator.StockGrowthMetrics;
 import com.brotherc.aquant.model.dto.common.ResponseDTO;
 import com.brotherc.aquant.model.vo.stockindicator.CalculatedValuationMetricsPageVO;
 import com.brotherc.aquant.model.vo.stockindicator.CalculatedValuationMetricsVO;

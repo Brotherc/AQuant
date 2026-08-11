@@ -1,8 +1,8 @@
 package com.brotherc.aquant.service.fund;
 
-import com.brotherc.aquant.entity.StockFundNetValue;
+import com.brotherc.aquant.entity.fund.StockFundNetValue;
 import com.brotherc.aquant.model.dto.akshare.FundOpenFundInfoEm;
-import com.brotherc.aquant.repository.StockFundNetValueRepository;
+import com.brotherc.aquant.repository.fund.StockFundNetValueRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

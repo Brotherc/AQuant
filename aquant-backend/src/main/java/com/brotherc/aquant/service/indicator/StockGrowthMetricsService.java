@@ -1,9 +1,9 @@
 package com.brotherc.aquant.service.indicator;
 
-import com.brotherc.aquant.entity.StockGrowthMetrics;
+import com.brotherc.aquant.entity.indicator.StockGrowthMetrics;
 import com.brotherc.aquant.model.dto.akshare.StockZhGrowthComparisonEm;
 import com.brotherc.aquant.model.vo.stockindicator.GrowthMetricsPageReqVO;
-import com.brotherc.aquant.repository.StockGrowthMetricsRepository;
+import com.brotherc.aquant.repository.indicator.StockGrowthMetricsRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;

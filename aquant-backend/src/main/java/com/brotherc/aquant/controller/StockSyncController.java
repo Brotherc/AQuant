@@ -1,7 +1,7 @@
 package com.brotherc.aquant.controller;
 
 import com.brotherc.aquant.model.dto.common.ResponseDTO;
-import com.brotherc.aquant.service.StockSyncService;
+import com.brotherc.aquant.service.sync.StockSyncService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

@@ -1,8 +1,8 @@
 package com.brotherc.aquant.service.industry;
 
-import com.brotherc.aquant.entity.StockBoardConstituentQuote;
+import com.brotherc.aquant.entity.industry.StockBoardConstituentQuote;
 import com.brotherc.aquant.model.dto.akshare.StockBoardIndustryConsEm;
-import com.brotherc.aquant.repository.StockBoardConstituentQuoteRepository;
+import com.brotherc.aquant.repository.industry.StockBoardConstituentQuoteRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

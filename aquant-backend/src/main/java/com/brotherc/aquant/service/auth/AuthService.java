@@ -1,10 +1,10 @@
 package com.brotherc.aquant.service.auth;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
-import com.brotherc.aquant.entity.SysUser;
+import com.brotherc.aquant.entity.sys.SysUser;
 import com.brotherc.aquant.exception.ExceptionEnum;
 import com.brotherc.aquant.model.vo.auth.*;
-import com.brotherc.aquant.repository.SysUserRepository;
+import com.brotherc.aquant.repository.sys.SysUserRepository;
 import com.brotherc.aquant.utils.JwtUtils;
 import com.brotherc.aquant.utils.SlidingWindowRateLimiter;
 import com.github.benmanes.caffeine.cache.Cache;
