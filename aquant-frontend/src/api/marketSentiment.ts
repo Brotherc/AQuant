@@ -35,7 +35,7 @@ export interface MarketSentimentVO {
 
 export function getMarketSentiment() {
   return request<ResponseDTO<MarketSentimentVO>>({
-    url: '/marketSentiment/current',
+    url: '/stockMarket/current',
     method: 'get'
   });
 }

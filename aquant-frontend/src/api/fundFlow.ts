@@ -45,14 +45,14 @@ export interface ResponseDTO<T> {
 
 export function getFundFlowGraph() {
   return request<ResponseDTO<FundFlowGraphData>>({
-    url: '/fundFlow/graph',
+    url: '/stockMarket/fundFlow/graph',
     method: 'get'
   });
 }
 
 export function getFundFlowSummary() {
   return request<ResponseDTO<FundFlowSummaryData>>({
-    url: '/fundFlow/summary',
+    url: '/stockMarket/fundFlow/summary',
     method: 'get'
   });
 }
