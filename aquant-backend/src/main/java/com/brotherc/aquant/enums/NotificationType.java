@@ -1,4 +1,4 @@
-package com.brotherc.aquant.model.enums;
+package com.brotherc.aquant.enums;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
