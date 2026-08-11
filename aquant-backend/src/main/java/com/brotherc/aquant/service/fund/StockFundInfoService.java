@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 public class StockFundInfoService {
 
     private static final DateTimeFormatter MONTH_DAY_FORMATTER = DateTimeFormatter.ofPattern("MM-dd");
-    private String FUND_TYPE = "fundType";
+    private static final String FUND_TYPE = "fundType";
 
     private final StockFundInfoRepository stockFundInfoRepository;
 

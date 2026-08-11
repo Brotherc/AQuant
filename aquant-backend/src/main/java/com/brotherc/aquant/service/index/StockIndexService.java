@@ -87,34 +87,27 @@ public class StockIndexService {
 
         LocalDate today = now.toLocalDate();
         for (StockZhIndexSpotSina item : spotList) {
-            if (StringUtils.isBlank(item.getCode()) || item.getLatestPrice() == null) {
-                continue;
+            if (StringUtils.isNotBlank(item.getCode()) && item.getLatestPrice() != null && targetCodes.contains(item.getCode())) {
+                StockIndexHistory history = stockIndexHistoryRepository
+                        .findByIndexCodeAndTradeDate(item.getCode(), today)
+                        .orElseGet(() -> {
+                            StockIndexHistory h = new StockIndexHistory();
+                            h.setIndexCode(item.getCode());
+                            h.setIndexName(item.getName());
+                            h.setTradeDate(today);
+                            return h;
+                        });
+
+                history.setOpenPrice(item.getOpenPrice());
+                history.setHighPrice(item.getHighPrice());
+                history.setLowPrice(item.getLowPrice());
+                history.setClosePrice(item.getLatestPrice());
+                history.setVolume(item.getVolume());
+                history.setTurnover(item.getTurnover());
+                history.setCreatedAt(now);
+
+                stockIndexHistoryRepository.save(history);
             }
-
-            // 过滤：仅处理指定的重要指数
-            if (!targetCodes.contains(item.getCode())) {
-                continue;
-            }
-
-            StockIndexHistory history = stockIndexHistoryRepository
-                    .findByIndexCodeAndTradeDate(item.getCode(), today)
-                    .orElseGet(() -> {
-                        StockIndexHistory h = new StockIndexHistory();
-                        h.setIndexCode(item.getCode());
-                        h.setIndexName(item.getName());
-                        h.setTradeDate(today);
-                        return h;
-                    });
-
-            history.setOpenPrice(item.getOpenPrice());
-            history.setHighPrice(item.getHighPrice());
-            history.setLowPrice(item.getLowPrice());
-            history.setClosePrice(item.getLatestPrice());
-            history.setVolume(item.getVolume());
-            history.setTurnover(item.getTurnover());
-            history.setCreatedAt(now);
-
-            stockIndexHistoryRepository.save(history);
         }
     }
 
