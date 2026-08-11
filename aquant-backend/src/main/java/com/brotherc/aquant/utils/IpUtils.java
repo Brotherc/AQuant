@@ -10,6 +10,8 @@ import jakarta.servlet.http.HttpServletRequest;
  */
 public final class IpUtils {
 
+    private static final String UNKNOWN = "unknown";
+
     private static final String[] HEADER_CANDIDATES = {
             "X-Forwarded-For",
             "X-Real-IP",
@@ -30,23 +32,23 @@ public final class IpUtils {
      */
     public static String getClientIp(HttpServletRequest request) {
         if (request == null) {
-            return "unknown";
+            return UNKNOWN;
         }
         for (String header : HEADER_CANDIDATES) {
             String value = request.getHeader(header);
-            if (value == null || value.isBlank() || "unknown".equalsIgnoreCase(value)) {
+            if (value == null || value.isBlank() || UNKNOWN.equalsIgnoreCase(value)) {
                 continue;
             }
             // X-Forwarded-For 可能是 "client, proxy1, proxy2"，取最左侧
             int commaIdx = value.indexOf(',');
             String ip = (commaIdx > 0 ? value.substring(0, commaIdx) : value).trim();
-            if (!ip.isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
+            if (!ip.isEmpty() && !UNKNOWN.equalsIgnoreCase(ip)) {
                 return ip;
             }
         }
 
         String remoteAddr = request.getRemoteAddr();
-        return remoteAddr != null ? remoteAddr : "unknown";
+        return remoteAddr != null ? remoteAddr : UNKNOWN;
     }
 
 }

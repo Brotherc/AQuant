@@ -79,7 +79,7 @@ class ArticleIntegrationTest {
         assertThat(createResp).isNotNull();
         assertThat(createResp.getId()).isNotNull();
         assertThat(createResp.getTitle()).isEqualTo("My Investment Analysis");
-        assertThat(createResp.getVisibility()).isEqualTo(0);
+        assertThat(createResp.getVisibility()).isZero();
         assertThat(createResp.getCreatedAt()).isNotNull();
 
         Long articleId = createResp.getId();
@@ -93,7 +93,7 @@ class ArticleIntegrationTest {
         assertThat(detail.getContent()).isEqualTo("This is my detailed analysis of the stock market...");
         assertThat(detail.getAuthorId()).isEqualTo(testUser1.getId());
         assertThat(detail.getAuthorUsername()).isEqualTo(testUser1.getUsername());
-        assertThat(detail.getVisibility()).isEqualTo(0);
+        assertThat(detail.getVisibility()).isZero();
         assertThat(detail.getCreatedAt()).isNotNull();
         assertThat(detail.getUpdatedAt()).isNotNull();
 
@@ -139,7 +139,7 @@ class ArticleIntegrationTest {
 
         // Verify it's private
         ArticleDetailVO detail1 = articleService.getArticleDetail(articleId, testUser1.getId());
-        assertThat(detail1.getVisibility()).isEqualTo(0);
+        assertThat(detail1.getVisibility()).isZero();
 
         // Verify user2 cannot access private article
         assertThatThrownBy(() -> articleService.getArticleDetail(articleId, testUser2.getId()))
@@ -169,7 +169,7 @@ class ArticleIntegrationTest {
 
         // Verify it's private again and user2 cannot access
         ArticleDetailVO detail3 = articleService.getArticleDetail(articleId, testUser1.getId());
-        assertThat(detail3.getVisibility()).isEqualTo(0);
+        assertThat(detail3.getVisibility()).isZero();
 
         assertThatThrownBy(() -> articleService.getArticleDetail(articleId, testUser2.getId()))
                 .hasMessageContaining("无权访问该文章");
@@ -348,12 +348,15 @@ class ArticleIntegrationTest {
     @DisplayName("Should preserve article content formatting")
     void testContentFormatSupport() {
         // Create article with special formatting
-        String contentWithFormatting = "Line 1: Introduction\n\n" +
-                "Line 2: Analysis\n" +
-                "  - Point 1\n" +
-                "  - Point 2\n\n" +
-                "Line 3: 中文内容测试\n" +
-                "Special chars: @#$%^&*()";
+        String contentWithFormatting = """
+                Line 1: Introduction
+                
+                Line 2: Analysis
+                  - Point 1
+                  - Point 2
+                
+                Line 3: 中文内容测试
+                Special chars: @#$%^&*()""";
 
         ArticleCreateReqVO createReq = new ArticleCreateReqVO();
         createReq.setTitle("Formatted Article");
@@ -390,7 +393,7 @@ class ArticleIntegrationTest {
 
         // Verify default is private
         ArticleDetailVO detail = articleService.getArticleDetail(createResp.getId(), testUser1.getId());
-        assertThat(detail.getVisibility()).isEqualTo(0);
+        assertThat(detail.getVisibility()).isZero();
 
         // Verify it's not in public list
         Page<ArticleListItemVO> publicArticles = articleService.getPublicArticles(null, PageRequest.of(0, 20));

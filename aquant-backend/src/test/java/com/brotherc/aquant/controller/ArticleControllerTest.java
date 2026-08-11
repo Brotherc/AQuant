@@ -311,7 +311,7 @@ class ArticleControllerTest {
     @Test
     @DisplayName("GET /article/detail - Success with authentication")
     void getArticleDetail_withAuthentication_shouldSucceed() throws Exception {
-        when(articleService.getArticleDetail(eq(1L), eq(123L)))
+        when(articleService.getArticleDetail(1L, 123L))
                 .thenReturn(detailVO);
 
         mockMvc.perform(get("/article/detail")

@@ -159,7 +159,7 @@ public class StockSyncTask {
                 latestQuoteRefreshed = true;
                 localHistoryTargetMap = stockZhASpots.stream().collect(
                         LinkedHashMap::new,
-                        (map, stockZhASpot) -> map.put(stockZhASpot.get代码(), stockZhASpot.get名称()),
+                        (map, stockZhASpot) -> map.put(stockZhASpot.getCode(), stockZhASpot.getName()),
                         Map::putAll
                 );
             }
@@ -174,7 +174,7 @@ public class StockSyncTask {
 
         Map<String, StockZhASpot> latestSpotMap = stockZhASpots.stream().collect(
                 LinkedHashMap::new,
-                (map, stockZhASpot) -> map.put(stockZhASpot.get代码(), stockZhASpot),
+                (map, stockZhASpot) -> map.put(stockZhASpot.getCode(), stockZhASpot),
                 Map::putAll
         );
         backfillMissingStockQuoteHistory(localHistoryTargetMap, historyEndDate, now, latestSpotMap, shouldWriteLatestHistory);

@@ -22,6 +22,7 @@ import com.brotherc.aquant.service.industry.StockIndustryBoardHistoryService;
 import com.brotherc.aquant.service.industry.StockIndustryBoardService;
 import com.brotherc.aquant.service.stock.StockQuoteHistoryService;
 import com.brotherc.aquant.service.stock.StockQuoteService;
+import com.brotherc.aquant.utils.DateUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -106,7 +107,7 @@ public class StockSyncService {
             // 遍历每个股票，获取并保存指定区间的历史数据
             for (StockZhASpot stock : stockZhASpotList) {
                 // 获取指定区间的历史数据
-                List<StockZhADaily> stockZhAHists = aKShareService.stockZhADaily(stock.get代码(), start, end, "qfq");
+                List<StockZhADaily> stockZhAHists = aKShareService.stockZhADaily(stock.getCode(), start, end, "qfq");
 
                 // 最大收盘
                 BigDecimal maxClose = stockZhAHists.stream()
@@ -120,14 +121,14 @@ public class StockSyncService {
                         .min(Comparator.naturalOrder())
                         .orElse(BigDecimal.ZERO);
 
-                StockQuote sq = mapping.get(stock.get代码());
+                StockQuote sq = mapping.get(stock.getCode());
 
                 // 更新股票价格区间信息
                 stockQuoteService.setPriceRange(sq, sq.getLatestPrice(), maxClose, minClose);
                 stockQuoteRepository.save(sq);
 
                 // 保存指定区间的历史数据
-                stockQuoteHistoryService.save(stockZhAHists, stock.get代码(), stock.get名称(), now);
+                stockQuoteHistoryService.save(stockZhAHists, stock.getCode(), stock.getName(), now);
             }
 
             // 更新最后一次股票同步时间
@@ -309,11 +310,7 @@ public class StockSyncService {
         return Optional.ofNullable(stockSync)
                 .map(StockSync::getValue)
                 .map(Long::parseLong)
-                .map(timestamp ->
-                        Instant.ofEpochMilli(timestamp)
-                                .atZone(ZoneId.systemDefault())
-                                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-                )
+                .map(DateUtils::formatEpochMilli)
                 .orElse("");
     }
 
@@ -323,11 +320,7 @@ public class StockSyncService {
         return Optional.ofNullable(stockSync)
                 .map(StockSync::getValue)
                 .map(Long::parseLong)
-                .map(timestamp ->
-                        Instant.ofEpochMilli(timestamp)
-                                .atZone(ZoneId.systemDefault())
-                                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-                )
+                .map(DateUtils::formatEpochMilli)
                 .orElse("");
     }
 
@@ -337,11 +330,7 @@ public class StockSyncService {
         return Optional.ofNullable(stockSync)
                 .map(StockSync::getValue)
                 .map(Long::parseLong)
-                .map(timestamp ->
-                        Instant.ofEpochMilli(timestamp)
-                                .atZone(ZoneId.systemDefault())
-                                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-                )
+                .map(DateUtils::formatEpochMilli)
                 .orElse("");
     }
 

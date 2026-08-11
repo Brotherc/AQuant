@@ -86,11 +86,11 @@ public class TencentFinanceService {
             return;
         }
 
-        // 腾讯返回格式示例：v_sh600519="1~贵州茅台~600519~1700.00~...";
+        // 腾讯返回格式示例（响应体内容形如：v_sh600519 对应的字符串 "1~贵州茅台~600519~1700.00~..."）
         String[] lines = responseBody.split(";");
         for (String line : lines) {
             String trimmedLine = line.trim();
-            if (trimmedLine.isEmpty() || !trimmedLine.contains("~")) {
+            if (!trimmedLine.contains("~")) {
                 continue;
             }
 

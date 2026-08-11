@@ -499,96 +499,6 @@ public class StockValuationMetricsService {
                 .toList();
     }
 
-    private boolean matchQuery(CalculatedValuationMetricsVO metrics, ValuationMetricsPageReqVO reqVO) {
-        if (reqVO == null) {
-            return true;
-        }
-        if (StringUtils.isNotBlank(reqVO.getStockCode())) {
-            String keyword = reqVO.getStockCode();
-            if (!StringUtils.containsIgnoreCase(metrics.getStockCode(), keyword)
-                    && !StringUtils.containsIgnoreCase(metrics.getStockName(), keyword)) {
-                return false;
-            }
-        }
-        return matchRange(metrics.getPeg(), reqVO.getPegMin(), reqVO.getPegMax())
-                && matchRange(metrics.getPeTtm(), reqVO.getPeTtmMin(), reqVO.getPeTtmMax())
-                && matchRange(metrics.getPsTtm(), reqVO.getPsTtmMin(), reqVO.getPsTtmMax())
-                && matchRange(metrics.getPbMrq(), reqVO.getPbMrqMin(), reqVO.getPbMrqMax());
-    }
-
-    private boolean matchRange(BigDecimal value, BigDecimal min, BigDecimal max) {
-        if (min == null && max == null) {
-            return true;
-        }
-        if (value == null) {
-            return false;
-        }
-        if (min != null && value.compareTo(min) < 0) {
-            return false;
-        }
-        return max == null || value.compareTo(max) <= 0;
-    }
-
-    private Comparator<CalculatedValuationMetricsVO> buildComparator(Sort sort) {
-        Comparator<CalculatedValuationMetricsVO> comparator = null;
-        for (Sort.Order order : sort) {
-            Comparator<CalculatedValuationMetricsVO> orderComparator = (left, right) ->
-                    compareValue(getSortValue(left, order.getProperty()), getSortValue(right, order.getProperty()), order.isAscending());
-            comparator = comparator == null ? orderComparator : comparator.thenComparing(orderComparator);
-        }
-        if (comparator == null) {
-            comparator = Comparator.comparing(CalculatedValuationMetricsVO::getStockCode);
-        }
-        return comparator;
-    }
-
-    private Sort normalizeSort(Sort requestedSort) {
-        if (requestedSort == null || requestedSort.isUnsorted()) {
-            return Sort.by(Sort.Direction.ASC, "peg");
-        }
-        List<Sort.Order> orders = new ArrayList<>();
-        for (Sort.Order order : requestedSort) {
-            if (isSortableProperty(order.getProperty())) {
-                orders.add(order);
-            }
-        }
-        return orders.isEmpty() ? Sort.by(Sort.Direction.ASC, "peg") : Sort.by(orders);
-    }
-
-    private boolean isSortableProperty(String property) {
-        return switch (property) {
-            case "peg", "peTtm", "psTtm", "pbMrq", "stockCode", "stockName" -> true;
-            default -> false;
-        };
-    }
-
-    private Comparable<?> getSortValue(CalculatedValuationMetricsVO metrics, String property) {
-        return switch (property) {
-            case "peg" -> metrics.getPeg();
-            case "peTtm" -> metrics.getPeTtm();
-            case "psTtm" -> metrics.getPsTtm();
-            case "pbMrq" -> metrics.getPbMrq();
-            case "stockCode" -> metrics.getStockCode();
-            case "stockName" -> metrics.getStockName();
-            default -> metrics.getPeg();
-        };
-    }
-
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private int compareValue(Comparable left, Comparable right, boolean ascending) {
-        if (left == null && right == null) {
-            return 0;
-        }
-        if (left == null) {
-            return 1;
-        }
-        if (right == null) {
-            return -1;
-        }
-        int result = left.compareTo(right);
-        return ascending ? result : -result;
-    }
-
     private BigDecimal multiply(BigDecimal left, BigDecimal right) {
         if (left == null || right == null) {
             return null;
@@ -637,87 +547,87 @@ public class StockValuationMetricsService {
         code = code.substring(2);
 
         for (StockZhValuationComparisonEm data : list) {
-            String c = data.get代码();
+            String c = data.getCode();
             if (code.equals(c)) {
-                stockValuationMetrics.setPeg(data.getPEG());
-                stockValuationMetrics.setPegRank(data.getPEG排名());
+                stockValuationMetrics.setPeg(data.getPeg());
+                stockValuationMetrics.setPegRank(data.getPegRank());
 
-                stockValuationMetrics.setPeLastYearA(data.get市盈率_24A());
-                stockValuationMetrics.setPeTtm(data.get市盈率_TTM());
-                stockValuationMetrics.setPeThisYE(data.get市盈率_25E());
-                stockValuationMetrics.setPeNextYE(data.get市盈率_26E());
-                stockValuationMetrics.setPeNext2YE(data.get市盈率_27E());
+                stockValuationMetrics.setPeLastYearA(data.getPe24a());
+                stockValuationMetrics.setPeTtm(data.getPeTtm());
+                stockValuationMetrics.setPeThisYE(data.getPe25e());
+                stockValuationMetrics.setPeNextYE(data.getPe26e());
+                stockValuationMetrics.setPeNext2YE(data.getPe27e());
 
-                stockValuationMetrics.setPsLastYA(data.get市销率_24A());
-                stockValuationMetrics.setPsTtm(data.get市销率_TTM());
-                stockValuationMetrics.setPsThisYE(data.get市销率_25E());
-                stockValuationMetrics.setPsNextYE(data.get市销率_26E());
-                stockValuationMetrics.setPsNext2YE(data.get市销率_27E());
+                stockValuationMetrics.setPsLastYA(data.getPs24a());
+                stockValuationMetrics.setPsTtm(data.getPsTtm());
+                stockValuationMetrics.setPsThisYE(data.getPs25e());
+                stockValuationMetrics.setPsNextYE(data.getPs26e());
+                stockValuationMetrics.setPsNext2YE(data.getPs27e());
 
-                stockValuationMetrics.setPbLastYA(data.get市净率_24A());
-                stockValuationMetrics.setPbMrq(data.get市净率_MRQ());
+                stockValuationMetrics.setPbLastYA(data.getPb24a());
+                stockValuationMetrics.setPbMrq(data.getPbMrq());
 
-                stockValuationMetrics.setPceLastYA(data.get市现率PCE_24A());
-                stockValuationMetrics.setPceTtm(data.get市现率PCE_TTM());
+                stockValuationMetrics.setPceLastYA(data.getPce24a());
+                stockValuationMetrics.setPceTtm(data.getPceTtm());
 
-                stockValuationMetrics.setPcfLastYA(data.get市现率PCF_24A());
-                stockValuationMetrics.setPcfTtm(data.get市现率PCF_TTM());
+                stockValuationMetrics.setPcfLastYA(data.getPcf24a());
+                stockValuationMetrics.setPcfTtm(data.getPcfTtm());
 
-                stockValuationMetrics.setEvEbitdaLastYA(data.getEV_EBITDA_24A());
+                stockValuationMetrics.setEvEbitdaLastYA(data.getEvEbitda24a());
 
                 stockValuationMetrics.setCreatedAt(LocalDateTime.now());
             } else if ("行业中值".equals(c)) {
-                stockValuationMetrics.setPegIndustryMed(data.getPEG());
+                stockValuationMetrics.setPegIndustryMed(data.getPeg());
 
-                stockValuationMetrics.setPeLastYearIndustryMed(data.get市盈率_24A());
-                stockValuationMetrics.setPeTtmIndustryMed(data.get市盈率_TTM());
-                stockValuationMetrics.setPeThisYEIndustryMed(data.get市盈率_25E());
-                stockValuationMetrics.setPeNextYEIndustryMed(data.get市盈率_26E());
-                stockValuationMetrics.setPeNext2YEIndustryMed(data.get市盈率_27E());
+                stockValuationMetrics.setPeLastYearIndustryMed(data.getPe24a());
+                stockValuationMetrics.setPeTtmIndustryMed(data.getPeTtm());
+                stockValuationMetrics.setPeThisYEIndustryMed(data.getPe25e());
+                stockValuationMetrics.setPeNextYEIndustryMed(data.getPe26e());
+                stockValuationMetrics.setPeNext2YEIndustryMed(data.getPe27e());
 
-                stockValuationMetrics.setPsLastYAIndustryMed(data.get市销率_24A());
-                stockValuationMetrics.setPsTtmIndustryMed(data.get市销率_TTM());
-                stockValuationMetrics.setPsThisYEIndustryMed(data.get市销率_25E());
-                stockValuationMetrics.setPsNextYEIndustryMed(data.get市销率_26E());
-                stockValuationMetrics.setPsNext2YEIndustryMed(data.get市销率_27E());
+                stockValuationMetrics.setPsLastYAIndustryMed(data.getPs24a());
+                stockValuationMetrics.setPsTtmIndustryMed(data.getPsTtm());
+                stockValuationMetrics.setPsThisYEIndustryMed(data.getPs25e());
+                stockValuationMetrics.setPsNextYEIndustryMed(data.getPs26e());
+                stockValuationMetrics.setPsNext2YEIndustryMed(data.getPs27e());
 
-                stockValuationMetrics.setPbLastYAIndustryMed(data.get市净率_24A());
-                stockValuationMetrics.setPbMrqIndustryMed(data.get市净率_MRQ());
+                stockValuationMetrics.setPbLastYAIndustryMed(data.getPb24a());
+                stockValuationMetrics.setPbMrqIndustryMed(data.getPbMrq());
 
-                stockValuationMetrics.setPceLastYAIndustryMed(data.get市现率PCE_24A());
-                stockValuationMetrics.setPceTtmIndustryMed(data.get市现率PCE_TTM());
+                stockValuationMetrics.setPceLastYAIndustryMed(data.getPce24a());
+                stockValuationMetrics.setPceTtmIndustryMed(data.getPceTtm());
 
-                stockValuationMetrics.setPcfLastYAIndustryMed(data.get市现率PCF_24A());
-                stockValuationMetrics.setPcfTtmIndustryMed(data.get市现率PCF_TTM());
+                stockValuationMetrics.setPcfLastYAIndustryMed(data.getPcf24a());
+                stockValuationMetrics.setPcfTtmIndustryMed(data.getPcfTtm());
 
-                stockValuationMetrics.setEvEbitdaLastYAIndustryMed(data.getEV_EBITDA_24A());
+                stockValuationMetrics.setEvEbitdaLastYAIndustryMed(data.getEvEbitda24a());
 
                 stockValuationMetrics.setCreatedAt(LocalDateTime.now());
             } else if ("行业平均".equals(c)) {
-                stockValuationMetrics.setPegIndustryAvg(data.getPEG());
+                stockValuationMetrics.setPegIndustryAvg(data.getPeg());
 
-                stockValuationMetrics.setPeLastYearIndustryAvg(data.get市盈率_24A());
-                stockValuationMetrics.setPeTtmIndustryAvg(data.get市盈率_TTM());
-                stockValuationMetrics.setPeThisYEIndustryAvg(data.get市盈率_25E());
-                stockValuationMetrics.setPeNextYEIndustryAvg(data.get市盈率_26E());
-                stockValuationMetrics.setPeNext2YEIndustryAvg(data.get市盈率_27E());
+                stockValuationMetrics.setPeLastYearIndustryAvg(data.getPe24a());
+                stockValuationMetrics.setPeTtmIndustryAvg(data.getPeTtm());
+                stockValuationMetrics.setPeThisYEIndustryAvg(data.getPe25e());
+                stockValuationMetrics.setPeNextYEIndustryAvg(data.getPe26e());
+                stockValuationMetrics.setPeNext2YEIndustryAvg(data.getPe27e());
 
-                stockValuationMetrics.setPsLastYAIndustryAvg(data.get市销率_24A());
-                stockValuationMetrics.setPsTtmIndustryAvg(data.get市销率_TTM());
-                stockValuationMetrics.setPsThisYEIndustryAvg(data.get市销率_25E());
-                stockValuationMetrics.setPsNextYEIndustryAvg(data.get市销率_26E());
-                stockValuationMetrics.setPsNext2YEIndustryAvg(data.get市销率_27E());
+                stockValuationMetrics.setPsLastYAIndustryAvg(data.getPs24a());
+                stockValuationMetrics.setPsTtmIndustryAvg(data.getPsTtm());
+                stockValuationMetrics.setPsThisYEIndustryAvg(data.getPs25e());
+                stockValuationMetrics.setPsNextYEIndustryAvg(data.getPs26e());
+                stockValuationMetrics.setPsNext2YEIndustryAvg(data.getPs27e());
 
-                stockValuationMetrics.setPbLastYAIndustryAvg(data.get市净率_24A());
-                stockValuationMetrics.setPbMrqIndustryAvg(data.get市净率_MRQ());
+                stockValuationMetrics.setPbLastYAIndustryAvg(data.getPb24a());
+                stockValuationMetrics.setPbMrqIndustryAvg(data.getPbMrq());
 
-                stockValuationMetrics.setPceLastYAIndustryAvg(data.get市现率PCE_24A());
-                stockValuationMetrics.setPceTtmIndustryAvg(data.get市现率PCE_TTM());
+                stockValuationMetrics.setPceLastYAIndustryAvg(data.getPce24a());
+                stockValuationMetrics.setPceTtmIndustryAvg(data.getPceTtm());
 
-                stockValuationMetrics.setPcfLastYAIndustryAvg(data.get市现率PCF_24A());
-                stockValuationMetrics.setPcfTtmIndustryAvg(data.get市现率PCF_TTM());
+                stockValuationMetrics.setPcfLastYAIndustryAvg(data.getPcf24a());
+                stockValuationMetrics.setPcfTtmIndustryAvg(data.getPcfTtm());
 
-                stockValuationMetrics.setEvEbitdaLastYAIndustryAvg(data.getEV_EBITDA_24A());
+                stockValuationMetrics.setEvEbitdaLastYAIndustryAvg(data.getEvEbitda24a());
 
                 stockValuationMetrics.setCreatedAt(LocalDateTime.now());
             }

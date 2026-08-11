@@ -321,7 +321,7 @@ public class StockStrategyService {
             });
         }
 
-        List<StockQuote> targetStocks = quoteStream.collect(Collectors.toList());
+        List<StockQuote> targetStocks = quoteStream.toList();
         if (targetStocks.isEmpty()) {
             return new PageImpl<>(Collections.emptyList(), pageable, 0);
         }
@@ -329,7 +329,7 @@ public class StockStrategyService {
         List<StockTradeSignalVO> list = momentumStrategy.calculate(reqVO.getLookbackDays(), reqVO.getThreshold(), targetStocks);
 
         if (StringUtils.isNotBlank(reqVO.getSignal())) {
-            list = list.stream().filter(vo -> reqVO.getSignal().equalsIgnoreCase(vo.getSignal())).collect(Collectors.toList());
+            list = list.stream().filter(vo -> reqVO.getSignal().equalsIgnoreCase(vo.getSignal())).toList();
         }
 
         Sort sort = pageable.getSort();
@@ -434,7 +434,7 @@ public class StockStrategyService {
             });
         }
 
-        List<StockQuote> targetStocks = stream.collect(Collectors.toList());
+        List<StockQuote> targetStocks = stream.toList();
         if (targetStocks.isEmpty()) {
             return new PageImpl<>(Collections.emptyList(), pageable, 0);
         }

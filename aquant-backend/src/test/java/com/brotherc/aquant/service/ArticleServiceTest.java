@@ -19,7 +19,6 @@ import org.springframework.data.domain.Page;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -143,8 +142,8 @@ class ArticleServiceTest {
         verify(articleRepository).save(articleCaptor.capture());
         UserArticle capturedArticle = articleCaptor.getValue();
 
-        assertThat(capturedArticle.getVisibility()).isEqualTo(0);
-        assertThat(result.getVisibility()).isEqualTo(0);
+        assertThat(capturedArticle.getVisibility()).isZero();
+        assertThat(result.getVisibility()).isZero();
     }
 
     @Test
@@ -174,8 +173,8 @@ class ArticleServiceTest {
         verify(articleRepository).save(articleCaptor.capture());
         UserArticle capturedArticle = articleCaptor.getValue();
 
-        assertThat(capturedArticle.getVisibility()).isEqualTo(0);
-        assertThat(result.getVisibility()).isEqualTo(0);
+        assertThat(capturedArticle.getVisibility()).isZero();
+        assertThat(result.getVisibility()).isZero();
     }
 
     @Test
@@ -205,8 +204,8 @@ class ArticleServiceTest {
         verify(articleRepository).save(articleCaptor.capture());
         UserArticle capturedArticle = articleCaptor.getValue();
 
-        assertThat(capturedArticle.getVisibility()).isEqualTo(0);
-        assertThat(result.getVisibility()).isEqualTo(0);
+        assertThat(capturedArticle.getVisibility()).isZero();
+        assertThat(result.getVisibility()).isZero();
     }
 
     @Test
@@ -267,8 +266,8 @@ class ArticleServiceTest {
         verify(articleRepository).save(articleCaptor.capture());
         UserArticle capturedArticle = articleCaptor.getValue();
 
-        assertThat(capturedArticle.getVisibility()).isEqualTo(0);
-        assertThat(result.getVisibility()).isEqualTo(0);
+        assertThat(capturedArticle.getVisibility()).isZero();
+        assertThat(result.getVisibility()).isZero();
     }
 
     @Test
@@ -637,7 +636,7 @@ class ArticleServiceTest {
         verify(articleRepository).save(articleCaptor.capture());
         UserArticle capturedArticle = articleCaptor.getValue();
 
-        assertThat(capturedArticle.getVisibility()).isEqualTo(0);
+        assertThat(capturedArticle.getVisibility()).isZero();
     }
 
     @Test
@@ -748,7 +747,7 @@ class ArticleServiceTest {
         UserArticle capturedArticle = articleCaptor.getValue();
 
         // Visibility should remain unchanged
-        assertThat(capturedArticle.getVisibility()).isEqualTo(0);
+        assertThat(capturedArticle.getVisibility()).isZero();
     }
 
     @Test
@@ -1148,7 +1147,7 @@ class ArticleServiceTest {
         assertThat(result.getContent()).isEqualTo("Private content only for author");
         assertThat(result.getAuthorId()).isEqualTo(testUserId);
         assertThat(result.getAuthorUsername()).isEqualTo(testUsername);
-        assertThat(result.getVisibility()).isEqualTo(0);
+        assertThat(result.getVisibility()).isZero();
 
         verify(articleRepository, times(1)).findById(articleId);
     }
@@ -1519,8 +1518,8 @@ class ArticleServiceTest {
         // Assert
         assertThat(result).isNotNull();
         assertThat(result.getContent()).isEmpty();
-        assertThat(result.getTotalElements()).isEqualTo(0);
-        assertThat(result.getTotalPages()).isEqualTo(0);
+        assertThat(result.getTotalElements()).isZero();
+        assertThat(result.getTotalPages()).isZero();
     }
 
     @Test
@@ -1590,7 +1589,7 @@ class ArticleServiceTest {
 
         List<Integer> visibilities = result.getContent().stream()
                 .map(com.brotherc.aquant.model.vo.article.ArticleListItemVO::getVisibility)
-                .collect(Collectors.toList());
+                .toList();
 
         assertThat(visibilities).containsExactlyInAnyOrder(1, 0);
     }
@@ -1623,7 +1622,7 @@ class ArticleServiceTest {
         // Assert
         assertThat(result.getContent()).hasSize(1);
         com.brotherc.aquant.model.vo.article.ArticleListItemVO vo = result.getContent().get(0);
-        assertThat(vo.getVisibility()).isEqualTo(0);
+        assertThat(vo.getVisibility()).isZero();
     }
 
     @Test
@@ -1656,7 +1655,7 @@ class ArticleServiceTest {
                 articleService.getUserArticles(testUserId, null, org.springframework.data.domain.PageRequest.of(page, size));
 
         // Assert
-        assertThat(result.getNumber()).isEqualTo(0);
+        assertThat(result.getNumber()).isZero();
         assertThat(result.getSize()).isEqualTo(10);
         assertThat(result.getTotalElements()).isEqualTo(15);
         assertThat(result.getTotalPages()).isEqualTo(2);
@@ -1706,7 +1705,7 @@ class ArticleServiceTest {
         // Assert
         assertThat(result).isNotNull();
         assertThat(result.getContent()).isEmpty();
-        assertThat(result.getTotalElements()).isEqualTo(0);
+        assertThat(result.getTotalElements()).isZero();
     }
 
     @Test
@@ -2135,7 +2134,7 @@ class ArticleServiceTest {
         // Assert
         assertThat(result).isNotNull();
         assertThat(result.getContent()).isEmpty();
-        assertThat(result.getTotalElements()).isEqualTo(0);
+        assertThat(result.getTotalElements()).isZero();
     }
 
     @Test
@@ -2166,7 +2165,7 @@ class ArticleServiceTest {
         // Assert
         assertThat(result).isNotNull();
         assertThat(result.getContent()).isEmpty();
-        assertThat(result.getTotalElements()).isEqualTo(0);
+        assertThat(result.getTotalElements()).isZero();
     }
 
     @Test
@@ -2273,7 +2272,7 @@ class ArticleServiceTest {
                 articleService.getUserArticles(testUserId, keyword, org.springframework.data.domain.PageRequest.of(page, size));
 
         // Assert
-        assertThat(result.getNumber()).isEqualTo(0);
+        assertThat(result.getNumber()).isZero();
         assertThat(result.getSize()).isEqualTo(10);
         assertThat(result.getTotalElements()).isEqualTo(15);
         assertThat(result.getTotalPages()).isEqualTo(2);

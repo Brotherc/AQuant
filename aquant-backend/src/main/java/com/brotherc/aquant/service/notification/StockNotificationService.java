@@ -77,7 +77,7 @@ public class StockNotificationService {
         StockNotification notification;
         if (reqVO.getId() != null) {
             notification = notificationRepository.findByIdAndUserId(reqVO.getId(), userId)
-                    .orElseThrow(() -> ExceptionEnum.SYS_CHECK_ERROR.toException());
+                    .orElseThrow(ExceptionEnum.SYS_CHECK_ERROR::toException);
         } else {
             notification = new StockNotification();
             notification.setUserId(userId);
@@ -139,7 +139,7 @@ public class StockNotificationService {
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long id, Long userId) {
         StockNotification notification = notificationRepository.findByIdAndUserId(id, userId)
-                .orElseThrow(() -> ExceptionEnum.SYS_CHECK_ERROR.toException());
+                .orElseThrow(ExceptionEnum.SYS_CHECK_ERROR::toException);
         notificationRepository.delete(notification);
         clearLastObservedPrice(notification.getId());
     }

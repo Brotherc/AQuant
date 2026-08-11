@@ -1,6 +1,7 @@
 package com.brotherc.aquant.model.dto.akshare;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -9,32 +10,46 @@ import java.math.BigDecimal;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class StockZhASpot {
 
-    private String 代码;
+    @JsonProperty("代码")
+    private String code;
 
-    private String 名称;
+    @JsonProperty("名称")
+    private String name;
 
-    private BigDecimal 最新价;
+    @JsonProperty("最新价")
+    private BigDecimal latestPrice;
 
-    private BigDecimal 涨跌额;
+    @JsonProperty("涨跌额")
+    private BigDecimal changeAmount;
 
-    private BigDecimal 涨跌幅;
+    @JsonProperty("涨跌幅")
+    private BigDecimal changePercent;
 
-    private BigDecimal 买入;
+    @JsonProperty("买入")
+    private BigDecimal buyPrice;
 
-    private BigDecimal 卖出;
+    @JsonProperty("卖出")
+    private BigDecimal sellPrice;
 
-    private BigDecimal 昨收;
+    @JsonProperty("昨收")
+    private BigDecimal prevClose;
 
-    private BigDecimal 今开;
+    @JsonProperty("今开")
+    private BigDecimal openPrice;
 
-    private BigDecimal 最高;
+    @JsonProperty("最高")
+    private BigDecimal highPrice;
 
-    private BigDecimal 最低;
+    @JsonProperty("最低")
+    private BigDecimal lowPrice;
 
-    private BigDecimal 成交量;
+    @JsonProperty("成交量")
+    private BigDecimal volume;
 
-    private BigDecimal 成交额;
+    @JsonProperty("成交额")
+    private BigDecimal turnover;
 
-    private String 时间戳;
+    @JsonProperty("时间戳")
+    private String timestamp;
 
 }

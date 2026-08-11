@@ -21,8 +21,8 @@ public class JwtUtils {
 
     private static final String ISSUER = "aquant";
 
-    private static String SECRET;
-    private static long EXPIRE_MS;
+    private static String secret;
+    private static long expireMs;
 
     @Value("${aquant.jwt.secret:}")
     private String secretConfig;
@@ -36,8 +36,8 @@ public class JwtUtils {
             throw new IllegalStateException(
                     "JWT 密钥未配置，请在配置文件中设置 aquant.jwt.secret");
         }
-        SECRET = secretConfig;
-        EXPIRE_MS = expireSecondsConfig * 1000L;
+        secret = secretConfig;
+        expireMs = expireSecondsConfig * 1000L;
     }
 
     /**
@@ -49,8 +49,8 @@ public class JwtUtils {
                 .withClaim("userId", userId)
                 .withClaim("username", username)
                 .withIssuedAt(new Date())
-                .withExpiresAt(new Date(System.currentTimeMillis() + EXPIRE_MS))
-                .sign(Algorithm.HMAC256(SECRET));
+                .withExpiresAt(new Date(System.currentTimeMillis() + expireMs))
+                .sign(Algorithm.HMAC256(secret));
     }
 
     /**
@@ -58,7 +58,7 @@ public class JwtUtils {
      */
     public static DecodedJWT verifyToken(String token) {
         try {
-            return JWT.require(Algorithm.HMAC256(SECRET))
+            return JWT.require(Algorithm.HMAC256(secret))
                     .withIssuer(ISSUER)
                     .build()
                     .verify(token);

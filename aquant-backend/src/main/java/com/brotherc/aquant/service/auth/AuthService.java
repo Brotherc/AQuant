@@ -211,7 +211,7 @@ public class AuthService {
             throw ExceptionEnum.AUTH_TOKEN_INVALID.toException();
         }
         SysUser user = sysUserRepository.findById(userId)
-                .orElseThrow(() -> ExceptionEnum.AUTH_USER_NOT_FOUND.toException());
+                .orElseThrow(ExceptionEnum.AUTH_USER_NOT_FOUND::toException);
 
         user.setEmail(normalizeRequiredEmail(newEmail));
         sysUserRepository.save(user);
@@ -286,7 +286,7 @@ public class AuthService {
         }
 
         SysUser user = sysUserRepository.findByEmail(normalizedEmail)
-                .orElseThrow(() -> ExceptionEnum.AUTH_RESET_CODE_INVALID.toException());
+                .orElseThrow(ExceptionEnum.AUTH_RESET_CODE_INVALID::toException);
 
         BCrypt.Result result = BCrypt.verifyer().verify(reqVO.getNewPassword().toCharArray(), user.getPassword());
         if (result.verified) {

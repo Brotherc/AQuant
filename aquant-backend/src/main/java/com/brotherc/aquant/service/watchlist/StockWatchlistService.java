@@ -77,15 +77,14 @@ public class StockWatchlistService {
         }
         // 校验归属
         StockWatchlistGroup group = groupRepository.findByIdAndUserId(groupId, userId)
-                .orElseThrow(() -> ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND.toException());
+                .orElseThrow(ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND::toException);
 
         List<StockWatchlistStock> watchlistStocks = stockRepository.findByGroupIdOrderBySortNoDesc(groupId);
         if (CollectionUtils.isEmpty(watchlistStocks)) {
             return new ArrayList<>();
         }
 
-        List<String> codes6 = watchlistStocks.stream().map(StockWatchlistStock::getStockCode)
-                .collect(Collectors.toList());
+        List<String> codes6 = watchlistStocks.stream().map(StockWatchlistStock::getStockCode).toList();
 
         List<String> notificationCodes = notificationRepository.findDistinctStockCodeByUserIdAndStockCodeIn(userId, codes6);
 
@@ -128,7 +127,7 @@ public class StockWatchlistService {
                 }
 
                 return vo;
-            }).collect(Collectors.toList());
+            }).toList();
         }
 
         // 智能补全并批量查询核心行情
@@ -188,7 +187,7 @@ public class StockWatchlistService {
                             vo.setBonusShareRatio(d.getBonusShareRatio());
                             vo.setTransferShareRatio(d.getTransferShareRatio());
                             return vo;
-                        }).collect(Collectors.toList()))));
+                        }).toList())));
 
         return watchlistStocks.stream().map(ws -> {
             WatchlistStockVO vo = new WatchlistStockVO();
@@ -394,7 +393,7 @@ public class StockWatchlistService {
             throw ExceptionEnum.AUTH_TOKEN_INVALID.toException();
         }
         groupRepository.findByIdAndUserId(groupId, userId)
-                .orElseThrow(() -> ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND.toException());
+                .orElseThrow(ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND::toException);
 
         stockRepository.deleteByGroupIdAndStockCode(groupId, stockCode);
     }
@@ -405,7 +404,7 @@ public class StockWatchlistService {
             throw ExceptionEnum.AUTH_TOKEN_INVALID.toException();
         }
         groupRepository.findByIdAndUserId(reqVO.getGroupId(), userId)
-                .orElseThrow(() -> ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND.toException());
+                .orElseThrow(ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND::toException);
 
         Long groupId = reqVO.getGroupId();
         List<String> codes = reqVO.getStockCodes();
@@ -431,7 +430,7 @@ public class StockWatchlistService {
             throw ExceptionEnum.AUTH_TOKEN_INVALID.toException();
         }
         groupRepository.findByIdAndUserId(reqVO.getGroupId(), userId)
-                .orElseThrow(() -> ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND.toException());
+                .orElseThrow(ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND::toException);
 
         Long groupId = reqVO.getGroupId();
         String stockCode = reqVO.getStockCode();
@@ -496,9 +495,9 @@ public class StockWatchlistService {
         }
         // 校验两个分组归属
         groupRepository.findByIdAndUserId(reqVO.getFromGroupId(), userId)
-                .orElseThrow(() -> ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND.toException());
+                .orElseThrow(ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND::toException);
         groupRepository.findByIdAndUserId(reqVO.getToGroupId(), userId)
-                .orElseThrow(() -> ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND.toException());
+                .orElseThrow(ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND::toException);
 
         String stockCode = reqVO.getStockCode();
         Long fromGroupId = reqVO.getFromGroupId();

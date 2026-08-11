@@ -46,8 +46,8 @@ public class StockQuoteHistoryService {
         // 提取所有股票代码；如果上游异常返回重复代码，保留最后一条行情。
         Map<String, StockZhASpot> spotMap = new LinkedHashMap<>();
         for (StockZhASpot spot : stockZhASpotList) {
-            if (spot != null && spot.get代码() != null) {
-                spotMap.put(spot.get代码(), spot);
+            if (spot != null && spot.getCode() != null) {
+                spotMap.put(spot.getCode(), spot);
             }
         }
         if (spotMap.isEmpty()) {
@@ -70,23 +70,23 @@ public class StockQuoteHistoryService {
 
         // 遍历实时行情
         for (StockZhASpot spot : spotMap.values()) {
-            StockQuoteHistory entity = existedMap.get(spot.get代码());
+            StockQuoteHistory entity = existedMap.get(spot.getCode());
 
             if (entity == null) {
                 entity = new StockQuoteHistory();
-                entity.setCode(spot.get代码());
+                entity.setCode(spot.getCode());
                 entity.setTradeDate(tradeDate);
             }
 
             // 行情更新
-            entity.setName(spot.get名称());
-            entity.setClosePrice(spot.get最新价());
-            entity.setOpenPrice(spot.get今开());
-            entity.setHighPrice(spot.get最高());
-            entity.setLowPrice(spot.get最低());
-            entity.setVolume(spot.get成交量());
-            entity.setTurnover(spot.get成交额());
-            entity.setQuoteTime(spot.get时间戳());
+            entity.setName(spot.getName());
+            entity.setClosePrice(spot.getLatestPrice());
+            entity.setOpenPrice(spot.getOpenPrice());
+            entity.setHighPrice(spot.getHighPrice());
+            entity.setLowPrice(spot.getLowPrice());
+            entity.setVolume(spot.getVolume());
+            entity.setTurnover(spot.getTurnover());
+            entity.setQuoteTime(spot.getTimestamp());
             entity.setCreatedAt(now);
 
             saveList.add(entity);
@@ -231,7 +231,6 @@ public class StockQuoteHistoryService {
         }
 
         List<StockQuoteHistory> result = new ArrayList<>();
-        BigDecimal prevClose = null; // No previous close info for first aggregated period unless we query more
 
         for (List<StockQuoteHistory> group : groupedMap.values()) {
             if (group.isEmpty())

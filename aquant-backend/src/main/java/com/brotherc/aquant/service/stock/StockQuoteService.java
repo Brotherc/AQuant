@@ -44,28 +44,28 @@ public class StockQuoteService {
 
         // 遍历第三方股票数据
         for (StockZhASpot stockZhASpot : stockZhASpotList) {
-            StockQuote sq = map.get(stockZhASpot.get代码());
+            StockQuote sq = map.get(stockZhASpot.getCode());
             // 如果不存在则创建
             if (sq == null) {
                 sq = new StockQuote();
             }
-            sq.setCode(stockZhASpot.get代码());
-            sq.setName(stockZhASpot.get名称());
-            sq.setLatestPrice(stockZhASpot.get最新价());
-            sq.setChangeAmount(stockZhASpot.get涨跌额());
-            sq.setChangePercent(stockZhASpot.get涨跌幅());
-            sq.setBuyPrice(stockZhASpot.get买入());
-            sq.setSellPrice(stockZhASpot.get卖出());
-            sq.setPrevClose(stockZhASpot.get昨收());
-            sq.setOpenPrice(stockZhASpot.get今开());
-            sq.setHighPrice(stockZhASpot.get最高());
-            sq.setLowPrice(stockZhASpot.get最低());
-            sq.setVolume(stockZhASpot.get成交量());
-            sq.setTurnover(stockZhASpot.get成交额());
-            sq.setQuoteTime(stockZhASpot.get时间戳());
+            sq.setCode(stockZhASpot.getCode());
+            sq.setName(stockZhASpot.getName());
+            sq.setLatestPrice(stockZhASpot.getLatestPrice());
+            sq.setChangeAmount(stockZhASpot.getChangeAmount());
+            sq.setChangePercent(stockZhASpot.getChangePercent());
+            sq.setBuyPrice(stockZhASpot.getBuyPrice());
+            sq.setSellPrice(stockZhASpot.getSellPrice());
+            sq.setPrevClose(stockZhASpot.getPrevClose());
+            sq.setOpenPrice(stockZhASpot.getOpenPrice());
+            sq.setHighPrice(stockZhASpot.getHighPrice());
+            sq.setLowPrice(stockZhASpot.getLowPrice());
+            sq.setVolume(stockZhASpot.getVolume());
+            sq.setTurnover(stockZhASpot.getTurnover());
+            sq.setQuoteTime(stockZhASpot.getTimestamp());
             sq.setCreatedAt(now);
 
-            setPriceRange(sq, stockZhASpot.get最新价(), stockZhASpot.get最新价(), stockZhASpot.get最新价());
+            setPriceRange(sq, stockZhASpot.getLatestPrice(), stockZhASpot.getLatestPrice(), stockZhASpot.getLatestPrice());
 
             list.add(sq);
         }

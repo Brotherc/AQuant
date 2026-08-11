@@ -23,6 +23,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class StockDupontAnalysisService {
 
+    private static final String ROE_3Y_AVG = "roe3yAvg";
+
     private final StockDupontAnalysisRepository stockDupontAnalysisRepository;
 
     public Page<StockDupontAnalysis> pageQuery(DupontAnalysisPageReqVO query, Pageable pageable) {
@@ -30,7 +32,7 @@ public class StockDupontAnalysisService {
         if (pageable.getSort().isUnsorted()) {
             int page = pageable.getPageNumber();
             int size = pageable.getPageSize();
-            pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "roe3yAvg"));
+            pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, ROE_3Y_AVG));
         }
 
         Specification<StockDupontAnalysis> specification =(root, cq, cb) -> {
@@ -43,10 +45,10 @@ public class StockDupontAnalysisService {
 
             // ROE-3年平均 范围
             if (query.getRoe3yAvgMin() != null) {
-                predicates.add(cb.ge(root.get("roe3yAvg"), query.getRoe3yAvgMin()));
+                predicates.add(cb.ge(root.get(ROE_3Y_AVG), query.getRoe3yAvgMin()));
             }
             if (query.getRoe3yAvgMax() != null) {
-                predicates.add(cb.le(root.get("roe3yAvg"), query.getRoe3yAvgMax()));
+                predicates.add(cb.le(root.get(ROE_3Y_AVG), query.getRoe3yAvgMax()));
             }
 
             // ROE-3年平均-行业中值 范围
@@ -67,7 +69,7 @@ public class StockDupontAnalysisService {
 
             // ROE-3年平均 > 行业平均
             if (Boolean.TRUE.equals(query.getRoeHigherThanIndustryAvg())) {
-                predicates.add(cb.gt(root.get("roe3yAvg"), root.get("roe3yAvgIndustryAvg")));
+                predicates.add(cb.gt(root.get(ROE_3Y_AVG), root.get("roe3yAvgIndustryAvg")));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
@@ -89,73 +91,73 @@ public class StockDupontAnalysisService {
         code = code.substring(2);
 
         for (StockZhDupontComparisonEm data : list) {
-            String c = data.get代码();
+            String c = data.getCode();
             if (code.equals(c)) {
-                stockDupontAnalysis.setRoe3yAvgRank(data.getROE_3年平均排名());
+                stockDupontAnalysis.setRoe3yAvgRank(data.getRoe3yAvgRank());
 
-                stockDupontAnalysis.setRoe3yAvg(data.getROE_3年平均());
-                stockDupontAnalysis.setRoeLast3yA(data.getROE_22A());
-                stockDupontAnalysis.setRoeLast2yA(data.getROE_23A());
-                stockDupontAnalysis.setRoeLastYA(data.getROE_24A());
+                stockDupontAnalysis.setRoe3yAvg(data.getRoe3yAvg());
+                stockDupontAnalysis.setRoeLast3yA(data.getRoe22a());
+                stockDupontAnalysis.setRoeLast2yA(data.getRoe23a());
+                stockDupontAnalysis.setRoeLastYA(data.getRoe24a());
 
-                stockDupontAnalysis.setNetMargin3yAvg(data.get净利率_3年平均());
-                stockDupontAnalysis.setNetMarginLast3yA(data.get净利率_22A());
-                stockDupontAnalysis.setNetMarginLast2yA(data.get净利率_23A());
-                stockDupontAnalysis.setNetMarginLastYA(data.get净利率_24A());
+                stockDupontAnalysis.setNetMargin3yAvg(data.getNetMargin3yAvg());
+                stockDupontAnalysis.setNetMarginLast3yA(data.getNetMargin22a());
+                stockDupontAnalysis.setNetMarginLast2yA(data.getNetMargin23a());
+                stockDupontAnalysis.setNetMarginLastYA(data.getNetMargin24a());
 
-                stockDupontAnalysis.setAssetTurnover3yAvg(data.get总资产周转率_3年平均());
-                stockDupontAnalysis.setAssetTurnoverLast3yA(data.get总资产周转率_22A());
-                stockDupontAnalysis.setAssetTurnoverLast2yA(data.get总资产周转率_23A());
-                stockDupontAnalysis.setAssetTurnoverLastYA(data.get总资产周转率_24A());
+                stockDupontAnalysis.setAssetTurnover3yAvg(data.getAssetTurnover3yAvg());
+                stockDupontAnalysis.setAssetTurnoverLast3yA(data.getAssetTurnover22a());
+                stockDupontAnalysis.setAssetTurnoverLast2yA(data.getAssetTurnover23a());
+                stockDupontAnalysis.setAssetTurnoverLastYA(data.getAssetTurnover24a());
 
-                stockDupontAnalysis.setEquityMultiplier3yAvg(data.get权益乘数_3年平均());
-                stockDupontAnalysis.setEquityMultiplierLast3yA(data.get权益乘数_22A());
-                stockDupontAnalysis.setEquityMultiplierLast2yA(data.get权益乘数_23A());
-                stockDupontAnalysis.setEquityMultiplierLastYA(data.get权益乘数_24A());
+                stockDupontAnalysis.setEquityMultiplier3yAvg(data.getEquityMultiplier3yAvg());
+                stockDupontAnalysis.setEquityMultiplierLast3yA(data.getEquityMultiplier22a());
+                stockDupontAnalysis.setEquityMultiplierLast2yA(data.getEquityMultiplier23a());
+                stockDupontAnalysis.setEquityMultiplierLastYA(data.getEquityMultiplier24a());
 
                 stockDupontAnalysis.setCreatedAt(LocalDateTime.now());
             } else if ("行业中值".equals(c)) {
-                stockDupontAnalysis.setRoe3yAvgIndustryMed(data.getROE_3年平均());
-                stockDupontAnalysis.setRoeLast3yAIndustryMed(data.getROE_22A());
-                stockDupontAnalysis.setRoeLast2yAIndustryMed(data.getROE_23A());
-                stockDupontAnalysis.setRoeLastYAIndustryMed(data.getROE_24A());
+                stockDupontAnalysis.setRoe3yAvgIndustryMed(data.getRoe3yAvg());
+                stockDupontAnalysis.setRoeLast3yAIndustryMed(data.getRoe22a());
+                stockDupontAnalysis.setRoeLast2yAIndustryMed(data.getRoe23a());
+                stockDupontAnalysis.setRoeLastYAIndustryMed(data.getRoe24a());
 
-                stockDupontAnalysis.setNetMargin3yAvgIndustryMed(data.get净利率_3年平均());
-                stockDupontAnalysis.setNetMarginLast3yAIndustryMed(data.get净利率_22A());
-                stockDupontAnalysis.setNetMarginLast2yAIndustryMed(data.get净利率_23A());
-                stockDupontAnalysis.setNetMarginLastYAIndustryMed(data.get净利率_24A());
+                stockDupontAnalysis.setNetMargin3yAvgIndustryMed(data.getNetMargin3yAvg());
+                stockDupontAnalysis.setNetMarginLast3yAIndustryMed(data.getNetMargin22a());
+                stockDupontAnalysis.setNetMarginLast2yAIndustryMed(data.getNetMargin23a());
+                stockDupontAnalysis.setNetMarginLastYAIndustryMed(data.getNetMargin24a());
 
-                stockDupontAnalysis.setAssetTurnover3yAvgIndustryMed(data.get总资产周转率_3年平均());
-                stockDupontAnalysis.setAssetTurnoverLast3yAIndustryMed(data.get总资产周转率_22A());
-                stockDupontAnalysis.setAssetTurnoverLast2yAIndustryMed(data.get总资产周转率_23A());
-                stockDupontAnalysis.setAssetTurnoverLastYAIndustryMed(data.get总资产周转率_24A());
+                stockDupontAnalysis.setAssetTurnover3yAvgIndustryMed(data.getAssetTurnover3yAvg());
+                stockDupontAnalysis.setAssetTurnoverLast3yAIndustryMed(data.getAssetTurnover22a());
+                stockDupontAnalysis.setAssetTurnoverLast2yAIndustryMed(data.getAssetTurnover23a());
+                stockDupontAnalysis.setAssetTurnoverLastYAIndustryMed(data.getAssetTurnover24a());
 
-                stockDupontAnalysis.setEquityMultiplier3yAvgIndustryMed(data.get权益乘数_3年平均());
-                stockDupontAnalysis.setEquityMultiplierLast3yAIndustryMed(data.get权益乘数_22A());
-                stockDupontAnalysis.setEquityMultiplierLast2yAIndustryMed(data.get权益乘数_23A());
-                stockDupontAnalysis.setEquityMultiplierLastYAIndustryMed(data.get权益乘数_24A());
+                stockDupontAnalysis.setEquityMultiplier3yAvgIndustryMed(data.getEquityMultiplier3yAvg());
+                stockDupontAnalysis.setEquityMultiplierLast3yAIndustryMed(data.getEquityMultiplier22a());
+                stockDupontAnalysis.setEquityMultiplierLast2yAIndustryMed(data.getEquityMultiplier23a());
+                stockDupontAnalysis.setEquityMultiplierLastYAIndustryMed(data.getEquityMultiplier24a());
 
                 stockDupontAnalysis.setCreatedAt(LocalDateTime.now());
             } else if ("行业平均".equals(c)) {
-                stockDupontAnalysis.setRoe3yAvgIndustryAvg(data.getROE_3年平均());
-                stockDupontAnalysis.setRoeLast3yAIndustryAvg(data.getROE_22A());
-                stockDupontAnalysis.setRoeLast2yAIndustryAvg(data.getROE_23A());
-                stockDupontAnalysis.setRoeLastYAIndustryAvg(data.getROE_24A());
+                stockDupontAnalysis.setRoe3yAvgIndustryAvg(data.getRoe3yAvg());
+                stockDupontAnalysis.setRoeLast3yAIndustryAvg(data.getRoe22a());
+                stockDupontAnalysis.setRoeLast2yAIndustryAvg(data.getRoe23a());
+                stockDupontAnalysis.setRoeLastYAIndustryAvg(data.getRoe24a());
 
-                stockDupontAnalysis.setNetMargin3yAvgIndustryAvg(data.get净利率_3年平均());
-                stockDupontAnalysis.setNetMarginLast3yAIndustryAvg(data.get净利率_22A());
-                stockDupontAnalysis.setNetMarginLast2yAIndustryAvg(data.get净利率_23A());
-                stockDupontAnalysis.setNetMarginLastYAIndustryAvg(data.get净利率_24A());
+                stockDupontAnalysis.setNetMargin3yAvgIndustryAvg(data.getNetMargin3yAvg());
+                stockDupontAnalysis.setNetMarginLast3yAIndustryAvg(data.getNetMargin22a());
+                stockDupontAnalysis.setNetMarginLast2yAIndustryAvg(data.getNetMargin23a());
+                stockDupontAnalysis.setNetMarginLastYAIndustryAvg(data.getNetMargin24a());
 
-                stockDupontAnalysis.setAssetTurnover3yAvgIndustryAvg(data.get总资产周转率_3年平均());
-                stockDupontAnalysis.setAssetTurnoverLast3yAIndustryAvg(data.get总资产周转率_22A());
-                stockDupontAnalysis.setAssetTurnoverLast2yAIndustryAvg(data.get总资产周转率_23A());
-                stockDupontAnalysis.setAssetTurnoverLastYAIndustryAvg(data.get总资产周转率_24A());
+                stockDupontAnalysis.setAssetTurnover3yAvgIndustryAvg(data.getAssetTurnover3yAvg());
+                stockDupontAnalysis.setAssetTurnoverLast3yAIndustryAvg(data.getAssetTurnover22a());
+                stockDupontAnalysis.setAssetTurnoverLast2yAIndustryAvg(data.getAssetTurnover23a());
+                stockDupontAnalysis.setAssetTurnoverLastYAIndustryAvg(data.getAssetTurnover24a());
 
-                stockDupontAnalysis.setEquityMultiplier3yAvgIndustryAvg(data.get权益乘数_3年平均());
-                stockDupontAnalysis.setEquityMultiplierLast3yAIndustryAvg(data.get权益乘数_22A());
-                stockDupontAnalysis.setEquityMultiplierLast2yAIndustryAvg(data.get权益乘数_23A());
-                stockDupontAnalysis.setEquityMultiplierLastYAIndustryAvg(data.get权益乘数_24A());
+                stockDupontAnalysis.setEquityMultiplier3yAvgIndustryAvg(data.getEquityMultiplier3yAvg());
+                stockDupontAnalysis.setEquityMultiplierLast3yAIndustryAvg(data.getEquityMultiplier22a());
+                stockDupontAnalysis.setEquityMultiplierLast2yAIndustryAvg(data.getEquityMultiplier23a());
+                stockDupontAnalysis.setEquityMultiplierLastYAIndustryAvg(data.getEquityMultiplier24a());
 
                 stockDupontAnalysis.setCreatedAt(LocalDateTime.now());
             }

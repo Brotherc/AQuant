@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 public class StockFundInfoService {
 
     private static final DateTimeFormatter MONTH_DAY_FORMATTER = DateTimeFormatter.ofPattern("MM-dd");
+    private String FUND_TYPE = "fundType";
 
     private final StockFundInfoRepository stockFundInfoRepository;
 
@@ -130,7 +131,7 @@ public class StockFundInfoService {
             }
 
             if (StringUtils.isNotBlank(reqVO.getFundType())) {
-                predicates.add(cb.equal(root.get("fundType"), reqVO.getFundType()));
+                predicates.add(cb.equal(root.get(FUND_TYPE), reqVO.getFundType()));
             }
 
             if (Boolean.TRUE.equals(reqVO.getIncludeUsStock())) {
@@ -139,8 +140,8 @@ public class StockFundInfoService {
                 for (String keyword : keywords) {
                     usStockPredicates.add(cb.like(root.get("fundName"), "%" + keyword + "%"));
                 }
-                usStockPredicates.add(cb.like(root.get("fundType"), "QDII%"));
-                usStockPredicates.add(cb.equal(root.get("fundType"), "指数型-海外股票"));
+                usStockPredicates.add(cb.like(root.get(FUND_TYPE), "QDII%"));
+                usStockPredicates.add(cb.equal(root.get(FUND_TYPE), "指数型-海外股票"));
                 
                 predicates.add(cb.or(usStockPredicates.toArray(new Predicate[0])));
             }
