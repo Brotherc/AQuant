@@ -275,50 +275,43 @@ public class StockValuationMetricsService {
 
         List<CalculatedValuationMetricsVO> result = new ArrayList<>();
         for (StockQuote stockQuote : stockQuoteRepository.findAll()) {
-            if (stockQuote == null || StringUtils.isBlank(stockQuote.getCode()) || stockQuote.getLatestPrice() == null) {
-                continue;
+            if (stockQuote != null && StringUtils.isNotBlank(stockQuote.getCode()) && stockQuote.getLatestPrice() != null) {
+                String plainCode = stockQuote.getCode().length() > 2 ? stockQuote.getCode().substring(2) : stockQuote.getCode();
+                List<StockPerformanceReport> reports = performanceReportMap.get(plainCode);
+                StockPerformanceReport latestReport = CollectionUtils.isEmpty(reports) ? null : findLatestReport(reports);
+
+                if (latestReport != null) {
+                    StockPerformanceReport annualReport = findLatestAnnualReport(reports);
+                    BigDecimal epsTtm = calculateTtmValue(reports, latestReport, StockPerformanceReport::getEarningsPerShare);
+                    BigDecimal revenueTtm = calculateTtmValue(reports, latestReport, StockPerformanceReport::getTotalRevenue);
+                    BigDecimal netProfitTtm = calculateTtmValue(reports, latestReport, StockPerformanceReport::getNetProfit);
+                    BigDecimal previousNetProfitTtm = calculatePreviousTtmValue(reports, latestReport, StockPerformanceReport::getNetProfit);
+                    BigDecimal ocfTtm = calculateTtmValue(reports, latestReport, StockPerformanceReport::getOperatingCashFlowPerShare);
+                    StockShareChange latestShareChange = latestShareChangeMap.get(stockQuote.getCode());
+
+                    CalculatedValuationMetricsVO metrics = new CalculatedValuationMetricsVO();
+                    metrics.setId(stockQuote.getId());
+                    metrics.setStockCode(stockQuote.getCode());
+                    metrics.setStockName(stockQuote.getName());
+                    metrics.setCalculatedAt(LocalDateTime.now());
+
+                    metrics.setPeTtm(divide(stockQuote.getLatestPrice(), epsTtm));
+                    metrics.setPeAnnual(annualReport == null ? null : divide(stockQuote.getLatestPrice(), annualReport.getEarningsPerShare()));
+                    metrics.setPbMrq(divide(stockQuote.getLatestPrice(), latestReport.getNetAssetsPerShare()));
+                    metrics.setPbAnnual(annualReport == null ? null : divide(stockQuote.getLatestPrice(), annualReport.getNetAssetsPerShare()));
+
+                    BigDecimal marketCap = latestShareChange == null ? null :
+                            multiply(stockQuote.getLatestPrice(), multiply(latestShareChange.getTotalShares10k(), TEN_THOUSAND));
+                    metrics.setPsTtm(divide(marketCap, revenueTtm));
+                    metrics.setPsAnnual(annualReport == null ? null : divide(marketCap, annualReport.getTotalRevenue()));
+
+                    metrics.setPcfTtm(divide(stockQuote.getLatestPrice(), ocfTtm));
+                    metrics.setPcfAnnual(annualReport == null ? null : divide(stockQuote.getLatestPrice(), annualReport.getOperatingCashFlowPerShare()));
+
+                    metrics.setPeg(calculatePeg(metrics.getPeTtm(), netProfitTtm, previousNetProfitTtm));
+                    result.add(metrics);
+                }
             }
-
-            String plainCode = stockQuote.getCode().length() > 2 ? stockQuote.getCode().substring(2) : stockQuote.getCode();
-            List<StockPerformanceReport> reports = performanceReportMap.get(plainCode);
-            if (CollectionUtils.isEmpty(reports)) {
-                continue;
-            }
-
-            StockPerformanceReport latestReport = findLatestReport(reports);
-            StockPerformanceReport annualReport = findLatestAnnualReport(reports);
-            if (latestReport == null) {
-                continue;
-            }
-
-            BigDecimal epsTtm = calculateTtmValue(reports, latestReport, StockPerformanceReport::getEarningsPerShare);
-            BigDecimal revenueTtm = calculateTtmValue(reports, latestReport, StockPerformanceReport::getTotalRevenue);
-            BigDecimal netProfitTtm = calculateTtmValue(reports, latestReport, StockPerformanceReport::getNetProfit);
-            BigDecimal previousNetProfitTtm = calculatePreviousTtmValue(reports, latestReport, StockPerformanceReport::getNetProfit);
-            BigDecimal ocfTtm = calculateTtmValue(reports, latestReport, StockPerformanceReport::getOperatingCashFlowPerShare);
-            StockShareChange latestShareChange = latestShareChangeMap.get(stockQuote.getCode());
-
-            CalculatedValuationMetricsVO metrics = new CalculatedValuationMetricsVO();
-            metrics.setId(stockQuote.getId());
-            metrics.setStockCode(stockQuote.getCode());
-            metrics.setStockName(stockQuote.getName());
-            metrics.setCalculatedAt(LocalDateTime.now());
-
-            metrics.setPeTtm(divide(stockQuote.getLatestPrice(), epsTtm));
-            metrics.setPeAnnual(annualReport == null ? null : divide(stockQuote.getLatestPrice(), annualReport.getEarningsPerShare()));
-            metrics.setPbMrq(divide(stockQuote.getLatestPrice(), latestReport.getNetAssetsPerShare()));
-            metrics.setPbAnnual(annualReport == null ? null : divide(stockQuote.getLatestPrice(), annualReport.getNetAssetsPerShare()));
-
-            BigDecimal marketCap = latestShareChange == null ? null :
-                    multiply(stockQuote.getLatestPrice(), multiply(latestShareChange.getTotalShares10k(), TEN_THOUSAND));
-            metrics.setPsTtm(divide(marketCap, revenueTtm));
-            metrics.setPsAnnual(annualReport == null ? null : divide(marketCap, annualReport.getTotalRevenue()));
-
-            metrics.setPcfTtm(divide(stockQuote.getLatestPrice(), ocfTtm));
-            metrics.setPcfAnnual(annualReport == null ? null : divide(stockQuote.getLatestPrice(), annualReport.getOperatingCashFlowPerShare()));
-
-            metrics.setPeg(calculatePeg(metrics.getPeTtm(), netProfitTtm, previousNetProfitTtm));
-            result.add(metrics);
         }
         return result;
     }
