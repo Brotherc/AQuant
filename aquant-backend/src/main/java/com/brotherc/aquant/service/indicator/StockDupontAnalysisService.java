@@ -8,9 +8,7 @@ import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,18 +21,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class StockDupontAnalysisService {
 
+    private static final String ROE_3Y_AVG_INDUSTRY_AVG = "roe3yAvgIndustryAvg";
     private static final String ROE_3Y_AVG = "roe3yAvg";
 
     private final StockDupontAnalysisRepository stockDupontAnalysisRepository;
 
     public Page<StockDupontAnalysis> pageQuery(DupontAnalysisPageReqVO query, Pageable pageable) {
-        // 如果用户没传排序，则默认按 roe3yAvg DESC
-        if (pageable.getSort().isUnsorted()) {
-            int page = pageable.getPageNumber();
-            int size = pageable.getPageSize();
-            pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, ROE_3Y_AVG));
-        }
-
         Specification<StockDupontAnalysis> specification =(root, cq, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -61,15 +53,15 @@ public class StockDupontAnalysisService {
 
             // ROE-3年平均-行业平均 范围
             if (query.getRoe3yAvgIndustryAvgMin() != null) {
-                predicates.add(cb.ge(root.get("roe3yAvgIndustryAvg"), query.getRoe3yAvgIndustryAvgMin()));
+                predicates.add(cb.ge(root.get(ROE_3Y_AVG_INDUSTRY_AVG), query.getRoe3yAvgIndustryAvgMin()));
             }
             if (query.getRoe3yAvgIndustryAvgMax() != null) {
-                predicates.add(cb.le(root.get("roe3yAvgIndustryAvg"), query.getRoe3yAvgIndustryAvgMax()));
+                predicates.add(cb.le(root.get(ROE_3Y_AVG_INDUSTRY_AVG), query.getRoe3yAvgIndustryAvgMax()));
             }
 
             // ROE-3年平均 > 行业平均
             if (Boolean.TRUE.equals(query.getRoeHigherThanIndustryAvg())) {
-                predicates.add(cb.gt(root.get(ROE_3Y_AVG), root.get("roe3yAvgIndustryAvg")));
+                predicates.add(cb.gt(root.get(ROE_3Y_AVG), root.get(ROE_3Y_AVG_INDUSTRY_AVG)));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
