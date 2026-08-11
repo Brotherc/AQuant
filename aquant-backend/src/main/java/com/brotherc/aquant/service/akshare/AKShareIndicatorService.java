@@ -33,6 +33,36 @@ public class AKShareIndicatorService extends AbstractAKShareService {
     }
 
     /**
+     * <a href="https://akshare.akfamily.xyz/data/stock/stock.html#id149">东方财富-资产负债表</a>
+     *
+     * @param date choice of {"XXXX0331", "XXXX0630", "XXXX0930", "XXXX1231"}; 从 20100331 开始
+     *
+     * @return A股上市公司资产负债表数据
+     */
+    public List<StockZcfzEm> stockZcfzEm(String date) {
+        HttpUrl httpUrl = HttpUrl.get(akshareAddress + "/api/public/stock_zcfz_em")
+                .newBuilder()
+                .addQueryParameter("date", date)
+                .build();
+        return executeGet(httpUrl, new TypeReference<>() {});
+    }
+
+    /**
+     * <a href="https://akshare.akfamily.xyz/data/stock/stock.html#id150">东方财富-北交所-资产负债表</a>
+     *
+     * @param date choice of {"XXXX0331", "XXXX0630", "XXXX0930", "XXXX1231"}; 从 20100331 开始
+     *
+     * @return 北交所上市公司资产负债表数据
+     */
+    public List<StockZcfzEm> stockZcfzBjEm(String date) {
+        HttpUrl httpUrl = HttpUrl.get(akshareAddress + "/api/public/stock_zcfz_bj_em")
+                .newBuilder()
+                .addQueryParameter("date", date)
+                .build();
+        return executeGet(httpUrl, new TypeReference<>() {});
+    }
+
+    /**
      * <a href="https://akshare.akfamily.xyz/data/stock/stock.html#id278">股本变动</a>
      *
      * @param symbol choice of {"深市主板", "沪市", "创业板", "科创板", "北交所", "全部"}
