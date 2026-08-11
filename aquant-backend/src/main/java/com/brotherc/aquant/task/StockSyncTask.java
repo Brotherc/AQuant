@@ -8,6 +8,8 @@ import com.brotherc.aquant.entity.StockSync;
 import com.brotherc.aquant.model.dto.akshare.*;
 import com.brotherc.aquant.repository.*;
 import com.brotherc.aquant.service.*;
+import com.brotherc.aquant.service.akshare.AKShareFundService;
+import com.brotherc.aquant.service.akshare.AKShareService;
 import com.brotherc.aquant.utils.StockHelper;
 import com.brotherc.aquant.utils.StockUtils;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,7 @@ public class StockSyncTask {
 
     private final StockHelper stockHelper;
     private final AKShareService aKShareService;
+    private final AKShareFundService aKShareFundService;
     private final TransactionTemplate transactionTemplate;
 
     private final StockQuoteService stockQuoteService;
@@ -656,8 +659,8 @@ public class StockSyncTask {
 
         boolean latestFundRefreshed = false;
         if (shouldRefreshLatestFund) {
-            List<FundNameEm> fundNameEms = aKShareService.fundNameEm();
-            List<FundPurchaseEm> fundPurchaseEms = aKShareService.fundPurchaseEm();
+            List<FundNameEm> fundNameEms = aKShareFundService.fundNameEm();
+            List<FundPurchaseEm> fundPurchaseEms = aKShareFundService.fundPurchaseEm();
             if (CollectionUtils.isEmpty(fundNameEms) && CollectionUtils.isEmpty(fundPurchaseEms)) {
                 log.warn("获取到的基金基础数据为空，尝试使用本地基金清单补齐海外基金历史净值");
             } else {
@@ -714,7 +717,7 @@ public class StockSyncTask {
             }
 
             try {
-                List<FundOpenFundInfoEm> fundNetValues = aKShareService.fundOpenFundInfoEm(fundCode, "单位净值走势", null);
+                List<FundOpenFundInfoEm> fundNetValues = aKShareFundService.fundOpenFundInfoEm(fundCode, "单位净值走势", null);
                 stockFundNetValueService.saveFundNetValues(fundCode, fundNetValues);
                 log.info("同步海外基金历史净值完成，fundCode={}, fundName={}", fundCode, fundName);
             } catch (Exception e) {
@@ -766,7 +769,7 @@ public class StockSyncTask {
             }
 
             try {
-                List<FundPortfolioHoldEm> holdings = aKShareService
+                List<FundPortfolioHoldEm> holdings = aKShareFundService
                         .fundPortfolioHoldEm(stockFundInfo.getFundCode(), syncWindow.getRequestDate());
                 List<FundPortfolioHoldEm> quarterHoldings = filterFundPortfolioHoldingsByQuarter(
                         holdings, syncWindow.getReportYear(), syncWindow.getReportQuarter()

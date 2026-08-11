@@ -17,6 +17,7 @@ import com.brotherc.aquant.entity.StockDupontAnalysis;
 import com.brotherc.aquant.model.projection.StockDividendProjection;
 import com.brotherc.aquant.repository.StockWatchlistStockRepository;
 import com.brotherc.aquant.entity.StockWatchlistStock;
+import com.brotherc.aquant.service.akshare.AKShareService;
 import com.brotherc.aquant.utils.DateUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

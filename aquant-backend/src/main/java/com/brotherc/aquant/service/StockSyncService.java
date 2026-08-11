@@ -4,6 +4,7 @@ import com.brotherc.aquant.constant.StockSyncConstant;
 import com.brotherc.aquant.entity.*;
 import com.brotherc.aquant.model.dto.akshare.*;
 import com.brotherc.aquant.repository.*;
+import com.brotherc.aquant.service.akshare.AKShareService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
