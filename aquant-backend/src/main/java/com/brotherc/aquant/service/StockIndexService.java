@@ -1,8 +1,8 @@
 package com.brotherc.aquant.service;
 
-import com.brotherc.aquant.constant.StockSyncConstant;
 import com.brotherc.aquant.entity.StockIndexHistory;
 import com.brotherc.aquant.entity.StockIndexSpot;
+import com.brotherc.aquant.enums.CoreIndexEnum;
 import com.brotherc.aquant.model.dto.akshare.StockZhIndexDaily;
 import com.brotherc.aquant.model.dto.akshare.StockZhIndexSpotSina;
 import com.brotherc.aquant.model.vo.index.StockIndexCardVO;
@@ -172,7 +172,7 @@ public class StockIndexService {
 
         List<StockIndexCardVO> result = new ArrayList<>();
         for (String code : targetCodes) {
-            String name = StockSyncConstant.CORE_INDICES.getOrDefault(code, code);
+            String name = CoreIndexEnum.getNameByCode(code);
             StockIndexSpot spot = spotMap.get(code);
 
             // 查询该指数近期 15 个交易日的收盘价序列

@@ -5,6 +5,7 @@ import com.brotherc.aquant.entity.StockIndustryBoard;
 import com.brotherc.aquant.entity.StockFundInfo;
 import com.brotherc.aquant.entity.StockQuote;
 import com.brotherc.aquant.entity.StockSync;
+import com.brotherc.aquant.enums.CoreIndexEnum;
 import com.brotherc.aquant.model.dto.akshare.*;
 import com.brotherc.aquant.repository.*;
 import com.brotherc.aquant.service.*;
@@ -883,7 +884,7 @@ public class StockSyncTask {
         }
 
         // 1. 优先增量补全核心大盘指数的历史日 K 线数据 (幂等防断层)
-        Map<String, String> coreIndices = StockSyncConstant.CORE_INDICES;
+        Map<String, String> coreIndices = CoreIndexEnum.getCodeNameMap();
         for (Map.Entry<String, String> entry : coreIndices.entrySet()) {
             String indexCode = entry.getKey();
             String indexName = entry.getValue();
@@ -901,7 +902,7 @@ public class StockSyncTask {
         List<StockZhIndexSpotSina> spotList = aKShareService.stockZhIndexSpotSina();
         if (!CollectionUtils.isEmpty(spotList)) {
             stockIndexService.saveIndexSpot(spotList, now);
-            stockIndexService.updateTodayHistoryFromSpot(spotList, coreIndices.keySet(), now);
+            stockIndexService.updateTodayHistoryFromSpot(spotList, CoreIndexEnum.getCodes(), now);
             log.info("同步指数实时行情完成，共 {} 条数据", spotList.size());
         }
 
