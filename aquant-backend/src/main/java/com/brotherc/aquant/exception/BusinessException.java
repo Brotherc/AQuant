@@ -1,5 +1,8 @@
 package com.brotherc.aquant.exception;
 
+import lombok.Getter;
+
+@Getter
 public class BusinessException extends RuntimeException {
 
     private final Integer code;
@@ -25,14 +28,6 @@ public class BusinessException extends RuntimeException {
         super(customMsg);
         this.code = exceptionEnum.getCode();
         this.msg = customMsg;
-    }
-
-    public Integer getCode() {
-        return code;
-    }
-
-    public String getMsg() {
-        return msg;
     }
 
 }

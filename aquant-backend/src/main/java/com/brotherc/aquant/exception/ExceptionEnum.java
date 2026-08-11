@@ -9,6 +9,7 @@ public enum ExceptionEnum {
 
     SYS_ERROR(1000001, "系统异常"),
     SYS_CHECK_ERROR(1000002, "系统校验异常"),
+    API_REQUEST_ERROR(1000003, "外部API访问异常"),
 
     STOCK_STRATEGY_DUAL_MA_ILLEGAL(1000101, "短期均线必须小于长期均线"),
     STOCK_SYNC_NOT_START(1000102, "非交易日时间无需同步"),

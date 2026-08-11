@@ -1,5 +1,7 @@
 package com.brotherc.aquant.service.akshare;
 
+import com.brotherc.aquant.exception.BusinessException;
+import com.brotherc.aquant.exception.ExceptionEnum;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -47,12 +49,12 @@ public abstract class AbstractAKShareService {
         try (Response response = okHttpClient.newCall(request).execute()) {
             if (!response.isSuccessful() || response.body() == null) {
                 log.info("{} 失败响应: {}", apiName, response);
-                throw new RuntimeException(apiName + "请求失败");
+                throw new BusinessException(ExceptionEnum.API_REQUEST_ERROR);
             }
             return objectMapper.readValue(response.body().string(), typeReference);
         } catch (IOException e) {
             log.error("{} 请求失败", apiName, e);
-            throw new RuntimeException(apiName + "请求失败", e);
+            throw new BusinessException(ExceptionEnum.API_REQUEST_ERROR);
         }
     }
 
