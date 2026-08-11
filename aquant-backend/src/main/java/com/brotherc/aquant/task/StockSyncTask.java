@@ -315,7 +315,7 @@ public class StockSyncTask {
         }
 
         try {
-            List<StockHoldChangeCninfo> stockHoldChanges = aKShareService.stockHoldChangeCninfo();
+            List<StockHoldChangeCninfo> stockHoldChanges = aKShareService.stockHoldChangeCninfo("全部");
             int savedCount = stockShareChangeService.replaceAll(stockHoldChanges);
             if (savedCount <= 0) {
                 log.warn("股票股本变动未保存有效数据，不更新同步水位");

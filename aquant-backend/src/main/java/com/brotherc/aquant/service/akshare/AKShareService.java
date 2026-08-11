@@ -102,10 +102,6 @@ public class AKShareService extends AbstractAKShareService {
         return executeGet(httpUrl, new TypeReference<>() {});
     }
 
-    public List<StockHoldChangeCninfo> stockHoldChangeCninfo() {
-        return stockHoldChangeCninfo("全部");
-    }
-
     /**
      * <a href="https://akshare.akfamily.xyz/data/stock/stock.html#id278">股本变动</a>
      *
