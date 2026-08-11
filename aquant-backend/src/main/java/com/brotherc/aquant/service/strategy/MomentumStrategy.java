@@ -44,7 +44,7 @@ public class MomentumStrategy {
         for (int b = 0; b < stocks.size(); b += batchSize) {
             List<StockQuote> batch = stocks.subList(b, Math.min(stocks.size(), b + batchSize));
             List<String> codes = batch.stream().map(StockQuote::getCode).toList();
-            
+
             List<StockQuoteHistoryProjection> histories = stockQuoteHistoryRepository
                     .findByTradeDateInAndCodeInOrderByTradeDateAsc(recentDates, codes);
             Map<String, List<StockQuoteHistoryProjection>> historyMap = histories.stream()
@@ -54,40 +54,30 @@ public class MomentumStrategy {
                 String code = stock.getCode();
                 String name = stock.getName();
 
-                List<StockQuoteHistoryProjection> list = historyMap.getOrDefault(code, new ArrayList<>());
+                List<StockQuoteHistoryProjection> list = historyMap.getOrDefault(code, Collections.emptyList());
 
-                if (list.size() < needDays) {
-                    result.add(new StockTradeSignalVO(code, name, TradeSignal.HOLD.name(),
-                            stock.getLatestPrice(), stock.getPir(), null));
-                    continue;
+                BigDecimal momentumValue = null;
+                TradeSignal signal = TradeSignal.HOLD;
+
+                if (list.size() >= needDays) {
+                    BigDecimal todayClose = list.get(list.size() - 1).getClosePrice();
+                    BigDecimal pastClose = list.get(0).getClosePrice();
+
+                    if (pastClose != null && pastClose.compareTo(BigDecimal.ZERO) != 0 && todayClose != null) {
+                        momentumValue = todayClose.subtract(pastClose)
+                                .divide(pastClose, 4, RoundingMode.HALF_UP)
+                                .multiply(BigDecimal.valueOf(100));
+
+                        if (momentumValue.compareTo(threshold) > 0) {
+                            signal = TradeSignal.BUY;
+                        } else if (momentumValue.compareTo(threshold.negate()) < 0) {
+                            signal = TradeSignal.SELL;
+                        }
+                    }
                 }
 
-                // 批次数据自带 ASC 排序，已无需逆序
-
-                BigDecimal todayClose = list.get(list.size() - 1).getClosePrice();
-            BigDecimal pastClose = list.get(0).getClosePrice();
-
-            if (pastClose == null || pastClose.compareTo(BigDecimal.ZERO) == 0 || todayClose == null) {
-                result.add(new StockTradeSignalVO(code, name, TradeSignal.HOLD.name(),
-                        stock.getLatestPrice(), stock.getPir(), null));
-                continue;
-            }
-
-            BigDecimal momentumValue = todayClose.subtract(pastClose)
-                    .divide(pastClose, 4, RoundingMode.HALF_UP)
-                    .multiply(BigDecimal.valueOf(100));
-
-            TradeSignal signal;
-            if (momentumValue.compareTo(threshold) > 0) {
-                signal = TradeSignal.BUY;
-            } else if (momentumValue.compareTo(threshold.negate()) < 0) {
-                signal = TradeSignal.SELL;
-            } else {
-                signal = TradeSignal.HOLD;
-            }
-
-            result.add(new StockTradeSignalVO(code, name, signal.name(),
-                    stock.getLatestPrice(), stock.getPir(), momentumValue));
+                result.add(new StockTradeSignalVO(code, name, signal.name(),
+                        stock.getLatestPrice(), stock.getPir(), momentumValue));
             }
         }
 
