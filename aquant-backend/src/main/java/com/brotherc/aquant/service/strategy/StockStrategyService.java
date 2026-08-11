@@ -1,4 +1,4 @@
-package com.brotherc.aquant.service;
+package com.brotherc.aquant.service.strategy;
 
 import com.brotherc.aquant.entity.StockQuote;
 import com.brotherc.aquant.exception.BusinessException;
@@ -11,8 +11,6 @@ import com.brotherc.aquant.model.vo.strategy.StockTradeSignalVO;
 import com.brotherc.aquant.model.vo.strategy.StockTradeBacktestVO;
 import com.brotherc.aquant.repository.StockQuoteRepository;
 import com.brotherc.aquant.repository.StockWatchlistGroupRepository;
-import com.brotherc.aquant.strategy.DualMovingAverageStrategy;
-import com.brotherc.aquant.strategy.MomentumStrategy;
 import com.brotherc.aquant.repository.StockWatchlistStockRepository;
 import com.brotherc.aquant.entity.StockWatchlistStock;
 import com.brotherc.aquant.utils.UserContext;

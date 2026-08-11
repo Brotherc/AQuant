@@ -3,7 +3,7 @@ package com.brotherc.aquant.controller;
 import com.brotherc.aquant.model.dto.common.ResponseDTO;
 import com.brotherc.aquant.model.vo.stockindustryboard.StockIndustryBoardPageReqVO;
 import com.brotherc.aquant.model.vo.stockindustryboard.StockIndustryBoardVO;
-import com.brotherc.aquant.service.StockClusterService;
+import com.brotherc.aquant.service.stock.StockClusterService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

@@ -1,4 +1,4 @@
-package com.brotherc.aquant.service;
+package com.brotherc.aquant.service.stock;
 
 import com.brotherc.aquant.model.dto.tencent.TencentStockQuote;
 import com.brotherc.aquant.utils.StockUtils;

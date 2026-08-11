@@ -1,10 +1,9 @@
-package com.brotherc.aquant.service;
+package com.brotherc.aquant.service.industry;
 
 import com.brotherc.aquant.entity.StockIndustryBoardHistory;
 import com.brotherc.aquant.model.dto.akshare.*;
 import com.brotherc.aquant.model.vo.stockindustryboard.StockIndustryBoardKVO;
 import com.brotherc.aquant.repository.StockIndustryBoardHistoryRepository;
-import com.brotherc.aquant.utils.StockHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;

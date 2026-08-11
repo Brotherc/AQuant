@@ -2,7 +2,7 @@ package com.brotherc.aquant.controller;
 
 import com.brotherc.aquant.model.dto.common.ResponseDTO;
 import com.brotherc.aquant.model.vo.stockindustryboard.StockIndustryBoardKVO;
-import com.brotherc.aquant.service.StockIndustryBoardHistoryService;
+import com.brotherc.aquant.service.industry.StockIndustryBoardHistoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;

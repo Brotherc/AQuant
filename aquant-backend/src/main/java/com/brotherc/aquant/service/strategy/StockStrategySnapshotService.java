@@ -1,4 +1,4 @@
-package com.brotherc.aquant.service;
+package com.brotherc.aquant.service.strategy;
 
 import com.brotherc.aquant.constant.StockSyncConstant;
 import com.brotherc.aquant.entity.StockQuote;
@@ -14,8 +14,6 @@ import com.brotherc.aquant.repository.StockStrategyDualMaBacktestSnapshotReposit
 import com.brotherc.aquant.repository.StockStrategyMomentumBacktestSnapshotRepository;
 import com.brotherc.aquant.repository.StockSyncRepository;
 import com.brotherc.aquant.repository.projection.StockQuoteHistoryProjection;
-import com.brotherc.aquant.strategy.DualMovingAverageStrategy;
-import com.brotherc.aquant.strategy.MomentumStrategy;
 import com.brotherc.aquant.utils.StockHelper;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;

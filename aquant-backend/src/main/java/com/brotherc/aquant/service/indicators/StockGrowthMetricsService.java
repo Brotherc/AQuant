@@ -1,4 +1,4 @@
-package com.brotherc.aquant.service;
+package com.brotherc.aquant.service.indicators;
 
 import com.brotherc.aquant.entity.StockGrowthMetrics;
 import com.brotherc.aquant.model.dto.akshare.StockZhGrowthComparisonEm;

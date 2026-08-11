@@ -2,7 +2,7 @@ package com.brotherc.aquant.controller;
 
 import com.brotherc.aquant.model.dto.common.ResponseDTO;
 import com.brotherc.aquant.model.vo.article.*;
-import com.brotherc.aquant.service.ArticleService;
+import com.brotherc.aquant.service.article.ArticleService;
 import com.brotherc.aquant.utils.UserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

@@ -5,7 +5,7 @@ import com.brotherc.aquant.model.vo.stockdividend.StockDividendDetailReqVO;
 import com.brotherc.aquant.model.vo.stockdividend.StockDividendDetailVO;
 import com.brotherc.aquant.model.vo.stockdividend.StockDividendStatPageReqVO;
 import com.brotherc.aquant.model.vo.stockdividend.StockDividendStatVO;
-import com.brotherc.aquant.service.StockDividendService;
+import com.brotherc.aquant.service.dividend.StockDividendService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

@@ -2,7 +2,7 @@ package com.brotherc.aquant.controller;
 
 import com.brotherc.aquant.model.dto.common.ResponseDTO;
 import com.brotherc.aquant.model.vo.auth.*;
-import com.brotherc.aquant.service.AuthService;
+import com.brotherc.aquant.service.auth.AuthService;
 import com.brotherc.aquant.utils.IpUtils;
 import com.brotherc.aquant.utils.UserContext;
 import io.swagger.v3.oas.annotations.Operation;

@@ -8,7 +8,6 @@ import com.brotherc.aquant.model.vo.fundflow.FundFlowSummaryVO;
 import com.brotherc.aquant.repository.StockIndustryBoardRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -67,7 +66,6 @@ public class FundFlowService {
         List<FundFlowGraphLinkVO> links = new ArrayList<>();
 
         Map<String, String> boardNodeIdMap = new HashMap<>();
-        Set<String> addedStockNames = new HashSet<>();
 
         // 1. 构建行业板块节点 (Board Nodes)
         for (StockIndustryBoard b : activeBoards) {

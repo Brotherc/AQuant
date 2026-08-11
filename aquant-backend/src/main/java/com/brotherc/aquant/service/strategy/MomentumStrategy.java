@@ -1,4 +1,4 @@
-package com.brotherc.aquant.strategy;
+package com.brotherc.aquant.service.strategy;
 
 import com.brotherc.aquant.entity.StockQuote;
 import com.brotherc.aquant.repository.projection.StockQuoteHistoryProjection;

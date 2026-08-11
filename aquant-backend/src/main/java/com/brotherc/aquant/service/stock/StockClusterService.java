@@ -1,9 +1,10 @@
-package com.brotherc.aquant.service;
+package com.brotherc.aquant.service.stock;
 
 import com.brotherc.aquant.model.vo.stockindustryboard.StockIndustryBoardPageReqVO;
 import com.brotherc.aquant.model.vo.stockindustryboard.StockIndustryBoardVO;
 import com.brotherc.aquant.model.vo.stockquote.StockQuotePageReqVO;
 import com.brotherc.aquant.model.vo.stockquote.StockQuoteVO;
+import com.brotherc.aquant.service.industry.StockIndustryBoardService;
 import com.brotherc.aquant.task.StockSyncTask;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

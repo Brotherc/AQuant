@@ -1,4 +1,4 @@
-package com.brotherc.aquant.service;
+package com.brotherc.aquant.service.stock;
 
 import com.brotherc.aquant.entity.StockAbnormal;
 import com.brotherc.aquant.repository.StockAbnormalRepository;

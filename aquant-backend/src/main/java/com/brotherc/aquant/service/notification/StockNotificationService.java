@@ -1,4 +1,4 @@
-package com.brotherc.aquant.service;
+package com.brotherc.aquant.service.notification;
 
 import com.brotherc.aquant.entity.StockNotification;
 import com.brotherc.aquant.entity.StockQuoteHistory;

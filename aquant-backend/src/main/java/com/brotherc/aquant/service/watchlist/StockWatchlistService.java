@@ -1,4 +1,4 @@
-package com.brotherc.aquant.service;
+package com.brotherc.aquant.service.watchlist;
 
 import com.brotherc.aquant.entity.StockQuote;
 import com.brotherc.aquant.entity.StockWatchlistGroup;

@@ -6,6 +6,7 @@ import com.brotherc.aquant.exception.ExceptionEnum;
 import com.brotherc.aquant.model.vo.article.ArticleCreateReqVO;
 import com.brotherc.aquant.model.vo.article.ArticleCreateRespVO;
 import com.brotherc.aquant.repository.ArticleRepository;
+import com.brotherc.aquant.service.article.ArticleService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

@@ -1,4 +1,4 @@
-package com.brotherc.aquant.service;
+package com.brotherc.aquant.service.stock;
 
 import com.brotherc.aquant.entity.StockShareChange;
 import com.brotherc.aquant.model.dto.akshare.StockHoldChangeCninfo;

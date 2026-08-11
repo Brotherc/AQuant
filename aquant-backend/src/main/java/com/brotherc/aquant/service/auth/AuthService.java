@@ -1,4 +1,4 @@
-package com.brotherc.aquant.service;
+package com.brotherc.aquant.service.auth;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import com.brotherc.aquant.entity.SysUser;

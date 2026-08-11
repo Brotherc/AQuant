@@ -1,4 +1,4 @@
-package com.brotherc.aquant.service;
+package com.brotherc.aquant.service.industry;
 
 import com.brotherc.aquant.entity.StockIndustryBoard;
 import com.brotherc.aquant.model.dto.akshare.StockBoardIndustrySummaryThs;

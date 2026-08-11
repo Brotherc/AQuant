@@ -1,4 +1,4 @@
-package com.brotherc.aquant.service;
+package com.brotherc.aquant.service.article;
 
 import com.brotherc.aquant.entity.UserArticle;
 import com.brotherc.aquant.exception.ExceptionEnum;

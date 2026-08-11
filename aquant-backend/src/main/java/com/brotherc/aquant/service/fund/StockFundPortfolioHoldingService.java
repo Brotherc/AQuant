@@ -1,4 +1,4 @@
-package com.brotherc.aquant.service;
+package com.brotherc.aquant.service.fund;
 
 import com.brotherc.aquant.entity.StockFundPortfolioHolding;
 import com.brotherc.aquant.model.dto.akshare.FundPortfolioHoldEm;

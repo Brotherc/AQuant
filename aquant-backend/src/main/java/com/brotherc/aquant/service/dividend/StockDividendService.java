@@ -1,4 +1,4 @@
-package com.brotherc.aquant.service;
+package com.brotherc.aquant.service.dividend;
 
 import com.brotherc.aquant.entity.StockDividend;
 import com.brotherc.aquant.entity.StockQuote;

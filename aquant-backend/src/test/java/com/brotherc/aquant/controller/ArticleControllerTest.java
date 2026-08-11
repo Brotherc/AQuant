@@ -1,7 +1,7 @@
 package com.brotherc.aquant.controller;
 
 import com.brotherc.aquant.model.vo.article.*;
-import com.brotherc.aquant.service.ArticleService;
+import com.brotherc.aquant.service.article.ArticleService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

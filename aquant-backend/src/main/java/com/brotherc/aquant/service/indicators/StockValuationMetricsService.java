@@ -1,4 +1,4 @@
-package com.brotherc.aquant.service;
+package com.brotherc.aquant.service.indicators;
 
 import com.brotherc.aquant.entity.StockPerformanceReport;
 import com.brotherc.aquant.entity.StockQuote;

@@ -4,7 +4,7 @@ import com.brotherc.aquant.entity.SysUser;
 import com.brotherc.aquant.model.vo.article.*;
 import com.brotherc.aquant.repository.ArticleRepository;
 import com.brotherc.aquant.repository.SysUserRepository;
-import com.brotherc.aquant.service.ArticleService;
+import com.brotherc.aquant.service.article.ArticleService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
