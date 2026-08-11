@@ -8,6 +8,7 @@ import com.brotherc.aquant.entity.StockSync;
 import com.brotherc.aquant.model.dto.akshare.*;
 import com.brotherc.aquant.repository.*;
 import com.brotherc.aquant.service.*;
+import com.brotherc.aquant.service.akshare.AKShareDividendService;
 import com.brotherc.aquant.service.akshare.AKShareFundService;
 import com.brotherc.aquant.service.akshare.AKShareService;
 import com.brotherc.aquant.utils.StockHelper;
@@ -35,6 +36,7 @@ public class StockSyncTask {
 
     private final StockHelper stockHelper;
     private final AKShareService aKShareService;
+    private final AKShareDividendService akShareDividendService;
     private final AKShareFundService aKShareFundService;
     private final TransactionTemplate transactionTemplate;
 
@@ -469,7 +471,7 @@ public class StockSyncTask {
 
         for (String date : quarterEndDates) {
             try {
-                List<StockFhpsEm> list = aKShareService.stockFhpsEm(date);
+                List<StockFhpsEm> list = akShareDividendService.stockFhpsEm(date);
                 stockSyncService.stockDividend(list, date, stockDividendSync);
             } catch (Exception e) {
                 log.error("同步股票分红数据失败:{}", date, e);

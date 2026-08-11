@@ -17,7 +17,7 @@ import com.brotherc.aquant.entity.StockDupontAnalysis;
 import com.brotherc.aquant.model.projection.StockDividendProjection;
 import com.brotherc.aquant.repository.StockWatchlistStockRepository;
 import com.brotherc.aquant.entity.StockWatchlistStock;
-import com.brotherc.aquant.service.akshare.AKShareService;
+import com.brotherc.aquant.service.akshare.AKShareDividendService;
 import com.brotherc.aquant.utils.DateUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,12 +41,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class StockDividendService {
 
+    private final AKShareDividendService akShareDividendService;
+
     private final StockDividendRepository stockDividendRepository;
     private final StockQuoteRepository stockQuoteRepository;
     private final StockValuationMetricsRepository stockValuationMetricsRepository;
     private final StockDupontAnalysisRepository stockDupontAnalysisRepository;
     private final StockWatchlistStockRepository stockWatchlistStockRepository;
-    private final AKShareService akShareService;
 
     public Page<StockDividendStatVO> pageDividendStats(StockDividendStatPageReqVO reqVO, Pageable pageable) {
         List<StockDividendStatVO> all = calcDividendStats(reqVO.getRecentYears(), reqVO.getMinAvgDividend(),
@@ -298,7 +299,7 @@ public class StockDividendService {
 
                 // 1. 尝试从 stockFhpsDetailEm 补充
                 try {
-                    List<StockFhpsDetailEm> detailEms = akShareService.stockFhpsDetailEm(cleanSymbol);
+                    List<StockFhpsDetailEm> detailEms = akShareDividendService.stockFhpsDetailEm(cleanSymbol);
                     if (!CollectionUtils.isEmpty(detailEms)) {
                         for (StockDividend target : targets) {
                             StockFhpsDetailEm match = findMatchingDetailEm(target, detailEms);
@@ -337,7 +338,7 @@ public class StockDividendService {
 
                 if (!thsTargets.isEmpty()) {
                     try {
-                        List<StockFhpsDetailThs> detailThsList = akShareService.stockFhpsDetailThs(cleanSymbol);
+                        List<StockFhpsDetailThs> detailThsList = akShareDividendService.stockFhpsDetailThs(cleanSymbol);
                         if (!CollectionUtils.isEmpty(detailThsList)) {
                             for (StockDividend target : thsTargets) {
                                 StockFhpsDetailThs match = findMatchingDetailThs(target, detailThsList);
