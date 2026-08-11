@@ -333,6 +333,10 @@ public class StockWatchlistService {
 
     @Transactional(rollbackFor = Exception.class)
     public void addStockToWatchlist(WatchlistStockReqVO reqVO, Long userId) {
+        doAddStockToWatchlist(reqVO, userId);
+    }
+
+    private void doAddStockToWatchlist(WatchlistStockReqVO reqVO, Long userId) {
         if (userId == null) {
             throw ExceptionEnum.AUTH_TOKEN_INVALID.toException();
         }
@@ -513,7 +517,7 @@ public class StockWatchlistService {
             WatchlistStockReqVO addReq = new WatchlistStockReqVO();
             addReq.setGroupId(toGroupId);
             addReq.setStockCode(stockCode);
-            addStockToWatchlist(addReq, userId);
+            doAddStockToWatchlist(addReq, userId);
         }
     }
 
