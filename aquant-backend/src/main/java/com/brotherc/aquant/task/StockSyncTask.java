@@ -8,6 +8,7 @@ import com.brotherc.aquant.entity.stock.StockQuote;
 import com.brotherc.aquant.entity.sync.StockSync;
 import com.brotherc.aquant.enums.CoreIndexEnum;
 import com.brotherc.aquant.model.dto.akshare.*;
+import com.brotherc.aquant.model.dto.stockquote.FundHoldingSyncWindow;
 import com.brotherc.aquant.repository.fund.StockFundInfoRepository;
 import com.brotherc.aquant.repository.industry.StockIndustryBoardHistoryRepository;
 import com.brotherc.aquant.repository.industry.StockIndustryBoardRepository;
@@ -921,31 +922,6 @@ public class StockSyncTask {
         }
         stockSync.setValue(String.valueOf(timestamp));
         stockSyncRepository.save(stockSync);
-    }
-
-    private static final class FundHoldingSyncWindow {
-
-        private final String requestDate;
-        private final Integer reportYear;
-        private final Integer reportQuarter;
-
-        private FundHoldingSyncWindow(String requestDate, Integer reportYear, Integer reportQuarter) {
-            this.requestDate = requestDate;
-            this.reportYear = reportYear;
-            this.reportQuarter = reportQuarter;
-        }
-
-        private String getRequestDate() {
-            return requestDate;
-        }
-
-        private Integer getReportYear() {
-            return reportYear;
-        }
-
-        private Integer getReportQuarter() {
-            return reportQuarter;
-        }
     }
 
 }
