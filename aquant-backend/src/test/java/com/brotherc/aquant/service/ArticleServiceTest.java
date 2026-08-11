@@ -10,12 +10,19 @@ import com.brotherc.aquant.service.article.ArticleService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -115,11 +122,12 @@ class ArticleServiceTest {
         assertThat(capturedArticle.getAuthorUsername()).isEqualTo(testUsername);
     }
 
-    @Test
-    @DisplayName("Should set default visibility to private when not specified - Requirement 1.4")
-    void createArticle_withoutVisibility_shouldDefaultToPrivate() {
+    @ParameterizedTest
+    @MethodSource("provideVisibilityCases")
+    @DisplayName("Should handle article visibility correctly on creation - Requirement 1.4")
+    void createArticle_visibilityVariations_shouldSetExpectedVisibility(Integer inputVisibility, int expectedVisibility) {
         // Arrange
-        validReqVO.setVisibility(null); // Not specified
+        validReqVO.setVisibility(inputVisibility);
 
         ArgumentCaptor<UserArticle> articleCaptor = ArgumentCaptor.forClass(UserArticle.class);
 
@@ -129,7 +137,7 @@ class ArticleServiceTest {
         savedArticle.setContent(validReqVO.getContent());
         savedArticle.setAuthorId(testUserId);
         savedArticle.setAuthorUsername(testUsername);
-        savedArticle.setVisibility(0);
+        savedArticle.setVisibility(expectedVisibility);
         savedArticle.setCreatedAt(LocalDateTime.now());
         savedArticle.setUpdatedAt(LocalDateTime.now());
 
@@ -142,132 +150,16 @@ class ArticleServiceTest {
         verify(articleRepository).save(articleCaptor.capture());
         UserArticle capturedArticle = articleCaptor.getValue();
 
-        assertThat(capturedArticle.getVisibility()).isZero();
-        assertThat(result.getVisibility()).isZero();
+        assertThat(capturedArticle.getVisibility()).isEqualTo(expectedVisibility);
+        assertThat(result.getVisibility()).isEqualTo(expectedVisibility);
     }
 
-    @Test
-    @DisplayName("Should set default visibility to private when empty string - Requirement 1.4")
-    void createArticle_withEmptyVisibility_shouldDefaultToPrivate() {
-        // Arrange
-        validReqVO.setVisibility(null); // Empty string
-
-        ArgumentCaptor<UserArticle> articleCaptor = ArgumentCaptor.forClass(UserArticle.class);
-
-        UserArticle savedArticle = new UserArticle();
-        savedArticle.setId(1L);
-        savedArticle.setTitle(validReqVO.getTitle());
-        savedArticle.setContent(validReqVO.getContent());
-        savedArticle.setAuthorId(testUserId);
-        savedArticle.setAuthorUsername(testUsername);
-        savedArticle.setVisibility(0);
-        savedArticle.setCreatedAt(LocalDateTime.now());
-        savedArticle.setUpdatedAt(LocalDateTime.now());
-
-        when(articleRepository.save(any(UserArticle.class))).thenReturn(savedArticle);
-
-        // Act
-        ArticleCreateRespVO result = articleService.createArticle(validReqVO, testUserId, testUsername);
-
-        // Assert
-        verify(articleRepository).save(articleCaptor.capture());
-        UserArticle capturedArticle = articleCaptor.getValue();
-
-        assertThat(capturedArticle.getVisibility()).isZero();
-        assertThat(result.getVisibility()).isZero();
-    }
-
-    @Test
-    @DisplayName("Should set default visibility to private when whitespace - Requirement 1.4")
-    void createArticle_withWhitespaceVisibility_shouldDefaultToPrivate() {
-        // Arrange
-        validReqVO.setVisibility(null); // Whitespace only
-
-        ArgumentCaptor<UserArticle> articleCaptor = ArgumentCaptor.forClass(UserArticle.class);
-
-        UserArticle savedArticle = new UserArticle();
-        savedArticle.setId(1L);
-        savedArticle.setTitle(validReqVO.getTitle());
-        savedArticle.setContent(validReqVO.getContent());
-        savedArticle.setAuthorId(testUserId);
-        savedArticle.setAuthorUsername(testUsername);
-        savedArticle.setVisibility(0);
-        savedArticle.setCreatedAt(LocalDateTime.now());
-        savedArticle.setUpdatedAt(LocalDateTime.now());
-
-        when(articleRepository.save(any(UserArticle.class))).thenReturn(savedArticle);
-
-        // Act
-        ArticleCreateRespVO result = articleService.createArticle(validReqVO, testUserId, testUsername);
-
-        // Assert
-        verify(articleRepository).save(articleCaptor.capture());
-        UserArticle capturedArticle = articleCaptor.getValue();
-
-        assertThat(capturedArticle.getVisibility()).isZero();
-        assertThat(result.getVisibility()).isZero();
-    }
-
-    @Test
-    @DisplayName("Should create article with public visibility when specified - Requirement 1.4")
-    void createArticle_withPublicVisibility_shouldSetPublic() {
-        // Arrange
-        validReqVO.setVisibility(1);
-
-        ArgumentCaptor<UserArticle> articleCaptor = ArgumentCaptor.forClass(UserArticle.class);
-
-        UserArticle savedArticle = new UserArticle();
-        savedArticle.setId(1L);
-        savedArticle.setTitle(validReqVO.getTitle());
-        savedArticle.setContent(validReqVO.getContent());
-        savedArticle.setAuthorId(testUserId);
-        savedArticle.setAuthorUsername(testUsername);
-        savedArticle.setVisibility(1);
-        savedArticle.setCreatedAt(LocalDateTime.now());
-        savedArticle.setUpdatedAt(LocalDateTime.now());
-
-        when(articleRepository.save(any(UserArticle.class))).thenReturn(savedArticle);
-
-        // Act
-        ArticleCreateRespVO result = articleService.createArticle(validReqVO, testUserId, testUsername);
-
-        // Assert
-        verify(articleRepository).save(articleCaptor.capture());
-        UserArticle capturedArticle = articleCaptor.getValue();
-
-        assertThat(capturedArticle.getVisibility()).isEqualTo(1);
-        assertThat(result.getVisibility()).isEqualTo(1);
-    }
-
-    @Test
-    @DisplayName("Should create article with private visibility when specified - Requirement 1.4")
-    void createArticle_withPrivateVisibility_shouldSetPrivate() {
-        // Arrange
-        validReqVO.setVisibility(0);
-
-        ArgumentCaptor<UserArticle> articleCaptor = ArgumentCaptor.forClass(UserArticle.class);
-
-        UserArticle savedArticle = new UserArticle();
-        savedArticle.setId(1L);
-        savedArticle.setTitle(validReqVO.getTitle());
-        savedArticle.setContent(validReqVO.getContent());
-        savedArticle.setAuthorId(testUserId);
-        savedArticle.setAuthorUsername(testUsername);
-        savedArticle.setVisibility(0);
-        savedArticle.setCreatedAt(LocalDateTime.now());
-        savedArticle.setUpdatedAt(LocalDateTime.now());
-
-        when(articleRepository.save(any(UserArticle.class))).thenReturn(savedArticle);
-
-        // Act
-        ArticleCreateRespVO result = articleService.createArticle(validReqVO, testUserId, testUsername);
-
-        // Assert
-        verify(articleRepository).save(articleCaptor.capture());
-        UserArticle capturedArticle = articleCaptor.getValue();
-
-        assertThat(capturedArticle.getVisibility()).isZero();
-        assertThat(result.getVisibility()).isZero();
+    private static Stream<Arguments> provideVisibilityCases() {
+        return Stream.of(
+                Arguments.of(null, 0),
+                Arguments.of(1, 1),
+                Arguments.of(0, 0)
+        );
     }
 
     @Test
@@ -858,9 +750,10 @@ class ArticleServiceTest {
     // Requirements tested: 7.1, 7.2, 7.3, 7.4, 7.5, 8.2
     // ========================================
 
-    @Test
-    @DisplayName("Should delete article by author - Requirement 7.1, 7.4")
-    void deleteArticle_byAuthor_shouldSucceed() {
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1})
+    @DisplayName("Should delete article by author for different visibilities - Requirement 7.1, 7.4")
+    void deleteArticle_byAuthor_shouldSucceed(int visibility) {
         // Arrange
         Long articleId = 1L;
         UserArticle existingArticle = new UserArticle();
@@ -869,7 +762,7 @@ class ArticleServiceTest {
         existingArticle.setContent("Content to Delete");
         existingArticle.setAuthorId(testUserId);
         existingArticle.setAuthorUsername(testUsername);
-        existingArticle.setVisibility(0);
+        existingArticle.setVisibility(visibility);
         existingArticle.setCreatedAt(LocalDateTime.now());
         existingArticle.setUpdatedAt(LocalDateTime.now());
 
@@ -942,56 +835,6 @@ class ArticleServiceTest {
 
         verify(articleRepository, never()).findById(any());
         verify(articleRepository, never()).delete(any(UserArticle.class));
-    }
-
-    @Test
-    @DisplayName("Should delete public article by author - Requirement 7.1")
-    void deleteArticle_publicArticleByAuthor_shouldSucceed() {
-        // Arrange
-        Long articleId = 1L;
-        UserArticle existingArticle = new UserArticle();
-        existingArticle.setId(articleId);
-        existingArticle.setTitle("Public Article to Delete");
-        existingArticle.setContent("Public Content to Delete");
-        existingArticle.setAuthorId(testUserId);
-        existingArticle.setAuthorUsername(testUsername);
-        existingArticle.setVisibility(1);
-        existingArticle.setCreatedAt(LocalDateTime.now());
-        existingArticle.setUpdatedAt(LocalDateTime.now());
-
-        when(articleRepository.findById(articleId)).thenReturn(java.util.Optional.of(existingArticle));
-
-        // Act
-        articleService.deleteArticle(articleId, testUserId);
-
-        // Assert
-        verify(articleRepository, times(1)).findById(articleId);
-        verify(articleRepository, times(1)).delete(existingArticle);
-    }
-
-    @Test
-    @DisplayName("Should delete private article by author - Requirement 7.1")
-    void deleteArticle_privateArticleByAuthor_shouldSucceed() {
-        // Arrange
-        Long articleId = 1L;
-        UserArticle existingArticle = new UserArticle();
-        existingArticle.setId(articleId);
-        existingArticle.setTitle("Private Article to Delete");
-        existingArticle.setContent("Private Content to Delete");
-        existingArticle.setAuthorId(testUserId);
-        existingArticle.setAuthorUsername(testUsername);
-        existingArticle.setVisibility(0);
-        existingArticle.setCreatedAt(LocalDateTime.now());
-        existingArticle.setUpdatedAt(LocalDateTime.now());
-
-        when(articleRepository.findById(articleId)).thenReturn(java.util.Optional.of(existingArticle));
-
-        // Act
-        articleService.deleteArticle(articleId, testUserId);
-
-        // Assert
-        verify(articleRepository, times(1)).findById(articleId);
-        verify(articleRepository, times(1)).delete(existingArticle);
     }
 
     @Test
@@ -1667,9 +1510,10 @@ class ArticleServiceTest {
         // Arrange
         int page = 0;
         int size = 20;
+        Pageable pageable = PageRequest.of(page, size);
 
         // Act & Assert
-        assertThatThrownBy(() -> articleService.getUserArticles(null, null, org.springframework.data.domain.PageRequest.of(page, size)))
+        assertThatThrownBy(() -> articleService.getUserArticles(null, null, pageable))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("code", ExceptionEnum.ARTICLE_AUTH_REQUIRED.getCode())
                 .hasFieldOrPropertyWithValue("msg", ExceptionEnum.ARTICLE_AUTH_REQUIRED.getMsg());
@@ -2096,9 +1940,10 @@ class ArticleServiceTest {
         int page = 0;
         int size = 20;
         String keyword = "test";
+        Pageable pageable = PageRequest.of(page, size);
 
         // Act & Assert
-        assertThatThrownBy(() -> articleService.getUserArticles(null, keyword, org.springframework.data.domain.PageRequest.of(page, size)))
+        assertThatThrownBy(() -> articleService.getUserArticles(null, keyword, pageable))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("code", ExceptionEnum.ARTICLE_AUTH_REQUIRED.getCode())
                 .hasFieldOrPropertyWithValue("msg", ExceptionEnum.ARTICLE_AUTH_REQUIRED.getMsg());

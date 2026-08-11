@@ -60,13 +60,12 @@ class ArticleRepositoryTest {
 
     @Test
     @DisplayName("Should find public articles ordered by creation time descending")
-    void findByVisibilityOrderByCreatedAtDesc_shouldReturnPublicArticlesInDescendingOrder() throws InterruptedException {
+    void findByVisibilityOrderByCreatedAtDesc_shouldReturnPublicArticlesInDescendingOrder() {
         // Arrange
-        UserArticle article1 = createArticle("Public Article 1", "Content 1", testUser1, 1);
-        Thread.sleep(10); // Ensure different timestamps
-        UserArticle article2 = createArticle("Public Article 2", "Content 2", testUser1, 1);
-        Thread.sleep(10);
-        UserArticle article3 = createArticle("Private Article", "Content 3", testUser1, 0);
+        LocalDateTime baseTime = LocalDateTime.now();
+        UserArticle article1 = createArticle("Public Article 1", "Content 1", testUser1, 1, baseTime.minusSeconds(10));
+        UserArticle article2 = createArticle("Public Article 2", "Content 2", testUser1, 1, baseTime.minusSeconds(5));
+        UserArticle article3 = createArticle("Private Article", "Content 3", testUser1, 0, baseTime);
         
         entityManager.persist(article1);
         entityManager.persist(article2);
@@ -107,13 +106,12 @@ class ArticleRepositoryTest {
 
     @Test
     @DisplayName("Should find articles by author ID ordered by creation time descending")
-    void findByAuthorIdOrderByCreatedAtDesc_shouldReturnUserArticlesInDescendingOrder() throws InterruptedException {
+    void findByAuthorIdOrderByCreatedAtDesc_shouldReturnUserArticlesInDescendingOrder() {
         // Arrange
-        UserArticle article1 = createArticle("Article 1", "Content 1", testUser1, 1);
-        Thread.sleep(10);
-        UserArticle article2 = createArticle("Article 2", "Content 2", testUser1, 0);
-        Thread.sleep(10);
-        UserArticle article3 = createArticle("Article 3", "Content 3", testUser2, 1);
+        LocalDateTime baseTime = LocalDateTime.now();
+        UserArticle article1 = createArticle("Article 1", "Content 1", testUser1, 1, baseTime.minusSeconds(10));
+        UserArticle article2 = createArticle("Article 2", "Content 2", testUser1, 0, baseTime.minusSeconds(5));
+        UserArticle article3 = createArticle("Article 3", "Content 3", testUser2, 1, baseTime);
         
         entityManager.persist(article1);
         entityManager.persist(article2);
@@ -315,12 +313,12 @@ class ArticleRepositoryTest {
 
     @Test
     @DisplayName("Should support pagination for public articles")
-    void findByVisibilityOrderByCreatedAtDesc_shouldSupportPagination() throws InterruptedException {
+    void findByVisibilityOrderByCreatedAtDesc_shouldSupportPagination() {
         // Arrange
+        LocalDateTime baseTime = LocalDateTime.now();
         for (int i = 1; i <= 25; i++) {
-            UserArticle article = createArticle("Article " + i, "Content " + i, testUser1, 1);
+            UserArticle article = createArticle("Article " + i, "Content " + i, testUser1, 1, baseTime.plusSeconds(i));
             entityManager.persist(article);
-            Thread.sleep(5); // Ensure different timestamps
         }
         entityManager.flush();
 
@@ -349,12 +347,12 @@ class ArticleRepositoryTest {
 
     @Test
     @DisplayName("Should support pagination for user articles")
-    void findByAuthorIdOrderByCreatedAtDesc_shouldSupportPagination() throws InterruptedException {
+    void findByAuthorIdOrderByCreatedAtDesc_shouldSupportPagination() {
         // Arrange
+        LocalDateTime baseTime = LocalDateTime.now();
         for (int i = 1; i <= 15; i++) {
-            UserArticle article = createArticle("Article " + i, "Content " + i, testUser1, 1);
+            UserArticle article = createArticle("Article " + i, "Content " + i, testUser1, 1, baseTime.plusSeconds(i));
             entityManager.persist(article);
-            Thread.sleep(5);
         }
         entityManager.flush();
 
@@ -371,12 +369,12 @@ class ArticleRepositoryTest {
 
     @Test
     @DisplayName("Should support pagination for search results")
-    void searchPublicArticles_shouldSupportPagination() throws InterruptedException {
+    void searchPublicArticles_shouldSupportPagination() {
         // Arrange
+        LocalDateTime baseTime = LocalDateTime.now();
         for (int i = 1; i <= 12; i++) {
-            UserArticle article = createArticle("Stock Article " + i, "Content " + i, testUser1, 1);
+            UserArticle article = createArticle("Stock Article " + i, "Content " + i, testUser1, 1, baseTime.plusSeconds(i));
             entityManager.persist(article);
-            Thread.sleep(5);
         }
         entityManager.flush();
 
@@ -453,15 +451,13 @@ class ArticleRepositoryTest {
 
     @Test
     @DisplayName("Should order search results by creation time descending")
-    void searchPublicArticles_shouldOrderByCreatedAtDesc() throws InterruptedException {
+    void searchPublicArticles_shouldOrderByCreatedAtDesc() {
         // Arrange
-        UserArticle article1 = createArticle("Stock Analysis 1", "Content", testUser1, 1);
+        LocalDateTime baseTime = LocalDateTime.now();
+        UserArticle article1 = createArticle("Stock Analysis 1", "Content", testUser1, 1, baseTime.minusSeconds(10));
         entityManager.persist(article1);
-        entityManager.flush();
         
-        Thread.sleep(100);
-        
-        UserArticle article2 = createArticle("Stock Analysis 2", "Content", testUser1, 1);
+        UserArticle article2 = createArticle("Stock Analysis 2", "Content", testUser1, 1, baseTime.minusSeconds(5));
         entityManager.persist(article2);
         entityManager.flush();
 
@@ -480,14 +476,18 @@ class ArticleRepositoryTest {
 
     // Helper method to create test articles
     private UserArticle createArticle(String title, String content, SysUser author, Integer visibility) {
+        return createArticle(title, content, author, visibility, LocalDateTime.now());
+    }
+
+    private UserArticle createArticle(String title, String content, SysUser author, Integer visibility, LocalDateTime createdAt) {
         UserArticle article = new UserArticle();
         article.setTitle(title);
         article.setContent(content);
         article.setAuthorId(author.getId());
         article.setAuthorUsername(author.getUsername());
         article.setVisibility(visibility);
-        article.setCreatedAt(LocalDateTime.now());
-        article.setUpdatedAt(LocalDateTime.now());
+        article.setCreatedAt(createdAt != null ? createdAt : LocalDateTime.now());
+        article.setUpdatedAt(createdAt != null ? createdAt : LocalDateTime.now());
         return article;
     }
 }

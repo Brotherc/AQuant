@@ -7,8 +7,12 @@ import jakarta.validation.ValidatorFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -31,20 +35,36 @@ class ArticleVOValidationTest {
 
     // ==================== ArticleCreateReqVO Tests ====================
 
-    @Test
-    @DisplayName("ArticleCreateReqVO - Should pass validation with valid data")
-    void createReqVO_withValidData_shouldPassValidation() {
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("provideValidCreateReqVOs")
+    @DisplayName("ArticleCreateReqVO - Should pass validation with valid data variations")
+    void createReqVO_validDataVariations_shouldPassValidation(String testName, String title, String content, Integer visibility) {
         // Arrange
         ArticleCreateReqVO vo = new ArticleCreateReqVO();
-        vo.setTitle("Valid Title");
-        vo.setContent("Valid content with sufficient length");
-        vo.setVisibility(1);
+        vo.setTitle(title);
+        vo.setContent(content);
+        vo.setVisibility(visibility);
 
         // Act
         Set<ConstraintViolation<ArticleCreateReqVO>> violations = validator.validate(vo);
 
         // Assert
         assertThat(violations).isEmpty();
+    }
+
+    private static Stream<Arguments> provideValidCreateReqVOs() {
+        return Stream.of(
+                Arguments.of("Standard valid data", "Valid Title", "Valid content with sufficient length", 1),
+                Arguments.of("Title exactly 200 chars", "a".repeat(200), "Valid content", 1),
+                Arguments.of("Content exactly 50000 chars", "Valid Title", "a".repeat(50000), 1),
+                Arguments.of("Public visibility", "Valid Title", "Valid content", 1),
+                Arguments.of("Private visibility", "Valid Title", "Valid content", 0),
+                Arguments.of("Null visibility", "Valid Title", "Valid content", null),
+                Arguments.of("Chinese title", "股票分析报告：2024年A股市场复盘与展望", "详细的分析内容", 1),
+                Arguments.of("Chinese content", "投资分析", "这是一篇关于股票投资的详细分析文章，包含了市场趋势、技术指标和投资建议。", 1),
+                Arguments.of("Special characters in title", "Stock Analysis: 2024 Q1 (Part 1) - Tech Sector!", "Valid content", 1),
+                Arguments.of("Line breaks in content", "Valid Title", "Line 1\nLine 2\nLine 3\n\nLine 5", 1)
+        );
     }
 
     @Test
@@ -62,7 +82,7 @@ class ArticleVOValidationTest {
         // Assert
         assertThat(violations).hasSize(1);
         ConstraintViolation<ArticleCreateReqVO> violation = violations.iterator().next();
-        assertThat(violation.getPropertyPath().toString()).isEqualTo("title");
+        assertThat(violation.getPropertyPath()).hasToString("title");
         assertThat(violation.getMessage()).isEqualTo("标题不能为空");
     }
 
@@ -81,7 +101,7 @@ class ArticleVOValidationTest {
         // Assert
         assertThat(violations).hasSize(1);
         ConstraintViolation<ArticleCreateReqVO> violation = violations.iterator().next();
-        assertThat(violation.getPropertyPath().toString()).isEqualTo("title");
+        assertThat(violation.getPropertyPath()).hasToString("title");
         assertThat(violation.getMessage()).isEqualTo("标题不能为空");
     }
 
@@ -100,24 +120,8 @@ class ArticleVOValidationTest {
         // Assert
         assertThat(violations).hasSize(1);
         ConstraintViolation<ArticleCreateReqVO> violation = violations.iterator().next();
-        assertThat(violation.getPropertyPath().toString()).isEqualTo("title");
+        assertThat(violation.getPropertyPath()).hasToString("title");
         assertThat(violation.getMessage()).isEqualTo("标题不能为空");
-    }
-
-    @Test
-    @DisplayName("ArticleCreateReqVO - Should pass validation when title is exactly 200 characters")
-    void createReqVO_withTitleExactly200Chars_shouldPassValidation() {
-        // Arrange
-        ArticleCreateReqVO vo = new ArticleCreateReqVO();
-        vo.setTitle("a".repeat(200));
-        vo.setContent("Valid content");
-        vo.setVisibility(1);
-
-        // Act
-        Set<ConstraintViolation<ArticleCreateReqVO>> violations = validator.validate(vo);
-
-        // Assert
-        assertThat(violations).isEmpty();
     }
 
     @Test
@@ -135,7 +139,7 @@ class ArticleVOValidationTest {
         // Assert
         assertThat(violations).hasSize(1);
         ConstraintViolation<ArticleCreateReqVO> violation = violations.iterator().next();
-        assertThat(violation.getPropertyPath().toString()).isEqualTo("title");
+        assertThat(violation.getPropertyPath()).hasToString("title");
         assertThat(violation.getMessage()).isEqualTo("标题长度不能超过200字符");
     }
 
@@ -154,7 +158,7 @@ class ArticleVOValidationTest {
         // Assert
         assertThat(violations).hasSize(1);
         ConstraintViolation<ArticleCreateReqVO> violation = violations.iterator().next();
-        assertThat(violation.getPropertyPath().toString()).isEqualTo("content");
+        assertThat(violation.getPropertyPath()).hasToString("content");
         assertThat(violation.getMessage()).isEqualTo("内容不能为空");
     }
 
@@ -173,7 +177,7 @@ class ArticleVOValidationTest {
         // Assert
         assertThat(violations).hasSize(1);
         ConstraintViolation<ArticleCreateReqVO> violation = violations.iterator().next();
-        assertThat(violation.getPropertyPath().toString()).isEqualTo("content");
+        assertThat(violation.getPropertyPath()).hasToString("content");
         assertThat(violation.getMessage()).isEqualTo("内容不能为空");
     }
 
@@ -192,24 +196,8 @@ class ArticleVOValidationTest {
         // Assert
         assertThat(violations).hasSize(1);
         ConstraintViolation<ArticleCreateReqVO> violation = violations.iterator().next();
-        assertThat(violation.getPropertyPath().toString()).isEqualTo("content");
+        assertThat(violation.getPropertyPath()).hasToString("content");
         assertThat(violation.getMessage()).isEqualTo("内容不能为空");
-    }
-
-    @Test
-    @DisplayName("ArticleCreateReqVO - Should pass validation when content is exactly 50000 characters")
-    void createReqVO_withContentExactly50000Chars_shouldPassValidation() {
-        // Arrange
-        ArticleCreateReqVO vo = new ArticleCreateReqVO();
-        vo.setTitle("Valid Title");
-        vo.setContent("a".repeat(50000));
-        vo.setVisibility(1);
-
-        // Act
-        Set<ConstraintViolation<ArticleCreateReqVO>> violations = validator.validate(vo);
-
-        // Assert
-        assertThat(violations).isEmpty();
     }
 
     @Test
@@ -227,56 +215,8 @@ class ArticleVOValidationTest {
         // Assert
         assertThat(violations).hasSize(1);
         ConstraintViolation<ArticleCreateReqVO> violation = violations.iterator().next();
-        assertThat(violation.getPropertyPath().toString()).isEqualTo("content");
+        assertThat(violation.getPropertyPath()).hasToString("content");
         assertThat(violation.getMessage()).isEqualTo("内容长度不能超过50000字符");
-    }
-
-    @Test
-    @DisplayName("ArticleCreateReqVO - Should pass validation when visibility is 'public'")
-    void createReqVO_withPublicVisibility_shouldPassValidation() {
-        // Arrange
-        ArticleCreateReqVO vo = new ArticleCreateReqVO();
-        vo.setTitle("Valid Title");
-        vo.setContent("Valid content");
-        vo.setVisibility(1);
-
-        // Act
-        Set<ConstraintViolation<ArticleCreateReqVO>> violations = validator.validate(vo);
-
-        // Assert
-        assertThat(violations).isEmpty();
-    }
-
-    @Test
-    @DisplayName("ArticleCreateReqVO - Should pass validation when visibility is 'private'")
-    void createReqVO_withPrivateVisibility_shouldPassValidation() {
-        // Arrange
-        ArticleCreateReqVO vo = new ArticleCreateReqVO();
-        vo.setTitle("Valid Title");
-        vo.setContent("Valid content");
-        vo.setVisibility(0);
-
-        // Act
-        Set<ConstraintViolation<ArticleCreateReqVO>> violations = validator.validate(vo);
-
-        // Assert
-        assertThat(violations).isEmpty();
-    }
-
-    @Test
-    @DisplayName("ArticleCreateReqVO - Should pass validation when visibility is null (default will be used)")
-    void createReqVO_withNullVisibility_shouldPassValidation() {
-        // Arrange
-        ArticleCreateReqVO vo = new ArticleCreateReqVO();
-        vo.setTitle("Valid Title");
-        vo.setContent("Valid content");
-        vo.setVisibility(null);
-
-        // Act
-        Set<ConstraintViolation<ArticleCreateReqVO>> violations = validator.validate(vo);
-
-        // Assert
-        assertThat(violations).isEmpty();
     }
 
     @Test
@@ -333,7 +273,7 @@ class ArticleVOValidationTest {
         // Assert
         assertThat(violations).hasSize(1);
         ConstraintViolation<ArticleUpdateReqVO> violation = violations.iterator().next();
-        assertThat(violation.getPropertyPath().toString()).isEqualTo("id");
+        assertThat(violation.getPropertyPath()).hasToString("id");
         assertThat(violation.getMessage()).isEqualTo("文章ID不能为空");
     }
 
@@ -353,7 +293,7 @@ class ArticleVOValidationTest {
         // Assert
         assertThat(violations).hasSize(1);
         ConstraintViolation<ArticleUpdateReqVO> violation = violations.iterator().next();
-        assertThat(violation.getPropertyPath().toString()).isEqualTo("title");
+        assertThat(violation.getPropertyPath()).hasToString("title");
         assertThat(violation.getMessage()).isEqualTo("标题不能为空");
     }
 
@@ -373,7 +313,7 @@ class ArticleVOValidationTest {
         // Assert
         assertThat(violations).hasSize(1);
         ConstraintViolation<ArticleUpdateReqVO> violation = violations.iterator().next();
-        assertThat(violation.getPropertyPath().toString()).isEqualTo("title");
+        assertThat(violation.getPropertyPath()).hasToString("title");
         assertThat(violation.getMessage()).isEqualTo("标题长度不能超过200字符");
     }
 
@@ -393,7 +333,7 @@ class ArticleVOValidationTest {
         // Assert
         assertThat(violations).hasSize(1);
         ConstraintViolation<ArticleUpdateReqVO> violation = violations.iterator().next();
-        assertThat(violation.getPropertyPath().toString()).isEqualTo("content");
+        assertThat(violation.getPropertyPath()).hasToString("content");
         assertThat(violation.getMessage()).isEqualTo("内容不能为空");
     }
 
@@ -413,7 +353,7 @@ class ArticleVOValidationTest {
         // Assert
         assertThat(violations).hasSize(1);
         ConstraintViolation<ArticleUpdateReqVO> violation = violations.iterator().next();
-        assertThat(violation.getPropertyPath().toString()).isEqualTo("content");
+        assertThat(violation.getPropertyPath()).hasToString("content");
         assertThat(violation.getMessage()).isEqualTo("内容长度不能超过50000字符");
     }
 
@@ -463,75 +403,11 @@ class ArticleVOValidationTest {
         // Assert
         assertThat(violations).hasSize(1);
         ConstraintViolation<ArticleIdReqVO> violation = violations.iterator().next();
-        assertThat(violation.getPropertyPath().toString()).isEqualTo("id");
+        assertThat(violation.getPropertyPath()).hasToString("id");
         assertThat(violation.getMessage()).isEqualTo("文章ID不能为空");
     }
 
     // ==================== Edge Case Tests ====================
-
-    @Test
-    @DisplayName("ArticleCreateReqVO - Should handle Chinese characters in title within limit")
-    void createReqVO_withChineseCharactersInTitle_shouldPassValidation() {
-        // Arrange
-        ArticleCreateReqVO vo = new ArticleCreateReqVO();
-        vo.setTitle("股票分析报告：2024年A股市场复盘与展望");
-        vo.setContent("详细的分析内容");
-        vo.setVisibility(1);
-
-        // Act
-        Set<ConstraintViolation<ArticleCreateReqVO>> violations = validator.validate(vo);
-
-        // Assert
-        assertThat(violations).isEmpty();
-    }
-
-    @Test
-    @DisplayName("ArticleCreateReqVO - Should handle Chinese characters in content within limit")
-    void createReqVO_withChineseCharactersInContent_shouldPassValidation() {
-        // Arrange
-        ArticleCreateReqVO vo = new ArticleCreateReqVO();
-        vo.setTitle("投资分析");
-        vo.setContent("这是一篇关于股票投资的详细分析文章，包含了市场趋势、技术指标和投资建议。");
-        vo.setVisibility(1);
-
-        // Act
-        Set<ConstraintViolation<ArticleCreateReqVO>> violations = validator.validate(vo);
-
-        // Assert
-        assertThat(violations).isEmpty();
-    }
-
-    @Test
-    @DisplayName("ArticleCreateReqVO - Should handle special characters in title")
-    void createReqVO_withSpecialCharactersInTitle_shouldPassValidation() {
-        // Arrange
-        ArticleCreateReqVO vo = new ArticleCreateReqVO();
-        vo.setTitle("Stock Analysis: 2024 Q1 (Part 1) - Tech Sector!");
-        vo.setContent("Valid content");
-        vo.setVisibility(1);
-
-        // Act
-        Set<ConstraintViolation<ArticleCreateReqVO>> violations = validator.validate(vo);
-
-        // Assert
-        assertThat(violations).isEmpty();
-    }
-
-    @Test
-    @DisplayName("ArticleCreateReqVO - Should handle line breaks in content")
-    void createReqVO_withLineBreaksInContent_shouldPassValidation() {
-        // Arrange
-        ArticleCreateReqVO vo = new ArticleCreateReqVO();
-        vo.setTitle("Valid Title");
-        vo.setContent("Line 1\nLine 2\nLine 3\n\nLine 5");
-        vo.setVisibility(1);
-
-        // Act
-        Set<ConstraintViolation<ArticleCreateReqVO>> violations = validator.validate(vo);
-
-        // Assert
-        assertThat(violations).isEmpty();
-    }
 
     @Test
     @DisplayName("ArticleUpdateReqVO - Should pass validation with exactly 200 character title")
