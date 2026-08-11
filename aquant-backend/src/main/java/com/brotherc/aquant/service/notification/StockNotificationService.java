@@ -41,6 +41,7 @@ import java.util.concurrent.ConcurrentMap;
 @RequiredArgsConstructor
 public class StockNotificationService {
 
+    private static final String CONDITION = "condition";
     private static final long OBSERVED_PRICE_TTL_MILLIS = 7L * 24 * 60 * 60 * 1000;
     private final ConcurrentMap<Long, ObservedPrice> lastObservedPriceMap = new ConcurrentHashMap<>();
 
@@ -223,7 +224,7 @@ public class StockNotificationService {
             JsonNode params = objectMapper.readTree(config.getParams());
             int maShort = params.path("maShort").asInt(5);
             int maLong = params.path("maLong").asInt(20);
-            String condition = params.path("condition").asText("UP");
+            String condition = params.path(CONDITION).asText("UP");
             String historyCode = StockUtils.wrapExchangePrefix(config.getStockCode());
 
             int needDays = maLong + 1;
@@ -333,7 +334,7 @@ public class StockNotificationService {
 
         try {
             JsonNode params = objectMapper.readTree(paramsText);
-            PriceAlertCondition condition = PriceAlertCondition.fromCode(params.path("condition").asText(null));
+            PriceAlertCondition condition = PriceAlertCondition.fromCode(params.path(CONDITION).asText(null));
             if (condition != null) {
                 return condition;
             }
@@ -352,7 +353,7 @@ public class StockNotificationService {
     private String normalizePriceAlertParams(String paramsText) {
         PriceAlertCondition condition = parsePriceAlertCondition(paramsText, true);
         try {
-            return objectMapper.writeValueAsString(java.util.Map.of("condition", condition.name()));
+            return objectMapper.writeValueAsString(java.util.Map.of(CONDITION, condition.name()));
         } catch (JsonProcessingException e) {
             throw new BusinessException(ExceptionEnum.STOCK_NOTIFICATION_PRICE_ALERT_PARAMS_ILLEGAL);
         }

@@ -36,6 +36,9 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class StockStrategyService {
 
+    private static final String SIGNAL = "signal";
+    private static final String LATEST_PRICE = "latestPrice";
+
     private final DualMovingAverageStrategy dualMovingAverageStrategy;
     private final MomentumStrategy momentumStrategy;
     private final StockWatchlistStockRepository stockWatchlistStockRepository;
@@ -129,13 +132,13 @@ public class StockStrategyService {
                 comparator = Comparator.comparing(StockTradeSignalVO::getCode);
             } else if ("name".equals(order.getProperty())) {
                 comparator = Comparator.comparing(StockTradeSignalVO::getName);
-            } else if ("signal".equals(order.getProperty())) {
+            } else if (SIGNAL.equals(order.getProperty())) {
                 comparator = Comparator.comparing(StockTradeSignalVO::getSignal);
             } else if ("pir".equals(order.getProperty())) {
                 comparator = Comparator.comparing(
                         StockTradeSignalVO::getPir,
                         Comparator.nullsLast(BigDecimal::compareTo));
-            } else if ("latestPrice".equals(order.getProperty())) {
+            } else if (LATEST_PRICE.equals(order.getProperty())) {
                 comparator = Comparator.comparing(StockTradeSignalVO::getLatestPrice);
             }
 
@@ -254,7 +257,7 @@ public class StockStrategyService {
                         StockTradeBacktestVO::getPValue,
                         reverse ? Comparator.nullsLast(Comparator.reverseOrder()) : Comparator.nullsLast(Double::compareTo));
                 reverse = false;
-            } else if ("latestPrice".equals(order.getProperty())) {
+            } else if (LATEST_PRICE.equals(order.getProperty())) {
                 comparator = Comparator.comparing(
                         StockTradeBacktestVO::getLatestPrice,
                         Comparator.nullsLast(BigDecimal::compareTo));
@@ -360,13 +363,13 @@ public class StockStrategyService {
                 comparator = Comparator.comparing(StockTradeSignalVO::getCode);
             } else if ("name".equals(order.getProperty())) {
                 comparator = Comparator.comparing(StockTradeSignalVO::getName);
-            } else if ("signal".equals(order.getProperty())) {
+            } else if (SIGNAL.equals(order.getProperty())) {
                 comparator = Comparator.comparing(StockTradeSignalVO::getSignal);
             } else if ("pir".equals(order.getProperty())) {
                 comparator = Comparator.comparing(
                         StockTradeSignalVO::getPir,
                         Comparator.nullsLast(BigDecimal::compareTo));
-            } else if ("latestPrice".equals(order.getProperty())) {
+            } else if (LATEST_PRICE.equals(order.getProperty())) {
                 comparator = Comparator.comparing(StockTradeSignalVO::getLatestPrice);
             } else if ("momentumValue".equals(order.getProperty())) {
                 comparator = Comparator.comparing(
@@ -471,7 +474,7 @@ public class StockStrategyService {
         if (!sort.isSorted()) return false;
         for (Sort.Order order : sort) {
             String prop = order.getProperty();
-            if ("signal".equals(prop) || "momentumValue".equals(prop) || "totalReturn".equals(prop) || 
+            if (SIGNAL.equals(prop) || "momentumValue".equals(prop) || "totalReturn".equals(prop) ||
                 "tradeCount".equals(prop) || "winRate".equals(prop) || "pValue".equals(prop)) {
                 return true;
             }

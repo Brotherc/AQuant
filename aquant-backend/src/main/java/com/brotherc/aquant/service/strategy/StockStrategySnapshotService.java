@@ -48,6 +48,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @RequiredArgsConstructor
 public class StockStrategySnapshotService {
 
+    private static final String P_VALUE = "pValue";
+    private static final String RELIABILITY = "reliability";
+
     private static final String[] PRESET_MARKETS = {"sh", "sz", "bj"};
     private static final int[] PRESET_MA_OPTIONS = {5, 10, 20, 30, 60, 120};
     private static final int[] PRESET_MOMENTUM_LOOKBACK_DAY_OPTIONS = {10, 20, 60, 120};
@@ -441,7 +444,7 @@ public class StockStrategySnapshotService {
             }
 
             if (StringUtils.isNotBlank(reqVO.getReliability())) {
-                predicates.add(cb.equal(root.get("reliability"), reqVO.getReliability()));
+                predicates.add(cb.equal(root.get(RELIABILITY), reqVO.getReliability()));
             }
 
             if (watchlistCodes != null) {
@@ -476,7 +479,7 @@ public class StockStrategySnapshotService {
             }
 
             if (StringUtils.isNotBlank(reqVO.getReliability())) {
-                predicates.add(cb.equal(root.get("reliability"), reqVO.getReliability()));
+                predicates.add(cb.equal(root.get(RELIABILITY), reqVO.getReliability()));
             }
 
             if (watchlistCodes != null) {
@@ -509,14 +512,14 @@ public class StockStrategySnapshotService {
                 continue;
             }
 
-            if ("pValue".equals(property)) {
+            if (P_VALUE.equals(property)) {
                 Expression<Integer> nullRank = cb.<Integer>selectCase()
-                        .when(cb.isNull(root.get("pValue")), 1)
+                        .when(cb.isNull(root.get(P_VALUE)), 1)
                         .otherwise(0);
                 orders.add(cb.asc(nullRank));
                 orders.add(sortOrder.getDirection() == Sort.Direction.DESC
-                        ? cb.desc(root.get("pValue"))
-                        : cb.asc(root.get("pValue")));
+                        ? cb.desc(root.get(P_VALUE))
+                        : cb.asc(root.get(P_VALUE)));
             } else {
                 orders.add(sortOrder.getDirection() == Sort.Direction.DESC
                         ? cb.desc(root.get(property))
@@ -534,7 +537,7 @@ public class StockStrategySnapshotService {
             return false;
         }
         for (Sort.Order order : sort) {
-            if ("pValue".equals(order.getProperty())) {
+            if (P_VALUE.equals(order.getProperty())) {
                 return true;
             }
         }
@@ -557,7 +560,7 @@ public class StockStrategySnapshotService {
         }
         return switch (property) {
             case "code", "name", "totalReturn", "tradeCount", "winRate",
-                    "pValue", "latestPrice", "pir", "reliability" -> property;
+                 P_VALUE, "latestPrice", "pir", RELIABILITY -> property;
             case "lastTime" -> "createdAt";
             default -> null;
         };

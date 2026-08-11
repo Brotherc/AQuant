@@ -90,34 +90,24 @@ public class TencentFinanceService {
         String[] lines = responseBody.split(";");
         for (String line : lines) {
             String trimmedLine = line.trim();
-            if (!trimmedLine.contains("~")) {
-                continue;
-            }
+            int firstQuote = trimmedLine.indexOf("\"");
+            int lastQuote = trimmedLine.lastIndexOf("\"");
 
-            try {
-                // 寻找引号包裹的内容
-                int firstQuote = trimmedLine.indexOf("\"");
-                int lastQuote = trimmedLine.lastIndexOf("\"");
-                if (firstQuote == -1 || lastQuote == -1 || firstQuote >= lastQuote) {
-                    continue;
-                }
+            if (trimmedLine.contains("~") && firstQuote != -1 && lastQuote != -1 && firstQuote < lastQuote) {
+                try {
+                    String content = trimmedLine.substring(firstQuote + 1, lastQuote);
+                    String[] parts = content.split("~");
 
-                String content = trimmedLine.substring(firstQuote + 1, lastQuote);
-                String[] parts = content.split("~");
-
-                // 腾讯协议字段索引：1: 股票名称, 2: 股票代码, 3: 最新价
-                if (parts.length > 3) {
-                    String name = parts[1];
-                    String code = parts[2];
-                    String priceStr = parts[3];
-                    
-                    if (!priceStr.isEmpty()) {
-                        BigDecimal price = new BigDecimal(priceStr);
+                    // 腾讯协议字段索引：1: 股票名称, 2: 股票代码, 3: 最新价
+                    if (parts.length > 3 && !parts[3].isEmpty()) {
+                        String name = parts[1];
+                        String code = parts[2];
+                        BigDecimal price = new BigDecimal(parts[3]);
                         resultMap.put(code, new TencentStockQuote(name, price));
                     }
+                } catch (Exception e) {
+                    log.warn("解析单条腾讯行情失败: line={}, msg={}", trimmedLine, e.getMessage());
                 }
-            } catch (Exception e) {
-                log.warn("解析单条腾讯行情失败: line={}, msg={}", trimmedLine, e.getMessage());
             }
         }
     }

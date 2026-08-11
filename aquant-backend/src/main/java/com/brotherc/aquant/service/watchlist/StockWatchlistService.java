@@ -68,7 +68,7 @@ public class StockWatchlistService {
             vo.setType(g.getType());
             vo.setSortNo(g.getSortNo());
             return vo;
-        }).collect(Collectors.toList());
+        }).toList();
     }
 
     public List<WatchlistStockVO> getStocksByGroupId(Long groupId, Long userId) {
