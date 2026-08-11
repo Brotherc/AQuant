@@ -137,73 +137,64 @@ public class StockDividendService {
         List<StockDividendStatVO> result = new ArrayList<>();
 
         for (Map.Entry<String, List<StockDividendProjection>> entry : group.entrySet()) {
-
             String stockCode = entry.getKey();
             List<StockDividendProjection> dividends = entry.getValue();
             String stockName = dividends.get(0).getStockName();
 
-            // 过滤股票代码和名称
-            if (StringUtils.isNotBlank(stockCodeQuery) && !stockCode.contains(stockCodeQuery)) {
-                continue;
+            boolean matchCode = StringUtils.isBlank(stockCodeQuery) || stockCode.contains(stockCodeQuery);
+            boolean matchName = StringUtils.isBlank(stockNameQuery) || stockName.contains(stockNameQuery);
+            boolean matchWatchlist = watchlistCodes == null || watchlistCodes.contains(stockCode);
+
+            if (matchCode && matchName && matchWatchlist) {
+                int currentYear = LocalDate.now().getYear();
+                int minYear = dividends.stream()
+                        .map(d -> d.getLatestAnnouncementDate().getYear())
+                        .min(Integer::compareTo)
+                        .orElse(currentYear);
+                int years = currentYear - minYear + 1;
+
+                // 最近 N 年平均分红
+                BigDecimal avg = dividends.stream()
+                        .map(StockDividendProjection::getCashDividendRatio)
+                        .filter(Objects::nonNull)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add)
+                        .divide(
+                                BigDecimal.valueOf(years),
+                                4,
+                                RoundingMode.HALF_UP);
+
+                if (minAvgDividend == null || avg.compareTo(minAvgDividend) >= 0) {
+                    // 最近一年分红（按公告日最大年）
+                    int latestYear = dividends.stream()
+                            .map(d -> d.getLatestAnnouncementDate().getYear())
+                            .max(Integer::compareTo)
+                            .orElse(0);
+
+                    BigDecimal latestYearDividend = dividends.stream()
+                            .filter(d -> d.getLatestAnnouncementDate().getYear() == latestYear)
+                            .map(StockDividendProjection::getCashDividendRatio)
+                            .filter(Objects::nonNull)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                    BigDecimal latestYearTransfer = dividends.stream()
+                            .filter(d -> d.getLatestAnnouncementDate().getYear() == latestYear)
+                            .map(d -> {
+                                BigDecimal bonus = d.getBonusShareRatio() != null ? d.getBonusShareRatio() : BigDecimal.ZERO;
+                                BigDecimal transfer = d.getTransferShareRatio() != null ? d.getTransferShareRatio()
+                                        : BigDecimal.ZERO;
+                                return bonus.add(transfer);
+                            })
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                    StockDividendStatVO stockDividendStatVO = new StockDividendStatVO();
+                    stockDividendStatVO.setStockCode(stockCode);
+                    stockDividendStatVO.setStockName(stockName);
+                    stockDividendStatVO.setAvgDividend(avg);
+                    stockDividendStatVO.setLatestYearDividend(latestYearDividend);
+                    stockDividendStatVO.setLatestYearTransfer(latestYearTransfer);
+                    result.add(stockDividendStatVO);
+                }
             }
-            if (StringUtils.isNotBlank(stockNameQuery) && !stockName.contains(stockNameQuery)) {
-                continue;
-            }
-            // 过滤自选分组
-            if (watchlistCodes != null && !watchlistCodes.contains(stockCode)) {
-                continue;
-            }
-
-            int currentYear = LocalDate.now().getYear();
-            int minYear = dividends.stream()
-                    .map(d -> d.getLatestAnnouncementDate().getYear())
-                    .min(Integer::compareTo)
-                    .orElse(currentYear);
-            int years = currentYear - minYear + 1;
-
-            // 最近 N 年平均分红
-            BigDecimal avg = dividends.stream()
-                    .map(StockDividendProjection::getCashDividendRatio)
-                    .filter(Objects::nonNull)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add)
-                    .divide(
-                            BigDecimal.valueOf(years),
-                            4,
-                            RoundingMode.HALF_UP);
-
-            if (minAvgDividend != null && avg.compareTo(minAvgDividend) < 0) {
-                continue;
-            }
-
-            // 最近一年分红（按公告日最大年）
-            int latestYear = dividends.stream()
-                    .map(d -> d.getLatestAnnouncementDate().getYear())
-                    .max(Integer::compareTo)
-                    .orElse(0);
-
-            BigDecimal latestYearDividend = dividends.stream()
-                    .filter(d -> d.getLatestAnnouncementDate().getYear() == latestYear)
-                    .map(StockDividendProjection::getCashDividendRatio)
-                    .filter(Objects::nonNull)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            BigDecimal latestYearTransfer = dividends.stream()
-                    .filter(d -> d.getLatestAnnouncementDate().getYear() == latestYear)
-                    .map(d -> {
-                        BigDecimal bonus = d.getBonusShareRatio() != null ? d.getBonusShareRatio() : BigDecimal.ZERO;
-                        BigDecimal transfer = d.getTransferShareRatio() != null ? d.getTransferShareRatio()
-                                : BigDecimal.ZERO;
-                        return bonus.add(transfer);
-                    })
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            StockDividendStatVO stockDividendStatVO = new StockDividendStatVO();
-            stockDividendStatVO.setStockCode(stockCode);
-            stockDividendStatVO.setStockName(dividends.get(0).getStockName());
-            stockDividendStatVO.setAvgDividend(avg);
-            stockDividendStatVO.setLatestYearDividend(latestYearDividend);
-            stockDividendStatVO.setLatestYearTransfer(latestYearTransfer);
-            result.add(stockDividendStatVO);
         }
 
         return result;
