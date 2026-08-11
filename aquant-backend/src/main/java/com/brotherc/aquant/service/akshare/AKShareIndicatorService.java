@@ -11,9 +11,9 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
-public class AKShareIndicatorsService extends AbstractAKShareService {
+public class AKShareIndicatorService extends AbstractAKShareService {
 
-    public AKShareIndicatorsService(ObjectMapper objectMapper, OkHttpClient okHttpClient) {
+    public AKShareIndicatorService(ObjectMapper objectMapper, OkHttpClient okHttpClient) {
         super(objectMapper, okHttpClient);
     }
 

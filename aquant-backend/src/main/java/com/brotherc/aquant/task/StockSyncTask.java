@@ -46,7 +46,7 @@ public class StockSyncTask {
 
     private final StockHelper stockHelper;
     private final AKShareService aKShareService;
-    private final AKShareIndicatorsService aKShareIndicatorsService;
+    private final AKShareIndicatorService aKShareIndicatorService;
     private final AKShareIndustryService aKShareIndustryService;
     private final AKShareDividendService akShareDividendService;
     private final AKShareFundService aKShareFundService;
@@ -327,7 +327,7 @@ public class StockSyncTask {
         }
 
         try {
-            List<StockHoldChangeCninfo> stockHoldChanges = aKShareIndicatorsService.stockHoldChangeCninfo("全部");
+            List<StockHoldChangeCninfo> stockHoldChanges = aKShareIndicatorService.stockHoldChangeCninfo("全部");
             int savedCount = stockShareChangeService.replaceAll(stockHoldChanges);
             if (savedCount <= 0) {
                 log.warn("股票股本变动未保存有效数据，不更新同步水位");
@@ -520,7 +520,7 @@ public class StockSyncTask {
                 break;
             }
             try {
-                List<StockYjbbEm> list = aKShareIndicatorsService.stockYjbbEm(date);
+                List<StockYjbbEm> list = aKShareIndicatorService.stockYjbbEm(date);
                 stockPerformanceReportService.save(date, list);
                 requestCount++;
                 hasRequestedReportDate = true;

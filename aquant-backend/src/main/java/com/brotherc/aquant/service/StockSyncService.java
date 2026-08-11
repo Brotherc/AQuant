@@ -4,7 +4,7 @@ import com.brotherc.aquant.constant.StockSyncConstant;
 import com.brotherc.aquant.entity.*;
 import com.brotherc.aquant.model.dto.akshare.*;
 import com.brotherc.aquant.repository.*;
-import com.brotherc.aquant.service.akshare.AKShareIndicatorsService;
+import com.brotherc.aquant.service.akshare.AKShareIndicatorService;
 import com.brotherc.aquant.service.akshare.AKShareService;
 import com.brotherc.aquant.service.fund.StockFundInfoService;
 import com.brotherc.aquant.service.indicator.StockDupontAnalysisService;
@@ -38,7 +38,7 @@ import java.util.stream.Collectors;
 public class StockSyncService {
 
     private final AKShareService aKShareService;
-    private final AKShareIndicatorsService aKShareIndicatorsService;
+    private final AKShareIndicatorService aKShareIndicatorService;
     private final StockQuoteService stockQuoteService;
     private final StockQuoteHistoryService stockQuoteHistoryService;
     private final StockGrowthMetricsService stockGrowthMetricsService;
@@ -154,15 +154,15 @@ public class StockSyncService {
             log.info("同步股票：" + stock.getCode() + " - " + stock.getName());
 
             // 同步计算杜邦分析、成长性、估值等数据
-            List<StockZhGrowthComparisonEm> stockZhGrowthComparisonEms = aKShareIndicatorsService.stockZhGrowthComparisonEm(stock.getCode());
+            List<StockZhGrowthComparisonEm> stockZhGrowthComparisonEms = aKShareIndicatorService.stockZhGrowthComparisonEm(stock.getCode());
             stockGrowthMetricsService.save(stock.getCode(), stock.getName(), stockZhGrowthComparisonEms);
 
             List<StockZhValuationComparisonEm> stockZhValuationComparisonEms;
             try {
-                stockZhValuationComparisonEms = aKShareIndicatorsService.stockZhValuationComparisonEm(stock.getCode());
+                stockZhValuationComparisonEms = aKShareIndicatorService.stockZhValuationComparisonEm(stock.getCode());
                 stockValuationMetricsService.save(stock.getCode(), stock.getName(), stockZhValuationComparisonEms);
 
-                List<StockZhDupontComparisonEm> stockZhDupontComparisonEms = aKShareIndicatorsService.stockZhDupontComparisonEm(stock.getCode());
+                List<StockZhDupontComparisonEm> stockZhDupontComparisonEms = aKShareIndicatorService.stockZhDupontComparisonEm(stock.getCode());
                 stockDupontAnalysisService.save(stock.getCode(), stock.getName(), stockZhDupontComparisonEms);
 
                 List<StockZhADaily> stockZhAHists = aKShareService.stockZhADaily(stock.getCode(), null, null, "qfq");
