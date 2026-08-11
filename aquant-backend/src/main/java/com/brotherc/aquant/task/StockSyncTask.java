@@ -10,6 +10,7 @@ import com.brotherc.aquant.repository.*;
 import com.brotherc.aquant.service.*;
 import com.brotherc.aquant.service.akshare.AKShareDividendService;
 import com.brotherc.aquant.service.akshare.AKShareFundService;
+import com.brotherc.aquant.service.akshare.AKShareIndustryService;
 import com.brotherc.aquant.service.akshare.AKShareService;
 import com.brotherc.aquant.utils.StockHelper;
 import com.brotherc.aquant.utils.StockUtils;
@@ -36,6 +37,7 @@ public class StockSyncTask {
 
     private final StockHelper stockHelper;
     private final AKShareService aKShareService;
+    private final AKShareIndustryService aKShareIndustryService;
     private final AKShareDividendService akShareDividendService;
     private final AKShareFundService aKShareFundService;
     private final TransactionTemplate transactionTemplate;
@@ -358,7 +360,7 @@ public class StockSyncTask {
         if (shouldRefreshLatestBoard) {
             List<StockBoardIndustrySummaryThs> stockBoardList;
             try {
-                stockBoardList = aKShareService.stockBoardIndustrySummaryThs().stream()
+                stockBoardList = aKShareIndustryService.stockBoardIndustrySummaryThs().stream()
                         .filter(stockBoard -> stockBoard != null && stockBoard.getSectorName() != null)
                         .toList();
             } catch (Exception e) {
@@ -419,7 +421,7 @@ public class StockSyncTask {
 
             try {
                 String historyStart = historyStartDate == null ? null : historyStartDate.toString();
-                List<StockBoardIndustryIndexThs> detailList = aKShareService
+                List<StockBoardIndustryIndexThs> detailList = aKShareIndustryService
                         .stockBoardIndustryIndexThs(sectorName, historyStart, historyEnd);
                 if (!CollectionUtils.isEmpty(detailList)) {
                     stockSyncService.stockBoardIndustryHistory(sectorName, detailList, timestamp);

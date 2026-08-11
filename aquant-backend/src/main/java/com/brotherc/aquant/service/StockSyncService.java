@@ -364,13 +364,4 @@ public class StockSyncService {
         }
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public void stockIndustryBoardHistory(String boardName, String startDate, String endDate) {
-        List<StockBoardIndustryIndexThs> list = aKShareService.stockBoardIndustryIndexThs(boardName, startDate, endDate);
-        if (CollectionUtils.isEmpty(list)) {
-            return;
-        }
-        stockIndustryBoardHistoryService.save(boardName, list, LocalDateTime.now());
-    }
-
 }
