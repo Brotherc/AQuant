@@ -5,14 +5,12 @@ import com.brotherc.aquant.model.dto.akshare.StockFhpsDetailThs;
 import com.brotherc.aquant.model.dto.akshare.StockFhpsEm;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-@Slf4j
 @Service
 public class AKShareDividendService extends AbstractAKShareService {
 
