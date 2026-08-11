@@ -1,7 +1,5 @@
 package com.brotherc.aquant.constant;
 
-import java.time.LocalTime;
-
 public class StockSyncConstant {
 
     private StockSyncConstant() {
@@ -28,8 +26,5 @@ public class StockSyncConstant {
     public static final String STOCK_FUND_PORTFOLIO_HOLDING_LATEST = "stock_fund_portfolio_holding_latest";
 
     public static final String STOCK_INDEX_LATEST = "stock_index_latest";
-
-    public static final LocalTime A_SHARE_MARKET_OPEN_TIME = LocalTime.of(9, 30);
-    public static final LocalTime A_SHARE_MARKET_CLOSE_TIME = LocalTime.of(15, 0);
 
 }

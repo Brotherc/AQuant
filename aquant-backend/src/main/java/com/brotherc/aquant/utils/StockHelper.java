@@ -1,6 +1,6 @@
 package com.brotherc.aquant.utils;
 
-import com.brotherc.aquant.constant.StockSyncConstant;
+import com.brotherc.aquant.constant.StockConstant;
 import com.brotherc.aquant.repository.StockTradeCalendarRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -91,7 +91,7 @@ public class StockHelper {
 
     public long getLatestClosedTradeDaySyncWatermark(LocalDateTime syncTime) {
         return latestClosedTradeDay(syncTime)
-                .atTime(StockSyncConstant.A_SHARE_MARKET_CLOSE_TIME)
+                .atTime(StockConstant.A_SHARE_MARKET_CLOSE_TIME)
                 .atZone(ZoneId.systemDefault())
                 .toInstant()
                 .toEpochMilli();

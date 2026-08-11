@@ -1,5 +1,6 @@
 package com.brotherc.aquant.task;
 
+import com.brotherc.aquant.constant.StockConstant;
 import com.brotherc.aquant.constant.StockSyncConstant;
 import com.brotherc.aquant.entity.StockIndustryBoard;
 import com.brotherc.aquant.entity.StockFundInfo;
@@ -211,8 +212,8 @@ public class StockSyncTask {
     private boolean shouldRefreshLatestQuote(StockSync stockSync, LocalDateTime now) {
         // 盘中每次执行都刷新最新行情，避免用户主动触发时看到的还是旧快照。
         if (stockHelper.isTradeDay(now.toLocalDate()) &&
-                !now.toLocalTime().isBefore(StockSyncConstant.A_SHARE_MARKET_OPEN_TIME) &&
-                now.toLocalTime().isBefore(StockSyncConstant.A_SHARE_MARKET_CLOSE_TIME)) {
+                !now.toLocalTime().isBefore(StockConstant.A_SHARE_MARKET_OPEN_TIME) &&
+                now.toLocalTime().isBefore(StockConstant.A_SHARE_MARKET_CLOSE_TIME)) {
             return true;
         }
 
@@ -228,8 +229,8 @@ public class StockSyncTask {
         // 3. 其余临界时段直接以当前时间为水位，避免误判为已覆盖。
         LocalDateTime watermark;
         if (stockHelper.isClosedDailyQuoteAvailable(now)) {
-            watermark = stockHelper.latestClosedTradeDay(now).atTime(StockSyncConstant.A_SHARE_MARKET_CLOSE_TIME);
-        } else if (now.toLocalTime().isBefore(StockSyncConstant.A_SHARE_MARKET_OPEN_TIME)) {
+            watermark = stockHelper.latestClosedTradeDay(now).atTime(StockConstant.A_SHARE_MARKET_CLOSE_TIME);
+        } else if (now.toLocalTime().isBefore(StockConstant.A_SHARE_MARKET_OPEN_TIME)) {
             watermark = now.toLocalDate().atStartOfDay();
         } else {
             watermark = now;
@@ -391,8 +392,8 @@ public class StockSyncTask {
 
     private boolean shouldRefreshLatestBoard(StockSync stockSync, LocalDateTime now) {
         if (stockHelper.isTradeDay(now.toLocalDate()) &&
-                !now.toLocalTime().isBefore(StockSyncConstant.A_SHARE_MARKET_OPEN_TIME) &&
-                now.toLocalTime().isBefore(StockSyncConstant.A_SHARE_MARKET_CLOSE_TIME)) {
+                !now.toLocalTime().isBefore(StockConstant.A_SHARE_MARKET_OPEN_TIME) &&
+                now.toLocalTime().isBefore(StockConstant.A_SHARE_MARKET_CLOSE_TIME)) {
             return true;
         }
 
@@ -697,8 +698,8 @@ public class StockSyncTask {
 
     private boolean shouldRefreshLatestFund(StockSync stockSync, LocalDateTime syncTime) {
         if (stockHelper.isTradeDay(syncTime.toLocalDate()) &&
-                !syncTime.toLocalTime().isBefore(StockSyncConstant.A_SHARE_MARKET_OPEN_TIME) &&
-                syncTime.toLocalTime().isBefore(StockSyncConstant.A_SHARE_MARKET_CLOSE_TIME)) {
+                !syncTime.toLocalTime().isBefore(StockConstant.A_SHARE_MARKET_OPEN_TIME) &&
+                syncTime.toLocalTime().isBefore(StockConstant.A_SHARE_MARKET_CLOSE_TIME)) {
             return true;
         }
 
