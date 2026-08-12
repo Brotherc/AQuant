@@ -38,10 +38,6 @@ public class StockPerformanceReportService {
         return stockPerformanceReportRepository.existsByReportDate(LocalDate.parse(reportDate, REPORT_DATE_FORMATTER));
     }
 
-    public boolean hasAnyReport() {
-        return stockPerformanceReportRepository.count() > 0;
-    }
-
     @Transactional(rollbackFor = Exception.class)
     public void save(String reportDate, List<StockYjbbEm> stockYjbbEms) {
         if (StringUtils.isBlank(reportDate) || CollectionUtils.isEmpty(stockYjbbEms)) {

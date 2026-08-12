@@ -13,6 +13,8 @@ public class StockSyncConstant {
 
     public static final String STOCK_PERFORMANCE_REPORT_LATEST = "stock_performance_report_latest";
 
+    public static final String STOCK_BALANCE_SHEET_LATEST = "stock_balance_sheet_latest";
+
     public static final String STOCK_SHARE_CHANGE_LATEST = "stock_share_change_latest";
 
     public static final String STOCK_STRATEGY_DUAL_MA_BACKTEST_SNAPSHOT_LATEST =

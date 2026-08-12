@@ -10,4 +10,8 @@ public class StockConstant {
     public static final LocalTime A_SHARE_MARKET_OPEN_TIME = LocalTime.of(9, 30);
     public static final LocalTime A_SHARE_MARKET_CLOSE_TIME = LocalTime.of(15, 0);
 
+    public static final int PERFORMANCE_REPORT_INITIAL_QUARTER_COUNT = 12;
+    // 三年杜邦指标需要额外一年的期末余额作为最早年度的期初值。
+    public static final int BALANCE_SHEET_INITIAL_QUARTER_COUNT = 16;
+
 }

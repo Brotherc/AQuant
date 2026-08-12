@@ -20,6 +20,7 @@ import com.brotherc.aquant.service.dividend.StockDividendDedupService;
 import com.brotherc.aquant.service.fund.StockFundNetValueService;
 import com.brotherc.aquant.service.fund.StockFundPortfolioHoldingService;
 import com.brotherc.aquant.service.index.StockIndexService;
+import com.brotherc.aquant.service.indicator.StockBalanceSheetService;
 import com.brotherc.aquant.service.indicator.StockPerformanceReportService;
 import com.brotherc.aquant.service.indicator.StockValuationMetricsService;
 import com.brotherc.aquant.service.stock.StockAbnormalService;
@@ -68,6 +69,7 @@ public class StockSyncTask {
     private final StockValuationMetricsService stockValuationMetricsService;
     private final StockFundNetValueService stockFundNetValueService;
     private final StockFundPortfolioHoldingService stockFundPortfolioHoldingService;
+    private final StockBalanceSheetService stockBalanceSheetService;
     private final StockPerformanceReportService stockPerformanceReportService;
     private final StockShareChangeService stockShareChangeService;
     private final StockIndexService stockIndexService;
@@ -122,6 +124,10 @@ public class StockSyncTask {
         log.info("同步股票业绩报表数据开始");
         syncStockPerformanceReport();
         log.info("同步股票业绩报表数据完成");
+
+        log.info("同步股票资产负债表数据开始");
+        syncStockBalanceSheet();
+        log.info("同步股票资产负债表数据完成");
     }
 
     /**
@@ -511,7 +517,8 @@ public class StockSyncTask {
             return;
         }
 
-        Map<String, Boolean> reportDateRefreshMap = buildPerformanceReportSyncTargets(LocalDate.now());
+        Map<String, Boolean> reportDateRefreshMap = buildFinancialReportSyncTargets(
+                LocalDate.now(), StockConstant.PERFORMANCE_REPORT_INITIAL_QUARTER_COUNT);
         int requestCount = 0;
         boolean hasFailed = false;
         boolean hasRequestedReportDate = false;
@@ -522,7 +529,7 @@ public class StockSyncTask {
                 log.info("股票业绩报表已存在，跳过第三方请求，reportDate={}", date);
                 continue;
             }
-            if (hasRequestedReportDate && !sleepBeforePerformanceReportRequest()) {
+            if (hasRequestedReportDate && !sleepBeforeFinancialReportRequest("股票业绩报表")) {
                 hasFailed = true;
                 break;
             }
@@ -550,46 +557,108 @@ public class StockSyncTask {
         }
     }
 
-    private boolean sleepBeforePerformanceReportRequest() {
+    /**
+     * 同步股票资产负债表数据
+     */
+    private void syncStockBalanceSheet() {
+        StockSync balanceSheetSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_BALANCE_SHEET_LATEST);
+        Long lastTimestamp = StockUtils.parseSyncTimestamp(balanceSheetSync);
+        if (lastTimestamp != null && !StockUtils.isAfterDate(lastTimestamp)) {
+            log.info("股票资产负债表当天已同步，跳过本次同步");
+            return;
+        }
+
+        Map<String, Boolean> reportDateRefreshMap = buildFinancialReportSyncTargets(
+                LocalDate.now(), StockConstant.BALANCE_SHEET_INITIAL_QUARTER_COUNT);
+        int requestCount = 0;
+        boolean hasFailed = false;
+        boolean hasRequested = false;
+        for (Map.Entry<String, Boolean> entry : reportDateRefreshMap.entrySet()) {
+            String date = entry.getKey();
+            boolean forceRefresh = Boolean.TRUE.equals(entry.getValue());
+            if (!forceRefresh && stockBalanceSheetService.existsByReportDate(date)) {
+                log.info("股票资产负债表已存在，跳过第三方请求，reportDate={}", date);
+                continue;
+            }
+
+            if (hasRequested && !sleepBeforeFinancialReportRequest("股票资产负债表")) {
+                hasFailed = true;
+                break;
+            }
+            try {
+                List<StockZcfzEm> mainBoardList = aKShareIndicatorService.stockZcfzEm(date);
+                requestCount++;
+                hasRequested = true;
+
+                if (!sleepBeforeFinancialReportRequest("股票资产负债表")) {
+                    hasFailed = true;
+                    break;
+                }
+                List<StockZcfzEm> bjList = aKShareIndicatorService.stockZcfzBjEm(date);
+                requestCount++;
+
+                List<StockZcfzEm> combinedList = new ArrayList<>();
+                if (!CollectionUtils.isEmpty(mainBoardList)) {
+                    combinedList.addAll(mainBoardList);
+                }
+                if (!CollectionUtils.isEmpty(bjList)) {
+                    combinedList.addAll(bjList);
+                }
+                boolean saved = stockBalanceSheetService.save(date, combinedList);
+                if (!saved) {
+                    hasFailed = true;
+                    log.warn("股票资产负债表未保存有效数据，本次不更新同步水位，reportDate={}", date);
+                }
+                log.info("同步股票资产负债表完成，reportDate={}, mainCount={}, bjCount={}, totalCount={}",
+                        date,
+                        mainBoardList == null ? 0 : mainBoardList.size(),
+                        bjList == null ? 0 : bjList.size(),
+                        combinedList.size());
+            } catch (Exception e) {
+                hasFailed = true;
+                log.error("同步股票资产负债表失败，reportDate={}", date, e);
+            }
+        }
+
+        if (!hasFailed) {
+            if (balanceSheetSync == null) {
+                balanceSheetSync = new StockSync();
+                balanceSheetSync.setName(StockSyncConstant.STOCK_BALANCE_SHEET_LATEST);
+            }
+            long timestamp = LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+            balanceSheetSync.setValue(String.valueOf(timestamp));
+            stockSyncRepository.save(balanceSheetSync);
+            log.info("股票资产负债表同步水位已更新，requestCount={}", requestCount);
+        }
+    }
+
+    private boolean sleepBeforeFinancialReportRequest(String dataName) {
         long sleepMillis = ThreadLocalRandom.current().nextLong(5000, 10001);
         try {
             TimeUnit.MILLISECONDS.sleep(sleepMillis);
             return true;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.warn("线程被中断，提前结束股票业绩报表同步");
+            log.warn("线程被中断，提前结束{}同步", dataName);
             return false;
         }
     }
 
-    private Map<String, Boolean> buildPerformanceReportSyncTargets(LocalDate currentDate) {
+    private Map<String, Boolean> buildFinancialReportSyncTargets(LocalDate currentDate, int quarterCount) {
         LocalDate currentQuarterEnd = getQuarterEnd(currentDate);
         LocalDate latestCompletedQuarterEnd = currentDate.isAfter(currentQuarterEnd)
                 ? currentQuarterEnd
                 : getQuarterEnd(currentDate.minusMonths(3));
 
         Map<String, Boolean> result = new LinkedHashMap<>();
-        if (!stockPerformanceReportService.hasAnyReport()) {
-            LocalDate cursor = latestCompletedQuarterEnd;
-            for (int i = 0; i < 12; i++) {
-                result.put(cursor.format(DateTimeFormatter.BASIC_ISO_DATE), true);
-                cursor = getQuarterEnd(cursor.minusMonths(3));
-            }
-            return result;
+        LocalDate cursor = latestCompletedQuarterEnd;
+        for (int i = 0; i < quarterCount; i++) {
+            boolean forceRefresh = i == 0
+                    && StockUtils.isPerformanceReportDisclosureWindow(currentDate, latestCompletedQuarterEnd);
+            result.put(cursor.format(DateTimeFormatter.BASIC_ISO_DATE), forceRefresh);
+            cursor = getQuarterEnd(cursor.minusMonths(3));
         }
-
-        addPerformanceReportTarget(result, latestCompletedQuarterEnd,
-                StockUtils.isPerformanceReportDisclosureWindow(currentDate, latestCompletedQuarterEnd));
-        addPerformanceReportTarget(result, getQuarterEnd(latestCompletedQuarterEnd.minusMonths(3)), false);
-        addPerformanceReportTarget(result, latestCompletedQuarterEnd.minusYears(1), false);
-        addPerformanceReportTarget(result, LocalDate.of(latestCompletedQuarterEnd.getYear() - 1, Month.DECEMBER, 31), false);
-        addPerformanceReportTarget(result, latestCompletedQuarterEnd.minusYears(2), false);
-        addPerformanceReportTarget(result, LocalDate.of(latestCompletedQuarterEnd.getYear() - 2, Month.DECEMBER, 31), false);
         return result;
-    }
-
-    private void addPerformanceReportTarget(Map<String, Boolean> targetMap, LocalDate reportDate, boolean forceRefresh) {
-        targetMap.merge(reportDate.format(DateTimeFormatter.BASIC_ISO_DATE), forceRefresh, Boolean::logicalOr);
     }
 
     /**
