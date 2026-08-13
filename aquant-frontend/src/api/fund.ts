@@ -11,6 +11,11 @@ export interface FundInfoVO {
   dailyLimitAmount?: number
   feeRate?: number
   latestNetValueReportDate?: string
+  officialPurchaseSource?: string
+  officialPurchaseSourceName?: string
+  officialPurchaseStatus?: 'OPEN' | 'LIMITED' | 'SUSPENDED'
+  officialPurchaseLimitAmount?: number
+  officialPurchaseEffectiveDate?: string
 }
 
 export interface FundInfoPageReqVO {
@@ -78,6 +83,29 @@ export interface StockFundPortfolioHoldingVO {
 export function getLatestFundHoldings(fundCode: string) {
   return request<ResponseDTO<StockFundPortfolioHoldingVO[]>>({
     url: '/stockFund/portfolio/latest',
+    method: 'GET',
+    params: { fundCode }
+  })
+}
+
+export interface StockFundPurchaseLimitVO {
+  source: string
+  sourceName: string
+  salesChannel: 'DIRECT' | 'ALL_CHANNELS'
+  salesChannelName: string
+  businessType: 'PURCHASE' | 'RECURRING_INVESTMENT'
+  status: 'OPEN' | 'LIMITED' | 'SUSPENDED'
+  limitAmount?: number
+  currency?: string
+  effectiveDate?: string
+  announcementDate?: string
+  announcementTitle?: string
+  announcementUrl?: string
+}
+
+export function getFundPurchaseLimits(fundCode: string) {
+  return request<ResponseDTO<StockFundPurchaseLimitVO[]>>({
+    url: '/stockFund/purchaseLimits',
     method: 'GET',
     params: { fundCode }
   })

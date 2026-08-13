@@ -39,4 +39,19 @@ public class StockFundInfoVO {
     @Schema(description = "最新净值日期")
     private LocalDate latestNetValueReportDate;
 
+    @Schema(description = "官方额度来源编码")
+    private String officialPurchaseSource;
+
+    @Schema(description = "官方额度来源名称")
+    private String officialPurchaseSourceName;
+
+    @Schema(description = "官方申购状态")
+    private String officialPurchaseStatus;
+
+    @Schema(description = "官方申购限额")
+    private java.math.BigDecimal officialPurchaseLimitAmount;
+
+    @Schema(description = "官方申购限制生效日期")
+    private LocalDate officialPurchaseEffectiveDate;
+
 }

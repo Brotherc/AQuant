@@ -1,6 +1,7 @@
 package com.brotherc.aquant.service.fund;
 
 import com.brotherc.aquant.entity.fund.StockFundInfo;
+import com.brotherc.aquant.entity.fund.StockFundPurchaseLimit;
 import com.brotherc.aquant.model.dto.akshare.FundPurchaseEm;
 import com.brotherc.aquant.model.dto.akshare.FundNameEm;
 import com.brotherc.aquant.model.vo.stockfund.StockFundInfoPageReqVO;
@@ -37,6 +38,7 @@ public class StockFundInfoService {
     private static final String FUND_TYPE = "fundType";
 
     private final StockFundInfoRepository stockFundInfoRepository;
+    private final StockFundPurchaseLimitService stockFundPurchaseLimitService;
 
     @Transactional(rollbackFor = Exception.class)
     public void saveFundInfos(List<FundNameEm> fundNameEms, List<FundPurchaseEm> fundPurchaseEms) {
@@ -149,9 +151,22 @@ public class StockFundInfoService {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        return stockFundInfoRepository.findAll(specification, pageable).map(o -> {
+        Page<StockFundInfo> entityPage = stockFundInfoRepository.findAll(specification, pageable);
+        Map<String, StockFundPurchaseLimit> purchaseLimitMap =
+                stockFundPurchaseLimitService.getPurchaseSummaries(
+                        entityPage.getContent().stream().map(StockFundInfo::getFundCode).toList()
+                );
+        return entityPage.map(o -> {
             StockFundInfoVO vo = new StockFundInfoVO();
             BeanUtils.copyProperties(o, vo);
+            StockFundPurchaseLimit purchaseLimit = purchaseLimitMap.get(o.getFundCode());
+            if (purchaseLimit != null) {
+                vo.setOfficialPurchaseSource(purchaseLimit.getSource());
+                vo.setOfficialPurchaseSourceName(purchaseLimit.getSourceName());
+                vo.setOfficialPurchaseStatus(purchaseLimit.getStatus());
+                vo.setOfficialPurchaseLimitAmount(purchaseLimit.getLimitAmount());
+                vo.setOfficialPurchaseEffectiveDate(purchaseLimit.getEffectiveDate());
+            }
             return vo;
         });
     }

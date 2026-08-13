@@ -46,6 +46,13 @@
             size="small"
             class="fund-table"
           >
+            <template #bodyCell="{ column, record }">
+              <template v-if="column.key === 'officialPurchaseLimit'">
+                <a-tooltip :title="record.officialPurchaseSourceName || '基金管理人官方渠道'">
+                  <span>{{ formatOfficialLimit(record.officialPurchaseStatus, record.officialPurchaseLimitAmount, 'CNY', 'PURCHASE') }}</span>
+                </a-tooltip>
+              </template>
+            </template>
           </a-table>
         </a-card>
       </a-col>
@@ -61,9 +68,47 @@
                 <a-tag color="blue">{{ selectedFund.fundType }}</a-tag>
               </a-descriptions-item>
               <a-descriptions-item label="购买起点">{{ selectedFund.purchaseStartAmount != null ? formatAmount(selectedFund.purchaseStartAmount) + '元' : '-' }}</a-descriptions-item>
-              <a-descriptions-item label="日累计限定金额">{{ selectedFund.dailyLimitAmount != null ? formatAmount(selectedFund.dailyLimitAmount) + '元' : '-' }}</a-descriptions-item>
+              <a-descriptions-item label="天天基金限额">{{ selectedFund.dailyLimitAmount != null ? formatAmount(selectedFund.dailyLimitAmount) + '元' : '-' }}</a-descriptions-item>
               <a-descriptions-item label="手续费">{{ selectedFund.feeRate != null ? selectedFund.feeRate + '%' : '-' }}</a-descriptions-item>
             </a-descriptions>
+            <div class="official-limit-section">
+              <div class="official-limit-title">基金公司官方额度</div>
+              <a-table
+                :columns="purchaseLimitColumns"
+                :data-source="purchaseLimitList"
+                :loading="purchaseLimitLoading"
+                :pagination="false"
+                :row-key="purchaseLimitRowKey"
+                size="small"
+              >
+                <template #bodyCell="{ column, record }">
+                  <template v-if="column.key === 'sourceName'">
+                    {{ record.sourceName || '-' }}
+                  </template>
+                  <template v-else-if="column.key === 'salesChannel'">
+                    {{ record.salesChannelName || '-' }}
+                  </template>
+                  <template v-else-if="column.key === 'businessType'">
+                    {{ formatBusinessType(record.businessType) }}
+                  </template>
+                  <template v-else-if="column.key === 'limit'">
+                    {{ formatOfficialLimit(record.status, record.limitAmount, record.currency, record.businessType) }}
+                  </template>
+                  <template v-else-if="column.key === 'announcement'">
+                    <a
+                      v-if="record.announcementUrl"
+                      :href="record.announcementUrl"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      :title="record.announcementTitle"
+                    >
+                      查看公告
+                    </a>
+                    <span v-else>-</span>
+                  </template>
+                </template>
+              </a-table>
+            </div>
             <div class="fund-chart-header" style="margin-top: 18px; display: flex; align-items: center; justify-content: space-between;">
               <span style="font-weight: 600; font-size: 14px; color: var(--color-text-primary, #0f172a);">单位净值走势</span>
               <a-tooltip title="放大查看走势">
@@ -116,8 +161,8 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch } from 'vue'
 import { FullscreenOutlined } from '@ant-design/icons-vue'
-import { getFundPage, getLatestFundHoldings, getStockFundInfoLatest } from '@/api/fund'
-import type { FundInfoPageReqVO, FundInfoVO, StockFundPortfolioHoldingVO } from '@/api/fund'
+import { getFundPage, getFundPurchaseLimits, getLatestFundHoldings, getStockFundInfoLatest } from '@/api/fund'
+import type { FundInfoPageReqVO, FundInfoVO, StockFundPortfolioHoldingVO, StockFundPurchaseLimitVO } from '@/api/fund'
 import FundNetValueChart from './components/FundNetValueChart.vue'
 import { formatAmount } from '@/utils/format'
 
@@ -129,6 +174,8 @@ const lastRefreshTime = ref('')
 
 const holdingList = ref<StockFundPortfolioHoldingVO[]>([])
 const holdingLoading = ref(false)
+const purchaseLimitList = ref<StockFundPurchaseLimitVO[]>([])
+const purchaseLimitLoading = ref(false)
 
 const holdingColumns = [
   { title: '序号', dataIndex: 'seqNo', width: 60, align: 'center' },
@@ -138,6 +185,19 @@ const holdingColumns = [
   { title: '持股数(万股)', dataIndex: 'holdShares', width: 120, align: 'right', customRender: ({ text }: any) => text != null ? text.toFixed(2) : '-' },
   { title: '市值(万元)', dataIndex: 'marketValue', width: 120, align: 'right', customRender: ({ text }: any) => text != null ? text.toFixed(2) : '-' }
 ]
+
+const purchaseLimitColumns = [
+  { title: '基金公司', dataIndex: 'sourceName', key: 'sourceName', width: 110 },
+  { title: '渠道', key: 'salesChannel', width: 110 },
+  { title: '业务', key: 'businessType', width: 90 },
+  { title: '当前额度', key: 'limit', width: 120 },
+  { title: '生效日期', dataIndex: 'effectiveDate', key: 'effectiveDate', width: 110, customRender: ({ text }: any) => text || '-' },
+  { title: '依据', key: 'announcement', width: 90 }
+]
+
+const purchaseLimitRowKey = (record: StockFundPurchaseLimitVO) => {
+  return `${record.source}-${record.salesChannel}-${record.businessType}`
+}
 
 const queryParams = reactive<FundInfoPageReqVO>({
   page: 0,
@@ -194,8 +254,24 @@ const columns = [
   { title: '代码', dataIndex: 'fundCode', key: 'fundCode', width: 80 },
   { title: '简称', dataIndex: 'fundName', key: 'fundName' },
   { title: '类型', dataIndex: 'fundType', key: 'fundType', width: 140 },
-  { title: '日累计限额', dataIndex: 'dailyLimitAmount', key: 'dailyLimitAmount', width: 130, sorter: true, customRender: ({ text }: any) => formatAmount(text) }
+  { title: '天天基金限额', dataIndex: 'dailyLimitAmount', key: 'dailyLimitAmount', width: 130, sorter: true, customRender: ({ text }: any) => text != null ? formatAmount(text) : '-' },
+  { title: '官方申购额度', key: 'officialPurchaseLimit', width: 130 }
 ]
+
+const formatBusinessType = (businessType: StockFundPurchaseLimitVO['businessType']) => {
+  return businessType === 'PURCHASE' ? '申购' : '定投'
+}
+
+const formatOfficialLimit = (
+  status?: StockFundPurchaseLimitVO['status'], amount?: number, currency?: string,
+  businessType?: StockFundPurchaseLimitVO['businessType']
+) => {
+  if (!status) return '-'
+  if (status === 'SUSPENDED') return businessType === 'RECURRING_INVESTMENT' ? '暂停定投' : '暂停申购'
+  if (status === 'OPEN') return '不限额'
+  if (amount == null) return '-'
+  return `${formatAmount(amount)}${currency === 'USD' ? '美元' : '元'}`
+}
 
 const loadData = async () => {
   loading.value = true
@@ -276,22 +352,31 @@ const rowClassName = (record: FundInfoVO) => {
 
 watch(selectedFund, async (newVal) => {
   if (newVal) {
+    const selectedFundCode = newVal.fundCode
     holdingLoading.value = true
-    try {
-      const res = await getLatestFundHoldings(newVal.fundCode)
-      if (res.data && res.data.success) {
-        holdingList.value = res.data.data
-      } else {
-        holdingList.value = []
-      }
-    } catch (error) {
-      console.error('Failed to load fund holdings:', error)
+    purchaseLimitLoading.value = true
+    const [holdingResult, purchaseLimitResult] = await Promise.allSettled([
+      getLatestFundHoldings(newVal.fundCode),
+      getFundPurchaseLimits(newVal.fundCode)
+    ])
+    if (selectedFund.value?.fundCode !== selectedFundCode) return
+    if (holdingResult.status === 'fulfilled' && holdingResult.value.data?.success) {
+      holdingList.value = holdingResult.value.data.data
+    } else {
       holdingList.value = []
-    } finally {
-      holdingLoading.value = false
     }
+    if (purchaseLimitResult.status === 'fulfilled' && purchaseLimitResult.value.data?.success) {
+      purchaseLimitList.value = purchaseLimitResult.value.data.data
+    } else {
+      purchaseLimitList.value = []
+    }
+    holdingLoading.value = false
+    purchaseLimitLoading.value = false
   } else {
     holdingList.value = []
+    purchaseLimitList.value = []
+    holdingLoading.value = false
+    purchaseLimitLoading.value = false
   }
 })
 
@@ -374,5 +459,14 @@ onMounted(() => {
 }
 .fund-table :deep(.fund-table-row-selected > td:first-child) {
   box-shadow: inset 3px 0 0 #6f6f6f;
+}
+.official-limit-section {
+  margin-top: 18px;
+}
+.official-limit-title {
+  margin-bottom: 10px;
+  color: var(--color-text-primary, #0f172a);
+  font-size: 14px;
+  font-weight: 600;
 }
 </style>

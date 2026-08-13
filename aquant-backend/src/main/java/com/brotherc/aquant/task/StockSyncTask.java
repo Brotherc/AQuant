@@ -19,6 +19,7 @@ import com.brotherc.aquant.service.akshare.*;
 import com.brotherc.aquant.service.dividend.StockDividendDedupService;
 import com.brotherc.aquant.service.fund.StockFundNetValueService;
 import com.brotherc.aquant.service.fund.StockFundPortfolioHoldingService;
+import com.brotherc.aquant.service.fund.FundPurchaseLimitSyncManager;
 import com.brotherc.aquant.service.index.StockIndexService;
 import com.brotherc.aquant.service.indicator.StockBalanceSheetService;
 import com.brotherc.aquant.service.indicator.StockPerformanceReportService;
@@ -69,6 +70,7 @@ public class StockSyncTask {
     private final StockValuationMetricsService stockValuationMetricsService;
     private final StockFundNetValueService stockFundNetValueService;
     private final StockFundPortfolioHoldingService stockFundPortfolioHoldingService;
+    private final FundPurchaseLimitSyncManager fundPurchaseLimitSyncManager;
     private final StockBalanceSheetService stockBalanceSheetService;
     private final StockPerformanceReportService stockPerformanceReportService;
     private final StockShareChangeService stockShareChangeService;
@@ -770,6 +772,7 @@ public class StockSyncTask {
 
         backfillMissingFundNetValues(localHistoryTargets, latestClosedTradeDay);
         syncFundPortfolioHoldings(now);
+        fundPurchaseLimitSyncManager.sync(now);
     }
 
     private boolean shouldRefreshLatestFund(StockSync stockSync, LocalDateTime syncTime) {

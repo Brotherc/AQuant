@@ -4,10 +4,12 @@ import com.brotherc.aquant.entity.fund.StockFundNetValue;
 import com.brotherc.aquant.model.dto.common.ResponseDTO;
 import com.brotherc.aquant.model.vo.stockfund.StockFundInfoPageReqVO;
 import com.brotherc.aquant.model.vo.stockfund.StockFundInfoVO;
+import com.brotherc.aquant.model.vo.stockfund.StockFundPurchaseLimitVO;
 import com.brotherc.aquant.entity.fund.StockFundPortfolioHolding;
 import com.brotherc.aquant.service.fund.StockFundPortfolioHoldingService;
 import com.brotherc.aquant.service.fund.StockFundInfoService;
 import com.brotherc.aquant.service.fund.StockFundNetValueService;
+import com.brotherc.aquant.service.fund.StockFundPurchaseLimitService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,7 @@ public class StockFundController {
     private final StockFundInfoService stockFundInfoService;
     private final StockFundNetValueService stockFundNetValueService;
     private final StockFundPortfolioHoldingService stockFundPortfolioHoldingService;
+    private final StockFundPurchaseLimitService stockFundPurchaseLimitService;
 
     @Operation(summary = "分页查询基金基本信息")
     @GetMapping("/page")
@@ -53,6 +56,12 @@ public class StockFundController {
     public ResponseDTO<List<StockFundPortfolioHolding>> getLatestFundHoldings(
             @RequestParam String fundCode) {
         return ResponseDTO.success(stockFundPortfolioHoldingService.getLatestFundHoldings(fundCode));
+    }
+
+    @Operation(summary = "获取基金当前官方申购限制")
+    @GetMapping("/purchaseLimits")
+    public ResponseDTO<List<StockFundPurchaseLimitVO>> getPurchaseLimits(@RequestParam String fundCode) {
+        return ResponseDTO.success(stockFundPurchaseLimitService.getCurrentLimits(fundCode));
     }
 
 }
