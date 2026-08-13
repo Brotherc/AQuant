@@ -35,9 +35,16 @@ AQuant 是一款基于现代 Web 技术栈开发的量化交易分析平台。�
 ![系统架构图](screenshots/architecture_diagram.png)
 
 ## 🎬 界面展示
-### 自选股票
+
+### 大盘全景
+![大盘全景1.png](screenshots/大盘全景1.png)
+![大盘全景2.png](screenshots/大盘全景2.png)
+
+### 自选股票/基金
 ![自选股票.png](screenshots/自选股票.png)
-![自选详情.png](screenshots/自选详情.png)
+![自选股票详情.png](screenshots/自选股票详情.png)
+![自选基金.png](screenshots/自选基金.png)
+![自选基金详情.png](screenshots/自选基金详情.png)
 ![自选通知.png](screenshots/自选通知.png)
 
 ### 股票数据
