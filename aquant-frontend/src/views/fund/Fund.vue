@@ -24,8 +24,8 @@
       </a-form>
     </a-card>
 
-    <a-row :gutter="16" class="fund-row">
-      <a-col :span="11">
+    <a-row :gutter="16" align="stretch" class="fund-row">
+      <a-col :span="11" class="fund-column">
         <a-card title="基金列表" :bordered="false" class="fund-card fund-list-card">
           <template #extra>
             <div v-if="lastRefreshTime" class="page-sync-meta fund-refresh-time">
@@ -42,7 +42,6 @@
             :row-key="getRowKey"
             :row-class-name="rowClassName"
             :custom-row="customRow"
-            :scroll="{ y: 760 }"
             size="small"
             class="fund-table"
           >
@@ -57,7 +56,7 @@
         </a-card>
       </a-col>
       
-      <a-col :span="13">
+      <a-col :span="13" class="fund-column">
         <a-card title="基金详情" :bordered="false" class="fund-card">
           <template v-if="selectedFund">
             <a-descriptions bordered :column="2">
@@ -118,7 +117,7 @@
               </a-tooltip>
             </div>
             <FundNetValueChart :fundCode="selectedFund.fundCode" :showMA="false" style="height: 300px;" />
-            <div v-if="holdingList.length > 0" style="margin-top: 24px;">
+            <div v-if="holdingList.length > 0" class="fund-holding-section">
               <h4 style="margin-bottom: 12px; font-weight: 600;">
                 最新持仓明细 ({{ holdingList[0]?.reportYear }}年第{{ holdingList[0]?.reportQuarter }}季度)
               </h4>
@@ -201,7 +200,7 @@ const purchaseLimitRowKey = (record: StockFundPurchaseLimitVO) => {
 
 const queryParams = reactive<FundInfoPageReqVO>({
   page: 0,
-  size: 20,
+  size: 30,
   fundName: '',
   fundCode: '',
   fundType: undefined,
@@ -243,8 +242,8 @@ const fundTypeOptions = [
 
 const pagination = reactive({
   current: 1,
-  pageSize: 20,
-  pageSizeOptions: ['20', '50', '100', '200'],
+  pageSize: 30,
+  pageSizeOptions: ['20', '30', '50', '100', '200'],
   total: 0,
   showSizeChanger: true,
   showTotal: (total: number) => `共 ${total} 条`
@@ -394,22 +393,21 @@ onMounted(() => {
 .fund-row {
   align-items: stretch;
 }
-.fund-row > .ant-col {
+.fund-column {
   display: flex;
-  flex-direction: column;
 }
 .fund-card {
   width: 100%;
-  height: 100%;
-  min-height: 660px;
+  height: clamp(1400px, calc(100vh + 280px), 1880px);
   display: flex;
   flex-direction: column;
   box-shadow: 0 1px 2px -2px rgba(0, 0, 0, 0.08), 0 3px 6px 0 rgba(0, 0, 0, 0.06), 0 5px 12px 4px rgba(0, 0, 0, 0.04);
 }
 .fund-card :deep(.ant-card-body) {
   flex: 1;
-  padding-bottom: 10px;
-  overflow: auto;
+  min-height: 0;
+  padding-bottom: 24px;
+  overflow-y: auto;
 }
 .fund-list-card {
   width: 100%;
@@ -468,5 +466,9 @@ onMounted(() => {
   color: var(--color-text-primary, #0f172a);
   font-size: 14px;
   font-weight: 600;
+}
+.fund-holding-section {
+  margin-top: 24px;
+  padding-bottom: 2px;
 }
 </style>
