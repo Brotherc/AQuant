@@ -365,7 +365,7 @@
     <!-- 通知设置 Modal -->
     <a-modal
       v-model:visible="notiModalVisible"
-      :title="`通知设置 - ${currentStockName}(${currentStockCode})`"
+      :title="`${currentNotiAssetType === 'FUND' ? '基金通知设置' : '股票通知设置'} - ${currentStockName}(${currentStockCode})`"
       width="1200px"
       :footer="null"
       destroyOnClose
@@ -388,7 +388,7 @@
                 <a-row :gutter="12" align="middle">
                   <a-col :span="4">
                     <a-select v-model:value="item.type" style="width: 100%;">
-                      <a-select-option :value="1">价格</a-select-option>
+                      <a-select-option :value="1">{{ currentNotiAssetType === 'FUND' ? '净值' : '价格' }}</a-select-option>
                       <a-select-option :value="2">双均线策略</a-select-option>
                     </a-select>
                   </a-col>
@@ -401,10 +401,10 @@
                       </a-select>
                       <a-input-number 
                         v-model:value="item.thresholdValue" 
-                        placeholder="价格" 
+                        :placeholder="currentNotiAssetType === 'FUND' ? '净值' : '价格'" 
                         style="width: 120px;" 
                         :min="0"
-                        :precision="2"
+                        :precision="currentNotiAssetType === 'FUND' ? 4 : 2"
                       />
                     </div>
                     <div v-else-if="item.type === 2" style="display: flex; gap: 8px; align-items: center;">
@@ -1066,6 +1066,7 @@ const notiLoading = ref(false);
 const notiList = ref<any[]>([]);
 const currentStockCode = ref('');
 const currentStockName = ref('');
+const currentNotiAssetType = ref<'STOCK' | 'FUND'>('STOCK');
 /** 当前打开通知 Modal 的股票所在分组（用于保存后刷新） */
 const notiSourceGroupId = ref<number>();
 
@@ -1105,6 +1106,7 @@ const processNotiList = (list: any[]) => {
 const openNotiModal = async (stock: any) => {
   currentStockCode.value = stock.stockCode;
   currentStockName.value = stock.stockName;
+  currentNotiAssetType.value = stock.targetType === 'FUND' ? 'FUND' : currentAssetType.value;
   // 找到该股票所在分组（遍历已加载的分组数据）
   notiSourceGroupId.value = undefined;
   for (const g of groups.value) {
@@ -1117,7 +1119,7 @@ const openNotiModal = async (stock: any) => {
   notiModalVisible.value = true;
   notiLoading.value = true;
   try {
-    const res = await getNotificationList(stock.stockCode);
+    const res = await getNotificationList(stock.stockCode, currentNotiAssetType.value);
     notiList.value = processNotiList(res.data.data || []);
   } catch (error) {
     console.error('Fetch notification list failed:', error);
@@ -1129,6 +1131,7 @@ const openNotiModal = async (stock: any) => {
 const handleAddNoti = () => {
   notiList.value.push({
     stockCode: currentStockCode.value,
+    assetType: currentNotiAssetType.value,
     type: 1,
     thresholdValue: null,
     condition: 'UP',
@@ -1143,7 +1146,7 @@ const handleAddNoti = () => {
 const handleSaveNoti = async (item: any) => {
   if (item.type === 1) {
     if (!item.thresholdValue && item.thresholdValue !== 0) {
-      message.warning('请输入通知价格');
+      message.warning(currentNotiAssetType.value === 'FUND' ? '请输入通知净值' : '请输入通知价格');
       return;
     }
   } else if (item.type === 2) {
@@ -1168,10 +1171,12 @@ const handleSaveNoti = async (item: any) => {
   }
 
   try {
+    item.assetType = currentNotiAssetType.value;
+    item.stockCode = currentStockCode.value;
     const res = await saveNotification(item);
     if (res.data.success) {
       message.success('通知设置已保存');
-      const listRes = await getNotificationList(currentStockCode.value);
+      const listRes = await getNotificationList(currentStockCode.value, currentNotiAssetType.value);
       notiList.value = processNotiList(listRes.data.data || []);
       if (notiSourceGroupId.value) {
         fetchStocks(notiSourceGroupId.value);

@@ -25,13 +25,19 @@ public class StockNotification {
     private Long userId;
 
     /**
-     * 股票代码
+     * 标的代码
      */
     @Column(name = "stock_code")
     private String stockCode;
 
     /**
-     * 提醒类型 (1: 价格通知, 2: 双均线策略)
+     * 标的类型 (STOCK: 股票, FUND: 基金)
+     */
+    @Column(name = "asset_type")
+    private String assetType = "STOCK";
+
+    /**
+     * 提醒类型 (1: 价格/净值通知, 2: 双均线策略)
      */
     @Column(name = "type")
     private Integer type;

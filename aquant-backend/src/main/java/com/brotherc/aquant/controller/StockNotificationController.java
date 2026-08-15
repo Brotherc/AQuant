@@ -22,11 +22,12 @@ public class StockNotificationController {
 
     private final StockNotificationService notificationService;
 
-    @Operation(summary = "获取股票的提醒设置")
+    @Operation(summary = "获取标的的提醒设置")
     @GetMapping("/list")
-    public ResponseDTO<List<StockNotificationVO>> list(@RequestParam String stockCode) {
+    public ResponseDTO<List<StockNotificationVO>> list(
+            @RequestParam String stockCode, @RequestParam(defaultValue = "STOCK") String assetType) {
         Long userId = UserContext.requireCurrentUserId();
-        return ResponseDTO.success(notificationService.getByUserIdAndStockCode(userId, stockCode));
+        return ResponseDTO.success(notificationService.getByUserIdAndStockCode(userId, stockCode, assetType));
     }
 
     @Operation(summary = "保存提醒设置")

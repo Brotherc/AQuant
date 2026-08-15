@@ -3,6 +3,7 @@ package com.brotherc.aquant.service.watchlist;
 import com.brotherc.aquant.entity.stock.StockQuote;
 import com.brotherc.aquant.entity.watchlist.StockWatchlistGroup;
 import com.brotherc.aquant.entity.watchlist.StockWatchlistStock;
+import com.brotherc.aquant.enums.NotificationAssetType;
 import com.brotherc.aquant.exception.BusinessException;
 import com.brotherc.aquant.exception.ExceptionEnum;
 import com.brotherc.aquant.model.vo.watchlist.WatchlistGroupReqVO;
@@ -86,10 +87,10 @@ public class StockWatchlistService {
 
         List<String> codes6 = watchlistStocks.stream().map(StockWatchlistStock::getStockCode).toList();
 
-        List<String> notificationCodes = notificationRepository.findDistinctStockCodeByUserIdAndStockCodeIn(userId, codes6);
-
         String groupType = group.getType();
         if ("FUND".equalsIgnoreCase(groupType)) {
+            List<String> notificationCodes = notificationRepository.findDistinctStockCodeByUserIdAndAssetTypeAndStockCodeIn(
+                    userId, NotificationAssetType.FUND.getType(), codes6);
             List<StockFundInfo> fundInfos = stockFundInfoRepository.findByFundCodeIn(codes6);
             Map<String, StockFundInfo> infoMap = fundInfos.stream()
                     .collect(Collectors.toMap(StockFundInfo::getFundCode, f -> f, (a, b) -> a));
@@ -129,6 +130,9 @@ public class StockWatchlistService {
                 return vo;
             }).toList();
         }
+
+        List<String> notificationCodes = notificationRepository.findDistinctStockCodeByUserIdAndAssetTypeAndStockCodeIn(
+                userId, NotificationAssetType.STOCK.getType(), codes6);
 
         // 智能补全并批量查询核心行情
         List<String> candidates = new ArrayList<>();

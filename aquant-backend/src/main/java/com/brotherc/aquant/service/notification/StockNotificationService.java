@@ -1,8 +1,10 @@
 package com.brotherc.aquant.service.notification;
 
 import com.brotherc.aquant.entity.notification.StockNotification;
+import com.brotherc.aquant.entity.fund.StockFundNetValue;
 import com.brotherc.aquant.entity.stock.StockQuoteHistory;
 import com.brotherc.aquant.entity.sys.SysUser;
+import com.brotherc.aquant.enums.NotificationAssetType;
 import com.brotherc.aquant.exception.BusinessException;
 import com.brotherc.aquant.enums.TradeSignal;
 import com.brotherc.aquant.exception.ExceptionEnum;
@@ -10,6 +12,7 @@ import com.brotherc.aquant.enums.NotificationType;
 import com.brotherc.aquant.enums.PriceAlertCondition;
 import com.brotherc.aquant.model.vo.notification.StockNotificationReqVO;
 import com.brotherc.aquant.model.vo.notification.StockNotificationVO;
+import com.brotherc.aquant.repository.fund.StockFundNetValueRepository;
 import com.brotherc.aquant.repository.notification.StockNotificationRepository;
 import com.brotherc.aquant.repository.stock.StockQuoteHistoryRepository;
 import com.brotherc.aquant.repository.sys.SysUserRepository;
@@ -21,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -53,15 +57,17 @@ public class StockNotificationService {
 
     private final StockNotificationRepository notificationRepository;
     private final StockQuoteHistoryRepository stockQuoteHistoryRepository;
+    private final StockFundNetValueRepository stockFundNetValueRepository;
     private final SysUserRepository sysUserRepository;
     private final JavaMailSender mailSender;
     private final ObjectMapper objectMapper;
 
     /**
-     * 获取用户指定股票的通知配置
+     * 获取用户指定标的的通知配置
      */
-    public List<StockNotificationVO> getByUserIdAndStockCode(Long userId, String stockCode) {
-        return notificationRepository.findAllByUserIdAndStockCode(userId, stockCode).stream()
+    public List<StockNotificationVO> getByUserIdAndStockCode(Long userId, String stockCode, String assetType) {
+        String normalizedAssetType = NotificationAssetType.fromType(assetType).getType();
+        return notificationRepository.findAllByUserIdAndStockCodeAndAssetType(userId, stockCode, normalizedAssetType).stream()
                 .map(this::convertToVO)
                 .toList();
     }
@@ -75,6 +81,7 @@ public class StockNotificationService {
             throw ExceptionEnum.AUTH_TOKEN_INVALID.toException();
         }
 
+        String assetType = NotificationAssetType.fromType(reqVO.getAssetType()).getType();
         StockNotification notification;
         if (reqVO.getId() != null) {
             notification = notificationRepository.findByIdAndUserId(reqVO.getId(), userId)
@@ -85,6 +92,7 @@ public class StockNotificationService {
             notification.setStockCode(reqVO.getStockCode());
         }
 
+        notification.setAssetType(assetType);
         notification.setType(reqVO.getType());
         notification.setThresholdValue(reqVO.getThresholdValue());
         if (NotificationType.PRICE.getType().equals(reqVO.getType())) {
@@ -103,7 +111,8 @@ public class StockNotificationService {
     }
 
     private void checkDuplicate(StockNotification notification, Long userId) {
-        List<StockNotification> existing = notificationRepository.findAllByUserIdAndStockCode(userId, notification.getStockCode());
+        List<StockNotification> existing = notificationRepository.findAllByUserIdAndStockCodeAndAssetType(
+                userId, notification.getStockCode(), notification.getAssetType());
         for (StockNotification item : existing) {
             // 排除自身（编辑情况）
             if (notification.getId() != null && notification.getId().equals(item.getId())) {
@@ -124,10 +133,11 @@ public class StockNotificationService {
 
     private void checkStockCountLimit(StockNotification notification) {
         String stockCode = notification.getStockCode();
-        // 如果该股票目前没有任何活跃通知，则保存后将成为一个新的监控股票
-        boolean isMonitored = notificationRepository.existsByStockCode(stockCode);
+        String assetType = notification.getAssetType();
+        // 如果该标的目前没有任何活跃通知，则保存后将成为一个新的监控标的
+        boolean isMonitored = notificationRepository.existsByStockCodeAndAssetType(stockCode, assetType);
         if (!isMonitored) {
-            long currentCount = notificationRepository.countActiveStockCodes();
+            long currentCount = notificationRepository.countActiveStockCodes(assetType);
             if (currentCount >= maxNotificationStockCount) {
                 throw ExceptionEnum.STOCK_NOTIFICATION_STOCK_COUNT_LIMIT.toException();
             }
@@ -146,9 +156,9 @@ public class StockNotificationService {
     }
 
     /**
-     * 检查并触发通知 (核心逻辑)
+     * 检查并触发股票通知
      */
-    public void checkAndNotify(String stockName, BigDecimal latestPrice, List<StockNotification> activeNotifications) {
+    public void checkStockAndNotify(String stockName, BigDecimal latestPrice, List<StockNotification> activeNotifications) {
         if (activeNotifications == null || activeNotifications.isEmpty()) {
             return;
         }
@@ -158,9 +168,9 @@ public class StockNotificationService {
         for (StockNotification config : activeNotifications) {
             try {
                 if (config.getType().equals(NotificationType.PRICE.getType())) {
-                    checkPriceAlert(config, stockName, latestPrice);
+                    checkThresholdAlert(config, stockName, latestPrice, "当前价", "价格通知");
                 } else if (config.getType().equals(NotificationType.DUAL_MA.getType())) {
-                    checkDualMAAlert(config, stockName, latestPrice);
+                    checkStockDualMAAlert(config, stockName, latestPrice);
                 }
             } catch (Exception e) {
                 log.error("Failed to check notification for user {}: {}", config.getUserId(), e.getMessage());
@@ -168,38 +178,64 @@ public class StockNotificationService {
         }
     }
 
-    private void checkPriceAlert(StockNotification config, String stockName, BigDecimal latestPrice) {
+    /**
+     * 检查并触发基金通知
+     */
+    public void checkFundAndNotify(String fundName, BigDecimal latestNetValue, List<StockNotification> activeNotifications) {
+        if (activeNotifications == null || activeNotifications.isEmpty()) {
+            return;
+        }
+
+        pruneExpiredObservedPrices(System.currentTimeMillis());
+
+        for (StockNotification config : activeNotifications) {
+            try {
+                if (config.getType().equals(NotificationType.PRICE.getType())) {
+                    checkThresholdAlert(config, fundName, latestNetValue, "最新净值", "净值通知");
+                } else if (config.getType().equals(NotificationType.DUAL_MA.getType())) {
+                    checkFundDualMAAlert(config, fundName, latestNetValue);
+                }
+            } catch (Exception e) {
+                log.error("Failed to check fund notification for user {}: {}", config.getUserId(), e.getMessage());
+            }
+        }
+    }
+
+    private void checkThresholdAlert(
+            StockNotification config, String targetName, BigDecimal latestValue, String valueLabel, String notificationTitle
+    ) {
         if (config.getThresholdValue() == null) return;
 
         BigDecimal threshold = config.getThresholdValue();
         PriceAlertCondition condition = parsePriceAlertCondition(config.getParams(), false);
         if (condition == null) {
-            log.warn("Invalid price alert params for notification {}: {}", config.getId(), config.getParams());
+            log.warn("Invalid threshold alert params for notification {}: {}", config.getId(), config.getParams());
             return;
         }
 
         Long notificationId = config.getId();
         if (notificationId == null) {
-            log.warn("Price alert notification without id, skip crossing detection for stock {}", config.getStockCode());
+            log.warn("Threshold alert notification without id, skip crossing detection for target {}", config.getStockCode());
             return;
         }
 
         long now = System.currentTimeMillis();
         BigDecimal previousPrice = getObservedPrice(notificationId, now);
-        lastObservedPriceMap.put(notificationId, new ObservedPrice(latestPrice, now + OBSERVED_PRICE_TTL_MILLIS));
+        lastObservedPriceMap.put(notificationId, new ObservedPrice(latestValue, now + OBSERVED_PRICE_TTL_MILLIS));
 
         if (previousPrice == null) {
             // 初次观测校验：如果当前已满足条件且通过频率限制，则补发通知
             boolean initialMet;
             if (PriceAlertCondition.DOWN == condition) {
-                initialMet = latestPrice.compareTo(threshold) <= 0;
+                initialMet = latestValue.compareTo(threshold) <= 0;
             } else {
-                initialMet = latestPrice.compareTo(threshold) >= 0;
+                initialMet = latestValue.compareTo(threshold) >= 0;
             }
 
             if (initialMet && isCoolDownPassed(config)) {
-                sendNotify(config, String.format("【价格通知】%s(%s) 当前价 %s 已%s设定值 %s (初次观测捕获)", 
-                    stockName, config.getStockCode(), latestPrice, condition.getDescription(), threshold));
+                sendNotify(config, String.format("【%s】%s(%s) %s %s 已%s设定值 %s (初次观测捕获)",
+                        notificationTitle, targetName, config.getStockCode(), valueLabel, latestValue,
+                        condition.getDescription(), threshold));
                 updateLastNotifyTime(config);
             }
             return;
@@ -207,19 +243,20 @@ public class StockNotificationService {
 
         boolean triggered;
         if (PriceAlertCondition.DOWN == condition) {
-            triggered = previousPrice.compareTo(threshold) > 0 && latestPrice.compareTo(threshold) <= 0;
+            triggered = previousPrice.compareTo(threshold) > 0 && latestValue.compareTo(threshold) <= 0;
         } else {
-            triggered = previousPrice.compareTo(threshold) < 0 && latestPrice.compareTo(threshold) >= 0;
+            triggered = previousPrice.compareTo(threshold) < 0 && latestValue.compareTo(threshold) >= 0;
         }
 
         if (triggered && isCoolDownPassed(config)) {
-            sendNotify(config, String.format("【价格通知】%s(%s) %s设定值 %s，当前价 %s", 
-                stockName, config.getStockCode(), condition.getDescription(), threshold, latestPrice));
+            sendNotify(config, String.format("【%s】%s(%s) %s设定值 %s，%s %s",
+                    notificationTitle, targetName, config.getStockCode(), condition.getDescription(), threshold,
+                    valueLabel, latestValue));
             updateLastNotifyTime(config);
         }
     }
 
-    private void checkDualMAAlert(StockNotification config, String stockName, BigDecimal latestPrice) {
+    private void checkStockDualMAAlert(StockNotification config, String stockName, BigDecimal latestPrice) {
         try {
             JsonNode params = objectMapper.readTree(config.getParams());
             int maShort = params.path("maShort").asInt(5);
@@ -265,6 +302,47 @@ public class StockNotificationService {
         }
     }
 
+    private void checkFundDualMAAlert(StockNotification config, String fundName, BigDecimal latestNetValue) {
+        try {
+            JsonNode params = objectMapper.readTree(config.getParams());
+            int maShort = params.path("maShort").asInt(5);
+            int maLong = params.path("maLong").asInt(20);
+            String condition = params.path(CONDITION).asText("UP");
+
+            int needDays = maLong + 1;
+            List<StockFundNetValue> history = stockFundNetValueRepository.findLatestByFundCode(
+                    config.getStockCode(), PageRequest.of(0, needDays));
+            if (history.size() < needDays) return;
+
+            Collections.reverse(history);
+
+            BigDecimal previousShort = avgFund(history.subList(history.size() - maShort - 1, history.size() - 1));
+            BigDecimal previousLong = avgFund(history.subList(history.size() - maLong - 1, history.size() - 1));
+            BigDecimal latestShort = avgFund(history.subList(history.size() - maShort, history.size()));
+            BigDecimal latestLong = avgFund(history.subList(history.size() - maLong, history.size()));
+
+            TradeSignal signal = TradeSignal.HOLD;
+            if (previousShort.compareTo(previousLong) <= 0 && latestShort.compareTo(latestLong) > 0) {
+                if ("UP".equalsIgnoreCase(condition)) {
+                    signal = TradeSignal.BUY;
+                }
+            } else if (previousShort.compareTo(previousLong) >= 0 && latestShort.compareTo(latestLong) < 0) {
+                if ("DOWN".equalsIgnoreCase(condition)) {
+                    signal = TradeSignal.SELL;
+                }
+            }
+
+            if (signal != TradeSignal.HOLD && isCoolDownPassed(config)) {
+                sendNotify(config, String.format("【策略通知】%s(%s) 触发双均线(%d, %d) %s 信号，最新净值 %s",
+                        fundName, config.getStockCode(), maShort, maLong, signal.name(), latestNetValue));
+                updateLastNotifyTime(config);
+            }
+
+        } catch (JsonProcessingException e) {
+            log.error("Invalid fund dual MA params format for notification {}: {}", config.getId(), config.getParams());
+        }
+    }
+
     private boolean isCoolDownPassed(StockNotification config) {
         if (config.getLastNotifyAt() == null) return true;
 
@@ -295,7 +373,8 @@ public class StockNotificationService {
                 SimpleMailMessage message = new SimpleMailMessage();
                 message.setFrom(mailFrom);
                 message.setTo(user.getEmail());
-                message.setSubject("AQuant 股票预警通知 - " + config.getStockCode());
+                String assetName = NotificationAssetType.fromType(config.getAssetType()).getDescription();
+                message.setSubject("AQuant " + assetName + "预警通知 - " + config.getStockCode());
                 message.setText(content);
                 mailSender.send(message);
                 log.info("Successfully sent email notification to {}", user.getEmail());
@@ -319,6 +398,13 @@ public class StockNotificationService {
                 .map(StockQuoteHistory::getClosePrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         return sum.add(latestPrice).divide(BigDecimal.valueOf(ma), 4, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal avgFund(List<StockFundNetValue> list) {
+        return list.stream()
+                .map(StockFundNetValue::getUnitNav)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .divide(BigDecimal.valueOf(list.size()), 4, RoundingMode.HALF_UP);
     }
 
     private StockNotificationVO convertToVO(StockNotification entity) {

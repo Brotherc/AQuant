@@ -7,19 +7,22 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
-@Schema(description = "股票通知信息")
+@Schema(description = "通知信息")
 public class StockNotificationVO {
 
     @Schema(description = "通知 ID")
     private Long id;
 
-    @Schema(description = "股票代码")
+    @Schema(description = "标的代码")
     private String stockCode;
 
-    @Schema(description = "提醒类型 (1: 价格, 2: 双均线策略)")
+    @Schema(description = "标的类型 (STOCK: 股票, FUND: 基金)")
+    private String assetType;
+
+    @Schema(description = "提醒类型 (1: 价格/净值, 2: 双均线策略)")
     private Integer type;
 
-    @Schema(description = "价格通知阈值")
+    @Schema(description = "价格/净值通知阈值")
     private BigDecimal thresholdValue;
 
     @Schema(description = "策略参数 (JSON 格式)")
