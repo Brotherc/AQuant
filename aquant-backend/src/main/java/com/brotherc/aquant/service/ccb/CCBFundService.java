@@ -81,7 +81,7 @@ public class CCBFundService {
      * 分页查询指定基金的建信官网申购类公告，关键词使用“申购”以覆盖限额、暂停和恢复申购等公告。
      */
     public CCBFundAnnouncementPage getPurchaseLimitAnnouncements(
-            String fundCode, LocalDate startDate, int page
+            String fundCode, LocalDate startDate, LocalDate endDate, int page
     ) {
         HttpUrl url = HttpUrl.get(ccbFundAddress).newBuilder()
                 .addPathSegments("website/v1/api/fund/notice")
@@ -90,7 +90,8 @@ public class CCBFundService {
                 // 不能只查“大额申购”，否则会漏掉解除限额的“恢复申购”公告。
                 .addQueryParameter("keyword", "申购")
                 .addQueryParameter("start", startDate == null ? "" : startDate.toString())
-                .addQueryParameter("end", "")
+                // 建信接口只有同时提供开始和结束日期时才会应用日期过滤。
+                .addQueryParameter("end", endDate == null ? "" : endDate.toString())
                 .addQueryParameter("page", String.valueOf(page))
                 .build();
 

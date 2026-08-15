@@ -104,7 +104,7 @@ public class CCBFundPurchaseLimitSyncService implements FundPurchaseLimitSyncSer
                 CCBFundAnnouncementPage announcementPage;
                 try {
                     announcementPage = ccbFundService.getPurchaseLimitAnnouncements(
-                            fund.getFundCode(), announcementStartDate, page
+                            fund.getFundCode(), announcementStartDate, syncTime.toLocalDate(), page
                     );
                 } catch (Exception e) {
                     allSuccess = false;
@@ -115,9 +115,20 @@ public class CCBFundPurchaseLimitSyncService implements FundPurchaseLimitSyncSer
                     break;
                 }
 
-                Map<String, StockFundAnnouncementSync> existingMap = loadExisting(announcementPage.getContent());
+                // 官网曾在结束日期为空时忽略开始日期；本地再限制一次，避免异常响应触发历史回扫。
+                List<CCBFundAnnouncement> announcements = announcementPage.getContent().stream()
+                        .filter(announcement -> announcement.getAnnouncementDate() == null
+                                || ((announcementStartDate == null
+                                || !announcement.getAnnouncementDate().isBefore(announcementStartDate))
+                                && !announcement.getAnnouncementDate().isAfter(syncTime.toLocalDate())))
+                        .toList();
+                if (CollectionUtils.isEmpty(announcements)) {
+                    break;
+                }
+
+                Map<String, StockFundAnnouncementSync> existingMap = loadExisting(announcements);
                 boolean pageHasPending = false;
-                for (CCBFundAnnouncement announcement : announcementPage.getContent()) {
+                for (CCBFundAnnouncement announcement : announcements) {
                     StockFundAnnouncementSync existing = existingMap.get(announcement.getAnnouncementId());
                     // 成功和确认无关的公告不再下载详情或附件，减少每天重复请求历史附件。
                     if (existing != null && (FundPurchaseLimitConstant.SYNC_SUCCESS.equals(existing.getStatus())

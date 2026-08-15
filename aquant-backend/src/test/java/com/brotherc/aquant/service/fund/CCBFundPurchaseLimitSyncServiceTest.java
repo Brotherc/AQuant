@@ -71,7 +71,8 @@ class CCBFundPurchaseLimitSyncServiceTest {
                 CCBFundConstant.SOURCE, FundPurchaseLimitConstant.SYNC_SUCCESS)).thenReturn(Optional.empty());
         when(stockFundAnnouncementSyncRepository.findTopBySourceAndStatusOrderByAnnouncementDateDesc(
                 CCBFundConstant.SOURCE, FundPurchaseLimitConstant.SYNC_IGNORED)).thenReturn(Optional.empty());
-        when(ccbFundService.getPurchaseLimitAnnouncements("539001", null, 1)).thenReturn(page);
+        when(ccbFundService.getPurchaseLimitAnnouncements(
+                "539001", null, syncTime.toLocalDate(), 1)).thenReturn(page);
 
         StockFundAnnouncementSync processed = new StockFundAnnouncementSync();
         processed.setAnnouncementId("303416");
@@ -83,6 +84,46 @@ class CCBFundPurchaseLimitSyncServiceTest {
         syncService.sync(syncTime);
 
         verify(ccbFundService, never()).getAnnouncementDetail(any());
+        verify(stockSyncRepository).save(watermark);
+    }
+
+    @Test
+    void shouldIgnoreAnnouncementsBeforeIncrementalStartDate() {
+        LocalDateTime syncTime = LocalDateTime.of(2026, 8, 14, 10, 0);
+        StockSync watermark = new StockSync();
+        watermark.setValue(String.valueOf(LocalDate.of(2026, 8, 13).atStartOfDay(ZoneId.systemDefault())
+                .toInstant().toEpochMilli()));
+        when(stockSyncRepository.findByName(any())).thenReturn(watermark);
+
+        CCBFundInfo fund = new CCBFundInfo();
+        fund.setFundCode("539001");
+        fund.setFundName("建信纳斯达克100指数（QDII）");
+        when(ccbFundService.getNasdaq100IndexFunds()).thenReturn(List.of(fund));
+        when(stockFundAnnouncementSyncRepository.findBySourceAndStatusInOrderByAnnouncementDateDesc(
+                CCBFundConstant.SOURCE,
+                List.of(FundPurchaseLimitConstant.SYNC_FAILED, FundPurchaseLimitConstant.SYNC_PENDING)))
+                .thenReturn(List.of());
+
+        StockFundAnnouncementSync latest = new StockFundAnnouncementSync();
+        latest.setAnnouncementDate(LocalDate.of(2026, 8, 12));
+        when(stockFundAnnouncementSyncRepository.findTopBySourceAndStatusOrderByAnnouncementDateDesc(
+                CCBFundConstant.SOURCE, FundPurchaseLimitConstant.SYNC_SUCCESS)).thenReturn(Optional.of(latest));
+        when(stockFundAnnouncementSyncRepository.findTopBySourceAndStatusOrderByAnnouncementDateDesc(
+                CCBFundConstant.SOURCE, FundPurchaseLimitConstant.SYNC_IGNORED)).thenReturn(Optional.empty());
+
+        CCBFundAnnouncement oldAnnouncement = new CCBFundAnnouncement();
+        oldAnnouncement.setAnnouncementId("298719");
+        oldAnnouncement.setAnnouncementDate(LocalDate.of(2026, 2, 25));
+        CCBFundAnnouncementPage page = new CCBFundAnnouncementPage();
+        page.setContent(List.of(oldAnnouncement));
+        page.setTotalPages(14);
+        when(ccbFundService.getPurchaseLimitAnnouncements(
+                "539001", LocalDate.of(2026, 8, 12), syncTime.toLocalDate(), 1)).thenReturn(page);
+
+        syncService.sync(syncTime);
+
+        verify(ccbFundService, never()).getAnnouncementDetail(any());
+        verify(stockFundAnnouncementSyncRepository, never()).findBySourceAndAnnouncementIdIn(any(), any());
         verify(stockSyncRepository).save(watermark);
     }
 }
