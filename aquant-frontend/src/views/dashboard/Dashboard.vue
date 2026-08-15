@@ -202,7 +202,7 @@
     <a-modal
       v-model:visible="indexModalVisible"
       :title="selectedIndexCard ? `【${selectedIndexCard.name} (${selectedIndexCard.code})】行情K线图` : '大盘指数K线图'"
-      width="1000px"
+      width="1280px"
       :footer="null"
       destroyOnClose
     >
@@ -1000,7 +1000,7 @@ onUnmounted(() => {
 
 .graph-actions :deep(.ant-btn:hover) {
   background: transparent !important;
-  color: #3b82f6 !important;
+  color: var(--color-text-primary, #000000) !important;
 }
 
 .graph-actions :deep(.ant-btn > span) {
