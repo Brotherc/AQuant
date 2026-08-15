@@ -2221,3 +2221,12 @@ watch(() => groups.value.length, async () => {
   padding: 4px 8px;
 }
 </style>
+
+<style>
+/* Popconfirm 取消/确定按钮文字垂直居中 */
+.ant-popconfirm-buttons .ant-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+</style>
