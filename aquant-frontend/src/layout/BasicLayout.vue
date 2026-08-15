@@ -217,18 +217,18 @@ const navigationGroups: NavigationGroup[] = [
   },
   {
     key: '/data',
-    title: '股票数据',
+    title: '市场数据',
     icon: StockOutlined,
     popupClassName: 'top-nav-popup top-nav-popup-compact',
     children: [
-      { key: '/stock-data/index', label: '股票详情' },
+      { key: '/stock-data/index', label: '股票' },
       { key: '/board/index', label: '行业板块' },
       { key: '/fund/index', label: '基金' }
     ]
   },
   {
     key: '/indicators',
-    title: '股票指标',
+    title: '基本面指标',
     icon: LineChartOutlined,
     popupClassName: 'top-nav-popup',
     children: [
