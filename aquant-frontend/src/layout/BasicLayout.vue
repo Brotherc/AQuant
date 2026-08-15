@@ -211,10 +211,9 @@ const navigationGroups: NavigationGroup[] = [
   },
   {
     key: '/watchlist',
-    title: '自选股票',
+    title: '自选',
     icon: HeartOutlined,
-    popupClassName: 'top-nav-popup top-nav-popup-compact',
-    children: [{ key: '/watchlist/index', label: '我的自选' }]
+    path: '/watchlist/index'
   },
   {
     key: '/data',
@@ -251,13 +250,13 @@ const navigationGroups: NavigationGroup[] = [
   },
   {
     key: '/article',
-    title: '投资社区',
+    title: '投资导航',
     icon: FileTextOutlined,
     popupClassName: 'top-nav-popup top-nav-popup-compact',
     children: [
       { key: '/article/public', label: '广场' },
       { key: '/article/my', label: '我的笔记' },
-      { key: '/finance-sites/index', label: '常用网站' }
+      { key: '/finance-sites/index', label: '投资书签' }
     ]
   }
 ];
@@ -267,6 +266,9 @@ const currentRouteMeta = computed(() => {
     return undefined;
   }
   for (const group of navigationGroups) {
+    if (group.path && group.path === route.path) {
+      return { parent: group.title, child: group.title };
+    }
     if (group.children) {
       const child = group.children.find((item) => item.key === route.path);
       if (child) {
