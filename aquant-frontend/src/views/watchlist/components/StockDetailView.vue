@@ -545,12 +545,16 @@ onUnmounted(() => {
   width: 348px;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .sidebar-section {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .dividend-list {
