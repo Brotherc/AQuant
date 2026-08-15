@@ -339,7 +339,7 @@
     <a-modal
       v-model:visible="detailVisible"
       :title="currentAssetType === 'FUND' ? '基金详情' : '股票详情'"
-      :width="currentAssetType === 'FUND' ? '1400px' : '1000px'"
+      :width="currentAssetType === 'FUND' ? '1400px' : '1400px'"
       :footer="null"
       centered
       destroyOnClose
