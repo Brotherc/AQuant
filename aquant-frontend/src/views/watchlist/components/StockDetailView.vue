@@ -204,8 +204,8 @@ const renderChart = (data: StockQuoteHistory[]) => {
     animation: false,
     legend: {
       data: ['K线', 'MA5', 'MA10', 'MA20', 'MA60', 'MA120'],
-      inactiveColor: 'rgba(255, 255, 255, 0.3)',
-      textStyle: { color: 'var(--color-text-secondary)', fontSize: 11 },
+      inactiveColor: chartTooltipTheme.mutedTextColor,
+      textStyle: { color: chartTooltipTheme.secondaryTextColor, fontSize: 11 },
       top: 0,
       right: '6%',
       itemWidth: 20,
