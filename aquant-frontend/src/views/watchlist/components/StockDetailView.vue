@@ -29,7 +29,7 @@
       </div>
     </div>
 
-    <a-divider style="margin: 16px 0" />
+    <a-divider style="margin: 24px 0" />
 
     <div class="detail-body">
       <!-- Left: Expanded Chart -->
@@ -440,7 +440,9 @@ onUnmounted(() => {
 
 <style scoped>
 .stock-detail-view {
-  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  color: var(--color-text-primary);
 }
 
 .detail-header {
@@ -450,8 +452,8 @@ onUnmounted(() => {
 }
 
 .stock-title {
-  font-size: 24px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -494,6 +496,16 @@ onUnmounted(() => {
 .metrics-grid {
   display: flex;
   gap: 24px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 12px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+}
+
+.metric-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
 }
 
 .metric-item .label {

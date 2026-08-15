@@ -343,6 +343,7 @@
       :footer="null"
       centered
       destroyOnClose
+      class="detail-modal"
     >
       <FundDetailView v-if="selectedStock && currentAssetType === 'FUND'" :stock="selectedStock" />
       <StockDetailView v-else-if="selectedStock" :stock="selectedStock" />
@@ -2228,5 +2229,12 @@ watch(() => groups.value.length, async () => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+/* 详情弹窗标题下方间距 */
+.detail-modal .ant-modal-header {
+  padding-bottom: 8px;
+  margin-bottom: 0;
+  border-bottom: 1px solid #f0f0f0;
 }
 </style>

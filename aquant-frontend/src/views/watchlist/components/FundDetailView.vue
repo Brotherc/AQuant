@@ -30,7 +30,7 @@
       </div>
     </div>
 
-    <a-divider style="margin: 16px 0" />
+    <a-divider style="margin: 24px 0" />
 
     <div class="detail-body">
       <!-- Left: Expanded Fund Net Value Chart -->
