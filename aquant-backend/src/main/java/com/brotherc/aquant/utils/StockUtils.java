@@ -127,6 +127,16 @@ public class StockUtils {
         return stockCode;
     }
 
+    public static String getPlainCode(String stockCode) {
+        if (StringUtils.isBlank(stockCode)) {
+            return stockCode;
+        }
+        if (stockCode.length() > 2 && (stockCode.startsWith("sh") || stockCode.startsWith("sz") || stockCode.startsWith("bj"))) {
+            return stockCode.substring(2);
+        }
+        return stockCode;
+    }
+
     public static boolean isTradeTime(LocalTime now) {
         // 上午 09:30 - 11:30
         boolean morning = !now.isBefore(LocalTime.of(9, 30)) && !now.isAfter(LocalTime.of(11, 30));
@@ -175,6 +185,10 @@ public class StockUtils {
             deadline = LocalDate.of(reportDate.getYear() + 1, Month.APRIL, 30);
         }
         return currentDate.isAfter(reportDate) && !currentDate.isAfter(deadline);
+    }
+
+    public static boolean isAnnualReport(LocalDate date) {
+        return date != null && date.getMonthValue() == 12 && date.getDayOfMonth() == 31;
     }
 
 }

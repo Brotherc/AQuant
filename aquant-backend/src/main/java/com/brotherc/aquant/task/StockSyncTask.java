@@ -22,6 +22,7 @@ import com.brotherc.aquant.service.fund.StockFundPortfolioHoldingService;
 import com.brotherc.aquant.service.fund.FundPurchaseLimitSyncManager;
 import com.brotherc.aquant.service.index.StockIndexService;
 import com.brotherc.aquant.service.indicator.StockBalanceSheetService;
+import com.brotherc.aquant.service.indicator.StockDupontAnalysisService;
 import com.brotherc.aquant.service.indicator.StockPerformanceReportService;
 import com.brotherc.aquant.service.indicator.StockValuationMetricsService;
 import com.brotherc.aquant.service.stock.StockAbnormalService;
@@ -73,6 +74,7 @@ public class StockSyncTask {
     private final FundPurchaseLimitSyncManager fundPurchaseLimitSyncManager;
     private final StockBalanceSheetService stockBalanceSheetService;
     private final StockPerformanceReportService stockPerformanceReportService;
+    private final StockDupontAnalysisService stockDupontAnalysisService;
     private final StockShareChangeService stockShareChangeService;
     private final StockIndexService stockIndexService;
 
@@ -92,6 +94,7 @@ public class StockSyncTask {
         clearDelistedStockData();
         syncStackDtaLatest();
         stockValuationMetricsService.refreshValuationMetrics();
+        stockDupontAnalysisService.refreshDupontAnalysis();
         stockStrategySnapshotService.refreshDualMaBacktestSnapshots();
         stockStrategySnapshotService.refreshMomentumBacktestSnapshots();
     }
