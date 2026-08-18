@@ -23,6 +23,7 @@ import com.brotherc.aquant.service.fund.FundPurchaseLimitSyncManager;
 import com.brotherc.aquant.service.index.StockIndexService;
 import com.brotherc.aquant.service.indicator.StockBalanceSheetService;
 import com.brotherc.aquant.service.indicator.StockDupontAnalysisService;
+import com.brotherc.aquant.service.indicator.StockGrowthMetricsService;
 import com.brotherc.aquant.service.indicator.StockPerformanceReportService;
 import com.brotherc.aquant.service.indicator.StockValuationMetricsService;
 import com.brotherc.aquant.service.stock.StockAbnormalService;
@@ -43,6 +44,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.CollectionUtils;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -75,6 +78,7 @@ public class StockSyncTask {
     private final StockBalanceSheetService stockBalanceSheetService;
     private final StockPerformanceReportService stockPerformanceReportService;
     private final StockDupontAnalysisService stockDupontAnalysisService;
+    private final StockGrowthMetricsService stockGrowthMetricsService;
     private final StockShareChangeService stockShareChangeService;
     private final StockIndexService stockIndexService;
 
@@ -95,6 +99,7 @@ public class StockSyncTask {
         syncStackDtaLatest();
         stockValuationMetricsService.refreshValuationMetrics();
         stockDupontAnalysisService.refreshDupontAnalysis();
+        stockGrowthMetricsService.refreshGrowthMetrics();
         stockStrategySnapshotService.refreshDualMaBacktestSnapshots();
         stockStrategySnapshotService.refreshMomentumBacktestSnapshots();
     }
@@ -966,8 +971,10 @@ public class StockSyncTask {
             return;
         }
 
-        // 1. 优先增量补全核心大盘指数的历史日 K 线数据 (幂等防断层)
+        // 1. 优先增量补全核心大盘指数的历史日 K 线数据 (幂等防断层)，并暂存 dailyList 供实时接口异常时兜底
         Map<String, String> coreIndices = CoreIndexEnum.getCodeNameMap();
+        Map<String, List<StockZhIndexDaily>> coreDailyMap = new HashMap<>();
+
         for (Map.Entry<String, String> entry : coreIndices.entrySet()) {
             String indexCode = entry.getKey();
             String indexName = entry.getValue();
@@ -975,21 +982,33 @@ public class StockSyncTask {
                 List<StockZhIndexDaily> dailyList = aKShareService.stockZhIndexDaily(indexCode);
                 if (!CollectionUtils.isEmpty(dailyList)) {
                     stockIndexService.saveIndexHistory(indexCode, indexName, dailyList, now);
+                    coreDailyMap.put(indexCode, dailyList);
                 }
             } catch (Exception e) {
                 log.error("增量同步指数 [{}] 历史日 K 线数据异常", indexName, e);
             }
         }
 
-        // 2. 历史数据补全完成后，刷新全量指数实时行情快照 & 指定核心大盘指数当日带成交额的 K 线
-        List<StockZhIndexSpotSina> spotList = aKShareService.stockZhIndexSpotSina();
+        // 2. 历史数据补全完成后，尝试刷新全量指数实时行情快照 (新浪实时接口)
+        List<StockZhIndexSpotSina> spotList = null;
+        try {
+            spotList = aKShareService.stockZhIndexSpotSina();
+        } catch (Exception e) {
+            log.error("拉取指数实时行情快照 (stockZhIndexSpotSina) 异常，准备尝试日K线兜底", e);
+        }
+
         if (!CollectionUtils.isEmpty(spotList)) {
             stockIndexService.saveIndexSpot(spotList, now);
             stockIndexService.updateTodayHistoryFromSpot(spotList, CoreIndexEnum.getCodes(), now);
             log.info("同步指数实时行情完成，共 {} 条数据", spotList.size());
+        } else if (!coreDailyMap.isEmpty()) {
+            log.warn("指数实时行情接口异常或为空，触发核心指数日K线兜底补全！");
+            List<StockZhIndexSpotSina> fallbackSpotList = buildFallbackSpotList(coreDailyMap, coreIndices);
+            stockIndexService.saveIndexSpot(fallbackSpotList, now);
+            log.info("核心指数日K线兜底补全实时行情完成，共 {} 条数据", fallbackSpotList.size());
         }
 
-        // 4. 更新同步水位标记
+        // 3. 更新同步水位标记
         long timestamp = now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
         if (stockSync == null) {
             stockSync = new StockSync();
@@ -997,6 +1016,44 @@ public class StockSyncTask {
         }
         stockSync.setValue(String.valueOf(timestamp));
         stockSyncRepository.save(stockSync);
+    }
+
+    private List<StockZhIndexSpotSina> buildFallbackSpotList(
+            Map<String, List<StockZhIndexDaily>> coreDailyMap,
+            Map<String, String> coreIndices) {
+        List<StockZhIndexSpotSina> list = new ArrayList<>();
+        for (Map.Entry<String, List<StockZhIndexDaily>> entry : coreDailyMap.entrySet()) {
+            String code = entry.getKey();
+            List<StockZhIndexDaily> dailyList = entry.getValue();
+            if (CollectionUtils.isEmpty(dailyList)) {
+                continue;
+            }
+
+            StockZhIndexDaily latest = dailyList.get(dailyList.size() - 1);
+            StockZhIndexDaily prev = dailyList.size() > 1 ? dailyList.get(dailyList.size() - 2) : null;
+
+            StockZhIndexSpotSina spot = new StockZhIndexSpotSina();
+            spot.setCode(code);
+            spot.setName(coreIndices.getOrDefault(code, code));
+            spot.setLatestPrice(latest.getClose());
+            spot.setOpenPrice(latest.getOpen());
+            spot.setHighPrice(latest.getHigh());
+            spot.setLowPrice(latest.getLow());
+            spot.setVolume(latest.getVolume());
+
+            if (prev != null && prev.getClose() != null && latest.getClose() != null) {
+                spot.setPrevClose(prev.getClose());
+                BigDecimal changeAmount = latest.getClose().subtract(prev.getClose());
+                spot.setChangeAmount(changeAmount);
+                if (prev.getClose().compareTo(BigDecimal.ZERO) != 0) {
+                    BigDecimal changePercent = changeAmount.multiply(BigDecimal.valueOf(100))
+                            .divide(prev.getClose(), 2, RoundingMode.HALF_UP);
+                    spot.setChangePercent(changePercent);
+                }
+            }
+            list.add(spot);
+        }
+        return list;
     }
 
 }
