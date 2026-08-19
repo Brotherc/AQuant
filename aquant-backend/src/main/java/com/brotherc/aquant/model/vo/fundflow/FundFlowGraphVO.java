@@ -1,23 +1,18 @@
 package com.brotherc.aquant.model.vo.fundflow;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.util.List;
 
-/**
- * 资金流动网络全景 VO
- */
 @Data
+@Schema(description = "资金流动网络全景VO")
 public class FundFlowGraphVO {
 
-    /**
-     * 节点列表
-     */
+    @Schema(description = "节点列表")
     private List<FundFlowGraphNodeVO> nodes;
 
-    /**
-     * 流向边列表
-     */
+    @Schema(description = "流向边列表")
     private List<FundFlowGraphLinkVO> links;
 
 }
