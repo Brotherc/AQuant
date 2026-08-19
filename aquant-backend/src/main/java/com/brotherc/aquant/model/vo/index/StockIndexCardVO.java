@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @Data
-@Schema(description = "核心大盘指数卡片 VO")
+@Schema(description = "核心大盘指数卡片VO")
 public class StockIndexCardVO {
 
     @Schema(description = "指数代码，如 sh000001")

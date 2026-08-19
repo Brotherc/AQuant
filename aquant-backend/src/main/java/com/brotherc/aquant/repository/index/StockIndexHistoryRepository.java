@@ -1,6 +1,7 @@
 package com.brotherc.aquant.repository.index;
 
 import com.brotherc.aquant.entity.index.StockIndexHistory;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
@@ -15,6 +16,8 @@ public interface StockIndexHistoryRepository extends JpaRepository<StockIndexHis
     Optional<StockIndexHistory> findByIndexCodeAndTradeDate(String indexCode, LocalDate tradeDate);
 
     Optional<StockIndexHistory> findFirstByIndexCodeOrderByTradeDateDesc(String indexCode);
+
+    List<StockIndexHistory> findByIndexCodeOrderByTradeDateDesc(String indexCode, Pageable pageable);
 
     List<StockIndexHistory> findByIndexCodeOrderByTradeDateDesc(String indexCode);
 

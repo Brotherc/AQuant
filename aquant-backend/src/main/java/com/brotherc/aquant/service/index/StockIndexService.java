@@ -12,6 +12,7 @@ import com.brotherc.aquant.utils.DateUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +32,11 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class StockIndexService {
+
+    private static final int SPARKLINE_HISTORY_COUNT = 15;
+    private static final List<String> TARGET_INDEX_CODES = List.of(
+            "sh000001", "sz399001", "sz399006", "sh000688", "sh000300", "sh000905"
+    );
 
     private final StockIndexSpotRepository stockIndexSpotRepository;
     private final StockIndexHistoryRepository stockIndexHistoryRepository;
@@ -159,19 +165,20 @@ public class StockIndexService {
      * 查询首页核心大盘指数卡片数据 (包含实时行情及历史迷你趋势线)
      */
     public List<StockIndexCardVO> getCoreIndexCards() {
-        List<String> targetCodes = List.of("sh000001", "sz399001", "sz399006", "sh000688", "sh000300", "sh000905");
-        Map<String, StockIndexSpot> spotMap = stockIndexSpotRepository.findByCodeIn(targetCodes).stream()
+        Map<String, StockIndexSpot> spotMap = stockIndexSpotRepository.findByCodeIn(TARGET_INDEX_CODES).stream()
                 .collect(Collectors.toMap(StockIndexSpot::getCode, spot -> spot, (a, b) -> a));
 
         List<StockIndexCardVO> result = new ArrayList<>();
-        for (String code : targetCodes) {
+        for (String code : TARGET_INDEX_CODES) {
             String name = CoreIndexEnum.getNameByCode(code);
             StockIndexSpot spot = spotMap.get(code);
 
-            // 查询该指数近期 15 个交易日的收盘价序列
-            List<StockIndexHistory> historyList = stockIndexHistoryRepository.findByIndexCodeOrderByTradeDateDesc(code);
+            // 查询该指数近期指定条数的收盘价序列
+            List<StockIndexHistory> historyList = stockIndexHistoryRepository.findByIndexCodeOrderByTradeDateDesc(
+                    code,
+                    PageRequest.of(0, SPARKLINE_HISTORY_COUNT)
+            );
             List<BigDecimal> historyPrices = historyList.stream()
-                    .limit(15)
                     .map(StockIndexHistory::getClosePrice)
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
