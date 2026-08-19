@@ -3,6 +3,7 @@ package com.brotherc.aquant.model.vo.fundflow;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -10,9 +11,9 @@ import java.util.List;
 public class FundFlowGraphVO {
 
     @Schema(description = "节点列表")
-    private List<FundFlowGraphNodeVO> nodes;
+    private List<FundFlowGraphNodeVO> nodes = new ArrayList<>();
 
     @Schema(description = "流向边列表")
-    private List<FundFlowGraphLinkVO> links;
+    private List<FundFlowGraphLinkVO> links = new ArrayList<>();
 
 }

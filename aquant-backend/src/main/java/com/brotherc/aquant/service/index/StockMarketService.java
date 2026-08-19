@@ -30,8 +30,6 @@ public class StockMarketService {
         List<StockIndustryBoard> boards = stockIndustryBoardRepository.findAll();
         FundFlowGraphVO vo = new FundFlowGraphVO();
         if (CollectionUtils.isEmpty(boards)) {
-            vo.setNodes(Collections.emptyList());
-            vo.setLinks(Collections.emptyList());
             return vo;
         }
 
@@ -71,7 +69,7 @@ public class StockMarketService {
 
         Map<String, String> boardNodeIdMap = new HashMap<>();
 
-        // 1. 构建行业板块节点 (Board Nodes)
+        // 构建行业板块节点 (Board Nodes)
         for (StockIndustryBoard b : activeBoards) {
             String nodeId = "board_" + b.getSectorName();
             boardNodeIdMap.put(b.getSectorName(), nodeId);
@@ -96,15 +94,17 @@ public class StockMarketService {
             nodes.add(node);
         }
 
-        // 3. 构建板块间的资金轮动流向连线 (Net Outflow Boards ➔ Net Inflow Boards)
+        // 构建板块间的资金轮动流向连线 (Net Outflow Boards ➔ Net Inflow Boards)
         List<StockIndustryBoard> outflowBoards = activeBoards.stream()
                 .filter(b -> b.getNetInflow() != null && b.getNetInflow().compareTo(BigDecimal.ZERO) < 0)
-                .sorted(Comparator.comparing(StockIndustryBoard::getNetInflow)) // 净流出最多在前
+                // 净流出最多在前
+                .sorted(Comparator.comparing(StockIndustryBoard::getNetInflow))
                 .toList();
 
         List<StockIndustryBoard> inflowBoards = activeBoards.stream()
                 .filter(b -> b.getNetInflow() != null && b.getNetInflow().compareTo(BigDecimal.ZERO) > 0)
-                .sorted(Comparator.comparing(StockIndustryBoard::getNetInflow).reversed()) // 净流入最多在前
+                // 净流入最多在前
+                .sorted(Comparator.comparing(StockIndustryBoard::getNetInflow).reversed())
                 .toList();
 
         int linkCount = Math.min(outflowBoards.size(), inflowBoards.size());
@@ -137,11 +137,6 @@ public class StockMarketService {
         FundFlowSummaryVO summary = new FundFlowSummaryVO();
 
         if (CollectionUtils.isEmpty(boards)) {
-            summary.setTotalMarketAmount(BigDecimal.ZERO);
-            summary.setRiseCountTotal(0);
-            summary.setFallCountTotal(0);
-            summary.setTopInflowSectors(Collections.emptyList());
-            summary.setTopOutflowSectors(Collections.emptyList());
             return summary;
         }
 
@@ -224,4 +219,5 @@ public class StockMarketService {
 
         return vo;
     }
+
 }
