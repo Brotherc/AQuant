@@ -22,7 +22,7 @@ public class StockMarketController {
 
     private final StockMarketService stockMarketService;
 
-    @Operation(summary = "查询基于本地股票实时表统计的市场情绪与温度计")
+    @Operation(summary = "查询市场涨跌分布")
     @GetMapping("/current")
     public ResponseDTO<MarketSentimentVO> getMarketSentiment() {
         return ResponseDTO.success(stockMarketService.getMarketSentiment());
