@@ -1,6 +1,7 @@
 package com.brotherc.aquant.repository.stock;
 
 import com.brotherc.aquant.entity.stock.StockQuote;
+import com.brotherc.aquant.model.dto.stockquote.StockQuoteSentimentDTO;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -29,5 +30,9 @@ public interface StockQuoteRepository extends JpaRepository<StockQuote, Long>, J
     List<StockQuote> findByCodeStartingWithIgnoreCase(String codePrefix);
 
     long deleteByCodeIn(List<String> codeList);
+
+    @Query("select new com.brotherc.aquant.model.dto.stockquote.StockQuoteSentimentDTO(q.changePercent, q.turnover) " +
+            "from StockQuote q where q.changePercent is not null")
+    List<StockQuoteSentimentDTO> findAllSentimentQuotes();
 
 }
