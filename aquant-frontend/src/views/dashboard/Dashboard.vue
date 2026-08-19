@@ -319,36 +319,60 @@ const getSparklinePath = (prices?: number[]): string => {
   return `M ${points.join(' L ')}`;
 };
 
-const loadData = async () => {
+const loadData = () => {
   loading.value = true;
-  try {
-    const [summaryRes, graphRes, indexRes, sentimentRes] = await Promise.all([
-      getFundFlowSummary(),
-      getFundFlowGraph(),
-      getCoreIndexCards(),
-      getMarketSentiment()
-    ]);
 
-    if (summaryRes.data?.data) {
-      summaryData.value = summaryRes.data.data;
-    }
-    if (graphRes.data?.data) {
-      graphData.value = graphRes.data.data;
-      nextTick(() => {
-        renderChart();
-      });
-    }
-    if (indexRes.data?.data) {
-      indexCards.value = indexRes.data.data;
-    }
-    if (sentimentRes.data?.data) {
-      sentimentData.value = sentimentRes.data.data;
-    }
-  } catch (error) {
-    console.error('加载资金流向与指数数据失败:', error);
-  } finally {
+  // 1. 全市场涨跌分布 (独立请求 & 极速渲染)
+  const sentimentPromise = getMarketSentiment()
+    .then(res => {
+      if (res.data?.data) {
+        sentimentData.value = res.data.data;
+      }
+    })
+    .catch(error => {
+      console.error('加载市场情绪失败:', error);
+    });
+
+  // 2. 资金流动汇总与板块榜单 (独立请求 & 极速渲染)
+  const summaryPromise = getFundFlowSummary()
+    .then(res => {
+      if (res.data?.data) {
+        summaryData.value = res.data.data;
+      }
+    })
+    .catch(error => {
+      console.error('加载资金流汇总失败:', error);
+    });
+
+  // 3. 核心大盘指数卡片 (独立请求 & 平滑就绪)
+  const indexPromise = getCoreIndexCards()
+    .then(res => {
+      if (res.data?.data) {
+        indexCards.value = res.data.data;
+      }
+    })
+    .catch(error => {
+      console.error('加载核心大盘指数失败:', error);
+    });
+
+  // 4. 板块资金博弈网络图 (独立请求 & 动态绘制)
+  const graphPromise = getFundFlowGraph()
+    .then(res => {
+      if (res.data?.data) {
+        graphData.value = res.data.data;
+        nextTick(() => {
+          renderChart();
+        });
+      }
+    })
+    .catch(error => {
+      console.error('加载资金流网络图失败:', error);
+    });
+
+  // 全部请求完成后解除全局 loading 状态
+  Promise.allSettled([sentimentPromise, summaryPromise, indexPromise, graphPromise]).finally(() => {
     loading.value = false;
-  }
+  });
 };
 
 const getBubbleColorStyle = (pct?: number | null) => {

@@ -10,12 +10,6 @@ export interface MarketSentimentVO {
   totalTurnover?: number;
   turnoverChangeAmount?: number;
 
-  temperature?: number;
-  temperatureLabel?: string;
-
-  strongRiseCount?: number;
-  strongFallCount?: number;
-
   limitUpCount?: number;
   up8ToMaxCount?: number;
   up6To8Count?: number;
