@@ -1,0 +1,374 @@
+package com.brotherc.aquant.sync.service;
+
+import com.brotherc.aquant.common.constant.StockSyncConstant;
+import com.brotherc.aquant.dividend.entity.StockDividend;
+import com.brotherc.aquant.stock.entity.StockQuote;
+import com.brotherc.aquant.stock.entity.StockQuoteHistory;
+import com.brotherc.aquant.sync.entity.StockSync;
+import com.brotherc.aquant.integration.akshare.model.*;
+import com.brotherc.aquant.dividend.repository.StockDividendRepository;
+import com.brotherc.aquant.industry.repository.StockIndustryBoardHistoryRepository;
+import com.brotherc.aquant.industry.repository.StockIndustryBoardRepository;
+import com.brotherc.aquant.stock.repository.StockQuoteHistoryRepository;
+import com.brotherc.aquant.stock.repository.StockQuoteRepository;
+import com.brotherc.aquant.sync.repository.StockSyncRepository;
+import com.brotherc.aquant.integration.akshare.service.AKShareIndicatorService;
+import com.brotherc.aquant.integration.akshare.service.AKShareService;
+import com.brotherc.aquant.fund.service.StockFundInfoService;
+import com.brotherc.aquant.indicator.service.StockDupontAnalysisService;
+import com.brotherc.aquant.indicator.service.StockGrowthMetricsService;
+import com.brotherc.aquant.indicator.service.StockValuationMetricsService;
+import com.brotherc.aquant.industry.service.StockIndustryBoardHistoryService;
+import com.brotherc.aquant.industry.service.StockIndustryBoardService;
+import com.brotherc.aquant.stock.service.StockQuoteHistoryService;
+import com.brotherc.aquant.stock.service.StockQuoteService;
+import com.brotherc.aquant.common.utils.DateUtils;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class StockSyncService {
+
+    private final AKShareService aKShareService;
+    private final AKShareIndicatorService aKShareIndicatorService;
+    private final StockQuoteService stockQuoteService;
+    private final StockQuoteHistoryService stockQuoteHistoryService;
+    private final StockGrowthMetricsService stockGrowthMetricsService;
+    private final StockDupontAnalysisService stockDupontAnalysisService;
+    private final StockValuationMetricsService stockValuationMetricsService;
+    private final StockIndustryBoardService stockIndustryBoardService;
+    private final StockIndustryBoardHistoryService stockIndustryBoardHistoryService;
+
+    private final StockQuoteRepository stockQuoteRepository;
+    private final StockSyncRepository stockSyncRepository;
+    private final StockDividendRepository stockDividendRepository;
+    private final StockQuoteHistoryRepository stockQuoteHistoryRepository;
+    private final StockIndustryBoardHistoryRepository stockIndustryBoardHistoryRepository;
+    private final StockIndustryBoardRepository stockIndustryBoardRepository;
+    private final StockFundInfoService stockFundInfoService;
+
+    @Transactional(rollbackFor = Exception.class)
+    public void stockQuote(List<StockZhASpot> stockZhASpotList, StockSync stockDailyLatest, LocalDateTime now) {
+        if (!CollectionUtils.isEmpty(stockZhASpotList)) {
+
+            // 更新A股股票最新行情
+            stockQuoteService.save(stockZhASpotList, now);
+            // 更新A股股票历史行情
+            stockQuoteHistoryService.save(stockZhASpotList, now);
+            // 更新最后一次股票同步时间
+            long timestamp = now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+            save(stockDailyLatest, StockSyncConstant.STOCK_DAILY_LATEST, timestamp);
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void syncFundInfo(
+            List<FundNameEm> fundNameEms, List<FundPurchaseEm> fundPurchaseEms, StockSync stockSync, long timestamp
+    ) {
+        if (!CollectionUtils.isEmpty(fundNameEms) || !CollectionUtils.isEmpty(fundPurchaseEms)) {
+            stockFundInfoService.saveFundInfos(fundNameEms, fundPurchaseEms);
+            save(stockSync, StockSyncConstant.STOCK_FUND_INFO_LATEST, timestamp);
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void stockQuote(
+            List<StockZhASpot> stockZhASpotList, StockSync stockDailyLatest,
+            LocalDate startDate, LocalDate endDate, long timestamp
+    ) {
+        if (!CollectionUtils.isEmpty(stockZhASpotList)) {
+            LocalDateTime now = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime();
+
+            // 更新A股股票最新行情
+            List<StockQuote> save = stockQuoteService.save(stockZhASpotList, now);
+            Map<String, StockQuote> mapping = save.stream().collect(Collectors.toMap(StockQuote::getCode, o -> o));
+            // 更新A股股票历史最新行情
+            stockQuoteHistoryService.save(stockZhASpotList, now);
+
+            String start = startDate.toString();
+            String end = endDate.toString();
+            // 遍历每个股票，获取并保存指定区间的历史数据
+            for (StockZhASpot stock : stockZhASpotList) {
+                // 获取指定区间的历史数据
+                List<StockZhADaily> stockZhAHists = aKShareService.stockZhADaily(stock.getCode(), start, end, "qfq");
+
+                // 最大收盘
+                BigDecimal maxClose = stockZhAHists.stream()
+                        .map(StockZhADaily::getClose)
+                        .max(Comparator.naturalOrder())
+                        .orElse(BigDecimal.ZERO);
+
+                // 最小收盘
+                BigDecimal minClose = stockZhAHists.stream()
+                        .map(StockZhADaily::getClose)
+                        .min(Comparator.naturalOrder())
+                        .orElse(BigDecimal.ZERO);
+
+                StockQuote sq = mapping.get(stock.getCode());
+
+                // 更新股票价格区间信息
+                stockQuoteService.setPriceRange(sq, sq.getLatestPrice(), maxClose, minClose);
+                stockQuoteRepository.save(sq);
+
+                // 保存指定区间的历史数据
+                stockQuoteHistoryService.save(stockZhAHists, stock.getCode(), stock.getName(), now);
+            }
+
+            // 更新最后一次股票同步时间
+            save(stockDailyLatest, StockSyncConstant.STOCK_DAILY_LATEST, timestamp);
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void stockDupontGrowthValuation(Integer count) {
+        // 1. 取出上次同步到的 ID
+        StockSync stockSync = stockSyncRepository.findByName("stock_select_id");
+        if (stockSync == null) {
+            stockSync = new StockSync();
+            stockSync.setName("stock_select_id");
+            stockSync.setValue("0");
+            stockSyncRepository.save(stockSync);
+        }
+
+        Long lastSyncId = Long.parseLong(stockSync.getValue());
+
+        // 2. 查询需要同步的股票
+        Pageable pageable = PageRequest.of(0, count);
+        List<StockQuote> stockList = stockQuoteRepository.findByIdGreaterThanOrderByIdAsc(lastSyncId, pageable);
+
+        if (CollectionUtils.isEmpty(stockList)) {
+            log.info("没有需要同步的股票，所有股票已同步完成。");
+            return;
+        }
+
+        // 3. 遍历同步
+        for (StockQuote stock : stockList) {
+            log.info("同步股票：" + stock.getCode() + " - " + stock.getName());
+
+            // 同步计算杜邦分析、成长性、估值等数据
+            List<StockZhGrowthComparisonEm> stockZhGrowthComparisonEms = aKShareIndicatorService.stockZhGrowthComparisonEm(stock.getCode());
+            stockGrowthMetricsService.save(stock.getCode(), stock.getName(), stockZhGrowthComparisonEms);
+
+            List<StockZhValuationComparisonEm> stockZhValuationComparisonEms;
+            try {
+                stockZhValuationComparisonEms = aKShareIndicatorService.stockZhValuationComparisonEm(stock.getCode());
+                stockValuationMetricsService.save(stock.getCode(), stock.getName(), stockZhValuationComparisonEms);
+
+                List<StockZhDupontComparisonEm> stockZhDupontComparisonEms = aKShareIndicatorService.stockZhDupontComparisonEm(stock.getCode());
+                stockDupontAnalysisService.save(stock.getCode(), stock.getName(), stockZhDupontComparisonEms);
+
+                List<StockZhADaily> stockZhAHists = aKShareService.stockZhADaily(stock.getCode(), null, null, "qfq");
+
+                // 1. 最大收盘
+                BigDecimal maxClose = stockZhAHists.stream()
+                        .map(StockZhADaily::getClose)
+                        .max(Comparator.naturalOrder())
+                        .orElse(BigDecimal.ZERO);
+
+                // 2. 最小收盘
+                BigDecimal minClose = stockZhAHists.stream()
+                        .map(StockZhADaily::getClose)
+                        .min(Comparator.naturalOrder())
+                        .orElse(BigDecimal.ZERO);
+
+                // 3. 最大最小差值
+                BigDecimal diff = maxClose.subtract(minClose);
+
+                // 4. 最新一条收盘（假设 list 最后一个是最新的）
+                BigDecimal latestClose = stockZhAHists.get(stockZhAHists.size() - 1).getClose();
+
+                // 5. 计算百分比：(latest - min) / diff * 100
+                BigDecimal percent = BigDecimal.ZERO;
+                if (diff.compareTo(BigDecimal.ZERO) != 0) {
+                    percent = latestClose.subtract(minClose)
+                            .divide(diff, 4, RoundingMode.HALF_UP) // 保留4位小数
+                            .multiply(new BigDecimal("100"));
+                }
+
+                stock.setHistoryHightPrice(maxClose);
+                stock.setHistoryLowPrice(minClose);
+                stock.setPir(percent);
+
+                stockQuoteRepository.save(stock);
+
+                // 4. 每同步一条更新 stock_sync 表
+                stockSync.setValue(stock.getId().toString());
+                stockSyncRepository.save(stockSync);
+
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+                LocalDate start = LocalDate.parse("2021-01-01", formatter);
+                LocalDate end = LocalDate.parse("2026-02-23", formatter);
+
+                List<StockQuoteHistory> filteredList = stockZhAHists.stream()
+                        .filter(daily -> {
+                            LocalDate tradeDate = LocalDate.parse(daily.getDate().substring(0, 10), formatter);
+                            return !tradeDate.isBefore(start) && !tradeDate.isAfter(end);
+                        }).map(o -> {
+                            StockQuoteHistory stockQuoteHistory = new StockQuoteHistory();
+                            stockQuoteHistory.setCode(stock.getCode());
+                            stockQuoteHistory.setName(stock.getName());
+                            stockQuoteHistory.setOpenPrice(o.getOpen());
+                            stockQuoteHistory.setClosePrice(o.getClose());
+                            stockQuoteHistory.setHighPrice(o.getHigh());
+                            stockQuoteHistory.setLowPrice(o.getLow());
+                            stockQuoteHistory.setVolume(o.getVolume());
+                            stockQuoteHistory.setTurnover(o.getAmount());
+                            stockQuoteHistory.setQuoteTime("15:00:00");
+                            String tradeDate = o.getDate().substring(0, 10);
+                            stockQuoteHistory.setTradeDate(tradeDate);
+                            stockQuoteHistory.setCreatedAt(LocalDateTime.now());
+                            return stockQuoteHistory;
+                        })
+                        .toList();
+
+                stockQuoteHistoryRepository.saveAll(filteredList);
+            } catch (Exception e) {
+                log.error("stock_zh_a_growth_comparison请求失败", e);
+            }
+        }
+
+        log.info("本次同步完成，最后同步到ID：" + stockList.get(stockList.size() - 1).getId());
+    }
+
+    /**
+     * 股票分红
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void stockDividend(List<StockFhpsEm> stockFhpsEms, String date, StockSync stockSync) {
+        if (!CollectionUtils.isEmpty(stockFhpsEms)) {
+            stockDividendRepository.deleteByReportDate(date);
+
+            List<StockDividend> list = stockFhpsEms.stream().map(o -> {
+                StockDividend stockDividend = new StockDividend();
+                stockDividend.setStockCode(o.getCode());
+                stockDividend.setStockName(o.getName());
+                stockDividend.setBonusShareTotalRatio(o.getBonusShareTotalRatio());
+                stockDividend.setBonusShareRatio(o.getBonusShareRatio());
+                stockDividend.setTransferShareRatio(o.getTransferShareRatio());
+                stockDividend.setCashDividendRatio(o.getCashDividendRatio());
+                stockDividend.setDividendYield(o.getDividendYield());
+                stockDividend.setEarningsPerShare(o.getEarningsPerShare());
+                stockDividend.setNetAssetPerShare(o.getNetAssetPerShare());
+                stockDividend.setCapitalReservePerShare(o.getCapitalReservePerShare());
+                stockDividend.setUndistributedProfitPerShare(o.getUndistributedProfitPerShare());
+                stockDividend.setNetProfitGrowthRate(o.getNetProfitGrowthRate());
+                stockDividend.setTotalShares(o.getTotalShares());
+                stockDividend.setProposalAnnouncementDate(LocalDateTime.parse(o.getProposalAnnouncementDate()).toLocalDate());
+                if (o.getRecordDate() != null) {
+                    stockDividend.setRecordDate(LocalDateTime.parse(o.getRecordDate()).toLocalDate());
+                }
+                if (o.getExDividendDate() != null) {
+                    stockDividend.setExDividendDate(LocalDateTime.parse(o.getExDividendDate()).toLocalDate());
+                }
+                stockDividend.setLatestAnnouncementDate(LocalDateTime.parse(o.getLatestAnnouncementDate()).toLocalDate());
+                stockDividend.setPlanStatus(o.getPlanStatus());
+                stockDividend.setReportDate(date);
+                return stockDividend;
+            }).toList();
+
+            stockDividendRepository.saveAll(list);
+
+            if (stockSync == null) {
+                stockSync = new StockSync();
+                stockSync.setName(StockSyncConstant.STOCK_DIVIDEND_LATEST);
+            }
+            stockSync.setValue(String.valueOf(System.currentTimeMillis()));
+            stockSyncRepository.save(stockSync);
+        }
+    }
+
+    private void save(StockSync stockSync, String name, Object value) {
+        if (stockSync == null) {
+            stockSync = new StockSync();
+            stockSync.setName(name);
+        }
+        stockSync.setValue(value != null ? value.toString() : null);
+        stockSyncRepository.save(stockSync);
+    }
+
+    public String getStockDailyLatest() {
+        StockSync stockSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_DAILY_LATEST);
+
+        return Optional.ofNullable(stockSync)
+                .map(StockSync::getValue)
+                .map(Long::parseLong)
+                .map(DateUtils::formatEpochMilli)
+                .orElse("");
+    }
+
+    public String getStockBoardIndustryLatest() {
+        StockSync stockSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_BOARD_INDUSTRY_LATEST);
+
+        return Optional.ofNullable(stockSync)
+                .map(StockSync::getValue)
+                .map(Long::parseLong)
+                .map(DateUtils::formatEpochMilli)
+                .orElse("");
+    }
+
+    public String getStockFundInfoLatest() {
+        StockSync stockSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_FUND_INFO_LATEST);
+
+        return Optional.ofNullable(stockSync)
+                .map(StockSync::getValue)
+                .map(Long::parseLong)
+                .map(DateUtils::formatEpochMilli)
+                .orElse("");
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void stockBoardIndustry(
+            List<StockBoardIndustrySummaryThs> stockBoardList, List<StockBoardIndustryIndexThs> stockBoardDetailList,
+            LocalDate startDate, LocalDate endDate, StockSync stocBoardSync, long timestamp
+    ) {
+        if (!CollectionUtils.isEmpty(stockBoardList)) {
+            LocalDateTime now = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime();
+
+            // 更新A股板块行情最新
+            stockIndustryBoardService.save(stockBoardList, now);
+
+            // 更新A股板块历史行情
+            stockIndustryBoardHistoryService.save(stockBoardDetailList, startDate, endDate, now);
+
+            // 更新最后一次股票板块行情同步时间
+            save(stocBoardSync, StockSyncConstant.STOCK_BOARD_INDUSTRY_LATEST, timestamp);
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void stockBoardIndustryLatest(
+            List<StockBoardIndustrySummaryThs> stockBoardList, StockSync stocBoardSync, LocalDateTime now
+    ) {
+        if (!CollectionUtils.isEmpty(stockBoardList)) {
+            stockIndustryBoardService.save(stockBoardList, now);
+            long timestamp = now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+            save(stocBoardSync, StockSyncConstant.STOCK_BOARD_INDUSTRY_LATEST, timestamp);
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void stockBoardIndustryHistory(String boardName, List<StockBoardIndustryIndexThs> stockBoardDetailList, LocalDateTime now) {
+        if (!CollectionUtils.isEmpty(stockBoardDetailList)) {
+            stockIndustryBoardHistoryService.save(boardName, stockBoardDetailList, now);
+        }
+    }
+
+}

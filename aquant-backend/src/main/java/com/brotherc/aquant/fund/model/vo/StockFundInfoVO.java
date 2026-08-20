@@ -1,0 +1,57 @@
+package com.brotherc.aquant.fund.model.vo;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
+
+import java.time.LocalDate;
+
+@Data
+@Schema(description = "股票基金数据展示")
+public class StockFundInfoVO {
+
+    @Schema(description = "主键ID")
+    private Long id;
+
+    @Schema(description = "基金代码")
+    private String fundCode;
+
+    @Schema(description = "拼音缩写")
+    private String pinyinAbbr;
+
+    @Schema(description = "基金简称")
+    private String fundName;
+
+    @Schema(description = "基金类型")
+    private String fundType;
+
+    @Schema(description = "拼音全称")
+    private String pinyinFull;
+
+    @Schema(description = "购买起点")
+    private java.math.BigDecimal purchaseStartAmount;
+
+    @Schema(description = "日累计限定金额")
+    private java.math.BigDecimal dailyLimitAmount;
+
+    @Schema(description = "手续费")
+    private java.math.BigDecimal feeRate;
+
+    @Schema(description = "最新净值日期")
+    private LocalDate latestNetValueReportDate;
+
+    @Schema(description = "官方额度来源编码")
+    private String officialPurchaseSource;
+
+    @Schema(description = "官方额度来源名称")
+    private String officialPurchaseSourceName;
+
+    @Schema(description = "官方申购状态")
+    private String officialPurchaseStatus;
+
+    @Schema(description = "官方申购限额")
+    private java.math.BigDecimal officialPurchaseLimitAmount;
+
+    @Schema(description = "官方申购限制生效日期")
+    private LocalDate officialPurchaseEffectiveDate;
+
+}

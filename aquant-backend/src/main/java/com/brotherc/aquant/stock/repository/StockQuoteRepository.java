@@ -1,0 +1,38 @@
+package com.brotherc.aquant.stock.repository;
+
+import com.brotherc.aquant.stock.entity.StockQuote;
+import com.brotherc.aquant.stock.model.dto.StockQuoteSentimentDTO;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Repository
+public interface StockQuoteRepository extends JpaRepository<StockQuote, Long>, JpaSpecificationExecutor<StockQuote> {
+
+    List<StockQuote> findByIdGreaterThanOrderByIdAsc(Long id, Pageable pageable);
+
+    @Query("select max(s.createdAt) from StockQuote s")
+    LocalDateTime findMaxCreatedAt();
+
+    List<StockQuote> findByCreatedAt(LocalDateTime createdAt);
+
+    List<StockQuote> findByCodeIn(List<String> codeList);
+
+    StockQuote findByCode(String code);
+
+    List<StockQuote> findByNameContaining(String name);
+
+    List<StockQuote> findByCodeStartingWithIgnoreCase(String codePrefix);
+
+    long deleteByCodeIn(List<String> codeList);
+
+    @Query("select new com.brotherc.aquant.stock.model.dto.StockQuoteSentimentDTO(q.changePercent, q.turnover) " +
+            "from StockQuote q where q.changePercent is not null")
+    List<StockQuoteSentimentDTO> findAllSentimentQuotes();
+
+}

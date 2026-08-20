@@ -1,17 +1,17 @@
 package com.brotherc.aquant.task;
 
-import com.brotherc.aquant.entity.notification.StockNotification;
-import com.brotherc.aquant.entity.fund.StockFundInfo;
-import com.brotherc.aquant.entity.fund.StockFundNetValue;
-import com.brotherc.aquant.enums.NotificationAssetType;
-import com.brotherc.aquant.model.dto.tencent.TencentStockQuote;
-import com.brotherc.aquant.repository.fund.StockFundInfoRepository;
-import com.brotherc.aquant.repository.fund.StockFundNetValueRepository;
-import com.brotherc.aquant.repository.notification.StockNotificationRepository;
-import com.brotherc.aquant.service.notification.StockNotificationService;
-import com.brotherc.aquant.service.stock.TencentFinanceService;
-import com.brotherc.aquant.utils.StockHelper;
-import com.brotherc.aquant.utils.StockUtils;
+import com.brotherc.aquant.notification.entity.StockNotification;
+import com.brotherc.aquant.fund.entity.StockFundInfo;
+import com.brotherc.aquant.fund.entity.StockFundNetValue;
+import com.brotherc.aquant.common.enums.NotificationAssetType;
+import com.brotherc.aquant.integration.tencent.model.TencentStockQuote;
+import com.brotherc.aquant.fund.repository.StockFundInfoRepository;
+import com.brotherc.aquant.fund.repository.StockFundNetValueRepository;
+import com.brotherc.aquant.notification.repository.StockNotificationRepository;
+import com.brotherc.aquant.notification.service.StockNotificationService;
+import com.brotherc.aquant.integration.tencent.service.TencentFinanceService;
+import com.brotherc.aquant.common.utils.StockHelper;
+import com.brotherc.aquant.common.utils.StockUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -40,7 +40,7 @@ public class StockNotificationTask {
      * 股票通知轮询任务
      * 每5秒执行一次
      */
-    @Scheduled(fixedRate = 5000)
+    //@Scheduled(initialDelay = 0, fixedRate = 600000)
     public void checkNotifications() {
         checkStockNotifications();
         checkFundNotifications();
