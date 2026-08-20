@@ -48,11 +48,6 @@
             size="small"
             class="dupont-table"
           >
-            <template #headerCell="{ column }">
-              <template v-if="column.dataIndex === 'roe3yAvgRank'">
-                 <span style="color: var(--color-text-secondary)">排名</span>
-              </template>
-            </template>
             <template #bodyCell="{ column, text }">
               <template v-if="column.dataIndex === 'stockCode'">
                 <a-tag class="stock-code-tag">{{ text }}</a-tag>
@@ -127,13 +122,12 @@ const formatPercent = (val: any) => val != null ? `${val}%` : '-';
 const formatValue = (val: any) => val != null ? val : '-';
 
 const columns: TableProps['columns'] = [
-  { title: '排名', dataIndex: 'roe3yAvgRank', sorter: true, width: 80 },
-  { title: '代码', dataIndex: 'stockCode', width: 80 },
-  { title: '名称', dataIndex: 'stockName', width: 100 },
-  { title: 'ROE(%)', dataIndex: 'roeLastYA', sorter: true, width: 90 },
-  { title: '净利率(%)', dataIndex: 'netMarginLastYA', width: 90 },
-  { title: '资产周转率', dataIndex: 'assetTurnoverLastYA', width: 100 },
-  { title: '权益乘数', dataIndex: 'equityMultiplierLastYA', width: 100 },
+  { title: '代码', dataIndex: 'stockCode', width: 90 },
+  { title: '名称', dataIndex: 'stockName', width: 110 },
+  { title: 'ROE(%)', dataIndex: 'roeLastYA', sorter: true, width: 100 },
+  { title: '净利率(%)', dataIndex: 'netMarginLastYA', width: 100 },
+  { title: '资产周转率', dataIndex: 'assetTurnoverLastYA', width: 110 },
+  { title: '权益乘数', dataIndex: 'equityMultiplierLastYA', width: 110 },
 ];
 
 const detailColumns: TableProps['columns'] = [

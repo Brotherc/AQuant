@@ -59,11 +59,6 @@
             size="small"
             class="growth-table"
           >
-            <template #headerCell="{ column }">
-              <template v-if="column.dataIndex === 'epsGrowth3yCagrRank'">
-                 <span style="color: var(--color-text-secondary)">排名</span>
-              </template>
-            </template>
             <template #bodyCell="{ column, text }">
               <template v-if="column.dataIndex === 'stockCode'">
                 <a-tag class="stock-code-tag">{{ text }}</a-tag>
@@ -144,12 +139,11 @@ const formatPercent = (val: any) => {
 }
 
 const columns: TableProps['columns'] = [
-  { title: '排名', dataIndex: 'epsGrowth3yCagrRank', sorter: true, width: 80 },
-  { title: '代码', dataIndex: 'stockCode', width: 80 },
-  { title: '名称', dataIndex: 'stockName', width: 100 },
-  { title: '每股收益(TTM)', dataIndex: 'epsGrowthTtm', sorter: true, width: 120 },
-  { title: '营收增长(TTM)', dataIndex: 'revenueGrowthTtm', sorter: true, width: 120 },
-  { title: '净利增长(TTM)', dataIndex: 'netProfitGrowthTtm', sorter: true, width: 120 },
+  { title: '代码', dataIndex: 'stockCode', width: 90 },
+  { title: '名称', dataIndex: 'stockName', width: 110 },
+  { title: '每股收益(TTM)', dataIndex: 'epsGrowthTtm', sorter: true, width: 130 },
+  { title: '营收增长(TTM)', dataIndex: 'revenueGrowthTtm', sorter: true, width: 130 },
+  { title: '净利增长(TTM)', dataIndex: 'netProfitGrowthTtm', sorter: true, width: 130 },
 ];
 
 const detailColumns: TableProps['columns'] = [
@@ -226,7 +220,7 @@ const pagination = reactive({
   showTotal: (total: number) => `共 ${total} 条数据`,
 });
 
-const sortState = ref<string[]>(['epsGrowth3yCagrRank,asc']);
+const sortState = ref<string[]>(['id,asc']);
 
 const fetchData = async () => {
   loading.value = true;
