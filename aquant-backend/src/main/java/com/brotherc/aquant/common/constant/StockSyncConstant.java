@@ -29,6 +29,8 @@ public class StockSyncConstant {
 
     public static final String STOCK_CCB_FUND_PURCHASE_LIMIT_LATEST = "stock_ccb_fund_purchase_limit_latest";
 
+    public static final String STOCK_GF_FUND_PURCHASE_LIMIT_LATEST = "stock_gf_fund_purchase_limit_latest";
+
     public static final String STOCK_INDEX_LATEST = "stock_index_latest";
 
 }

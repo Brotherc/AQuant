@@ -33,6 +33,31 @@ public class StockFundPurchaseLimitService {
     private final StockFundAnnouncementSyncRepository stockFundAnnouncementSyncRepository;
 
     @Transactional(rollbackFor = Exception.class)
+    public void saveCurrentRules(
+            String source, String sourceName, List<? extends FundPurchaseLimitRule> rules
+    ) {
+        for (FundPurchaseLimitRule rule : rules) {
+            StockFundPurchaseLimit entity = stockFundPurchaseLimitRepository
+                    .findBySourceAndFundCodeAndSalesChannelAndBusinessType(
+                            source, rule.getFundCode(), rule.getSalesChannel(), rule.getBusinessType()
+                    ).orElseGet(StockFundPurchaseLimit::new);
+            entity.setFundCode(rule.getFundCode());
+            entity.setSource(source);
+            entity.setSourceName(sourceName);
+            entity.setSalesChannel(rule.getSalesChannel());
+            entity.setSalesChannelName(FundPurchaseLimitConstant.CHANNEL_DIRECT.equals(rule.getSalesChannel())
+                    ? FundPurchaseLimitConstant.CHANNEL_DIRECT_NAME
+                    : FundPurchaseLimitConstant.CHANNEL_ALL_NAME);
+            entity.setBusinessType(rule.getBusinessType());
+            entity.setStatus(rule.getStatus());
+            entity.setLimitAmount(rule.getLimitAmount());
+            entity.setCurrency(rule.getCurrency());
+            entity.setEffectiveDate(rule.getEffectiveDate());
+            stockFundPurchaseLimitRepository.save(entity);
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
     public void saveSuccess(
             String source, String sourceName, FundPurchaseLimitAnnouncement announcement,
             FundPurchaseLimitAnnouncementDetail detail, String attachmentHash,
