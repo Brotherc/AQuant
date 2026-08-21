@@ -151,11 +151,11 @@ const detailColumns: TableProps['columns'] = [
     title: '分析指标', 
     dataIndex: 'metric',
     customCell: (_, index) => {
-      if (index === 0 || index === 6) {
-        return { rowSpan: 6, class: 'metric-group-start-cell' };
+      if (index === 0 || index === 3) {
+        return { rowSpan: 3, class: 'metric-group-start-cell' };
       }
-      if (index === 12) {
-        return { rowSpan: 6 };
+      if (index === 6) {
+        return { rowSpan: 3 };
       }
       return { rowSpan: 0 };
     }
@@ -170,31 +170,22 @@ const detailTableData = computed(() => {
   if (!selectedStock.value) return [];
   const s = selectedStock.value;
   return [
-    { key: 'eps_27E', metric: '基本每股收益增长率', period: '27E', stockValue: formatPercent(s.epsGrowthNext2YE), industryAvg: formatPercent(s.epsGrowthNext2YEIndustryAvg), industryMed: formatPercent(s.epsGrowthNext2YEIndustryMed) },
-    { key: 'eps_26E', metric: '基本每股收益增长率', period: '26E', stockValue: formatPercent(s.epsGrowthNextYE), industryAvg: formatPercent(s.epsGrowthNextYEIndustryAvg), industryMed: formatPercent(s.epsGrowthNextYEIndustryMed) },
-    { key: 'eps_25E', metric: '基本每股收益增长率', period: '25E', stockValue: formatPercent(s.epsGrowthThisYE), industryAvg: formatPercent(s.epsGrowthThisYEIndustryAvg), industryMed: formatPercent(s.epsGrowthThisYEIndustryMed) },
     { key: 'eps_TTM', metric: '基本每股收益增长率', period: 'TTM', stockValue: formatPercent(s.epsGrowthTtm), industryAvg: formatPercent(s.epsGrowthTtmIndustryAvg), industryMed: formatPercent(s.epsGrowthTtmIndustryMed) },
-    { key: 'eps_24A', metric: '基本每股收益增长率', period: '24A', stockValue: formatPercent(s.epsGrowthLastYA), industryAvg: formatPercent(s.epsGrowthLastYAIndustryAvg), industryMed: formatPercent(s.epsGrowthLastYAIndustryMed) },
+    { key: 'eps_lastYA', metric: '基本每股收益增长率', period: '去年', stockValue: formatPercent(s.epsGrowthLastYA), industryAvg: formatPercent(s.epsGrowthLastYAIndustryAvg), industryMed: formatPercent(s.epsGrowthLastYAIndustryMed) },
     { key: 'eps_3y', metric: '基本每股收益增长率', period: '3年复合', stockValue: formatPercent(s.epsGrowth3yCagr), industryAvg: formatPercent(s.epsGrowth3yCagrIndustryAvg), industryMed: formatPercent(s.epsGrowth3yCagrIndustryMed) },
 
-    { key: 'rev_27E', metric: '营业收入增长率', period: '27E', stockValue: formatPercent(s.revenueGrowthNext2YE), industryAvg: formatPercent(s.revenueGrowthNext2YEIndustryAvg), industryMed: formatPercent(s.revenueGrowthNext2YEIndustryMed) },
-    { key: 'rev_26E', metric: '营业收入增长率', period: '26E', stockValue: formatPercent(s.revenueGrowthNextYE), industryAvg: formatPercent(s.revenueGrowthNextYEIndustryAvg), industryMed: formatPercent(s.revenueGrowthNextYEIndustryMed) },
-    { key: 'rev_25E', metric: '营业收入增长率', period: '25E', stockValue: formatPercent(s.revenueGrowthThisYE), industryAvg: formatPercent(s.revenueGrowthThisYEIndustryAvg), industryMed: formatPercent(s.revenueGrowthThisYEIndustryMed) },
     { key: 'rev_TTM', metric: '营业收入增长率', period: 'TTM', stockValue: formatPercent(s.revenueGrowthTtm), industryAvg: formatPercent(s.revenueGrowthTtmIndustryAvg), industryMed: formatPercent(s.revenueGrowthTtmIndustryMed) },
-    { key: 'rev_24A', metric: '营业收入增长率', period: '24A', stockValue: formatPercent(s.revenueGrowthLastYA), industryAvg: formatPercent(s.revenueGrowthLastYAIndustryAvg), industryMed: formatPercent(s.revenueGrowthLastYAIndustryMed) },
+    { key: 'rev_lastYA', metric: '营业收入增长率', period: '去年', stockValue: formatPercent(s.revenueGrowthLastYA), industryAvg: formatPercent(s.revenueGrowthLastYAIndustryAvg), industryMed: formatPercent(s.revenueGrowthLastYAIndustryMed) },
     { key: 'rev_3y', metric: '营业收入增长率', period: '3年复合', stockValue: formatPercent(s.revenueGrowth3yCagr), industryAvg: formatPercent(s.revenueGrowth3yCagrIndustryAvg), industryMed: formatPercent(s.revenueGrowth3yCagrIndustryMed) },
 
-    { key: 'net_27E', metric: '净利润增长率', period: '27E', stockValue: formatPercent(s.netProfitGrowthNext2YE), industryAvg: formatPercent(s.netProfitGrowthNext2YEIndustryAvg), industryMed: formatPercent(s.netProfitGrowthNext2YEIndustryMed) },
-    { key: 'net_26E', metric: '净利润增长率', period: '26E', stockValue: formatPercent(s.netProfitGrowthNextYE), industryAvg: formatPercent(s.netProfitGrowthNextYEIndustryAvg), industryMed: formatPercent(s.netProfitGrowthNextYEIndustryMed) },
-    { key: 'net_25E', metric: '净利润增长率', period: '25E', stockValue: formatPercent(s.netProfitGrowthThisYE), industryAvg: formatPercent(s.netProfitGrowthThisYEIndustryAvg), industryMed: formatPercent(s.netProfitGrowthThisYEIndustryMed) },
     { key: 'net_TTM', metric: '净利润增长率', period: 'TTM', stockValue: formatPercent(s.netProfitGrowthTtm), industryAvg: formatPercent(s.netProfitGrowthTtmIndustryAvg), industryMed: formatPercent(s.netProfitGrowthTtmIndustryMed) },
-    { key: 'net_24A', metric: '净利润增长率', period: '24A', stockValue: formatPercent(s.netProfitGrowthLastYA), industryAvg: formatPercent(s.netProfitGrowthLastYAIndustryAvg), industryMed: formatPercent(s.netProfitGrowthLastYAIndustryMed) },
+    { key: 'net_lastYA', metric: '净利润增长率', period: '去年', stockValue: formatPercent(s.netProfitGrowthLastYA), industryAvg: formatPercent(s.netProfitGrowthLastYAIndustryAvg), industryMed: formatPercent(s.netProfitGrowthLastYAIndustryMed) },
     { key: 'net_3y', metric: '净利润增长率', period: '3年复合', stockValue: formatPercent(s.netProfitGrowth3yCagr), industryAvg: formatPercent(s.netProfitGrowth3yCagrIndustryAvg), industryMed: formatPercent(s.netProfitGrowth3yCagrIndustryMed) },
   ];
 });
 
 const detailRowClassName = (_record: any, index: number) => {
-  if (index === 5 || index === 11) {
+  if (index === 2 || index === 5) {
     return 'metric-group-divider';
   }
   return '';

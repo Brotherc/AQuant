@@ -154,24 +154,24 @@ const detailTableData = computed(() => {
   if (!selectedStock.value) return [];
   const s = selectedStock.value;
   return [
-    { key: 'roe_25A', metric: 'ROE(%)', period: '25A', stockValue: formatPercent(s.roeLastYA), industryAvg: formatPercent(s.roeLastYAIndustryAvg), industryMed: formatPercent(s.roeLastYAIndustryMed) },
-    { key: 'roe_24A', metric: 'ROE(%)', period: '24A', stockValue: formatPercent(s.roeLast2yA), industryAvg: formatPercent(s.roeLast2yAIndustryAvg), industryMed: formatPercent(s.roeLast2yAIndustryMed) },
-    { key: 'roe_23A', metric: 'ROE(%)', period: '23A', stockValue: formatPercent(s.roeLast3yA), industryAvg: formatPercent(s.roeLast3yAIndustryAvg), industryMed: formatPercent(s.roeLast3yAIndustryMed) },
+    { key: 'roe_lastYA', metric: 'ROE(%)', period: '去年', stockValue: formatPercent(s.roeLastYA), industryAvg: formatPercent(s.roeLastYAIndustryAvg), industryMed: formatPercent(s.roeLastYAIndustryMed) },
+    { key: 'roe_last2yA', metric: 'ROE(%)', period: '前年', stockValue: formatPercent(s.roeLast2yA), industryAvg: formatPercent(s.roeLast2yAIndustryAvg), industryMed: formatPercent(s.roeLast2yAIndustryMed) },
+    { key: 'roe_last3yA', metric: 'ROE(%)', period: '大前年', stockValue: formatPercent(s.roeLast3yA), industryAvg: formatPercent(s.roeLast3yAIndustryAvg), industryMed: formatPercent(s.roeLast3yAIndustryMed) },
     { key: 'roe_3y', metric: 'ROE(%)', period: '3年平均', stockValue: formatPercent(s.roe3yAvg), industryAvg: formatPercent(s.roe3yAvgIndustryAvg), industryMed: formatPercent(s.roe3yAvgIndustryMed) },
 
-    { key: 'net_25A', metric: '净利率(%)', period: '25A', stockValue: formatPercent(s.netMarginLastYA), industryAvg: formatPercent(s.netMarginLastYAIndustryAvg), industryMed: formatPercent(s.netMarginLastYAIndustryMed) },
-    { key: 'net_24A', metric: '净利率(%)', period: '24A', stockValue: formatPercent(s.netMarginLast2yA), industryAvg: formatPercent(s.netMarginLast2yAIndustryAvg), industryMed: formatPercent(s.netMarginLast2yAIndustryMed) },
-    { key: 'net_23A', metric: '净利率(%)', period: '23A', stockValue: formatPercent(s.netMarginLast3yA), industryAvg: formatPercent(s.netMarginLast3yAIndustryAvg), industryMed: formatPercent(s.netMarginLast3yAIndustryMed) },
+    { key: 'net_lastYA', metric: '净利率(%)', period: '去年', stockValue: formatPercent(s.netMarginLastYA), industryAvg: formatPercent(s.netMarginLastYAIndustryAvg), industryMed: formatPercent(s.netMarginLastYAIndustryMed) },
+    { key: 'net_last2yA', metric: '净利率(%)', period: '前年', stockValue: formatPercent(s.netMarginLast2yA), industryAvg: formatPercent(s.netMarginLast2yAIndustryAvg), industryMed: formatPercent(s.netMarginLast2yAIndustryMed) },
+    { key: 'net_last3yA', metric: '净利率(%)', period: '大前年', stockValue: formatPercent(s.netMarginLast3yA), industryAvg: formatPercent(s.netMarginLast3yAIndustryAvg), industryMed: formatPercent(s.netMarginLast3yAIndustryMed) },
     { key: 'net_3y', metric: '净利率(%)', period: '3年平均', stockValue: formatPercent(s.netMargin3yAvg), industryAvg: formatPercent(s.netMargin3yAvgIndustryAvg), industryMed: formatPercent(s.netMargin3yAvgIndustryMed) },
 
-    { key: 'ast_25A', metric: '资产周转率', period: '25A', stockValue: formatValue(s.assetTurnoverLastYA), industryAvg: formatValue(s.assetTurnoverLastYAIndustryAvg), industryMed: formatValue(s.assetTurnoverLastYAIndustryMed) },
-    { key: 'ast_24A', metric: '资产周转率', period: '24A', stockValue: formatValue(s.assetTurnoverLast2yA), industryAvg: formatValue(s.assetTurnoverLast2yAIndustryAvg), industryMed: formatValue(s.assetTurnoverLast2yAIndustryMed) },
-    { key: 'ast_23A', metric: '资产周转率', period: '23A', stockValue: formatValue(s.assetTurnoverLast3yA), industryAvg: formatValue(s.assetTurnoverLast3yAIndustryAvg), industryMed: formatValue(s.assetTurnoverLast3yAIndustryMed) },
+    { key: 'ast_lastYA', metric: '资产周转率', period: '去年', stockValue: formatValue(s.assetTurnoverLastYA), industryAvg: formatValue(s.assetTurnoverLastYAIndustryAvg), industryMed: formatValue(s.assetTurnoverLastYAIndustryMed) },
+    { key: 'ast_last2yA', metric: '资产周转率', period: '前年', stockValue: formatValue(s.assetTurnoverLast2yA), industryAvg: formatValue(s.assetTurnoverLast2yAIndustryAvg), industryMed: formatValue(s.assetTurnoverLast2yAIndustryMed) },
+    { key: 'ast_last3yA', metric: '资产周转率', period: '大前年', stockValue: formatValue(s.assetTurnoverLast3yA), industryAvg: formatValue(s.assetTurnoverLast3yAIndustryAvg), industryMed: formatValue(s.assetTurnoverLast3yAIndustryMed) },
     { key: 'ast_3y', metric: '资产周转率', period: '3年平均', stockValue: formatValue(s.assetTurnover3yAvg), industryAvg: formatValue(s.assetTurnover3yAvgIndustryAvg), industryMed: formatValue(s.assetTurnover3yAvgIndustryMed) },
 
-    { key: 'eq_25A', metric: '权益乘数', period: '25A', stockValue: formatValue(s.equityMultiplierLastYA), industryAvg: formatValue(s.equityMultiplierLastYAIndustryAvg), industryMed: formatValue(s.equityMultiplierLastYAIndustryMed) },
-    { key: 'eq_24A', metric: '权益乘数', period: '24A', stockValue: formatValue(s.equityMultiplierLast2yA), industryAvg: formatValue(s.equityMultiplierLast2yAIndustryAvg), industryMed: formatValue(s.equityMultiplierLast2yAIndustryMed) },
-    { key: 'eq_23A', metric: '权益乘数', period: '23A', stockValue: formatValue(s.equityMultiplierLast3yA), industryAvg: formatValue(s.equityMultiplierLast3yAIndustryAvg), industryMed: formatValue(s.equityMultiplierLast3yAIndustryMed) },
+    { key: 'eq_lastYA', metric: '权益乘数', period: '去年', stockValue: formatValue(s.equityMultiplierLastYA), industryAvg: formatValue(s.equityMultiplierLastYAIndustryAvg), industryMed: formatValue(s.equityMultiplierLastYAIndustryMed) },
+    { key: 'eq_last2yA', metric: '权益乘数', period: '前年', stockValue: formatValue(s.equityMultiplierLast2yA), industryAvg: formatValue(s.equityMultiplierLast2yAIndustryAvg), industryMed: formatValue(s.equityMultiplierLast2yAIndustryMed) },
+    { key: 'eq_last3yA', metric: '权益乘数', period: '大前年', stockValue: formatValue(s.equityMultiplierLast3yA), industryAvg: formatValue(s.equityMultiplierLast3yAIndustryAvg), industryMed: formatValue(s.equityMultiplierLast3yAIndustryMed) },
     { key: 'eq_3y', metric: '权益乘数', period: '3年平均', stockValue: formatValue(s.equityMultiplier3yAvg), industryAvg: formatValue(s.equityMultiplier3yAvgIndustryAvg), industryMed: formatValue(s.equityMultiplier3yAvgIndustryMed) },
   ];
 });
