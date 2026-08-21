@@ -40,7 +40,7 @@ public class StockNotificationTask {
      * 股票通知轮询任务
      * 每5秒执行一次
      */
-    //@Scheduled(initialDelay = 0, fixedRate = 600000)
+    @Scheduled(initialDelay = 0, fixedRate = 600000)
     public void checkNotifications() {
         checkStockNotifications();
         checkFundNotifications();
