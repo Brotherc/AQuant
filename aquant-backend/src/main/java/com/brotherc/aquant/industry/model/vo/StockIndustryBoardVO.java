@@ -21,13 +21,13 @@ public class StockIndustryBoardVO {
     @Schema(description = "涨跌幅(%)")
     private BigDecimal changePercent;
 
-    @Schema(description = "总成交量")
+    @Schema(description = "总成交量(万手)")
     private BigDecimal totalVolume;
 
-    @Schema(description = "总成交额")
+    @Schema(description = "总成交额(亿元)")
     private BigDecimal totalAmount;
 
-    @Schema(description = "净流入")
+    @Schema(description = "净流入(亿元)")
     private BigDecimal netInflow;
 
     @Schema(description = "上涨家数")

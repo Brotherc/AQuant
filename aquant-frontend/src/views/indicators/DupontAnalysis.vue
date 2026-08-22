@@ -53,10 +53,10 @@
                 <a-tag class="stock-code-tag">{{ text }}</a-tag>
               </template>
               <template v-else-if="['roeLastYA', 'netMarginLastYA'].includes(column.dataIndex as string)">
-                <span>{{ text != null ? text + '%' : '-' }}</span>
+                <span>{{ formatPercent(text) }}</span>
               </template>
               <template v-else-if="['assetTurnoverLastYA', 'equityMultiplierLastYA'].includes(column.dataIndex as string)">
-                <span>{{ text != null ? text : '-' }}</span>
+                <span>{{ formatValue(text) }}</span>
               </template>
             </template>
           </a-table>
@@ -118,8 +118,17 @@ const dataSource = ref<StockDupontAnalysis[]>([]);
 const selectedStock = ref<StockDupontAnalysis | null>(null);
 const isLoggedIn = ref(!!localStorage.getItem('token'));
 
-const formatPercent = (val: any) => val != null ? `${val}%` : '-';
-const formatValue = (val: any) => val != null ? val : '-';
+const formatPercent = (val: any) => {
+  if (val == null) return '-';
+  const num = Number(val);
+  return isNaN(num) ? '-' : `${num.toFixed(2)}%`;
+};
+
+const formatValue = (val: any) => {
+  if (val == null) return '-';
+  const num = Number(val);
+  return isNaN(num) ? '-' : num.toFixed(2);
+};
 
 const columns: TableProps['columns'] = [
   { title: '代码', dataIndex: 'stockCode', width: 90 },
