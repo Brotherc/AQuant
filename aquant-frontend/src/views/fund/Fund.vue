@@ -66,8 +66,8 @@
               <a-descriptions-item label="基金类型">
                 <a-tag color="blue">{{ selectedFund.fundType }}</a-tag>
               </a-descriptions-item>
-              <a-descriptions-item label="购买起点">{{ selectedFund.purchaseStartAmount != null ? formatAmount(selectedFund.purchaseStartAmount) + '元' : '-' }}</a-descriptions-item>
-              <a-descriptions-item label="天天基金限额">{{ selectedFund.dailyLimitAmount != null ? formatAmount(selectedFund.dailyLimitAmount) + '元' : '-' }}</a-descriptions-item>
+              <a-descriptions-item label="购买起点">{{ selectedFund.purchaseStartAmount != null ? formatAmount(selectedFund.purchaseStartAmount) : '-' }}</a-descriptions-item>
+              <a-descriptions-item label="基金限额">{{ selectedFund.dailyLimitAmount != null ? formatAmount(selectedFund.dailyLimitAmount) : '-' }}</a-descriptions-item>
               <a-descriptions-item label="手续费">{{ selectedFund.feeRate != null ? selectedFund.feeRate + '%' : '-' }}</a-descriptions-item>
             </a-descriptions>
             <div class="official-limit-section">
@@ -253,7 +253,7 @@ const columns = [
   { title: '代码', dataIndex: 'fundCode', key: 'fundCode', width: 80 },
   { title: '简称', dataIndex: 'fundName', key: 'fundName' },
   { title: '类型', dataIndex: 'fundType', key: 'fundType', width: 140 },
-  { title: '天天基金限额', dataIndex: 'dailyLimitAmount', key: 'dailyLimitAmount', width: 130, sorter: true, customRender: ({ text }: any) => text != null ? formatAmount(text) : '-' },
+  { title: '基金限额', dataIndex: 'dailyLimitAmount', key: 'dailyLimitAmount', width: 130, sorter: true, customRender: ({ text }: any) => text != null ? formatAmount(text) : '-' },
   { title: '官方申购额度', key: 'officialPurchaseLimit', width: 130 }
 ]
 
@@ -262,14 +262,14 @@ const formatBusinessType = (businessType: StockFundPurchaseLimitVO['businessType
 }
 
 const formatOfficialLimit = (
-  status?: StockFundPurchaseLimitVO['status'], amount?: number, currency?: string,
+  status?: StockFundPurchaseLimitVO['status'], amount?: number, _currency?: string,
   businessType?: StockFundPurchaseLimitVO['businessType']
 ) => {
   if (!status) return '-'
   if (status === 'SUSPENDED') return businessType === 'RECURRING_INVESTMENT' ? '暂停定投' : '暂停申购'
   if (status === 'OPEN') return '不限额'
   if (amount == null) return '-'
-  return `${formatAmount(amount)}${currency === 'USD' ? '美元' : '元'}`
+  return formatAmount(amount)
 }
 
 const loadData = async () => {

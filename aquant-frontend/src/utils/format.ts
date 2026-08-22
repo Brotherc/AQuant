@@ -27,7 +27,7 @@ export const formatAmount = (value: number | null | undefined) => {
     { threshold: 100000000, divisor: 100000000, suffix: '亿' },
     { threshold: 10000, divisor: 10000, suffix: '万' },
     { threshold: 1000, divisor: 1000, suffix: '千' },
-  ])
+  ], '元')
 }
 
 export const formatVolume = (value: number | null | undefined) => {
