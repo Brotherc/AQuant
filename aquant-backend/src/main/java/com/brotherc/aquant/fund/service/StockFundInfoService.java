@@ -13,7 +13,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -121,6 +123,15 @@ public class StockFundInfoService {
     }
 
     public Page<StockFundInfoVO> getPage(StockFundInfoPageReqVO reqVO, Pageable pageable) {
+        Sort sort = pageable.getSort();
+        if (sort.isSorted() && sort.getOrderFor("dailyLimitAmount") != null && sort.getOrderFor("fundName") == null) {
+            pageable = PageRequest.of(
+                    pageable.getPageNumber(),
+                    pageable.getPageSize(),
+                    sort.and(Sort.by(Sort.Direction.ASC, "fundName"))
+            );
+        }
+
         Specification<StockFundInfo> specification = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
