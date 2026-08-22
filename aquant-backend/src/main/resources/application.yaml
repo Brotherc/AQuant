@@ -58,6 +58,11 @@ druid:
 
 akshare-address: http://127.0.0.1:8080
 ccbfund-address: https://www.ccbfund.cn
+gffund-address: https://www.gffunds.com.cn
+morganfund-address: https://www.cifm.com
+efund-address: https://www.efunds.com.cn
+efund-api-address: https://api.efunds.com.cn
+efund-cdn-address: https://cdn.efunds.com.cn
 
 aquant:
   stock:
