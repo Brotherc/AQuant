@@ -246,6 +246,9 @@ public class CCBFundAnnouncementParser {
     }
 
     private boolean isOtherSalesChannel(String title, String text) {
+        if (title.contains("销售机构") || title.contains("费率优惠") || title.contains("代销机构")) {
+            return true;
+        }
         Matcher matcher = Pattern.compile("在([^，。]{1,30})渠道").matcher(title);
         return matcher.find() && !matcher.group(1).contains("直销");
     }

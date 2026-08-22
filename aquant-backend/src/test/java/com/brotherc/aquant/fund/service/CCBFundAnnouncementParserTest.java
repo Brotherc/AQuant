@@ -78,4 +78,17 @@ class CCBFundAnnouncementParserTest {
         assertThat(result.isMatchedTargetFund()).isFalse();
         assertThat(result.getRules()).isEmpty();
     }
+
+    @Test
+    void shouldIgnoreSalesAgencyFeeDiscountAnnouncementContainingTargetFund() {
+        CCBFundAnnouncementParseResult result = parser.parseExtractedDocument(
+                "建信基金关于增加某公司为旗下销售机构并参加申购费率优惠活动的公告",
+                "基金代码 012752 539001",
+                List.of(List.of("基金代码", "012752", "539001")),
+                Set.of("012752", "539001")
+        );
+
+        assertThat(result.isMatchedTargetFund()).isFalse();
+        assertThat(result.getRules()).isEmpty();
+    }
 }
