@@ -71,6 +71,15 @@ public class StockFundPurchaseLimitService {
             if (entity.getId() != null && isOlderRule(entity, rule, announcement.getAnnouncementDate())) {
                 continue;
             }
+            if (FundPurchaseLimitConstant.CHANNEL_ALL.equals(rule.getSalesChannel())) {
+                stockFundPurchaseLimitRepository
+                        .findBySourceAndFundCodeAndSalesChannelAndBusinessType(
+                                source, rule.getFundCode(), FundPurchaseLimitConstant.CHANNEL_DIRECT,
+                                rule.getBusinessType()
+                        )
+                        .filter(directRule -> !isOlderRule(directRule, rule, announcement.getAnnouncementDate()))
+                        .ifPresent(stockFundPurchaseLimitRepository::delete);
+            }
             entity.setFundCode(rule.getFundCode());
             entity.setSource(source);
             entity.setSourceName(sourceName);
@@ -209,16 +218,15 @@ public class StockFundPurchaseLimitService {
     }
 
     private boolean isPreferredSummary(StockFundPurchaseLimit incoming, StockFundPurchaseLimit existing) {
-        int priorityComparison = Integer.compare(channelPriority(incoming), channelPriority(existing));
-        if (priorityComparison != 0) {
-            return priorityComparison < 0;
-        }
         if (incoming.getEffectiveDate() != null && existing.getEffectiveDate() != null
                 && !incoming.getEffectiveDate().equals(existing.getEffectiveDate())) {
             return incoming.getEffectiveDate().isAfter(existing.getEffectiveDate());
         }
-        return incoming.getAnnouncementDate() != null && (existing.getAnnouncementDate() == null
-                || incoming.getAnnouncementDate().isAfter(existing.getAnnouncementDate()));
+        if (incoming.getAnnouncementDate() != null && existing.getAnnouncementDate() != null
+                && !incoming.getAnnouncementDate().equals(existing.getAnnouncementDate())) {
+            return incoming.getAnnouncementDate().isAfter(existing.getAnnouncementDate());
+        }
+        return channelPriority(incoming) < channelPriority(existing);
     }
 
     private void saveAnnouncementStatus(

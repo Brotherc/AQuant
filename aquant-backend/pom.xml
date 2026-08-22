@@ -20,6 +20,7 @@
     <properties>
         <java.version>17</java.version>
         <poi.version>5.5.1</poi.version>
+        <pdfbox.version>2.0.31</pdfbox.version>
     </properties>
 
     <dependencies>
@@ -78,6 +79,12 @@
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
             <version>${poi.version}</version>
+        </dependency>
+        <!-- 摩根基金额度公告使用 PDF 附件 -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>${pdfbox.version}</version>
         </dependency>
 
         <!-- Spring Data JPA -->
