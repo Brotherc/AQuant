@@ -234,6 +234,8 @@ import StockIndexHistoryChart from './components/StockIndexHistoryChart.vue';
 const loading = ref(false);
 const chartRef = ref<HTMLDivElement | null>(null);
 let chartInstance: echarts.ECharts | null = null;
+let chartResizeObserver: ResizeObserver | null = null;
+let chartResizeFrame: number | null = null;
 
 const indexModalVisible = ref(false);
 const selectedIndexCard = ref<StockIndexCardVO | null>(null);
@@ -624,14 +626,38 @@ const handleResize = () => {
   }
 };
 
+const observeChartSize = () => {
+  if (!chartRef.value || typeof ResizeObserver === 'undefined') return;
+  chartResizeObserver?.disconnect();
+  chartResizeObserver = new ResizeObserver(entries => {
+    const entry = entries[0];
+    if (!entry || entry.contentRect.width <= 0 || entry.contentRect.height <= 0) return;
+    if (chartResizeFrame !== null) {
+      cancelAnimationFrame(chartResizeFrame);
+    }
+    chartResizeFrame = requestAnimationFrame(() => {
+      chartResizeFrame = null;
+      chartInstance?.resize();
+    });
+  });
+  chartResizeObserver.observe(chartRef.value);
+};
+
 onMounted(() => {
   loadData();
+  nextTick(observeChartSize);
   window.addEventListener('resize', handleResize);
   window.addEventListener('mousemove', handleGraphMouseMove);
   window.addEventListener('mouseup', handleGraphMouseUp);
 });
 
 onUnmounted(() => {
+  chartResizeObserver?.disconnect();
+  chartResizeObserver = null;
+  if (chartResizeFrame !== null) {
+    cancelAnimationFrame(chartResizeFrame);
+    chartResizeFrame = null;
+  }
   window.removeEventListener('resize', handleResize);
   window.removeEventListener('mousemove', handleGraphMouseMove);
   window.removeEventListener('mouseup', handleGraphMouseUp);
