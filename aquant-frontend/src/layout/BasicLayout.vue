@@ -85,14 +85,15 @@
     <a-layout-content class="c-content">
       <div class="content-container">
         <div v-if="currentRouteMeta" class="page-context">
-          <a-breadcrumb class="page-breadcrumb">
-            <a-breadcrumb-item>
+          <a-breadcrumb v-if="currentRouteMeta.parent || currentRouteMeta.child" class="page-breadcrumb">
+            <a-breadcrumb-item v-if="currentRouteMeta.parent && currentRouteMeta.parent !== currentRouteMeta.child">
               <span class="page-breadcrumb-parent">{{ currentRouteMeta.parent }}</span>
             </a-breadcrumb-item>
-            <a-breadcrumb-item>
+            <a-breadcrumb-item v-if="currentRouteMeta.child">
               <span class="page-breadcrumb-current">{{ currentRouteMeta.child }}</span>
             </a-breadcrumb-item>
           </a-breadcrumb>
+          <div v-else></div>
           <div id="page-header-extra"></div>
         </div>
         <router-view />
@@ -264,6 +265,9 @@ const navigationGroups: NavigationGroup[] = [
 const currentRouteMeta = computed(() => {
   if (route.path === '/dashboard') {
     return undefined;
+  }
+  if (route.path === '/watchlist/index' || route.path === '/watchlist') {
+    return { parent: '', child: '' };
   }
   for (const group of navigationGroups) {
     if (group.path && group.path === route.path) {
