@@ -13,7 +13,7 @@
           <a-input v-model:value="searchParams.stockCode" placeholder="股票代码" allow-clear style="width: 140px" />
         </a-form-item>
         <a-form-item label="名称">
-          <a-input v-model:value="searchParams.stockName" placeholder="股票名称" allow-clear style="width: 100px" />
+          <a-input v-model:value="searchParams.stockName" placeholder="股票名称" allow-clear style="width: 140px" />
         </a-form-item>
         <a-form-item label="近N年">
           <a-input-number v-model:value="searchParams.recentYears" placeholder="3" style="width: 80px" :min="1" />
