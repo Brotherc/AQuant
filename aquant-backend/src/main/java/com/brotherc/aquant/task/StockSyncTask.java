@@ -261,6 +261,21 @@ public class StockSyncTask {
         return lastTimestamp < watermark.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
     }
 
+    /** 历史行情回补失败后的退避重试间隔（毫秒），依次为 5 秒、10 秒、15 秒，股票与板块共用。 */
+    private static final long[] BACKFILL_RETRY_BACKOFF_MILLIS = {5000L, 10000L, 15000L};
+
+    /** 单只股票历史行情回补的执行参数，失败后携带同一组参数重试（事务保证失败回滚，重放安全）。 */
+    private record StockBackfillContext(
+            String code,
+            String name,
+            String historyStart,
+            String historyEnd,
+            boolean shouldBackfill,
+            StockZhASpot latestSpot,
+            boolean wroteLatest
+    ) {
+    }
+
     /**
      * 根据本地已有的 {@code stock_quote_history} 最大交易日，按股票逐只补齐缺失的前复权日线。
      *
@@ -269,6 +284,7 @@ public class StockSyncTask {
      *     <li>先批量查出每只股票在历史表里已经同步到哪一天，避免对每只股票单独查库。</li>
      *     <li>补齐起点取“已同步最大交易日 + 1 天”；如果该股票历史表里还没有数据，则从第三方接口可返回的最早日期开始拉。</li>
      *     <li>如果起止区间之间根本没有交易日，则直接跳过，避免发起没有意义的第三方请求。</li>
+     *     <li>单只股票失败时按 5s/10s/15s 退避重试；全部股票处理完后统一做最后一次重试，仍失败则留待下次同步触发时按水位自动补齐。</li>
      * </ol>
      */
     private void backfillMissingStockQuoteHistory(
@@ -289,6 +305,7 @@ public class StockSyncTask {
         // 批量查库拿到每只股票已同步到的最后一个交易日
         Map<String, String> maxTradeDateMap = findMaxTradeDateMap(codes, historyEndDate);
         String historyEnd = historyEndDate.toString();
+        List<StockBackfillContext> failedContexts = new ArrayList<>();
 
         for (Map.Entry<String, String> entry : historyTargetMap.entrySet()) {
             String code = entry.getKey();
@@ -307,25 +324,98 @@ public class StockSyncTask {
 
             // start 传 null 表示让第三方接口按默认最早范围返回，用于该股票首次落历史数据的场景。
             String historyStart = historyStartDate == null ? null : historyStartDate.toString();
-            try {
-                transactionTemplate.executeWithoutResult(status -> {
-                    if (shouldBackfill) {
-                        List<StockZhADaily> stockZhAHists = aKShareService
-                                .stockZhADaily(code, historyStart, historyEnd, "qfq");
-                        // 历史表保存时统一带上本次同步时间，便于后续排查某批次落库结果。
-                        stockQuoteHistoryService.save(stockZhAHists, code, name, syncTime);
-                    }
-
-                    if (shouldWriteLatestHistory && latestSpot != null) {
-                        stockQuoteHistoryService.save(Collections.singletonList(latestSpot), syncTime);
-                    }
-                });
-                log.info("同步单只股票历史行情完成，code={}, start={}, end={}, wroteLatest={}",
-                        code, historyStart, historyEnd, shouldWriteLatestHistory && latestSpot != null);
-            } catch (Exception e) {
-                log.error("同步单只股票历史行情失败，code={}, start={}, end={}, wroteLatest={}",
-                        code, historyStart, historyEnd, shouldWriteLatestHistory && latestSpot != null, e);
+            boolean wroteLatest = shouldWriteLatestHistory && latestSpot != null;
+            StockBackfillContext context = new StockBackfillContext(
+                    code, name, historyStart, historyEnd, shouldBackfill, latestSpot, wroteLatest);
+            if (!executeStockBackfillWithRetry(context, syncTime)) {
+                failedContexts.add(context);
             }
+        }
+
+        retryFailedStockBackfills(failedContexts, syncTime);
+    }
+
+    /**
+     * 执行单只股票的历史行情回补，失败时按 {@link #BACKFILL_RETRY_BACKOFF_MILLIS} 退避重试。
+     *
+     * @return 全部重试结束后是否成功
+     */
+    private boolean executeStockBackfillWithRetry(StockBackfillContext context, LocalDateTime syncTime) {
+        int totalAttempts = BACKFILL_RETRY_BACKOFF_MILLIS.length + 1;
+        for (int attempt = 1; attempt <= totalAttempts; attempt++) {
+            if (attempt > 1 && !sleepBeforeRetry(BACKFILL_RETRY_BACKOFF_MILLIS[attempt - 2])) {
+                log.warn("股票历史行情重试等待被中断，提前结束该股票重试，code={}", context.code());
+                return false;
+            }
+            try {
+                executeStockBackfill(context, syncTime);
+                if (context.shouldBackfill()) {
+                    log.info("同步单只股票历史行情完成，code={}, backfillRange=[{}, {}], wroteLatest={}, attempt={}/{}",
+                            context.code(), context.historyStart(), context.historyEnd(),
+                            context.wroteLatest(), attempt, totalAttempts);
+                } else {
+                    log.info("同步股票最新行情完成（历史无缺口，跳过回补），code={}, wroteLatest={}, attempt={}/{}",
+                            context.code(), context.wroteLatest(), attempt, totalAttempts);
+                }
+                return true;
+            } catch (Exception e) {
+                log.error("同步单只股票历史行情失败，code={}, shouldBackfill={}, backfillRange=[{}, {}], wroteLatest={}, attempt={}/{}",
+                        context.code(), context.shouldBackfill(), context.historyStart(), context.historyEnd(),
+                        context.wroteLatest(), attempt, totalAttempts, e);
+            }
+        }
+        return false;
+    }
+
+    private void executeStockBackfill(StockBackfillContext context, LocalDateTime syncTime) {
+        transactionTemplate.executeWithoutResult(status -> {
+            if (context.shouldBackfill()) {
+                List<StockZhADaily> stockZhAHists = aKShareService
+                        .stockZhADaily(context.code(), context.historyStart(), context.historyEnd(), "qfq");
+                // 历史表保存时统一带上本次同步时间，便于后续排查某批次落库结果。
+                stockQuoteHistoryService.save(stockZhAHists, context.code(), context.name(), syncTime);
+            }
+
+            if (context.wroteLatest()) {
+                stockQuoteHistoryService.save(Collections.singletonList(context.latestSpot()), syncTime);
+            }
+        });
+    }
+
+    /**
+     * 全部股票回补完成后，对失败股票做最后一次重试；仍失败的放弃本次同步，
+     * 缺口数据留待下次同步触发时按水位自动补齐。
+     */
+    private void retryFailedStockBackfills(List<StockBackfillContext> failedContexts, LocalDateTime syncTime) {
+        if (CollectionUtils.isEmpty(failedContexts)) {
+            return;
+        }
+
+        log.info("本轮股票历史行情回补结束，共 {} 只股票重试后仍失败，开始最终重试", failedContexts.size());
+        int recoveredCount = 0;
+        for (StockBackfillContext context : failedContexts) {
+            try {
+                executeStockBackfill(context, syncTime);
+                recoveredCount++;
+                log.info("股票历史行情最终重试成功，code={}, backfillRange=[{}, {}]",
+                        context.code(), context.historyStart(), context.historyEnd());
+            } catch (Exception e) {
+                log.error("股票历史行情最终重试失败，放弃本次同步等待下次触发，code={}, shouldBackfill={}, backfillRange=[{}, {}], wroteLatest={}",
+                        context.code(), context.shouldBackfill(), context.historyStart(), context.historyEnd(),
+                        context.wroteLatest(), e);
+            }
+        }
+        log.info("股票历史行情最终重试结束，成功 {} 只，仍失败 {} 只（等待下次同步触发自动补齐）",
+                recoveredCount, failedContexts.size() - recoveredCount);
+    }
+
+    private boolean sleepBeforeRetry(long backoffMillis) {
+        try {
+            TimeUnit.MILLISECONDS.sleep(backoffMillis);
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
         }
     }
 
@@ -428,6 +518,14 @@ public class StockSyncTask {
         return lastTimestamp < stockHelper.getLatestClosedTradeDaySyncWatermark(now);
     }
 
+    /** 单个板块历史K线回补的执行参数，失败后携带同一组参数重试（保存为 upsert 语义，重放安全）。 */
+    private record BoardBackfillContext(
+            String sectorName,
+            String historyStart,
+            String historyEnd
+    ) {
+    }
+
     private void backfillMissingStockBoardHistory(
             List<String> sectorNames, LocalDate historyEndDate, LocalDateTime timestamp
     ) {
@@ -442,6 +540,8 @@ public class StockSyncTask {
 
         Map<String, String> maxTradeDateMap = findBoardMaxTradeDateMap(sectorNames, historyEndDate);
         String historyEnd = historyEndDate.toString();
+        List<BoardBackfillContext> failedContexts = new ArrayList<>();
+        boolean interrupted = false;
 
         for (String sectorName : sectorNames) {
             String maxTradeDate = maxTradeDateMap.get(sectorName);
@@ -452,22 +552,83 @@ public class StockSyncTask {
                 continue;
             }
 
-            try {
-                String historyStart = historyStartDate == null ? null : historyStartDate.toString();
-                List<StockBoardIndustryIndexThs> detailList = aKShareIndustryService
-                        .stockBoardIndustryIndexThs(sectorName, historyStart, historyEnd);
-                if (!CollectionUtils.isEmpty(detailList)) {
-                    stockSyncService.stockBoardIndustryHistory(sectorName, detailList, timestamp);
-                }
-                log.info("同步板块历史K线完成，sectorName={}, start={}, end={}", sectorName, historyStart, historyEnd);
-            } catch (Exception e) {
-                log.error("同步板块历史K线失败，sectorName={}, end={}", sectorName, historyEnd, e);
+            String historyStart = historyStartDate == null ? null : historyStartDate.toString();
+            BoardBackfillContext context = new BoardBackfillContext(sectorName, historyStart, historyEnd);
+            if (!executeBoardBackfillWithRetry(context, timestamp)) {
+                failedContexts.add(context);
             }
 
+            if (!sleepAfterBoardRequest()) {
+                interrupted = true;
+                break;
+            }
+        }
+
+        if (!interrupted) {
+            retryFailedBoardBackfills(failedContexts, timestamp);
+        }
+    }
+
+    /**
+     * 执行单个板块的历史K线回补，失败时按 {@link #BACKFILL_RETRY_BACKOFF_MILLIS} 退避重试。
+     *
+     * @return 全部重试结束后是否成功
+     */
+    private boolean executeBoardBackfillWithRetry(BoardBackfillContext context, LocalDateTime timestamp) {
+        int totalAttempts = BACKFILL_RETRY_BACKOFF_MILLIS.length + 1;
+        for (int attempt = 1; attempt <= totalAttempts; attempt++) {
+            if (attempt > 1 && !sleepBeforeRetry(BACKFILL_RETRY_BACKOFF_MILLIS[attempt - 2])) {
+                log.warn("板块历史K线重试等待被中断，提前结束该板块重试，sectorName={}", context.sectorName());
+                return false;
+            }
+            try {
+                executeBoardBackfill(context, timestamp);
+                log.info("同步板块历史K线完成，sectorName={}, start={}, end={}, attempt={}/{}",
+                        context.sectorName(), context.historyStart(), context.historyEnd(), attempt, totalAttempts);
+                return true;
+            } catch (Exception e) {
+                log.error("同步板块历史K线失败，sectorName={}, end={}, attempt={}/{}",
+                        context.sectorName(), context.historyEnd(), attempt, totalAttempts, e);
+            }
+        }
+        return false;
+    }
+
+    private void executeBoardBackfill(BoardBackfillContext context, LocalDateTime timestamp) {
+        List<StockBoardIndustryIndexThs> detailList = aKShareIndustryService
+                .stockBoardIndustryIndexThs(context.sectorName(), context.historyStart(), context.historyEnd());
+        if (!CollectionUtils.isEmpty(detailList)) {
+            stockSyncService.stockBoardIndustryHistory(context.sectorName(), detailList, timestamp);
+        }
+    }
+
+    /**
+     * 全部板块回补完成后，对失败板块做最后一次重试；仍失败的放弃本次同步，
+     * 缺口数据留待下次同步触发时按水位自动补齐。
+     */
+    private void retryFailedBoardBackfills(List<BoardBackfillContext> failedContexts, LocalDateTime timestamp) {
+        if (CollectionUtils.isEmpty(failedContexts)) {
+            return;
+        }
+
+        log.info("本轮板块历史K线回补结束，共 {} 个板块重试后仍失败，开始最终重试", failedContexts.size());
+        int recoveredCount = 0;
+        for (BoardBackfillContext context : failedContexts) {
+            try {
+                executeBoardBackfill(context, timestamp);
+                recoveredCount++;
+                log.info("板块历史K线最终重试成功，sectorName={}, start={}, end={}",
+                        context.sectorName(), context.historyStart(), context.historyEnd());
+            } catch (Exception e) {
+                log.error("板块历史K线最终重试失败，放弃本次同步等待下次触发，sectorName={}, start={}, end={}",
+                        context.sectorName(), context.historyStart(), context.historyEnd(), e);
+            }
             if (!sleepAfterBoardRequest()) {
                 break;
             }
         }
+        log.info("板块历史K线最终重试结束，成功 {} 个，仍失败 {} 个（等待下次同步触发自动补齐）",
+                recoveredCount, failedContexts.size() - recoveredCount);
     }
 
     private Map<String, String> findBoardMaxTradeDateMap(List<String> sectorNames, LocalDate historyEndDate) {
