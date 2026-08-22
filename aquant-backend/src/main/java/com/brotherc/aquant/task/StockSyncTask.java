@@ -659,19 +659,39 @@ public class StockSyncTask {
      * 同步股票分红数据
      */
     private void syncStockDividend() {
-        StockSync stockDividendSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_DIVIDEND_LATEST);
-        Long lastTimestamp = Optional.ofNullable(stockDividendSync).map(StockSync::getValue).map(Long::valueOf).orElse(null);
+        List<StockSync> stockDividendSyncList = stockSyncRepository
+                .findAllByNameOrderByIdDesc(StockSyncConstant.STOCK_DIVIDEND_LATEST);
+        StockSync stockDividendSync = stockDividendSyncList.stream().findFirst().orElse(null);
 
+        if (stockDividendSyncList.size() > 1) {
+            stockSyncRepository.deleteAllInBatch(stockDividendSyncList.subList(1, stockDividendSyncList.size()));
+            log.warn("清理重复的股票分红同步记录，删除数量={}", stockDividendSyncList.size() - 1);
+        }
+
+        Long lastTimestamp = StockUtils.parseSyncTimestamp(stockDividendSync);
         if (lastTimestamp == null || StockUtils.isAfterDate(lastTimestamp)) {
-        List<String> quarterEndDates = StockUtils.getQuarterEndDatesFromNowToLastYearStart();
-
-        for (String date : quarterEndDates) {
-            try {
-                List<StockFhpsEm> list = akShareDividendService.stockFhpsEm(date);
-                stockSyncService.stockDividend(list, date, stockDividendSync);
-            } catch (Exception e) {
-                log.error("同步股票分红数据失败:{}", date, e);
+            boolean hasFailed = false;
+            List<String> quarterEndDates = StockUtils.getQuarterEndDatesFromNowToLastYearStart();
+            for (String date : quarterEndDates) {
+                try {
+                    List<StockFhpsEm> list = akShareDividendService.stockFhpsEm(date);
+                    stockSyncService.stockDividend(list, date);
+                } catch (Exception e) {
+                    hasFailed = true;
+                    log.error("同步股票分红数据失败: {}", date, e);
                 }
+            }
+
+            // 全部报告期都成功后再推进水位，避免部分成功时将未完成的同步误标记为完成。
+            if (!hasFailed) {
+                if (stockDividendSync == null) {
+                    stockDividendSync = new StockSync();
+                    stockDividendSync.setName(StockSyncConstant.STOCK_DIVIDEND_LATEST);
+                }
+                stockDividendSync.setValue(String.valueOf(System.currentTimeMillis()));
+                stockSyncRepository.save(stockDividendSync);
+            } else {
+                log.warn("部分报告期的股票分红数据同步失败，本次不更新同步时间");
             }
         }
         stockDividendDedupService.clearDuplicateLatestAnnouncementDateRows();

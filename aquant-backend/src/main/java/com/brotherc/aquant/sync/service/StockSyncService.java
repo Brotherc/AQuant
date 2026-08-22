@@ -252,7 +252,7 @@ public class StockSyncService {
      * 股票分红
      */
     @Transactional(rollbackFor = Exception.class)
-    public void stockDividend(List<StockFhpsEm> stockFhpsEms, String date, StockSync stockSync) {
+    public void stockDividend(List<StockFhpsEm> stockFhpsEms, String date) {
         if (!CollectionUtils.isEmpty(stockFhpsEms)) {
             stockDividendRepository.deleteByReportDate(date);
 
@@ -285,13 +285,6 @@ public class StockSyncService {
             }).toList();
 
             stockDividendRepository.saveAll(list);
-
-            if (stockSync == null) {
-                stockSync = new StockSync();
-                stockSync.setName(StockSyncConstant.STOCK_DIVIDEND_LATEST);
-            }
-            stockSync.setValue(String.valueOf(System.currentTimeMillis()));
-            stockSyncRepository.save(stockSync);
         }
     }
 
