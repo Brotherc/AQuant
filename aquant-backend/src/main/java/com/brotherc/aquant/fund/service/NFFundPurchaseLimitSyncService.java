@@ -1,0 +1,239 @@
+package com.brotherc.aquant.fund.service;
+
+import com.brotherc.aquant.common.constant.FundPurchaseLimitConstant;
+import com.brotherc.aquant.common.constant.NFFundConstant;
+import com.brotherc.aquant.common.constant.StockSyncConstant;
+import com.brotherc.aquant.common.utils.DigestUtils;
+import com.brotherc.aquant.common.utils.StockUtils;
+import com.brotherc.aquant.fund.entity.StockFundAnnouncementSync;
+import com.brotherc.aquant.fund.model.dto.FundPurchaseLimitAnnouncementDetail;
+import com.brotherc.aquant.fund.model.dto.FundPurchaseLimitRule;
+import com.brotherc.aquant.fund.repository.StockFundAnnouncementSyncRepository;
+import com.brotherc.aquant.integration.nf.model.NFFundAnnouncement;
+import com.brotherc.aquant.integration.nf.model.NFFundAnnouncementPage;
+import com.brotherc.aquant.integration.nf.service.NFFundService;
+import com.brotherc.aquant.sync.entity.StockSync;
+import com.brotherc.aquant.sync.repository.StockSyncRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class NFFundPurchaseLimitSyncService implements FundPurchaseLimitSyncService {
+
+    private static final Set<String> TARGET_FUND_CODES = Set.of("016452", "016453", "021000");
+
+    private final NFFundService nfFundService;
+    private final NFFundAnnouncementParser nfFundAnnouncementParser;
+    private final StockFundPurchaseLimitService stockFundPurchaseLimitService;
+    private final StockFundAnnouncementSyncRepository stockFundAnnouncementSyncRepository;
+    private final StockSyncRepository stockSyncRepository;
+
+    @Override
+    public String getSourceName() {
+        return NFFundConstant.SOURCE_NAME;
+    }
+
+    /**
+     * 每天增量扫描南方纳斯达克100指数基金的官方额度公告；首次取得三个份额当前规则后停止回溯。
+     */
+    @Override
+    public void sync(LocalDateTime syncTime) {
+        StockSync stockSync = stockSyncRepository.findByName(StockSyncConstant.STOCK_NF_FUND_PURCHASE_LIMIT_LATEST);
+        Long lastTimestamp = StockUtils.parseSyncTimestamp(stockSync);
+        LocalDate lastSyncDate = null;
+        if (lastTimestamp != null) {
+            lastSyncDate = Instant.ofEpochMilli(lastTimestamp).atZone(ZoneId.systemDefault()).toLocalDate();
+            if (lastSyncDate.equals(syncTime.toLocalDate())) {
+                log.info("南方基金官方额度当天已同步，跳过本次同步，syncDate={}", lastSyncDate);
+                return;
+            }
+        }
+
+        boolean allSuccess = retryPendingAnnouncements(syncTime.toLocalDate());
+        LocalDate latestProcessedDate = getLatestProcessedAnnouncementDate();
+        boolean baselineCompleted = hasCompleteCurrentRules();
+        LocalDate announcementStartDate = baselineCompleted
+                ? (lastSyncDate != null ? lastSyncDate : latestProcessedDate) : null;
+        int page = 1;
+        while (true) {
+            NFFundAnnouncementPage announcementPage;
+            try {
+                announcementPage = nfFundService.getNasdaq100Announcements(page);
+            } catch (Exception e) {
+                allSuccess = false;
+                log.error("获取南方基金公告列表失败，page={}", page, e);
+                break;
+            }
+            List<NFFundAnnouncement> relevantAnnouncements = announcementPage.getContent().stream()
+                    .filter(this::isPurchaseLimitAnnouncement)
+                    .filter(announcement -> announcementStartDate == null
+                            || !announcement.getAnnouncementDate().isBefore(announcementStartDate))
+                    .sorted(Comparator.comparing(NFFundAnnouncement::getAnnouncementDate).reversed())
+                    .toList();
+            Map<String, StockFundAnnouncementSync> existingMap = loadExisting(relevantAnnouncements);
+            for (NFFundAnnouncement announcement : relevantAnnouncements) {
+                StockFundAnnouncementSync existing = existingMap.get(announcement.getAnnouncementId());
+                boolean alreadyProcessed = baselineCompleted && existing != null
+                        && (FundPurchaseLimitConstant.SYNC_SUCCESS.equals(existing.getStatus())
+                        || FundPurchaseLimitConstant.SYNC_IGNORED.equals(existing.getStatus()));
+                boolean waitingForEffectiveDate = existing != null
+                        && FundPurchaseLimitConstant.SYNC_PENDING.equals(existing.getStatus())
+                        && existing.getRetryAfterDate() != null
+                        && existing.getRetryAfterDate().isAfter(syncTime.toLocalDate());
+                if (!alreadyProcessed && !waitingForEffectiveDate) {
+                    if (processAnnouncement(announcement, syncTime.toLocalDate())) {
+                        allSuccess = false;
+                    }
+                    if (!baselineCompleted && hasCompleteCurrentRules()) {
+                        baselineCompleted = true;
+                        break;
+                    }
+                }
+            }
+            if ((lastTimestamp == null && baselineCompleted) || page >= announcementPage.getTotalPages()
+                    || !containsNewerAnnouncement(announcementPage, announcementStartDate)) {
+                break;
+            }
+            page++;
+        }
+
+        if (!allSuccess || !baselineCompleted) {
+            log.warn("南方基金官方额度同步未完整完成，本次不更新同步标记，allSuccess={}, baselineCompleted={}",
+                    allSuccess, baselineCompleted);
+            return;
+        }
+        if (stockSync == null) {
+            stockSync = new StockSync();
+            stockSync.setName(StockSyncConstant.STOCK_NF_FUND_PURCHASE_LIMIT_LATEST);
+        }
+        stockSync.setValue(String.valueOf(syncTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()));
+        stockSyncRepository.save(stockSync);
+        log.info("同步南方基金官方额度完成，targetFundCount={}", TARGET_FUND_CODES.size());
+    }
+
+    private boolean retryPendingAnnouncements(LocalDate syncDate) {
+        boolean success = true;
+        List<StockFundAnnouncementSync> pendingRecords = stockFundAnnouncementSyncRepository
+                .findBySourceAndStatusInOrderByAnnouncementDateDesc(
+                        NFFundConstant.SOURCE,
+                        List.of(FundPurchaseLimitConstant.SYNC_FAILED, FundPurchaseLimitConstant.SYNC_PENDING)
+                );
+        for (StockFundAnnouncementSync pending : pendingRecords) {
+            if (FundPurchaseLimitConstant.SYNC_PENDING.equals(pending.getStatus())
+                    && pending.getRetryAfterDate() != null && pending.getRetryAfterDate().isAfter(syncDate)) {
+                continue;
+            }
+            NFFundAnnouncement announcement = new NFFundAnnouncement();
+            announcement.setAnnouncementId(pending.getAnnouncementId());
+            announcement.setAnnouncementDate(pending.getAnnouncementDate());
+            announcement.setTitle(pending.getTitle());
+            announcement.setDetailUrl(pending.getDetailUrl());
+            announcement.setAttachmentUrl(pending.getAttachmentUrl());
+            if (processAnnouncement(announcement, syncDate)) {
+                success = false;
+            }
+        }
+        return success;
+    }
+
+    private boolean processAnnouncement(NFFundAnnouncement announcement, LocalDate syncDate) {
+        FundPurchaseLimitAnnouncementDetail detail = new FundPurchaseLimitAnnouncementDetail();
+        detail.setDetailUrl(announcement.getDetailUrl());
+        detail.setAttachmentUrl(announcement.getAttachmentUrl());
+        detail.setAttachmentName(announcement.getAnnouncementId() + ".pdf");
+        try {
+            byte[] attachment = nfFundService.downloadAnnouncement(announcement.getAttachmentUrl());
+            List<FundPurchaseLimitRule> rules = nfFundAnnouncementParser.parse(announcement.getTitle(), attachment);
+            if (rules.isEmpty()) {
+                throw new IllegalStateException("公告匹配南方纳指100但未解析出额度规则");
+            }
+            LocalDate retryAfterDate = rules.stream()
+                    .map(FundPurchaseLimitRule::getEffectiveDate)
+                    .filter(date -> date != null && date.isAfter(syncDate))
+                    .min(LocalDate::compareTo)
+                    .orElse(null);
+            String hash = DigestUtils.sha256(attachment);
+            if (retryAfterDate != null) {
+                stockFundPurchaseLimitService.savePending(
+                        NFFundConstant.SOURCE, announcement, detail, hash, retryAfterDate
+                );
+                return false;
+            }
+            stockFundPurchaseLimitService.saveSuccess(
+                    NFFundConstant.SOURCE, NFFundConstant.SOURCE_NAME, announcement, detail, hash, rules
+            );
+            log.info("处理南方基金额度公告完成，announcementId={}, ruleCount={}",
+                    announcement.getAnnouncementId(), rules.size());
+            return false;
+        } catch (Exception e) {
+            stockFundPurchaseLimitService.saveFailed(NFFundConstant.SOURCE, announcement, detail, e);
+            log.error("处理南方基金额度公告失败，announcementId={}", announcement.getAnnouncementId(), e);
+            return true;
+        }
+    }
+
+    private Map<String, StockFundAnnouncementSync> loadExisting(List<NFFundAnnouncement> announcements) {
+        if (announcements.isEmpty()) {
+            return Map.of();
+        }
+        Set<String> ids = new HashSet<>();
+        for (NFFundAnnouncement announcement : announcements) {
+            ids.add(announcement.getAnnouncementId());
+        }
+        Map<String, StockFundAnnouncementSync> result = new HashMap<>();
+        for (StockFundAnnouncementSync existing : stockFundAnnouncementSyncRepository
+                .findBySourceAndAnnouncementIdIn(NFFundConstant.SOURCE, ids)) {
+            result.put(existing.getAnnouncementId(), existing);
+        }
+        return result;
+    }
+
+    private LocalDate getLatestProcessedAnnouncementDate() {
+        LocalDate successDate = stockFundAnnouncementSyncRepository
+                .findTopBySourceAndStatusOrderByAnnouncementDateDesc(
+                        NFFundConstant.SOURCE, FundPurchaseLimitConstant.SYNC_SUCCESS
+                ).map(StockFundAnnouncementSync::getAnnouncementDate).orElse(null);
+        LocalDate ignoredDate = stockFundAnnouncementSyncRepository
+                .findTopBySourceAndStatusOrderByAnnouncementDateDesc(
+                        NFFundConstant.SOURCE, FundPurchaseLimitConstant.SYNC_IGNORED
+                ).map(StockFundAnnouncementSync::getAnnouncementDate).orElse(null);
+        if (successDate == null) {
+            return ignoredDate;
+        }
+        return ignoredDate != null && ignoredDate.isAfter(successDate) ? ignoredDate : successDate;
+    }
+
+    private boolean hasCompleteCurrentRules() {
+        return TARGET_FUND_CODES.stream().allMatch(code ->
+                stockFundPurchaseLimitService.hasCurrentPurchaseLimit(NFFundConstant.SOURCE, code));
+    }
+
+    private boolean containsNewerAnnouncement(NFFundAnnouncementPage page, LocalDate latestProcessedDate) {
+        return latestProcessedDate == null || page.getContent().stream()
+                .anyMatch(item -> !item.getAnnouncementDate().isBefore(latestProcessedDate));
+    }
+
+    private boolean isPurchaseLimitAnnouncement(NFFundAnnouncement announcement) {
+        String title = announcement.getTitle().replace(" ", "");
+        boolean holidayNotice = title.contains("节假日") || title.contains("境外主要市场")
+                || title.contains("非交易日") || title.contains("暂停申购赎回等业务");
+        return title.contains("南方纳斯达克100") && !holidayNotice
+                && (title.contains("金额限制") || title.contains("大额申购")
+                || title.contains("恢复申购") || title.contains("暂停申购"));
+    }
+
+}
