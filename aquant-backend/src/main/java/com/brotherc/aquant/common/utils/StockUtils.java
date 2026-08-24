@@ -3,6 +3,7 @@ package com.brotherc.aquant.common.utils;
 import com.brotherc.aquant.sync.entity.StockSync;
 import org.apache.commons.lang3.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -189,6 +190,11 @@ public class StockUtils {
 
     public static boolean isAnnualReport(LocalDate date) {
         return date != null && date.getMonthValue() == 12 && date.getDayOfMonth() == 31;
+    }
+
+    public static BigDecimal toAmount(String value, String unit) {
+        BigDecimal amount = new BigDecimal(value.replace(",", ""));
+        return "万".equals(unit) ? amount.multiply(BigDecimal.valueOf(10000)) : amount;
     }
 
 }

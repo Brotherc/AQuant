@@ -63,6 +63,7 @@ morganfund-address: https://www.cifm.com
 efund-address: https://www.efunds.com.cn
 efund-api-address: https://api.efunds.com.cn
 efund-cdn-address: https://cdn.efunds.com.cn
+nffund-address: https://www.nffund.com
 
 aquant:
   stock:
