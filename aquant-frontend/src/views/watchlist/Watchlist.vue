@@ -2133,18 +2133,18 @@ watch(() => groups.value.length, async () => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--color-bg-elevated) !important;
-  border: 1px solid var(--color-border) !important;
-  border-radius: var(--radius-xl) !important;
-  box-shadow: var(--shadow-sm) !important;
-  transition: all var(--transition-base) var(--transition-timing) !important;
+  background: #ffffff !important;
+  border: 1px solid #edf2f7 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  transition: all 0.25s ease !important;
   padding: 18px !important;
 }
 
 .stock-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-card-hover) !important;
-  border-color: var(--color-border-hover) !important;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.05) !important;
+  border-color: #cbd5e1 !important;
 }
 
 .add-stock-card {
@@ -2154,16 +2154,16 @@ watch(() => groups.value.length, async () => {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  border: 1px dashed var(--color-border) !important;
+  border: 1px dashed #e2e8f0 !important;
   background-color: transparent !important;
   cursor: pointer;
-  transition: all var(--transition-base) var(--transition-timing);
-  border-radius: var(--radius-xl) !important;
+  transition: all 0.25s ease;
+  border-radius: 12px !important;
 }
 
 .add-stock-card:hover {
-  border-color: var(--color-accent) !important;
-  background-color: var(--color-accent-light) !important;
+  border-color: #94a3b8 !important;
+  background-color: #f8fafc !important;
   transform: translateY(-2px);
 }
 
