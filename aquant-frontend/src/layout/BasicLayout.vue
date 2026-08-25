@@ -85,15 +85,17 @@
     <a-layout-content class="c-content">
       <div class="content-container">
         <div v-if="currentRouteMeta" class="page-context">
-          <a-breadcrumb v-if="currentRouteMeta.parent || currentRouteMeta.child" class="page-breadcrumb">
-            <a-breadcrumb-item v-if="currentRouteMeta.parent && currentRouteMeta.parent !== currentRouteMeta.child">
-              <span class="page-breadcrumb-parent">{{ currentRouteMeta.parent }}</span>
-            </a-breadcrumb-item>
-            <a-breadcrumb-item v-if="currentRouteMeta.child">
-              <span class="page-breadcrumb-current">{{ currentRouteMeta.child }}</span>
-            </a-breadcrumb-item>
-          </a-breadcrumb>
-          <div v-else></div>
+          <div class="page-context-left">
+            <a-breadcrumb v-if="currentRouteMeta.parent || currentRouteMeta.child" class="page-breadcrumb">
+              <a-breadcrumb-item v-if="currentRouteMeta.parent && currentRouteMeta.parent !== currentRouteMeta.child">
+                <span class="page-breadcrumb-parent">{{ currentRouteMeta.parent }}</span>
+              </a-breadcrumb-item>
+              <a-breadcrumb-item v-if="currentRouteMeta.child">
+                <span class="page-breadcrumb-current">{{ currentRouteMeta.child }}</span>
+              </a-breadcrumb-item>
+            </a-breadcrumb>
+            <div id="page-header-extra-left"></div>
+          </div>
           <div id="page-header-extra"></div>
         </div>
         <router-view />
@@ -560,6 +562,12 @@ const handleUpdateEmail = async () => {
   border-radius: var(--radius-lg);
   background: transparent;
   border: none;
+}
+
+.page-context-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .page-breadcrumb {

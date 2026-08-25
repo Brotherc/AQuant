@@ -21,6 +21,9 @@ public class WatchlistGroupVO {
     @Schema(description = "排序号")
     private Integer sortNo;
 
+    @Schema(description = "分组下的股票/基金数量")
+    private Integer count;
+
     @Schema(description = "分组下的股票列表")
     private List<WatchlistStockVO> stocks;
 

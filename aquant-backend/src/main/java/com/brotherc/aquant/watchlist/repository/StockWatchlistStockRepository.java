@@ -11,6 +11,8 @@ public interface StockWatchlistStockRepository extends JpaRepository<StockWatchl
 
     List<StockWatchlistStock> findByGroupIdOrderBySortNoDesc(Long groupId);
 
+    List<StockWatchlistStock> findByGroupIdIn(List<Long> groupIds);
+
     void deleteByGroupIdAndStockCode(Long groupId, String stockCode);
 
     boolean existsByGroupIdAndStockCode(Long groupId, String stockCode);

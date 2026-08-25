@@ -62,12 +62,21 @@ public class StockWatchlistService {
         } else {
             groups = groupRepository.findAllByUserIdOrderBySortNoAsc(userId);
         }
+        if (CollectionUtils.isEmpty(groups)) {
+            return new ArrayList<>();
+        }
+        List<Long> groupIds = groups.stream().map(StockWatchlistGroup::getId).toList();
+        List<StockWatchlistStock> allStocks = stockRepository.findByGroupIdIn(groupIds);
+        Map<Long, Long> countMap = allStocks.stream()
+                .collect(Collectors.groupingBy(StockWatchlistStock::getGroupId, Collectors.counting()));
+
         return groups.stream().map(g -> {
             WatchlistGroupVO vo = new WatchlistGroupVO();
             vo.setId(g.getId());
             vo.setName(g.getName());
             vo.setType(g.getType());
             vo.setSortNo(g.getSortNo());
+            vo.setCount(countMap.getOrDefault(g.getId(), 0L).intValue());
             return vo;
         }).toList();
     }

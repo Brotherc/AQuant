@@ -1,55 +1,101 @@
 <template>
   <div class="watchlist-container">
-    <!-- 穿透/传送资产类型 (股票 / 基金) 切换页签至顶部 [股票数据 / 我的自选] 面包屑行右侧 -->
-    <Teleport to="#page-header-extra" v-if="isMounted">
-      <a-radio-group v-model:value="currentAssetType" button-style="solid" size="small" @change="onAssetTypeChange">
-        <a-radio-button value="STOCK">股票自选</a-radio-button>
-        <a-radio-button value="FUND">基金自选</a-radio-button>
-      </a-radio-group>
+    <!-- 穿透/传送资产类型 (股票 / 基金) 切换页签至顶部面包屑左侧 -->
+    <Teleport to="#page-header-extra-left" v-if="isMounted">
+      <div class="card-segmented-pill">
+        <button
+          class="pill-btn"
+          :class="{ 'is-active': currentAssetType === 'STOCK' }"
+          @click="setAssetType('STOCK')"
+        >
+          股票自选
+        </button>
+        <button
+          class="pill-btn"
+          :class="{ 'is-active': currentAssetType === 'FUND' }"
+          @click="setAssetType('FUND')"
+        >
+          基金自选
+        </button>
+      </div>
     </Teleport>
 
     <!-- 顶部分组导航与全局过滤 -->
     <div class="watchlist-sticky-toolbar">
       <div class="group-anchors-header">
-        <div class="group-anchors-list" ref="anchorsListEl">
-          <template v-for="(group, idx) in visibleGroups" :key="group.id">
-            <span
-              class="group-anchor"
-              :class="{ active: activeGroupId === group.id }"
-              :title="group.name"
-              @click="scrollToGroup(group.id)"
-            >
-              {{ group.name }}
-            </span>
-            <span v-if="idx < visibleGroups.length - 1" class="group-anchor-sep">·</span>
-          </template>
-        </div>
-        <a-dropdown
-          v-if="overflowGroups.length > 0"
-          :trigger="['hover']"
-          placement="bottomRight"
-          overlayClassName="group-anchor-more-dropdown"
-        >
-          <div class="group-anchors-more-wrap">
-            <span v-if="visibleGroups.length > 0" class="group-anchor-sep">·</span>
-            <span class="group-anchor group-anchor-more" :class="{ active: overflowGroups.some(g => g.id === activeGroupId) }">
-              更多
-            </span>
+        <div class="group-tabs-nav" ref="anchorsListEl">
+          <!-- 全部 -->
+          <div
+            class="group-tab-item group-tab-all"
+            :class="{ active: activeGroupId === 'ALL' || activeGroupId === undefined }"
+            @click="selectAll"
+          >
+            <span class="tab-label">全部</span>
+            <span class="tab-count">{{ totalStockCount }}</span>
+            <span class="tab-underline" v-if="activeGroupId === 'ALL' || activeGroupId === undefined"></span>
           </div>
-          <template #overlay>
-            <a-menu>
-              <a-menu-item
-                v-for="group in overflowGroups"
-                :key="group.id"
+
+          <!-- 各分组 -->
+          <template v-for="group in visibleGroups" :key="group.id">
+            <a-dropdown :trigger="['contextmenu']">
+              <div
+                class="group-tab-item"
                 :class="{ active: activeGroupId === group.id }"
                 :title="group.name"
-                @click="scrollToGroup(group.id)"
+                @click="selectGroup(group.id)"
               >
-                {{ group.name }}
-              </a-menu-item>
-            </a-menu>
+                <span class="tab-label">{{ group.name }}</span>
+                <span class="tab-count">{{ group.count ?? (groupStocks[group.id]?.length || 0) }}</span>
+                <span class="tab-underline" v-if="activeGroupId === group.id"></span>
+              </div>
+              <template #overlay>
+                <a-menu>
+                  <a-menu-item @click="openRenameGroupModal(group)">
+                    <edit-outlined style="margin-right: 6px;" /> 重命名
+                  </a-menu-item>
+                  <a-menu-divider />
+                  <a-menu-item :disabled="isFirstGroup(group.id)" @click="handleMoveGroup(group.id, 'UP')">
+                    <arrow-up-outlined style="margin-right: 6px;" /> 上移
+                  </a-menu-item>
+                  <a-menu-item :disabled="isLastGroup(group.id)" @click="handleMoveGroup(group.id, 'DOWN')">
+                    <arrow-down-outlined style="margin-right: 6px;" /> 下移
+                  </a-menu-item>
+                  <a-menu-divider />
+                  <a-menu-item danger @click="onDeleteGroup(group.id)">
+                    <delete-outlined style="margin-right: 6px;" /> 删除
+                  </a-menu-item>
+                </a-menu>
+              </template>
+            </a-dropdown>
           </template>
-        </a-dropdown>
+
+          <!-- 更多下拉 (若超出) -->
+          <a-dropdown
+            v-if="overflowGroups.length > 0"
+            :trigger="['hover']"
+            placement="bottomRight"
+            overlayClassName="group-tab-more-dropdown"
+          >
+            <div class="group-tab-item group-tab-more" :class="{ active: overflowGroups.some(g => g.id === activeGroupId) }">
+              <span class="tab-label">更多</span>
+              <span class="tab-count">({{ overflowGroups.length }})</span>
+              <span class="tab-underline" v-if="overflowGroups.some(g => g.id === activeGroupId)"></span>
+            </div>
+            <template #overlay>
+              <a-menu>
+                <a-menu-item
+                  v-for="group in overflowGroups"
+                  :key="group.id"
+                  :class="{ active: activeGroupId === group.id }"
+                  :title="group.name"
+                  @click="selectGroup(group.id)"
+                >
+                  {{ group.name }} {{ group.count ?? (groupStocks[group.id]?.length || 0) }}
+                </a-menu-item>
+              </a-menu>
+            </template>
+          </a-dropdown>
+        </div>
         <div class="group-anchors-right">
           <div class="global-filter-bar">
             <a-checkbox v-model:checked="globalFilterNoti">仅看有通知设置</a-checkbox>
@@ -64,10 +110,22 @@
               </template>
             </a-input>
           </div>
-          <a-button type="primary" class="toolbar-action-button" @click="showAddGroupModal">
-            <template #icon><plus-outlined /></template>
-            新建分组
-          </a-button>
+          <!-- 右侧三个点下拉菜单：新增分组、编辑分组 -->
+          <a-dropdown :trigger="['click']" placement="bottomRight">
+            <div class="toolbar-more-btn" title="分组操作">
+              <ellipsis-outlined style="font-size: 18px;" />
+            </div>
+            <template #overlay>
+              <a-menu>
+                <a-menu-item @click="showAddGroupModal">
+                  <plus-outlined style="margin-right: 6px;" /> 新增分组
+                </a-menu-item>
+                <a-menu-item @click="openManageGroupsModal">
+                  <edit-outlined style="margin-right: 6px;" /> 编辑分组
+                </a-menu-item>
+              </a-menu>
+            </template>
+          </a-dropdown>
         </div>
       </div>
     </div>
@@ -82,78 +140,175 @@
       </a-empty>
     </div>
 
-    <!-- 各分组卡片区 -->
+    <!-- 统一顶部排序控制器（只在最上方展示一次） -->
+    <div class="group-section-sort-row" v-if="totalStockCount > 0">
+      <!-- 基金排序选项 -->
+      <div class="sort-options" v-if="currentAssetType === 'FUND'">
+        <span class="ctrl-label">排序：</span>
+        <span class="ctrl-item" :class="{ active: currentSortKey === 'default' }" @click="handleSortClick('default')">默认</span>
+        <span class="ctrl-item" :class="{ active: currentSortKey === 'latestPrice' }" @click="handleSortClick('latestPrice')">
+          单位净值 <caret-up-outlined v-if="currentSortKey === 'latestPrice' && currentSortOrder === 'asc'"/><caret-down-outlined v-else />
+        </span>
+        <span class="ctrl-item" :class="{ active: currentSortKey === 'changePercent' }" @click="handleSortClick('changePercent')">
+          日增长率 <caret-up-outlined v-if="currentSortKey === 'changePercent' && currentSortOrder === 'asc'"/><caret-down-outlined v-else />
+        </span>
+        <span class="ctrl-item" :class="{ active: currentSortKey === 'accumulatedNetValue' }" @click="handleSortClick('accumulatedNetValue')">
+          累计净值 <caret-up-outlined v-if="currentSortKey === 'accumulatedNetValue' && currentSortOrder === 'asc'"/><caret-down-outlined v-else />
+        </span>
+      </div>
+      <!-- 股票排序选项 -->
+      <div class="sort-options" v-else>
+        <span class="ctrl-label">排序：</span>
+        <span class="ctrl-item" :class="{ active: currentSortKey === 'default' }" @click="handleSortClick('default')">默认</span>
+        <span class="ctrl-item" :class="{ active: currentSortKey === 'latestPrice' }" @click="handleSortClick('latestPrice')">
+          最新价 <caret-up-outlined v-if="currentSortKey === 'latestPrice' && currentSortOrder === 'asc'"/><caret-down-outlined v-else />
+        </span>
+        <span class="ctrl-item" :class="{ active: currentSortKey === 'changePercent' }" @click="handleSortClick('changePercent')">
+          涨跌幅 <caret-up-outlined v-if="currentSortKey === 'changePercent' && currentSortOrder === 'asc'"/><caret-down-outlined v-else />
+        </span>
+        <span class="ctrl-item" :class="{ active: currentSortKey === 'pe' }" @click="handleSortClick('pe')">
+          PE <caret-up-outlined v-if="currentSortKey === 'pe' && currentSortOrder === 'asc'"/><caret-down-outlined v-else />
+        </span>
+        <span class="ctrl-item" :class="{ active: currentSortKey === 'roe' }" @click="handleSortClick('roe')">
+          ROE <caret-up-outlined v-if="currentSortKey === 'roe' && currentSortOrder === 'asc'"/><caret-down-outlined v-else />
+        </span>
+      </div>
+    </div>
+
+    <!-- 标的卡片区 -->
+    <!-- 模式 1: 全部 Tab - 所有标的统一连续流式平铺 -->
+    <div v-if="activeGroupId === 'ALL' || activeGroupId === undefined" class="group-section">
+      <a-spin :spinning="groupsLoading">
+        <a-row :gutter="[16, 16]" class="card-grid">
+          <a-col
+            :xs="24" :sm="24" :md="12" :lg="8" :xl="6"
+            v-for="item in allSortedStocks"
+            :key="`${item.groupId}-${item.stock.stockCode}`"
+          >
+            <div class="draggable-wrapper">
+              <a-card hoverable class="stock-card" size="small">
+                <!-- 头部：代码与名称，移除操作 -->
+                <div class="card-header">
+                  <div class="stock-info">
+                    <a-tooltip :title="item.stock.stockName" placement="topLeft">
+                      <span class="stock-name" :class="{ 'fund-name': currentAssetType === 'FUND' }">
+                        {{ item.stock.stockName }}
+                      </span>
+                    </a-tooltip>
+                    <span class="stock-code">{{ item.stock.stockCode }}</span>
+                  </div>
+                  <div class="header-right">
+                    <span @click.stop="openNotiModal(item.stock)" style="display: inline-flex; align-items: center; cursor: pointer; margin-right: 12px; font-size: 16px;">
+                      <bell-filled
+                        v-if="item.stock.hasNotification"
+                        class="noti-icon noti-icon--active"
+                        title="修改通知规则"
+                      />
+                      <bell-outlined
+                        v-else
+                        class="noti-icon"
+                        title="新增消息提醒"
+                      />
+                    </span>
+                    <a-dropdown :trigger="['click']">
+                      <ellipsis-outlined class="more-icon" />
+                      <template #overlay>
+                        <a-menu>
+                          <a-menu-item @click="openStockDetail(item.stock)">
+                            查看详情
+                          </a-menu-item>
+                          <a-menu-divider />
+                          <a-menu-item @click="showMoveGroupModal(item.groupId, item.stock)">
+                            修改分组
+                          </a-menu-item>
+                          <a-menu-divider />
+                          <a-menu-item danger @click.stop>
+                            <div @click.stop>
+                              <a-popconfirm
+                                title="确定移除该股票吗？"
+                                @confirm="handleRemoveStock(item.groupId, item.stock.stockCode)"
+                                placement="left"
+                              >
+                                <div style="margin: -5px -12px; padding: 5px 12px;">移除</div>
+                              </a-popconfirm>
+                            </div>
+                          </a-menu-item>
+                        </a-menu>
+                      </template>
+                    </a-dropdown>
+                  </div>
+                </div>
+
+                <!-- 行情数据 -->
+                <div class="quote-info" :class="getPriceColorClass(item.stock.changePercent)">
+                  <div class="latest-price">{{ item.stock.latestPrice != null ? item.stock.latestPrice.toFixed(2) : '-' }}</div>
+                  <div class="change-percent">
+                    {{ item.stock.changePercent > 0 ? '+' : '' }}{{ item.stock.changePercent != null ? item.stock.changePercent.toFixed(2) + '%' : '-' }}
+                  </div>
+                </div>
+
+                <!-- 迷你K线 (仅股票) -->
+                <div class="kline-box" v-if="currentAssetType === 'STOCK'">
+                  <MiniKlineChart :stockCode="item.stock.stockCode" />
+                </div>
+
+                <!-- 迷你净值走势图 (仅基金) -->
+                <div class="kline-box" v-else>
+                  <MiniFundNetValueChart :fundCode="item.stock.stockCode" />
+                </div>
+
+                <!-- 基本面数据 (股票) -->
+                <div class="fundamentals" v-if="currentAssetType === 'STOCK'">
+                  <div class="fund-item">
+                    <span class="label">PE</span>
+                    <span class="val">{{ item.stock.pe != null ? item.stock.pe.toFixed(2) : '-' }}</span>
+                  </div>
+                  <div class="fund-item">
+                    <span class="label">PEG</span>
+                    <span class="val">{{ item.stock.peg != null ? item.stock.peg.toFixed(2) : '-' }}</span>
+                  </div>
+                  <div class="fund-item">
+                    <span class="label">ROE</span>
+                    <span class="val">{{ item.stock.roe != null ? item.stock.roe.toFixed(2) + '%' : '-' }}</span>
+                  </div>
+                </div>
+
+                <!-- 基金核心指标 (基金) -->
+                <div class="fundamentals" v-else>
+                  <div class="fund-item">
+                    <span class="label">累计净值</span>
+                    <span class="val">{{ item.stock.accumulatedNetValue != null ? item.stock.accumulatedNetValue.toFixed(4) : '-' }}</span>
+                  </div>
+                  <div class="fund-item">
+                    <span class="label">净值日期</span>
+                    <span class="val">{{ item.stock.netValueDate || '-' }}</span>
+                  </div>
+                </div>
+
+                <!-- 分红数据 (仅股票) -->
+                <template v-if="currentAssetType === 'STOCK' && item.stock.recentDividends && item.stock.recentDividends.length > 0">
+                  <div class="dividends-wrap">
+                    <div v-for="(div, idx) in item.stock.recentDividends" :key="idx" class="dividend-row">
+                      <span class="div-date">{{ formatReportDate(div.proposalAnnouncementDate) }}</span>
+                      <span class="div-text">{{ formatDividend(div) }}</span>
+                    </div>
+                  </div>
+                </template>
+              </a-card>
+            </div>
+          </a-col>
+        </a-row>
+      </a-spin>
+    </div>
+
+    <!-- 模式 2: 单个具体分组 Tab -->
     <div
-      v-for="group in groups"
+      v-else
+      v-for="group in displayedGroups"
       :key="group.id"
       class="group-section"
       :data-group-id="group.id"
-      :ref="(el) => setGroupSectionRef(group.id, el)"
     >
-      <!-- 分组标题与操作 -->
-      <div class="group-section-header">
-        <div class="group-section-title" :title="group.name">{{ group.name }}</div>
-        <div class="group-section-divider"></div>
-        <div class="group-section-actions">
-          <a-dropdown :trigger="['click']" placement="bottomRight">
-            <span class="group-section-more" @click.stop>
-              <ellipsis-outlined />
-            </span>
-            <template #overlay>
-              <a-menu>
-                <a-menu-item @click="openRenameGroupModal(group)">
-                  重命名
-                </a-menu-item>
-                <a-menu-divider />
-                <a-menu-item :disabled="isFirstGroup(group.id)" @click="handleMoveGroup(group.id, 'UP')">
-                  上移
-                </a-menu-item>
-                <a-menu-item :disabled="isLastGroup(group.id)" @click="handleMoveGroup(group.id, 'DOWN')">
-                  下移
-                </a-menu-item>
-                <a-menu-divider />
-                <a-menu-item danger @click="onDeleteGroup(group.id)">
-                  删除
-                </a-menu-item>
-              </a-menu>
-            </template>
-          </a-dropdown>
-        </div>
-      </div>
-      <div class="group-section-sort-row" v-if="(groupStocks[group.id] || []).length > 0">
-        <!-- 基金排序选项 -->
-        <div class="sort-options" v-if="currentAssetType === 'FUND'">
-          <span class="ctrl-label">排序：</span>
-          <span class="ctrl-item" :class="{ active: getUiState(group.id).sortKey === 'default' }" @click="handleSortChange(group.id, 'default')">默认</span>
-          <span class="ctrl-item" :class="{ active: getUiState(group.id).sortKey === 'latestPrice' }" @click="handleSortChange(group.id, 'latestPrice')">
-            单位净值 <caret-up-outlined v-if="getUiState(group.id).sortKey === 'latestPrice' && getUiState(group.id).sortOrder === 'asc'"/><caret-down-outlined v-else />
-          </span>
-          <span class="ctrl-item" :class="{ active: getUiState(group.id).sortKey === 'changePercent' }" @click="handleSortChange(group.id, 'changePercent')">
-            日增长率 <caret-up-outlined v-if="getUiState(group.id).sortKey === 'changePercent' && getUiState(group.id).sortOrder === 'asc'"/><caret-down-outlined v-else />
-          </span>
-          <span class="ctrl-item" :class="{ active: getUiState(group.id).sortKey === 'accumulatedNetValue' }" @click="handleSortChange(group.id, 'accumulatedNetValue')">
-            累计净值 <caret-up-outlined v-if="getUiState(group.id).sortKey === 'accumulatedNetValue' && getUiState(group.id).sortOrder === 'asc'"/><caret-down-outlined v-else />
-          </span>
-        </div>
-        <!-- 股票排序选项 -->
-        <div class="sort-options" v-else>
-          <span class="ctrl-label">排序：</span>
-          <span class="ctrl-item" :class="{ active: getUiState(group.id).sortKey === 'default' }" @click="handleSortChange(group.id, 'default')">默认</span>
-          <span class="ctrl-item" :class="{ active: getUiState(group.id).sortKey === 'latestPrice' }" @click="handleSortChange(group.id, 'latestPrice')">
-            最新价 <caret-up-outlined v-if="getUiState(group.id).sortKey === 'latestPrice' && getUiState(group.id).sortOrder === 'asc'"/><caret-down-outlined v-else />
-          </span>
-          <span class="ctrl-item" :class="{ active: getUiState(group.id).sortKey === 'changePercent' }" @click="handleSortChange(group.id, 'changePercent')">
-            涨跌幅 <caret-up-outlined v-if="getUiState(group.id).sortKey === 'changePercent' && getUiState(group.id).sortOrder === 'asc'"/><caret-down-outlined v-else />
-          </span>
-          <span class="ctrl-item" :class="{ active: getUiState(group.id).sortKey === 'pe' }" @click="handleSortChange(group.id, 'pe')">
-            PE <caret-up-outlined v-if="getUiState(group.id).sortKey === 'pe' && getUiState(group.id).sortOrder === 'asc'"/><caret-down-outlined v-else />
-          </span>
-          <span class="ctrl-item" :class="{ active: getUiState(group.id).sortKey === 'roe' }" @click="handleSortChange(group.id, 'roe')">
-            ROE <caret-up-outlined v-if="getUiState(group.id).sortKey === 'roe' && getUiState(group.id).sortOrder === 'asc'"/><caret-down-outlined v-else />
-          </span>
-        </div>
-      </div>
-
       <a-spin :spinning="groupLoading[group.id]">
         <a-row :gutter="[16, 16]" class="card-grid">
           <a-col
@@ -294,7 +449,7 @@
               </a-card>
             </div>
           </a-col>
-          <!-- 添加标的常驻卡片 -->
+          <!-- 添加标的常驻卡片 (单分组展示) -->
           <a-col :xs="24" :sm="24" :md="12" :lg="8" :xl="6">
             <a-card hoverable class="add-stock-card" size="small" @click="showAddStockModal(group.id)">
               <plus-outlined class="add-icon" />
@@ -334,6 +489,83 @@
           <a-input v-model:value="renameForm.name" placeholder="请输入分组名称" />
         </a-form-item>
       </a-form>
+    </a-modal>
+
+    <!-- 编辑分组 Modal -->
+    <a-modal
+      v-model:visible="manageGroupsModalVisible"
+      title="编辑分组"
+      :footer="null"
+      width="460px"
+      wrapClassName="manage-groups-modal"
+    >
+      <div class="manage-groups-content">
+        <div class="manage-groups-header-tip">
+          支持重命名、调整排序及删除分组
+        </div>
+        <div class="manage-groups-list">
+          <div
+            v-for="(group, idx) in groups"
+            :key="group.id"
+            class="manage-group-item"
+          >
+            <!-- 分组名称及编辑 -->
+            <div class="manage-group-name-col">
+              <template v-if="editingGroupId === group.id">
+                <a-input
+                  v-model:value="editingGroupName"
+                  size="small"
+                  @pressEnter="saveEditingGroup(group.id)"
+                  @blur="saveEditingGroup(group.id)"
+                  style="width: 170px;"
+                />
+              </template>
+              <template v-else>
+                <span class="manage-group-name" :title="group.name">{{ group.name }}</span>
+                <span class="manage-group-count">({{ group.count ?? (groupStocks[group.id]?.length || 0) }})</span>
+                <edit-outlined class="manage-edit-icon" @click="startEditingGroup(group)" title="重命名" />
+              </template>
+            </div>
+
+            <!-- 操作按钮：上移、下移、删除 -->
+            <div class="manage-group-actions">
+              <a-button
+                type="text"
+                size="small"
+                :disabled="idx === 0"
+                @click="handleMoveGroup(group.id, 'UP')"
+                title="上移"
+              >
+                <arrow-up-outlined />
+              </a-button>
+              <a-button
+                type="text"
+                size="small"
+                :disabled="idx === groups.length - 1"
+                @click="handleMoveGroup(group.id, 'DOWN')"
+                title="下移"
+              >
+                <arrow-down-outlined />
+              </a-button>
+              <a-button
+                type="text"
+                danger
+                size="small"
+                title="删除"
+                @click="onDeleteGroup(group.id)"
+              >
+                <delete-outlined />
+              </a-button>
+            </div>
+          </div>
+        </div>
+
+        <div class="manage-groups-footer-add">
+          <a-button type="dashed" block @click="showAddGroupModal">
+            <plus-outlined /> 新增分组
+          </a-button>
+        </div>
+      </div>
     </a-modal>
 
     <a-modal
@@ -477,7 +709,11 @@ import {
   EllipsisOutlined,
   BellOutlined,
   BellFilled,
-  QuestionCircleOutlined
+  QuestionCircleOutlined,
+  EditOutlined,
+  ArrowUpOutlined,
+  ArrowDownOutlined,
+  DeleteOutlined
 } from '@ant-design/icons-vue';
 import MiniKlineChart from './components/MiniKlineChart.vue';
 import MiniFundNetValueChart from './components/MiniFundNetValueChart.vue';
@@ -503,7 +739,11 @@ import { getNotificationList, saveNotification, deleteNotification } from '@/api
 const groups = ref<WatchlistGroupVO[]>([]);
 const groupsLoading = ref(false);
 /** 当前在视口内（被锚点高亮）的分组 */
-const activeGroupId = ref<number>();
+const activeGroupId = ref<number | 'ALL' | undefined>('ALL');
+
+const totalStockCount = computed(() => {
+  return groups.value.reduce((sum, g) => sum + (g.count ?? groupStocks[g.id]?.length ?? 0), 0);
+});
 /** 各分组的股票数据：groupId → 股票列表 */
 const groupStocks = reactive<Record<number, WatchlistStockVO[]>>({});
 /** 各分组的加载状态 */
@@ -518,6 +758,14 @@ const visibleCount = ref(Number.MAX_SAFE_INTEGER);
 const visibleAnchorCount = computed(() => Math.min(visibleCount.value, MAX_VISIBLE_ANCHOR_GROUPS, groups.value.length));
 const visibleGroups = computed(() => groups.value.slice(0, visibleAnchorCount.value));
 const overflowGroups = computed(() => groups.value.slice(visibleAnchorCount.value));
+
+/** 当前选中的分组列表（全部 或 单个分组） */
+const displayedGroups = computed(() => {
+  if (activeGroupId.value === 'ALL' || activeGroupId.value === undefined) {
+    return groups.value;
+  }
+  return groups.value.filter(g => g.id === activeGroupId.value);
+});
 
 /** 全局搜索/通知过滤状态 */
 const globalSearchQuery = ref('');
@@ -541,97 +789,6 @@ const ensureUiState = (groupId: number) => {
 const getUiState = (groupId: number): GroupUiState => {
   ensureUiState(groupId);
   return groupUiState[groupId]!;
-};
-
-/** 分组区块 DOM 引用（用于滚动定位与 IntersectionObserver） */
-const groupSectionRefs = new Map<number, HTMLElement>();
-const setGroupSectionRef = (groupId: number, el: any) => {
-  if (el && el instanceof HTMLElement) {
-    groupSectionRefs.set(groupId, el);
-    observeGroupSection(groupId, el);
-  } else {
-    const old = groupSectionRefs.get(groupId);
-    if (old && intersectionObserver) {
-      intersectionObserver.unobserve(old);
-    }
-    groupSectionRefs.delete(groupId);
-  }
-};
-
-let intersectionObserver: IntersectionObserver | null = null;
-let activeGroupUpdateFrame: number | null = null;
-let initialActiveUnlockFrame: number | null = null;
-let initialActiveUnlockSecondFrame: number | null = null;
-let initialActiveLocked = true;
-
-const getActiveAnchorTop = () => {
-  const toolbar = document.querySelector('.watchlist-sticky-toolbar') as HTMLElement | null;
-  return toolbar ? toolbar.getBoundingClientRect().bottom + 16 : 140;
-};
-
-const updateActiveGroupByPosition = () => {
-  if (initialActiveLocked || groupSectionRefs.size === 0) return;
-  const anchorTop = getActiveAnchorTop();
-  let nearestPassed: { id: number; top: number } | null = null;
-  let nearestPending: { id: number; top: number } | null = null;
-
-  for (const group of groups.value) {
-    const el = groupSectionRefs.get(group.id);
-    if (!el) continue;
-    const rect = el.getBoundingClientRect();
-    if (rect.bottom <= anchorTop) continue;
-    const top = rect.top - anchorTop;
-
-    if (top <= 0) {
-      if (!nearestPassed || top > nearestPassed.top) {
-        nearestPassed = { id: group.id, top };
-      }
-    } else if (!nearestPending || top < nearestPending.top) {
-      nearestPending = { id: group.id, top };
-    }
-  }
-
-  const nextActiveId = nearestPassed?.id || nearestPending?.id;
-  if (nextActiveId && activeGroupId.value !== nextActiveId) {
-    activeGroupId.value = nextActiveId;
-  }
-};
-
-const scheduleActiveGroupUpdate = () => {
-  if (initialActiveLocked) return;
-  if (activeGroupUpdateFrame != null) {
-    cancelAnimationFrame(activeGroupUpdateFrame);
-  }
-  activeGroupUpdateFrame = requestAnimationFrame(() => {
-    activeGroupUpdateFrame = null;
-    updateActiveGroupByPosition();
-  });
-};
-
-/**
- * 第一次出现在视口时：触发懒加载 + 更新 activeGroupId
- */
-const observeGroupSection = (_groupId: number, el: HTMLElement) => {
-  if (!intersectionObserver) return;
-  intersectionObserver.observe(el);
-};
-
-const initIntersectionObserver = () => {
-  intersectionObserver = new IntersectionObserver((entries) => {
-    for (const entry of entries) {
-      const groupId = Number(entry.target.getAttribute('data-group-id'));
-      if (entry.isIntersecting) {
-        if (!loadedGroups.has(groupId)) {
-          loadedGroups.add(groupId);
-          fetchStocks(groupId);
-        }
-      }
-    }
-    scheduleActiveGroupUpdate();
-  }, {
-    threshold: [0, 0.2, 0.5],
-    rootMargin: '-140px 0px -40% 0px'
-  });
 };
 
 // 股票详情相关
@@ -682,6 +839,40 @@ const handleRenameGroup = async () => {
   }
 };
 
+// 编辑/管理分组 Modal
+const manageGroupsModalVisible = ref(false);
+const editingGroupId = ref<number | null>(null);
+const editingGroupName = ref('');
+
+const openManageGroupsModal = () => {
+  editingGroupId.value = null;
+  editingGroupName.value = '';
+  manageGroupsModalVisible.value = true;
+};
+
+const startEditingGroup = (group: WatchlistGroupVO) => {
+  editingGroupId.value = group.id;
+  editingGroupName.value = group.name;
+};
+
+const saveEditingGroup = async (groupId: number) => {
+  if (editingGroupId.value !== groupId) return;
+  const newName = editingGroupName.value.trim();
+  editingGroupId.value = null;
+  if (!newName) return;
+  const target = groups.value.find(g => g.id === groupId);
+  if (target && target.name === newName) return;
+  try {
+    const res = await updateWatchlistGroup({ id: groupId, name: newName });
+    if (res.data.success) {
+      message.success('修改成功');
+      if (target) target.name = newName;
+    }
+  } catch (error) {
+    console.error('Failed to update group name:', error);
+  }
+};
+
 // 修改分组（移动股票）相关
 const moveGroupModalVisible = ref(false);
 const moveGroupLoading = ref(false);
@@ -729,6 +920,25 @@ const handleExecuteMoveGroup = async () => {
 };
 
 // 排序处理
+const globalSortState = reactive<GroupUiState>({
+  sortKey: 'default',
+  sortOrder: 'desc'
+});
+
+const currentSortKey = computed(() => {
+  if (activeGroupId.value === 'ALL' || activeGroupId.value === undefined) {
+    return globalSortState.sortKey;
+  }
+  return getUiState(activeGroupId.value).sortKey;
+});
+
+const currentSortOrder = computed(() => {
+  if (activeGroupId.value === 'ALL' || activeGroupId.value === undefined) {
+    return globalSortState.sortOrder;
+  }
+  return getUiState(activeGroupId.value).sortOrder;
+});
+
 const handleSortChange = (groupId: number, key: string) => {
   const state = getUiState(groupId);
   if (key === 'default') {
@@ -742,6 +952,77 @@ const handleSortChange = (groupId: number, key: string) => {
     state.sortOrder = 'desc';
   }
 };
+
+const handleSortClick = (key: string) => {
+  if (activeGroupId.value === 'ALL' || activeGroupId.value === undefined) {
+    if (key === 'default') {
+      globalSortState.sortKey = 'default';
+    } else if (globalSortState.sortKey === key) {
+      globalSortState.sortOrder = globalSortState.sortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+      globalSortState.sortKey = key;
+      globalSortState.sortOrder = 'desc';
+    }
+    for (const g of groups.value) {
+      const state = getUiState(g.id);
+      state.sortKey = globalSortState.sortKey;
+      state.sortOrder = globalSortState.sortOrder;
+    }
+  } else {
+    handleSortChange(activeGroupId.value, key);
+  }
+};
+
+interface GroupedStockItem {
+  groupId: number;
+  stock: WatchlistStockVO;
+}
+
+const allSortedStocks = computed<GroupedStockItem[]>(() => {
+  const items: GroupedStockItem[] = [];
+  for (const group of groups.value) {
+    const list = groupStocks[group.id] || [];
+    for (const stock of list) {
+      items.push({ groupId: group.id, stock });
+    }
+  }
+
+  let result = items;
+  if (globalSearchQuery.value) {
+    const q = globalSearchQuery.value.trim().toLowerCase();
+    result = result.filter(item =>
+      (item.stock.stockName && item.stock.stockName.toLowerCase().includes(q)) ||
+      (item.stock.stockCode && item.stock.stockCode.toLowerCase().includes(q))
+    );
+  }
+  if (globalFilterNoti.value) {
+    result = result.filter(item => item.stock.hasNotification);
+  }
+
+  if (globalSortState.sortKey === 'default') {
+    return result;
+  }
+
+  return [...result].sort((a, b) => {
+    const key = globalSortState.sortKey;
+    let valA = (a.stock as any)[key];
+    let valB = (b.stock as any)[key];
+
+    if (currentAssetType.value === 'FUND') {
+      if (key === 'latestPrice') {
+        valA = a.stock.unitNetValue ?? a.stock.latestPrice;
+        valB = b.stock.unitNetValue ?? b.stock.latestPrice;
+      } else if (key === 'changePercent') {
+        valA = a.stock.dailyGrowthRate ?? a.stock.changePercent;
+        valB = b.stock.dailyGrowthRate ?? b.stock.changePercent;
+      }
+    }
+
+    if (valA == null || isNaN(valA)) valA = globalSortState.sortOrder === 'asc' ? Infinity : -Infinity;
+    if (valB == null || isNaN(valB)) valB = globalSortState.sortOrder === 'asc' ? Infinity : -Infinity;
+    return globalSortState.sortOrder === 'asc' ? valA - valB : valB - valA;
+  });
+});
 
 const getSortedStocks = (groupId: number): WatchlistStockVO[] => {
   const state = getUiState(groupId);
@@ -807,9 +1088,21 @@ const formatReportDate = (dateStr: string | undefined | null) => {
 
 const currentAssetType = ref<'STOCK' | 'FUND'>('STOCK');
 
+const setAssetType = (type: 'STOCK' | 'FUND') => {
+  if (currentAssetType.value === type) return;
+  currentAssetType.value = type;
+  onAssetTypeChange();
+};
+
 const onAssetTypeChange = () => {
-  activeGroupId.value = undefined;
+  activeGroupId.value = 'ALL';
   fetchGroups();
+};
+
+const fetchAllGroupStocks = () => {
+  for (const g of groups.value) {
+    fetchStocks(g.id);
+  }
 };
 
 const fetchGroups = async () => {
@@ -823,11 +1116,15 @@ const fetchGroups = async () => {
       for (const g of groups.value) {
         ensureUiState(g.id);
       }
-      // 默认 active 为第一个
-      if (groups.value.length > 0) {
-        activeGroupId.value = groups.value[0]!.id;
-      } else {
-        activeGroupId.value = undefined;
+      if (activeGroupId.value === 'ALL' || activeGroupId.value === undefined) {
+        fetchAllGroupStocks();
+      } else if (typeof activeGroupId.value === 'number') {
+        if (groups.value.some(g => g.id === activeGroupId.value)) {
+          fetchStocks(activeGroupId.value);
+        } else {
+          activeGroupId.value = 'ALL';
+          fetchAllGroupStocks();
+        }
       }
     }
   } catch (error) {
@@ -851,13 +1148,16 @@ const fetchStocks = async (groupId: number) => {
   }
 };
 
-/** 滚动到指定分组 */
-const scrollToGroup = (groupId: number) => {
-  const el = groupSectionRefs.get(groupId);
-  if (el) {
-    activeGroupId.value = groupId;
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
+/** 切换到全部展示 */
+const selectAll = () => {
+  activeGroupId.value = 'ALL';
+  fetchAllGroupStocks();
+};
+
+/** 切换到指定分组展示 */
+const selectGroup = (groupId: number) => {
+  activeGroupId.value = groupId;
+  fetchStocks(groupId);
 };
 
 /* === 分组上移/下移 === */
@@ -1210,55 +1510,11 @@ const isMounted = ref(false);
 
 onMounted(async () => {
   isMounted.value = true;
-  initialActiveLocked = true;
-  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-  initIntersectionObserver();
   await fetchGroups();
-  // 初次进入主动加载第一个分组（IntersectionObserver 在 ref 设置后才能触发）
-  await nextTick();
-  if (groups.value.length > 0) {
-    const firstId = groups.value[0]!.id;
-    activeGroupId.value = firstId;
-    if (!loadedGroups.has(firstId)) {
-      loadedGroups.add(firstId);
-      fetchStocks(firstId);
-    }
-  }
-  // 初始化锚点容量观察
   setupAnchorsResize();
-  initialActiveUnlockFrame = requestAnimationFrame(() => {
-    initialActiveUnlockFrame = null;
-    initialActiveUnlockSecondFrame = requestAnimationFrame(() => {
-      initialActiveUnlockSecondFrame = null;
-      initialActiveLocked = false;
-      updateActiveGroupByPosition();
-      window.addEventListener('scroll', scheduleActiveGroupUpdate, { passive: true });
-      window.addEventListener('resize', scheduleActiveGroupUpdate);
-    });
-  });
 });
 
 onBeforeUnmount(() => {
-  initialActiveLocked = true;
-  window.removeEventListener('scroll', scheduleActiveGroupUpdate);
-  window.removeEventListener('resize', scheduleActiveGroupUpdate);
-  if (initialActiveUnlockFrame != null) {
-    cancelAnimationFrame(initialActiveUnlockFrame);
-    initialActiveUnlockFrame = null;
-  }
-  if (initialActiveUnlockSecondFrame != null) {
-    cancelAnimationFrame(initialActiveUnlockSecondFrame);
-    initialActiveUnlockSecondFrame = null;
-  }
-  if (activeGroupUpdateFrame != null) {
-    cancelAnimationFrame(activeGroupUpdateFrame);
-    activeGroupUpdateFrame = null;
-  }
-  if (intersectionObserver) {
-    intersectionObserver.disconnect();
-    intersectionObserver = null;
-  }
-  groupSectionRefs.clear();
   if (anchorsResizeObserver) {
     anchorsResizeObserver.disconnect();
     anchorsResizeObserver = null;
@@ -1292,13 +1548,14 @@ const measureAnchors = async () => {
   }
   const containerWidth = container.clientWidth;
 
-  const items = Array.from(container.querySelectorAll<HTMLElement>(':scope > .group-anchor:not(.group-anchor-more)'));
-  const seps = Array.from(container.querySelectorAll<HTMLElement>(':scope > .group-anchor-sep'));
-  // 给"更多"预留固定宽度：分隔符 + 文字按钮 + 缓冲（避免边界情况下被挤掉）
-  const reservedForMore = 80;
+  const items = Array.from(container.querySelectorAll<HTMLElement>(':scope > .group-tab-item:not(.group-tab-more):not(.group-tab-all)'));
+  const allItem = container.querySelector<HTMLElement>(':scope > .group-tab-all');
+  const allItemWidth = allItem ? allItem.offsetWidth + 12 : 0;
+  // 给"更多"预留固定宽度
+  const reservedForMore = 90;
 
   // 全部都能放下
-  const totalWidth = items.reduce((sum, it, i) => sum + it.offsetWidth + (i > 0 ? (seps[i - 1]?.offsetWidth || 12) : 0), 0);
+  const totalWidth = items.reduce((sum, it) => sum + it.offsetWidth + 12, allItemWidth);
   if (totalWidth <= containerWidth) {
     visibleCount.value = items.length;
     measuring = false;
@@ -1306,11 +1563,10 @@ const measureAnchors = async () => {
   }
 
   // 否则按顺序累加，给"更多"预留固定空间
-  let used = 0;
+  let used = allItemWidth;
   let count = 0;
   for (let i = 0; i < items.length; i++) {
-    const sepWidth = i > 0 ? (seps[i - 1]?.offsetWidth || 12) : 0;
-    const itemWidth = items[i]!.offsetWidth + sepWidth;
+    const itemWidth = items[i]!.offsetWidth + 12;
     if (used + itemWidth + reservedForMore > containerWidth) break;
     used += itemWidth;
     count = i + 1;
@@ -1365,18 +1621,19 @@ watch(() => groups.value.length, async () => {
 }
 
 /* ========================================
-   顶部锚点导航
+   顶部固定分组 Tab 导航（极简平铺栏，非卡片样式）
    ======================================== */
 .watchlist-sticky-toolbar {
   position: sticky;
-  top: calc(64px + var(--spacing-sm));
+  top: 64px;
   z-index: 20;
   margin-bottom: var(--spacing-lg);
-  padding: 10px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 10px 26px rgba(36, 63, 94, 0.08);
+  padding: 4px 0 10px 0;
+  border: none;
+  border-bottom: 1px solid #edf2f7;
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: none;
   backdrop-filter: saturate(180%) blur(12px);
 }
 
@@ -1389,87 +1646,80 @@ watch(() => groups.value.length, async () => {
   margin-bottom: 0;
 }
 
-.group-anchors-list {
+.group-tabs-nav {
   display: flex;
-  flex-wrap: nowrap;
   align-items: center;
-  gap: 4px;
-  flex: 0 1 auto;
-  max-width: min(760px, 56vw);
+  gap: 12px;
+  flex: 1;
   min-width: 0;
   overflow: hidden;
 }
 
-.group-anchor {
-  cursor: pointer;
-  padding: 4px 8px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  transition: all var(--transition-fast);
-  user-select: none;
-  white-space: nowrap;
-  flex-shrink: 0;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.group-anchor-more {
-  padding: 4px 8px;
-  border: none;
-  background: transparent;
-  color: var(--color-accent);
-  font-weight: var(--font-weight-medium);
-}
-
-.group-anchors-more-wrap {
+.group-tab-item {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-  margin-left: 0;
-  margin-right: auto;
+  gap: 6px;
+  padding: 6px 14px 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: transparent;
 }
 
-.group-anchor-more.active {
-  color: var(--color-accent);
-  font-weight: var(--font-weight-semibold);
+.group-tab-item:hover {
+  color: #0f172a;
+  background: #f8fafc;
 }
 
-:global(.group-anchor-more-dropdown .ant-dropdown-menu) {
+.group-tab-item.active {
+  background: #f1f5f9;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.group-tab-item .tab-label {
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.group-tab-item .tab-count {
+  font-size: 13px;
+  line-height: 1.2;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
+  opacity: 0.9;
+}
+
+.group-tab-item .tab-underline {
+  position: absolute;
+  bottom: 0px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 2.5px;
+  background: #0f172a;
+  border-radius: 2px;
+}
+
+:global(.group-tab-more-dropdown .ant-dropdown-menu) {
   width: 260px;
   max-width: min(260px, calc(100vw - 32px));
 }
 
-:global(.group-anchor-more-dropdown .ant-dropdown-menu-item) {
+:global(.group-tab-more-dropdown .ant-dropdown-menu-item) {
   overflow: hidden;
 }
 
-:global(.group-anchor-more-dropdown .ant-dropdown-menu-title-content) {
+:global(.group-tab-more-dropdown .ant-dropdown-menu-title-content) {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.group-anchor:hover {
-  color: var(--color-text-primary);
-  background: rgba(0, 0, 0, 0.08);
-}
-
-.group-anchor.active:not(.group-anchor-more) {
-  color: var(--color-accent);
-  border: 1px solid rgba(0, 0, 0, 0.32);
-  background: transparent;
-  font-weight: var(--font-weight-semibold);
-}
-
-.group-anchor-sep {
-  color: var(--color-text-tertiary);
-  user-select: none;
-  padding: 0 2px;
 }
 
 .group-anchors-right {
@@ -1502,9 +1752,100 @@ watch(() => groups.value.length, async () => {
   max-width: 24vw;
 }
 
-.toolbar-action-button {
+.toolbar-more-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
   height: 32px;
-  line-height: 30px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: #ffffff;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toolbar-more-btn:hover {
+  color: #0f172a;
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+/* 编辑分组弹窗 */
+:global(.manage-groups-modal .ant-modal-body) {
+  padding: 16px 24px;
+}
+
+.manage-groups-header-tip {
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 12px;
+}
+
+.manage-groups-list {
+  max-height: 360px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+  border: 1px solid #f1f5f9;
+  border-radius: 8px;
+}
+
+.manage-group-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s ease;
+}
+
+.manage-group-item:last-child {
+  border-bottom: none;
+}
+
+.manage-group-item:hover {
+  background: #f8fafc;
+}
+
+.manage-group-name-col {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.manage-group-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #0f172a;
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.manage-group-count {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.manage-edit-icon {
+  font-size: 13px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.manage-edit-icon:hover {
+  color: #0f172a;
+}
+
+.manage-group-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 @media (max-width: 980px) {
@@ -2241,5 +2582,48 @@ watch(() => groups.value.length, async () => {
   padding-bottom: 8px;
   margin-bottom: 0;
   border-bottom: 1px solid #f0f0f0;
+}
+
+/* 顶部资产类型切换 (股票自选 / 基金自选) 分段药丸样式 - 统一对齐大盘全景 */
+#page-header-extra-left .card-segmented-pill,
+#page-header-extra .card-segmented-pill,
+.card-segmented-pill {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 2px;
+  border: 1px solid #e2e8f0;
+}
+
+#page-header-extra-left .pill-btn,
+#page-header-extra .pill-btn,
+.pill-btn {
+  border: none;
+  background: transparent;
+  padding: 4px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  line-height: 1.4;
+  outline: none;
+}
+
+#page-header-extra-left .pill-btn:hover,
+#page-header-extra .pill-btn:hover,
+.pill-btn:hover {
+  color: #0f172a;
+}
+
+#page-header-extra-left .pill-btn.is-active,
+#page-header-extra .pill-btn.is-active,
+.pill-btn.is-active {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 </style>
