@@ -13,43 +13,55 @@
       <!-- 左卡片：情绪环 + 整体状态 + 家数与赚钱效应 (占 10/24) -->
       <a-col :xs="24" :lg="10">
         <div class="overview-white-card sentiment-overview-card">
-          <!-- 情绪环形图 -->
-          <div class="sentiment-donut-wrap">
-            <svg class="donut-svg" viewBox="0 0 100 100">
-              <!-- 底环 -->
-              <path
-                d="M 16 80 A 40 40 0 1 1 84 80"
-                fill="none"
-                stroke="#f1f5f9"
-                stroke-width="7"
-                stroke-linecap="round"
-              />
-              <!-- 彩色渐变进度环 -->
-              <path
-                d="M 16 80 A 40 40 0 1 1 84 80"
-                fill="none"
-                stroke="url(#donutGradient)"
-                stroke-width="7"
-                stroke-linecap="round"
-                :stroke-dasharray="190"
-                :stroke-dashoffset="190 - (190 * Math.min(100, Math.max(0, sentimentData?.sentimentScore ?? 32))) / 100"
-              />
+          <!-- 情绪仪表盘 (彩虹弧形转盘) -->
+          <div class="sentiment-gauge-wrap">
+            <svg class="gauge-svg" viewBox="0 0 100 100">
               <defs>
-                <linearGradient id="donutGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <!-- 底轨渐变色（清新柔和多色渐变：淡绿 -> 天蓝 -> 蓝紫） -->
+                <linearGradient id="gaugeTrackGradient" x1="0%" y1="90%" x2="100%" y2="90%">
+                  <stop offset="0%" stop-color="#86efac" stop-opacity="0.5" />
+                  <stop offset="35%" stop-color="#7dd3fc" stop-opacity="0.5" />
+                  <stop offset="70%" stop-color="#93c5fd" stop-opacity="0.5" />
+                  <stop offset="100%" stop-color="#a5b4fc" stop-opacity="0.5" />
+                </linearGradient>
+                <!-- 激活进度条渐变色（在交界处平滑自然过渡） -->
+                <linearGradient id="gaugeProgressGradient" x1="0%" y1="90%" x2="100%" y2="90%">
                   <stop offset="0%" stop-color="#10b981" />
-                  <stop offset="35%" stop-color="#06b6d4" />
-                  <stop offset="70%" stop-color="#3b82f6" />
-                  <stop offset="100%" stop-color="#ef4444" />
+                  <stop :offset="`${Math.max(8, (sentimentData?.sentimentScore ?? 32) * 0.65)}%`" stop-color="#22c55e" />
+                  <stop :offset="`${sentimentData?.sentimentScore ?? 32}%`" stop-color="#38bdf8" stop-opacity="0.85" />
+                  <stop :offset="`${Math.min(100, (sentimentData?.sentimentScore ?? 32) + 10)}%`" stop-color="#93c5fd" stop-opacity="0.45" />
                 </linearGradient>
               </defs>
+              <!-- 底轨 -->
+              <path
+                d="M 20.9 74.4 A 38 38 0 1 1 79.1 74.4"
+                fill="none"
+                stroke="url(#gaugeTrackGradient)"
+                stroke-width="8"
+                stroke-linecap="round"
+              />
+              <!-- 激活进度 -->
+              <path
+                d="M 20.9 74.4 A 38 38 0 1 1 79.1 74.4"
+                fill="none"
+                stroke="url(#gaugeProgressGradient)"
+                stroke-width="8"
+                stroke-linecap="round"
+                :stroke-dasharray="172.5"
+                :stroke-dashoffset="172.5 - (172.5 * Math.min(100, Math.max(0, sentimentData?.sentimentScore ?? 32))) / 100"
+              />
             </svg>
-            <div class="donut-center-info">
-              <div class="donut-score-box">
-                <span class="donut-score">{{ sentimentData?.sentimentScore ?? 32 }}</span>
-                <span class="donut-score-max">/100</span>
+            <!-- 环内中心：仅数字 32 和 /100 居中 -->
+            <div class="gauge-center-info">
+              <div class="gauge-score">{{ sentimentData?.sentimentScore ?? 32 }}</div>
+              <div class="gauge-max">/100</div>
+            </div>
+            <!-- 环下底部：市场情绪标签 + 偏冷状态 -->
+            <div class="gauge-bottom-box">
+              <div class="gauge-bottom-label">市场情绪</div>
+              <div class="gauge-bottom-mood" :class="moodTagClass">
+                {{ sentimentData?.sentimentMoodTag || '偏冷' }}
               </div>
-              <div class="donut-label">市场情绪</div>
-              <div class="donut-mood-badge" :class="moodTagClass">{{ sentimentData?.sentimentMoodTag || '偏冷' }}</div>
             </div>
           </div>
 
@@ -66,18 +78,24 @@
             <div class="counts-summary-line">
               <div class="count-item">
                 <span class="item-label">上涨</span>
-                <span class="item-num text-red">{{ formatNumber(sentimentData?.riseCount ?? 1142) }}</span>
-                <span class="item-unit">家</span>
+                <div class="item-value-box">
+                  <span class="item-num text-red">{{ formatNumber(sentimentData?.riseCount ?? 1142) }}</span>
+                  <span class="item-unit">家</span>
+                </div>
               </div>
               <div class="count-item">
                 <span class="item-label">下跌</span>
-                <span class="item-num text-green">{{ formatNumber(sentimentData?.fallCount ?? 4317) }}</span>
-                <span class="item-unit">家</span>
+                <div class="item-value-box">
+                  <span class="item-num text-green">{{ formatNumber(sentimentData?.fallCount ?? 4317) }}</span>
+                  <span class="item-unit">家</span>
+                </div>
               </div>
               <div class="count-item">
                 <span class="item-label">平盘</span>
-                <span class="item-num text-gray">{{ formatNumber(sentimentData?.flatCount ?? 83) }}</span>
-                <span class="item-unit">家</span>
+                <div class="item-value-box">
+                  <span class="item-num text-gray">{{ formatNumber(sentimentData?.flatCount ?? 83) }}</span>
+                  <span class="item-unit">家</span>
+                </div>
               </div>
             </div>
 
@@ -124,24 +142,39 @@
                 <span>1.0</span>
                 <span>0</span>
               </div>
-              <!-- 5 根柱子 -->
-              <div class="turnover-bars-row">
-                <div
-                  v-for="(item, idx) in turnover5Days"
-                  :key="idx"
-                  class="turnover-bar-item"
-                  :class="{ 'is-today': item.isToday }"
-                >
-                  <div class="bar-top-value" :class="{ 'is-today': item.isToday }">
-                    {{ item.amount }}
-                  </div>
-                  <div class="bar-track">
+              <!-- 柱子 + 0基准线 + 日期 -->
+              <div class="turnover-bars-content">
+                <!-- 5 根柱子 -->
+                <div class="turnover-bars-row">
+                  <div
+                    v-for="(item, idx) in turnover5Days"
+                    :key="idx"
+                    class="turnover-bar-item"
+                    :class="{ 'is-today': item.isToday }"
+                  >
                     <div
-                      class="bar-fill-inner"
-                      :style="{ height: `${Math.min(100, Math.max(10, (item.amount / 3.0) * 100))}%` }"
-                    ></div>
+                      class="bar-pillar-wrap"
+                      :style="{ height: `${Math.min(100, Math.max(15, (item.amount / 3.0) * 100))}%` }"
+                    >
+                      <div class="bar-top-value" :class="{ 'is-today': item.isToday }">
+                        {{ item.amount }}
+                      </div>
+                      <div class="bar-fill-inner"></div>
+                    </div>
                   </div>
-                  <div class="bar-date-label" :class="{ 'is-today': item.isToday }">
+                </div>
+
+                <!-- 0 刻度水平基准线 (位于柱子与Y轴0点处，在日期上方) -->
+                <div class="turnover-baseline"></div>
+
+                <!-- 日期行 (位于基准线下方) -->
+                <div class="turnover-dates-row">
+                  <div
+                    v-for="(item, idx) in turnover5Days"
+                    :key="idx"
+                    class="bar-date-item"
+                    :class="{ 'is-today': item.isToday }"
+                  >
                     {{ item.isToday ? '今日' : item.date }}
                   </div>
                 </div>
@@ -185,8 +218,11 @@
             <svg class="sparkline-svg" viewBox="0 0 100 24" preserveAspectRatio="none">
               <path
                 :d="getSparklinePath(item.historyPrices)"
-                :stroke="(item.changePercent || 0) >= 0 ? '#ef4444' : '#059669'"
-                stroke-width="1.8"
+                :stroke="(item.changePercent || 0) >= 0 ? '#e05454' : '#1ea55b'"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                vector-effect="non-scaling-stroke"
                 fill="none"
               />
             </svg>
@@ -455,20 +491,20 @@ const turnover5Days = computed(() => {
 const distributionBars = computed(() => {
   const d = sentimentData.value;
   return [
-    { label: '涨停', count: d?.limitUpCount ?? 79, background: 'linear-gradient(to top, #ef4444, #f87171)', textColor: '#ef4444' },
-    { label: '>8%', count: d?.up8ToMaxCount ?? 15, background: 'linear-gradient(to top, #f87171, #fca5a5)', textColor: '#ef4444' },
-    { label: '8~6%', count: d?.up6To8Count ?? 37, background: 'linear-gradient(to top, #f87171, #fca5a5)', textColor: '#ef4444' },
-    { label: '6~4%', count: d?.up4To6Count ?? 210, background: 'linear-gradient(to top, #ef4444, #f87171)', textColor: '#ef4444' },
-    { label: '4~2%', count: d?.up2To4Count ?? 238, background: 'linear-gradient(to top, #ef4444, #f87171)', textColor: '#ef4444' },
-    { label: '1~0%', count: (d?.up0To1Count ?? 0) + (d?.up1To2Count ?? 0) || 475, background: 'linear-gradient(to top, #ef4444, #fca5a5)', textColor: '#ef4444' },
+    { label: '涨停', count: d?.limitUpCount ?? 79, background: 'linear-gradient(to top, #e05454, #f87171)', textColor: '#e05454' },
+    { label: '>8%', count: d?.up8ToMaxCount ?? 15, background: 'linear-gradient(to top, #f87171, #fca5a5)', textColor: '#e05454' },
+    { label: '8~6%', count: d?.up6To8Count ?? 37, background: 'linear-gradient(to top, #f87171, #fca5a5)', textColor: '#e05454' },
+    { label: '6~4%', count: d?.up4To6Count ?? 210, background: 'linear-gradient(to top, #e05454, #f87171)', textColor: '#e05454' },
+    { label: '4~2%', count: d?.up2To4Count ?? 238, background: 'linear-gradient(to top, #e05454, #f87171)', textColor: '#e05454' },
+    { label: '1~0%', count: (d?.up0To1Count ?? 0) + (d?.up1To2Count ?? 0) || 475, background: 'linear-gradient(to top, #e05454, #fca5a5)', textColor: '#e05454' },
     { label: '平', count: d?.flatCount ?? 83, background: '#cbd5e1', textColor: '#64748b' },
-    { label: '0~1%', count: d?.down0To1Count ?? 838, background: 'linear-gradient(to top, #059669, #34d399)', textColor: '#059669' },
-    { label: '1~2%', count: d?.down1To2Count ?? 1609, background: 'linear-gradient(to top, #059669, #10b981)', textColor: '#059669' },
-    { label: '2~4%', count: d?.down2To4Count ?? 1579, background: 'linear-gradient(to top, #059669, #10b981)', textColor: '#059669' },
-    { label: '4~6%', count: d?.down4To6Count ?? 228, background: 'linear-gradient(to top, #059669, #34d399)', textColor: '#059669' },
-    { label: '6~8%', count: d?.down6To8Count ?? 45, background: 'linear-gradient(to top, #10b981, #6ee7b7)', textColor: '#059669' },
-    { label: '8%<', count: d?.down8ToMinCount ?? 10, background: 'linear-gradient(to top, #34d399, #a7f3d0)', textColor: '#059669' },
-    { label: '跌停', count: d?.limitDownCount ?? 8, background: 'linear-gradient(to top, #059669, #10b981)', textColor: '#059669' }
+    { label: '0~1%', count: d?.down0To1Count ?? 838, background: 'linear-gradient(to top, #1ea55b, #4ade80)', textColor: '#1ea55b' },
+    { label: '1~2%', count: d?.down1To2Count ?? 1609, background: 'linear-gradient(to top, #1ea55b, #34d399)', textColor: '#1ea55b' },
+    { label: '2~4%', count: d?.down2To4Count ?? 1579, background: 'linear-gradient(to top, #1ea55b, #34d399)', textColor: '#1ea55b' },
+    { label: '4~6%', count: d?.down4To6Count ?? 228, background: 'linear-gradient(to top, #1ea55b, #4ade80)', textColor: '#1ea55b' },
+    { label: '6~8%', count: d?.down6To8Count ?? 45, background: 'linear-gradient(to top, #34d399, #86efac)', textColor: '#1ea55b' },
+    { label: '8%<', count: d?.down8ToMinCount ?? 10, background: 'linear-gradient(to top, #4ade80, #bbf7d0)', textColor: '#1ea55b' },
+    { label: '跌停', count: d?.limitDownCount ?? 8, background: 'linear-gradient(to top, #1ea55b, #34d399)', textColor: '#1ea55b' }
   ];
 });
 
@@ -611,9 +647,9 @@ const renderChart = () => {
     let color = '#94a3b8';
     if (node.changePercent !== null && node.changePercent !== undefined) {
       if (node.changePercent > 0) {
-        color = node.changePercent > 3 ? '#b91c1c' : '#ef4444';
+        color = node.changePercent > 3 ? '#c53030' : '#e05454';
       } else if (node.changePercent < 0) {
-        color = node.changePercent < -3 ? '#047857' : '#10b981';
+        color = node.changePercent < -3 ? '#15803d' : '#1ea55b';
       }
     }
 
@@ -658,7 +694,7 @@ const renderChart = () => {
           const pctStr = raw.changePercent !== null ? (raw.changePercent > 0 ? '+' : '') + raw.changePercent + '%' : '--';
           return `
             <div style="font-weight:bold;margin-bottom:4px;">${raw.name}</div>
-            <div>涨跌幅: <span style="font-weight:bold;color:${raw.changePercent >= 0 ? '#ef4444' : '#10b981'}">${pctStr}</span></div>
+            <div>涨跌幅: <span style="font-weight:bold;color:${raw.changePercent >= 0 ? '#e05454' : '#1ea55b'}">${pctStr}</span></div>
             <div>主力净流入: <span style="font-weight:bold;">${netInflowStr}</span></div>
           `;
         }
@@ -859,7 +895,7 @@ onUnmounted(() => {
 }
 
 .overview-title {
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 700;
   color: var(--color-text-primary, #0f172a);
   line-height: 1;
@@ -878,13 +914,13 @@ onUnmounted(() => {
 }
 
 .overview-white-card {
-  min-height: 175px;
+  min-height: 190px;
   height: 100%;
   width: 100%;
   box-sizing: border-box;
   background: #ffffff !important;
   border-radius: 12px;
-  padding: 22px 24px;
+  padding: 24px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   border: 1px solid #edf2f7;
   display: flex;
@@ -899,84 +935,94 @@ onUnmounted(() => {
 .sentiment-vertical-divider {
   width: 1px;
   background: #edf2f7;
-  height: 80px;
+  height: 105px;
   align-self: center;
   flex-shrink: 0;
 }
 
-/* 环形情绪图 */
-.sentiment-donut-wrap {
+/* 情绪仪表盘 (彩虹弧形转盘) */
+.sentiment-gauge-wrap {
   position: relative;
-  width: 125px;
-  height: 125px;
+  width: 142px;
+  height: 148px;
   flex-shrink: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
-.donut-svg {
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
+.gauge-svg {
+  width: 142px;
+  height: 142px;
 }
 
-.donut-center-info {
+/* 环内中心：仅数字 32 和 /100 居中 */
+.gauge-center-info {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -64%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
+  pointer-events: none;
+  width: 100%;
 }
 
-.donut-score-box {
-  display: flex;
-  align-items: baseline;
-  line-height: 1;
-}
-
-.donut-score {
+.gauge-score {
   font-size: 28px;
   font-weight: 800;
   color: #0f172a;
+  line-height: 1;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
 }
 
-.donut-score-max {
+.gauge-max {
+  font-size: 12px;
+  font-weight: 500;
+  color: #94a3b8;
+  line-height: 1;
+  margin-top: 3px;
+}
+
+/* 环下底部：市场情绪标签 + 偏冷状态 */
+.gauge-bottom-box {
+  position: absolute;
+  bottom: 0px;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.gauge-bottom-label {
   font-size: 11px;
   color: #94a3b8;
-  margin-left: 2px;
+  line-height: 1;
+  margin-bottom: 8px;
 }
 
-.donut-label {
-  font-size: 10px;
-  color: #94a3b8;
-  margin-top: 2px;
-}
-
-.donut-mood-badge {
-  font-size: 11px;
+.gauge-bottom-mood {
+  text-align: center;
+  font-size: 16px;
   font-weight: 700;
-  padding: 2px 10px;
-  border-radius: 10px;
-  margin-top: 4px;
+  line-height: 1;
 }
 
-.donut-mood-badge.tag-cold {
-  background: #eff6ff;
+.gauge-bottom-mood.tag-cold {
   color: #2563eb;
 }
 
-.donut-mood-badge.tag-warm {
-  background: #fef3c7;
+.gauge-bottom-mood.tag-warm {
   color: #d97706;
 }
 
-.donut-mood-badge.tag-hot {
-  background: #fee2e2;
+.gauge-bottom-mood.tag-hot {
   color: #dc2626;
 }
 
@@ -1001,8 +1047,8 @@ onUnmounted(() => {
 }
 
 .status-badge {
-  font-size: 17px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 800;
 }
 
 .text-blue {
@@ -1017,24 +1063,32 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   width: 100%;
-  align-items: baseline;
 }
 
 .count-item {
   display: flex;
-  align-items: baseline;
-  gap: 4px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   white-space: nowrap;
 }
 
 .item-label {
   font-size: 13px;
   color: #64748b;
+  font-weight: 500;
+}
+
+.item-value-box {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
 }
 
 .item-num {
   font-size: 19px;
   font-weight: 800;
+  line-height: 1.1;
 }
 
 .item-unit {
@@ -1046,6 +1100,9 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
+  border-top: 1px solid #edf2f7;
+  padding-top: 10px;
+  margin-top: 2px;
 }
 
 .effect-label {
@@ -1147,8 +1204,8 @@ onUnmounted(() => {
 
 .turnover-bars-container {
   display: flex;
-  align-items: flex-end;
-  gap: 14px;
+  align-items: flex-start;
+  gap: 12px;
   width: 100%;
 }
 
@@ -1157,7 +1214,7 @@ onUnmounted(() => {
   flex-direction: column;
   justify-content: space-between;
   height: 60px;
-  margin-bottom: 18px;
+  margin-top: 20px;
   font-size: 10px;
   color: #94a3b8;
   line-height: 1;
@@ -1166,71 +1223,99 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.turnover-bars-row {
+.turnover-bars-content {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.turnover-bars-row {
   display: flex;
   align-items: flex-end;
   justify-content: space-around;
   gap: 12px;
-  border-bottom: 1px solid #edf2f7;
-  padding-bottom: 4px;
   width: 100%;
+  height: 80px;
 }
 
 .turnover-bar-item {
   flex: 1;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
 }
 
+.bar-pillar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  width: 28px;
+  transition: height 0.3s ease;
+}
+
 .bar-top-value {
   font-size: 11px;
   font-weight: 600;
   color: #94a3b8;
-  height: 16px;
-  line-height: 16px;
-  margin-bottom: 4px;
+  line-height: 1;
+  margin-bottom: 3px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
+  white-space: nowrap;
 }
 
 .bar-top-value.is-today {
-  color: #ef4444;
+  color: #e05454;
   font-weight: 700;
-}
-
-.bar-track {
-  width: 28px;
-  height: 60px;
-  background: transparent;
-  border-radius: 4px 4px 0 0;
-  display: flex;
-  align-items: flex-end;
-  overflow: hidden;
 }
 
 .bar-fill-inner {
   width: 100%;
+  flex: 1;
   border-radius: 4px 4px 0 0;
-  background: #93c5fd;
-  transition: height 0.3s ease;
+  background: linear-gradient(to top, #7ea6cc, #a8c8e6);
+  min-height: 4px;
 }
 
 .turnover-bar-item.is-today .bar-fill-inner {
-  background: linear-gradient(to top, #ef4444, #f87171);
+  background: linear-gradient(to top, #e05454, #f87171);
 }
 
-.bar-date-label {
+.turnover-baseline {
+  width: 100%;
+  height: 1px;
+  background: #edf2f7;
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+
+.turnover-dates-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 12px;
+  width: 100%;
+}
+
+.bar-date-item {
+  flex: 1;
   font-size: 11px;
   color: #64748b;
-  margin-top: 4px;
+  text-align: center;
   line-height: 1;
   white-space: nowrap;
 }
 
+.bar-date-item.is-today {
+  color: #e05454;
+  font-weight: 700;
+}
+
 .bar-date-label.is-today {
-  color: #ef4444;
+  color: #e05454;
   font-weight: 700;
 }
 
@@ -1241,13 +1326,13 @@ onUnmounted(() => {
 }
 
 .index-card-flat {
-  background: #ffffff !important;
-  border: 1px solid #edf2f7;
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 18px 20px;
   min-height: 158px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
   position: relative;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   display: flex;
@@ -1256,8 +1341,9 @@ onUnmounted(() => {
 }
 
 .index-card-flat:hover {
+  background: #f1f5f9 !important;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.05);
   border-color: #cbd5e1;
 }
 
@@ -1275,11 +1361,10 @@ onUnmounted(() => {
 }
 
 .index-code-badge {
-  font-size: 11px;
+  font-size: 12px;
   color: #64748b;
-  background: #f8fafc;
-  padding: 2px 6px;
-  border-radius: 4px;
+  font-weight: 700;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
 }
 
 .index-price-row {
@@ -1328,7 +1413,8 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: stretch;
   width: 100%;
-  min-height: 320px;
+  min-height: 420px;
+  padding: 24px !important;
 }
 
 .flow-card {
@@ -1336,7 +1422,8 @@ onUnmounted(() => {
   justify-content: flex-start;
   align-items: stretch;
   width: 100%;
-  min-height: 320px;
+  min-height: 420px;
+  padding: 24px !important;
 }
 
 /* 全市场涨跌分布 */
@@ -1345,11 +1432,11 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 20px;
 }
 
 .dist-title {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
   color: #0f172a;
 }
@@ -1367,7 +1454,7 @@ onUnmounted(() => {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  height: 155px;
+  height: 220px;
   padding: 6px 0;
   gap: 4px;
 }
@@ -1383,7 +1470,7 @@ onUnmounted(() => {
 
 .bar-column-box {
   width: 100%;
-  max-width: 18px;
+  max-width: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1392,9 +1479,9 @@ onUnmounted(() => {
 }
 
 .bar-count-val {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  margin-bottom: 2px;
+  margin-bottom: 3px;
 }
 
 .bar-fill {
@@ -1404,28 +1491,28 @@ onUnmounted(() => {
 }
 
 .bar-label {
-  font-size: 9px;
+  font-size: 10px;
   color: #64748b;
-  margin-top: 4px;
+  margin-top: 6px;
   white-space: nowrap;
 }
 
 .sentiment-progress-container {
   width: 100%;
-  margin-top: 10px;
+  margin-top: 18px;
 }
 
 .sentiment-progress-bar {
   display: flex;
   width: 100%;
-  height: 6px;
-  border-radius: 3px;
+  height: 7px;
+  border-radius: 4px;
   overflow: hidden;
   background: #f1f5f9;
 }
 
 .progress-segment.rise {
-  background: #ef4444;
+  background: #e05454;
 }
 
 .progress-segment.flat {
@@ -1433,15 +1520,15 @@ onUnmounted(() => {
 }
 
 .progress-segment.fall {
-  background: #059669;
+  background: #1ea55b;
 }
 
 .sentiment-progress-medians {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 6px;
-  font-size: 11px;
+  margin-top: 8px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -1451,7 +1538,7 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  margin-bottom: 0;
+  margin-bottom: 16px;
 }
 
 .flow-title-box {
@@ -1462,7 +1549,7 @@ onUnmounted(() => {
 }
 
 .flow-title {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   color: #0f172a;
 }
@@ -1519,7 +1606,8 @@ onUnmounted(() => {
   display: flex;
   align-items: stretch;
   gap: 20px;
-  margin: auto 0;
+  flex: 1;
+  min-height: 330px;
 }
 
 .flow-vertical-divider {
@@ -1540,20 +1628,22 @@ onUnmounted(() => {
   font-size: 13px;
   font-weight: 700;
   color: #475569;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .rank-list-wrap {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
+  flex: 1;
+  justify-content: space-around;
 }
 
 .sector-row-item {
   display: flex;
   align-items: center;
   font-size: 13px;
-  padding: 6px 10px;
+  padding: 10px 14px;
   border-radius: 6px;
   background: #ffffff;
   transition: all 0.15s;
@@ -1578,12 +1668,12 @@ onUnmounted(() => {
 
 .rank-badge-num.badge-red {
   background: #fee2e2;
-  color: #ef4444;
+  color: #e05454;
 }
 
 .rank-badge-num.badge-green {
   background: #dcfce7;
-  color: #059669;
+  color: #1ea55b;
 }
 
 .rank-badge-num.badge-gray {
@@ -1617,18 +1707,26 @@ onUnmounted(() => {
 .flow-bubble-mode-body {
   width: 100%;
   position: relative;
-  height: 220px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 330px;
 }
 
 .chart-wrapper {
   width: 100%;
   position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   height: 100%;
 }
 
 .graph-chart-container {
   width: 100%;
-  height: 220px;
+  flex: 1;
+  height: 100%;
+  min-height: 330px;
 }
 
 .floating-zoom-toolbar {
@@ -1655,11 +1753,11 @@ onUnmounted(() => {
 
 /* 颜色工具类 */
 .text-red {
-  color: #ef4444 !important;
+  color: var(--color-error, #e05454) !important;
 }
 
 .text-green {
-  color: #059669 !important;
+  color: var(--color-success, #1ea55b) !important;
 }
 
 .text-gray {
