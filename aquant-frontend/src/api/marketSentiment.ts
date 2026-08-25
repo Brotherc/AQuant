@@ -10,6 +10,24 @@ export interface MarketSentimentVO {
   totalTurnover?: number;
   turnoverChangeAmount?: number;
 
+  profitEffect?: number;
+  sentimentScore?: number;
+  sentimentLevel?: string;
+  sentimentMoodTag?: string;
+  sentimentScoreChange?: number;
+  volumeRatio?: number;
+  volumeChangePercent?: number;
+  riseMedianPercent?: number;
+  fallMedianPercent?: number;
+  marketSummary?: string;
+  updateTime?: string;
+
+  recent5DaysTurnover?: Array<{
+    date: string;
+    amount: number;
+    isToday?: boolean;
+  }>;
+
   limitUpCount?: number;
   up8ToMaxCount?: number;
   up6To8Count?: number;

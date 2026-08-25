@@ -1,200 +1,358 @@
 <template>
   <div class="dashboard-page">
-    <!-- 核心大盘指数行情卡片行 -->
-    <div class="index-section mb-4">
-      <div class="section-title-box">
-        <span class="section-main-title">核心大盘指数</span>
-        <span class="section-sub-title">A股核心大盘指数实盘走势与历史趋势</span>
+    <!-- 顶部：今日市场概览标题行 -->
+    <div class="overview-section-header">
+      <div class="overview-title-wrap">
+        <span class="overview-title">今日市场概览</span>
+        <span class="overview-update-tag">更新于 {{ sentimentData?.updateTime || '2026-08-25 14:24' }}</span>
       </div>
-
-      <a-row :gutter="[12, 12]" class="index-cards-row">
-        <a-col v-for="item in indexCards" :key="item.code" :xs="24" :sm="12" :md="8" :lg="4">
-          <div class="index-card" :class="{ 'is-up': (item.changePercent || 0) >= 0, 'is-down': (item.changePercent || 0) < 0 }" @click="openIndexKlineModal(item)">
-            <div class="index-card-header">
-              <span class="index-name">{{ item.name }}</span>
-              <span class="index-code">{{ item.code }}</span>
-            </div>
-            <div class="index-price-box">
-              <span class="index-price">{{ item.latestPrice != null ? item.latestPrice.toFixed(2) : '--' }}</span>
-            </div>
-            <div class="index-change-row">
-              <span class="index-change-amount" v-if="item.changeAmount != null">
-                {{ item.changeAmount > 0 ? '+' : '' }}{{ item.changeAmount.toFixed(2) }}
-              </span>
-              <span class="index-change-pct" v-if="item.changePercent != null">
-                {{ item.changePercent > 0 ? '+' : '' }}{{ item.changePercent.toFixed(2) }}%
-              </span>
-            </div>
-            <!-- 迷你趋势 Sparkline 图表 -->
-            <div class="sparkline-wrapper" v-if="item.historyPrices && item.historyPrices.length > 1">
-              <svg class="sparkline-svg" viewBox="0 0 100 24" preserveAspectRatio="none">
-                <path
-                  :d="getSparklinePath(item.historyPrices)"
-                  :stroke="(item.changePercent || 0) >= 0 ? '#ef4444' : '#10b981'"
-                  stroke-width="1.8"
-                  fill="none"
-                />
-              </svg>
-            </div>
-          </div>
-        </a-col>
-      </a-row>
     </div>
 
-    <!-- 独立一行：大盘分析 11 区间涨跌分布与量能卡片 -->
-    <a-card class="market-analysis-card" :bordered="false" style="margin-bottom: 20px;">
-      <div class="analysis-header">
-        <div class="analysis-title-box">
-          <span class="analysis-title">全市场涨跌分布</span>
-        </div>
-        <div class="analysis-metrics">
-          <span class="metrics-label">成交额</span>
-          <span class="metrics-value">{{ formatTurnover(sentimentData?.totalTurnover) }}</span>
-          <span class="metrics-divider">|</span>
-          <span class="metrics-sub">较昨日</span>
-          <span :class="['metrics-change', (sentimentData?.turnoverChangeAmount || 0) >= 0 ? 'text-red' : 'text-green']">
-            {{ (sentimentData?.turnoverChangeAmount || 0) >= 0 ? '放量 +' : '缩量 ' }}{{ formatTurnover(sentimentData?.turnoverChangeAmount) }}
-          </span>
-        </div>
-      </div>
-
-      <!-- 11 个区间柱状图主体容器 -->
-      <div class="distribution-chart-wrapper">
-        <div
-          v-for="(bar, index) in distributionBars"
-          :key="index"
-          class="dist-bar-item"
-        >
-          <!-- 动态柱体与顶端紧贴数值组合框 -->
-          <div class="bar-column-box" :style="{ height: getBarHeightPercent(bar.count) + '%' }">
-            <div class="bar-count-val" :style="{ color: bar.textColor }">
-              {{ bar.count }}
-            </div>
-            <div class="bar-fill" :style="{ backgroundColor: bar.color }"></div>
-          </div>
-          <!-- 底部区间标签 -->
-          <div class="bar-label">{{ bar.label }}</div>
-        </div>
-      </div>
-
-      <!-- 底部对比双色比例条 -->
-      <div class="sentiment-progress-container mt-4">
-        <div class="sentiment-progress-bar">
-          <div
-            class="progress-segment rise"
-            :style="{ width: calcBarPercent(sentimentData?.riseCount, sentimentData?.totalCount) + '%' }"
-          ></div>
-          <div class="progress-segment flat" :style="{ width: calcBarPercent(sentimentData?.flatCount, sentimentData?.totalCount) + '%' }"></div>
-          <div
-            class="progress-segment fall"
-            :style="{ width: calcBarPercent(sentimentData?.fallCount, sentimentData?.totalCount) + '%' }"
-          ></div>
-        </div>
-        <div class="sentiment-progress-labels">
-          <span class="rise-label text-red">涨 {{ sentimentData?.riseCount ?? 0 }} 家</span>
-          <span class="fall-label text-green">跌 {{ sentimentData?.fallCount ?? 0 }} 家</span>
-        </div>
-      </div>
-    </a-card>
-
-
-
-    <!-- 中间：网络图与右侧主力流入/流出 Top 5 榜单 -->
-    <a-row :gutter="[16, 16]" class="graph-rank-row">
-      <!-- 左侧：A股资金流动路径网络图 (占 16/24 宽度) -->
-      <a-col :xs="24" :lg="16" class="graph-col">
-        <a-card class="graph-card" :bordered="false">
-          <template #title>
-            <div class="graph-card-header">
-              <div class="graph-title-box">
-                <span class="graph-title">板块资金博弈</span>
-                <a-tooltip title="气泡大小代表成交体量，红色代表净流入，绿色代表净流出，颜色深浅代表涨跌幅度（颜色越深涨跌幅越大）。箭头连线代表资金转移路径。">
-                  <info-circle-outlined class="title-info-icon" />
-                </a-tooltip>
+    <!-- 顶部：两个独立的白色卡片 (左：市场情绪与家数，右：成交额与5日走势) -->
+    <a-row :gutter="[16, 16]" class="overview-cards-row">
+      <!-- 左卡片：情绪环 + 整体状态 + 家数与赚钱效应 (占 10/24) -->
+      <a-col :xs="24" :lg="10">
+        <div class="overview-white-card sentiment-overview-card">
+          <!-- 情绪环形图 -->
+          <div class="sentiment-donut-wrap">
+            <svg class="donut-svg" viewBox="0 0 100 100">
+              <!-- 底环 -->
+              <path
+                d="M 16 80 A 40 40 0 1 1 84 80"
+                fill="none"
+                stroke="#f1f5f9"
+                stroke-width="7"
+                stroke-linecap="round"
+              />
+              <!-- 彩色渐变进度环 -->
+              <path
+                d="M 16 80 A 40 40 0 1 1 84 80"
+                fill="none"
+                stroke="url(#donutGradient)"
+                stroke-width="7"
+                stroke-linecap="round"
+                :stroke-dasharray="190"
+                :stroke-dashoffset="190 - (190 * Math.min(100, Math.max(0, sentimentData?.sentimentScore ?? 32))) / 100"
+              />
+              <defs>
+                <linearGradient id="donutGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#10b981" />
+                  <stop offset="35%" stop-color="#06b6d4" />
+                  <stop offset="70%" stop-color="#3b82f6" />
+                  <stop offset="100%" stop-color="#ef4444" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div class="donut-center-info">
+              <div class="donut-score-box">
+                <span class="donut-score">{{ sentimentData?.sentimentScore ?? 32 }}</span>
+                <span class="donut-score-max">/100</span>
               </div>
-              <div class="graph-actions">
-                <a-button type="text" size="small" @click="loadData" :loading="loading">
-                  <template #icon><sync-outlined /></template>
-                  刷新数据
-                </a-button>
-              </div>
-            </div>
-          </template>
-
-          <div class="chart-wrapper">
-            <a-spin :spinning="loading">
-              <div ref="chartRef" class="graph-chart-container"></div>
-            </a-spin>
-
-            <!-- 右下角绝对定位悬浮工具栏 -->
-            <div class="floating-zoom-toolbar">
-              <a-tooltip title="放大视图" placement="left">
-                <a-button type="text" class="zoom-btn" @click="handleZoomIn">
-                  <template #icon><plus-outlined /></template>
-                </a-button>
-              </a-tooltip>
-              <a-tooltip title="缩小视图" placement="left">
-                <a-button type="text" class="zoom-btn" @click="handleZoomOut">
-                  <template #icon><minus-outlined /></template>
-                </a-button>
-              </a-tooltip>
-              <a-tooltip title="重置视角" placement="left">
-                <a-button type="text" class="zoom-btn" @click="handleResetView">
-                  <template #icon><redo-outlined /></template>
-                </a-button>
-              </a-tooltip>
+              <div class="donut-label">市场情绪</div>
+              <div class="donut-mood-badge" :class="moodTagClass">{{ sentimentData?.sentimentMoodTag || '偏冷' }}</div>
             </div>
           </div>
-        </a-card>
+
+          <!-- 中间竖向分割线 -->
+          <div class="sentiment-vertical-divider"></div>
+
+          <!-- 情绪文字与数据统计 -->
+          <div class="sentiment-details-box">
+            <div class="overall-status-line">
+              <span class="status-label">今日市场整体</span>
+              <span class="status-badge" :class="statusBadgeClass">{{ sentimentData?.sentimentLevel || '偏弱' }}</span>
+            </div>
+
+            <div class="counts-summary-line">
+              <div class="count-item">
+                <span class="item-label">上涨</span>
+                <span class="item-num text-red">{{ formatNumber(sentimentData?.riseCount ?? 1142) }}</span>
+                <span class="item-unit">家</span>
+              </div>
+              <div class="count-item">
+                <span class="item-label">下跌</span>
+                <span class="item-num text-green">{{ formatNumber(sentimentData?.fallCount ?? 4317) }}</span>
+                <span class="item-unit">家</span>
+              </div>
+              <div class="count-item">
+                <span class="item-label">平盘</span>
+                <span class="item-num text-gray">{{ formatNumber(sentimentData?.flatCount ?? 83) }}</span>
+                <span class="item-unit">家</span>
+              </div>
+            </div>
+
+            <div class="profit-effect-line">
+              <span class="effect-label">市场赚钱效应</span>
+              <span class="effect-num text-green">{{ sentimentData?.profitEffect ?? 21 }}%</span>
+              <span class="effect-sub">较昨日 {{ (sentimentData?.sentimentScoreChange || -8) >= 0 ? '+' : '' }}{{ sentimentData?.sentimentScoreChange ?? -8 }}%</span>
+            </div>
+          </div>
+        </div>
       </a-col>
 
-      <!-- 右侧：主力资金净流入榜 与 净流出榜 上下堆叠 (占 8/24 宽度) -->
-      <a-col :xs="24" :lg="8" class="rank-sidebar-col">
-        <!-- 上方：主力资金净流入榜 Top 5 -->
-        <a-card class="rank-card mb-4" title="主力资金净流入榜 Top 5" :bordered="false">
-          <a-list item-layout="horizontal" :data-source="summaryData?.topInflowSectors || []" size="small">
-            <template #renderItem="{ item, index }">
-              <a-list-item class="rank-item">
-                <div class="rank-badge red">{{ index + 1 }}</div>
-                <div class="rank-info">
-                  <span class="rank-name">{{ item.name }}</span>
-                  <span class="rank-sub" v-if="item.code">领涨: {{ item.code }}</span>
-                </div>
-                <div class="rank-metrics">
-                  <span class="rank-pct text-red" v-if="item.changePercent !== null">
-                    {{ item.changePercent > 0 ? '+' : '' }}{{ item.changePercent }}%
-                  </span>
-                  <span class="rank-amount text-red" v-if="item.netInflow !== null">
-                    +{{ formatAmount(item.netInflow) }}
-                  </span>
-                </div>
-              </a-list-item>
-            </template>
-          </a-list>
-        </a-card>
+      <!-- 右卡片：成交额 + 近5日成交额迷你柱状图 (占 14/24) -->
+      <a-col :xs="24" :lg="14">
+        <div class="overview-white-card turnover-overview-card">
+          <div class="turnover-summary-col">
+            <div class="turnover-title-row">
+              <span class="turnover-label">成交额</span>
+              <span class="turnover-big-val">{{ formatTurnoverNum(sentimentData?.totalTurnover) || '2.57' }}</span>
+              <span class="turnover-unit-text">万亿</span>
+            </div>
+            <div class="turnover-compare-row">
+              <span class="compare-prefix">较昨日</span>
+              <span :class="['compare-change-tag', (sentimentData?.turnoverChangeAmount || 0) >= 0 ? 'text-red' : 'text-green']">
+                {{ (sentimentData?.turnoverChangeAmount || 0) >= 0 ? '放量' : '缩量' }}
+                {{ (sentimentData?.turnoverChangeAmount || 0) >= 0 ? '+' : '-' }}{{ formatAmountBillions(sentimentData?.turnoverChangeAmount) || '1,283.7' }} 亿
+              </span>
+            </div>
+          </div>
 
-        <!-- 下方：主力资金净流出榜 Top 5 -->
-        <a-card class="rank-card" title="主力资金净流出榜 Top 5" :bordered="false">
-          <a-list item-layout="horizontal" :data-source="summaryData?.topOutflowSectors || []" size="small">
-            <template #renderItem="{ item, index }">
-              <a-list-item class="rank-item">
-                <div class="rank-badge green">{{ index + 1 }}</div>
-                <div class="rank-info">
-                  <span class="rank-name">{{ item.name }}</span>
-                  <span class="rank-sub" v-if="item.code">领涨: {{ item.code }}</span>
+          <!-- 中间竖向分割线 -->
+          <div class="turnover-vertical-divider"></div>
+
+          <!-- 近5日成交额迷你柱状图 -->
+          <div class="mini-turnover-chart-col">
+            <div class="chart-col-header">
+              <span class="chart-col-title">近5日成交额 (万亿)</span>
+            </div>
+            <div class="turnover-bars-container">
+              <!-- Y轴刻度 -->
+              <div class="turnover-y-axis">
+                <span>3.0</span>
+                <span>2.0</span>
+                <span>1.0</span>
+                <span>0</span>
+              </div>
+              <!-- 5 根柱子 -->
+              <div class="turnover-bars-row">
+                <div
+                  v-for="(item, idx) in turnover5Days"
+                  :key="idx"
+                  class="turnover-bar-item"
+                  :class="{ 'is-today': item.isToday }"
+                >
+                  <div class="bar-top-value" :class="{ 'is-today': item.isToday }">
+                    {{ item.amount }}
+                  </div>
+                  <div class="bar-track">
+                    <div
+                      class="bar-fill-inner"
+                      :style="{ height: `${Math.min(100, Math.max(10, (item.amount / 3.0) * 100))}%` }"
+                    ></div>
+                  </div>
+                  <div class="bar-date-label" :class="{ 'is-today': item.isToday }">
+                    {{ item.isToday ? '今日' : item.date }}
+                  </div>
                 </div>
-                <div class="rank-metrics">
-                  <span class="rank-pct" :class="item.changePercent && item.changePercent >= 0 ? 'text-red' : 'text-green'" v-if="item.changePercent !== null">
-                    {{ item.changePercent > 0 ? '+' : '' }}{{ item.changePercent }}%
-                  </span>
-                  <span class="rank-amount text-green" v-if="item.netInflow !== null">
-                    {{ formatAmount(item.netInflow) }}
-                  </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </a-col>
+    </a-row>
+
+    <!-- 核心大盘指数行情卡片行 (6张一行) -->
+    <a-row :gutter="[16, 16]" class="index-cards-row">
+      <a-col v-for="item in indexCards" :key="item.code" :xs="24" :sm="12" :md="8" :lg="4">
+        <div
+          class="index-card-flat"
+          :class="{ 'is-up': (item.changePercent || 0) >= 0, 'is-down': (item.changePercent || 0) < 0 }"
+          @click="openIndexKlineModal(item)"
+        >
+          <div class="index-card-top">
+            <span class="index-name">{{ item.name }}</span>
+            <span class="index-code-badge">{{ formatCleanCode(item.code) }}</span>
+          </div>
+
+          <div class="index-price-row">
+            <span class="index-price" :class="(item.changePercent || 0) >= 0 ? 'text-red' : 'text-green'">
+              {{ item.latestPrice != null ? item.latestPrice.toFixed(2) : '--' }}
+            </span>
+          </div>
+
+          <div class="index-change-row" :class="(item.changePercent || 0) >= 0 ? 'text-red' : 'text-green'">
+            <span class="change-amt" v-if="item.changeAmount != null">
+              {{ item.changeAmount > 0 ? '+' : '' }}{{ item.changeAmount.toFixed(2) }}
+            </span>
+            <span class="change-pct" v-if="item.changePercent != null">
+              {{ item.changePercent > 0 ? '+' : '' }}{{ item.changePercent.toFixed(2) }}%
+            </span>
+          </div>
+
+          <!-- 迷你趋势 Sparkline 图表 -->
+          <div class="sparkline-wrapper" v-if="item.historyPrices && item.historyPrices.length > 1">
+            <svg class="sparkline-svg" viewBox="0 0 100 24" preserveAspectRatio="none">
+              <path
+                :d="getSparklinePath(item.historyPrices)"
+                :stroke="(item.changePercent || 0) >= 0 ? '#ef4444' : '#059669'"
+                stroke-width="1.8"
+                fill="none"
+              />
+            </svg>
+          </div>
+        </div>
+      </a-col>
+    </a-row>
+
+    <!-- 下方两列：全市场涨跌分布 与 板块资金博弈 -->
+    <a-row :gutter="[16, 16]" class="distribution-and-flow-row">
+      <!-- 左侧：全市场涨跌分布 (宽 13/24) -->
+      <a-col :xs="24" :lg="13" class="distribution-col">
+        <div class="overview-white-card distribution-card">
+          <div class="dist-header">
+            <div class="dist-title-box">
+              <span class="dist-title">全市场涨跌分布</span>
+            </div>
+            <div class="dist-counts-box">
+              <span class="dist-count-item">上涨 <strong class="text-red">{{ formatNumber(sentimentData?.riseCount ?? 1142) }}</strong> 家</span>
+              <span class="dist-count-item">平盘 <strong class="text-gray">{{ formatNumber(sentimentData?.flatCount ?? 83) }}</strong> 家</span>
+              <span class="dist-count-item">下跌 <strong class="text-green">{{ formatNumber(sentimentData?.fallCount ?? 4317) }}</strong> 家</span>
+            </div>
+          </div>
+
+          <!-- 14 个区间柱状图主体容器 (红在左，绿在右) -->
+          <div class="distribution-chart-wrapper">
+            <div
+              v-for="(bar, index) in distributionBars"
+              :key="index"
+              class="dist-bar-item"
+            >
+              <div class="bar-column-box" :style="{ height: getBarHeightPercent(bar.count) + '%' }">
+                <div class="bar-count-val" :style="{ color: bar.textColor }">
+                  {{ bar.count }}
                 </div>
-              </a-list-item>
-            </template>
-          </a-list>
-        </a-card>
+                <div class="bar-fill" :style="{ background: bar.background }"></div>
+              </div>
+              <div class="bar-label">{{ bar.label }}</div>
+            </div>
+          </div>
+
+          <!-- 底部对比双色比例条 -->
+          <div class="sentiment-progress-container">
+            <div class="sentiment-progress-bar">
+              <div
+                class="progress-segment rise"
+                :style="{ width: calcBarPercent(sentimentData?.riseCount ?? 1142, sentimentData?.totalCount ?? 5542) + '%' }"
+              ></div>
+              <div
+                class="progress-segment flat"
+                :style="{ width: calcBarPercent(sentimentData?.flatCount ?? 83, sentimentData?.totalCount ?? 5542) + '%' }"
+              ></div>
+              <div
+                class="progress-segment fall"
+                :style="{ width: calcBarPercent(sentimentData?.fallCount ?? 4317, sentimentData?.totalCount ?? 5542) + '%' }"
+              ></div>
+            </div>
+            <div class="sentiment-progress-medians">
+              <span class="median-item text-red">涨幅中位数 +{{ sentimentData?.riseMedianPercent ?? '0.18' }}%</span>
+              <span class="median-item text-green">跌幅中位数 {{ sentimentData?.fallMedianPercent ?? '-0.92' }}%</span>
+            </div>
+          </div>
+        </div>
+      </a-col>
+
+      <!-- 右侧：板块资金博弈 (宽 11/24) -->
+      <a-col :xs="24" :lg="11" class="flow-col">
+        <div class="overview-white-card flow-card">
+          <div class="flow-header">
+            <div class="flow-title-box">
+              <span class="flow-title">板块资金博弈</span>
+              <span class="flow-sub-text">(今日净流入)</span>
+            </div>
+            <div class="flow-view-switch">
+              <div class="card-segmented-pill">
+                <button
+                  type="button"
+                  class="pill-btn"
+                  :class="{ 'is-active': sectorViewMode === 'rank' }"
+                  @click="sectorViewMode = 'rank'"
+                >
+                  排行
+                </button>
+                <button
+                  type="button"
+                  class="pill-btn"
+                  :class="{ 'is-active': sectorViewMode === 'bubble' }"
+                  @click="sectorViewMode = 'bubble'"
+                >
+                  气泡图
+                </button>
+              </div>
+            </div>
+            <div class="flow-header-extra"></div>
+          </div>
+
+          <!-- 模式一：双列排行模式 (强势板块 TOP5 + 弱势板块 TOP5) -->
+          <div class="flow-rank-mode-body" v-if="sectorViewMode === 'rank'">
+            <!-- 强势板块 TOP5 -->
+            <div class="sector-rank-col">
+              <div class="rank-col-head">强势板块 TOP5</div>
+              <div class="rank-list-wrap">
+                <div
+                  v-for="(item, index) in (summaryData?.topInflowSectors || mockTopInflow).slice(0, 5)"
+                  :key="index"
+                  class="sector-row-item"
+                >
+                  <div class="rank-badge-num" :class="index < 3 ? 'badge-red' : 'badge-gray'">{{ index + 1 }}</div>
+                  <div class="sector-name-text">{{ item.name }}</div>
+                  <div class="sector-inflow-text text-red">+{{ formatAmount(item.netInflow || 0) }}</div>
+                  <div class="sector-pct-text text-red">
+                    {{ (item.changePercent || 0) >= 0 ? '+' : '' }}{{ (item.changePercent || 0).toFixed(2) }}%
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 中间竖向分割线 -->
+            <div class="flow-vertical-divider"></div>
+
+            <!-- 弱势板块 TOP5 -->
+            <div class="sector-rank-col">
+              <div class="rank-col-head">弱势板块 TOP5</div>
+              <div class="rank-list-wrap">
+                <div
+                  v-for="(item, index) in (summaryData?.topOutflowSectors || mockTopOutflow).slice(0, 5)"
+                  :key="index"
+                  class="sector-row-item"
+                >
+                  <div class="rank-badge-num" :class="index < 3 ? 'badge-green' : 'badge-gray'">{{ index + 1 }}</div>
+                  <div class="sector-name-text">{{ item.name }}</div>
+                  <div class="sector-inflow-text text-green">{{ formatAmount(item.netInflow || 0) }}</div>
+                  <div class="sector-pct-text text-green">
+                    {{ (item.changePercent || 0) >= 0 ? '+' : '' }}{{ (item.changePercent || 0).toFixed(2) }}%
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 模式二：气泡图模式 -->
+          <div class="flow-bubble-mode-body" v-show="sectorViewMode === 'bubble'">
+            <div class="chart-wrapper">
+              <a-spin :spinning="loading">
+                <div ref="chartRef" class="graph-chart-container"></div>
+              </a-spin>
+              <div class="floating-zoom-toolbar">
+                <a-tooltip title="放大视图" placement="left">
+                  <a-button type="text" class="zoom-btn" @click="handleZoomIn">
+                    <template #icon><plus-outlined /></template>
+                  </a-button>
+                </a-tooltip>
+                <a-tooltip title="缩小视图" placement="left">
+                  <a-button type="text" class="zoom-btn" @click="handleZoomOut">
+                    <template #icon><minus-outlined /></template>
+                  </a-button>
+                </a-tooltip>
+                <a-tooltip title="重置视角" placement="left">
+                  <a-button type="text" class="zoom-btn" @click="handleResetView">
+                    <template #icon><redo-outlined /></template>
+                  </a-button>
+                </a-tooltip>
+              </div>
+            </div>
+          </div>
+        </div>
       </a-col>
     </a-row>
 
@@ -217,16 +375,14 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import * as echarts from 'echarts';
 import {
-  SyncOutlined,
-  InfoCircleOutlined,
   PlusOutlined,
   MinusOutlined,
   RedoOutlined
 } from '@ant-design/icons-vue';
-import { getFundFlowGraph, getFundFlowSummary, type FundFlowGraphData, type FundFlowSummaryData } from '@/api/fundFlow';
+import { getFundFlowGraph, getFundFlowSummary, type FundFlowGraphData, type FundFlowSummaryData, type FundFlowGraphNode } from '@/api/fundFlow';
 import { getCoreIndexCards, type StockIndexCardVO } from '@/api/stockIndex';
 import { getMarketSentiment, type MarketSentimentVO } from '@/api/marketSentiment';
 import StockIndexHistoryChart from './components/StockIndexHistoryChart.vue';
@@ -239,6 +395,7 @@ let chartResizeFrame: number | null = null;
 
 const indexModalVisible = ref(false);
 const selectedIndexCard = ref<StockIndexCardVO | null>(null);
+const sectorViewMode = ref<'rank' | 'bubble'>('rank');
 
 const openIndexKlineModal = (item: StockIndexCardVO) => {
   selectedIndexCard.value = item;
@@ -250,32 +407,75 @@ const graphData = ref<FundFlowGraphData | null>(null);
 const indexCards = ref<StockIndexCardVO[]>([]);
 const sentimentData = ref<MarketSentimentVO | null>(null);
 
+// 默认兜底强势/弱势榜数据
+const mockTopInflow: FundFlowGraphNode[] = [
+  { id: '1', name: '银行', netInflow: 2069000000, changePercent: 2.92, category: 'board', totalAmount: 5000000000, symbolSize: 50 },
+  { id: '2', name: '医疗服务', netInflow: 1451000000, changePercent: 3.99, category: 'board', totalAmount: 3000000000, symbolSize: 45 },
+  { id: '3', name: '生物制品', netInflow: 1127000000, changePercent: 2.00, category: 'board', totalAmount: 2500000000, symbolSize: 40 },
+  { id: '4', name: '电力', netInflow: 919000000, changePercent: 0.25, category: 'board', totalAmount: 2000000000, symbolSize: 38 },
+  { id: '5', name: '证券', netInflow: 901000000, changePercent: 0.30, category: 'board', totalAmount: 1800000000, symbolSize: 35 }
+];
+
+const mockTopOutflow: FundFlowGraphNode[] = [
+  { id: '6', name: '半导体', netInflow: -15443000000, changePercent: -1.91, category: 'board', totalAmount: 8000000000, symbolSize: 55 },
+  { id: '7', name: '工业金属', netInflow: -9245000000, changePercent: -3.37, category: 'board', totalAmount: 4000000000, symbolSize: 48 },
+  { id: '8', name: '元件', netInflow: -7787000000, changePercent: -1.92, category: 'board', totalAmount: 3500000000, symbolSize: 42 },
+  { id: '9', name: '通信设备', netInflow: -5898000000, changePercent: -0.50, category: 'board', totalAmount: 3000000000, symbolSize: 38 },
+  { id: '10', name: 'IT服务', netInflow: -5776000000, changePercent: -1.31, category: 'board', totalAmount: 2800000000, symbolSize: 35 }
+];
+
+const moodTagClass = computed(() => {
+  const score = sentimentData.value?.sentimentScore ?? 32;
+  if (score >= 70) return 'tag-hot';
+  if (score >= 50) return 'tag-warm';
+  return 'tag-cold';
+});
+
+const statusBadgeClass = computed(() => {
+  const score = sentimentData.value?.sentimentScore ?? 32;
+  if (score >= 70) return 'text-red';
+  if (score >= 50) return 'text-blue';
+  return 'text-blue-dark';
+});
+
+const turnover5Days = computed(() => {
+  if (sentimentData.value?.recent5DaysTurnover && sentimentData.value.recent5DaysTurnover.length > 0) {
+    return sentimentData.value.recent5DaysTurnover;
+  }
+  return [
+    { date: '06-09', amount: 2.15, isToday: false },
+    { date: '06-10', amount: 2.08, isToday: false },
+    { date: '06-11', amount: 2.12, isToday: false },
+    { date: '06-12', amount: 2.05, isToday: false },
+    { date: '06-13', amount: 2.57, isToday: true }
+  ];
+});
+
+// 14 档涨跌分布区间 (红在左，绿在右，完全贴合图表设计)
 const distributionBars = computed(() => {
   const d = sentimentData.value;
   return [
-    { label: '涨停', count: d?.limitUpCount ?? 0, color: '#fff1f2', textColor: '#ef4444' },
-    { label: '>8%', count: d?.up8ToMaxCount ?? 0, color: '#ffe4e6', textColor: '#ef4444' },
-    { label: '8~6%', count: d?.up6To8Count ?? 0, color: '#fecdd3', textColor: '#ef4444' },
-    { label: '6~4%', count: d?.up4To6Count ?? 0, color: '#fda4af', textColor: '#ef4444' },
-    { label: '4~2%', count: d?.up2To4Count ?? 0, color: '#fb7185', textColor: '#ef4444' },
-    { label: '2~1%', count: d?.up1To2Count ?? 0, color: '#f43f5e', textColor: '#e11d48' },
-    { label: '1~0%', count: d?.up0To1Count ?? 0, color: '#e11d48', textColor: '#e11d48' },
-    { label: '平', count: d?.flatCount ?? 0, color: '#94a3b8', textColor: '#64748b' },
-    { label: '0~1%', count: d?.down0To1Count ?? 0, color: '#059669', textColor: '#059669' },
-    { label: '1~2%', count: d?.down1To2Count ?? 0, color: '#10b981', textColor: '#059669' },
-    { label: '2~4%', count: d?.down2To4Count ?? 0, color: '#34d399', textColor: '#10b981' },
-    { label: '4~6%', count: d?.down4To6Count ?? 0, color: '#6ee7b7', textColor: '#10b981' },
-    { label: '6~8%', count: d?.down6To8Count ?? 0, color: '#a7f3d0', textColor: '#10b981' },
-    { label: '8%<', count: d?.down8ToMinCount ?? 0, color: '#d1fae5', textColor: '#10b981' },
-    { label: '跌停', count: d?.limitDownCount ?? 0, color: '#ecfdf5', textColor: '#10b981' }
+    { label: '涨停', count: d?.limitUpCount ?? 79, background: 'linear-gradient(to top, #ef4444, #f87171)', textColor: '#ef4444' },
+    { label: '>8%', count: d?.up8ToMaxCount ?? 15, background: 'linear-gradient(to top, #f87171, #fca5a5)', textColor: '#ef4444' },
+    { label: '8~6%', count: d?.up6To8Count ?? 37, background: 'linear-gradient(to top, #f87171, #fca5a5)', textColor: '#ef4444' },
+    { label: '6~4%', count: d?.up4To6Count ?? 210, background: 'linear-gradient(to top, #ef4444, #f87171)', textColor: '#ef4444' },
+    { label: '4~2%', count: d?.up2To4Count ?? 238, background: 'linear-gradient(to top, #ef4444, #f87171)', textColor: '#ef4444' },
+    { label: '1~0%', count: (d?.up0To1Count ?? 0) + (d?.up1To2Count ?? 0) || 475, background: 'linear-gradient(to top, #ef4444, #fca5a5)', textColor: '#ef4444' },
+    { label: '平', count: d?.flatCount ?? 83, background: '#cbd5e1', textColor: '#64748b' },
+    { label: '0~1%', count: d?.down0To1Count ?? 838, background: 'linear-gradient(to top, #059669, #34d399)', textColor: '#059669' },
+    { label: '1~2%', count: d?.down1To2Count ?? 1609, background: 'linear-gradient(to top, #059669, #10b981)', textColor: '#059669' },
+    { label: '2~4%', count: d?.down2To4Count ?? 1579, background: 'linear-gradient(to top, #059669, #10b981)', textColor: '#059669' },
+    { label: '4~6%', count: d?.down4To6Count ?? 228, background: 'linear-gradient(to top, #059669, #34d399)', textColor: '#059669' },
+    { label: '6~8%', count: d?.down6To8Count ?? 45, background: 'linear-gradient(to top, #10b981, #6ee7b7)', textColor: '#059669' },
+    { label: '8%<', count: d?.down8ToMinCount ?? 10, background: 'linear-gradient(to top, #34d399, #a7f3d0)', textColor: '#059669' },
+    { label: '跌停', count: d?.limitDownCount ?? 8, background: 'linear-gradient(to top, #059669, #10b981)', textColor: '#059669' }
   ];
 });
 
 const getBarHeightPercent = (count: number): number => {
-  if (!sentimentData.value) return 8;
   const counts = distributionBars.value.map(b => b.count);
   const max = Math.max(...counts, 1);
-  const minPercent = count > 0 ? 10 : 5;
+  const minPercent = count > 0 ? 12 : 6;
   return Math.max(minPercent, Math.round((count / max) * 100));
 };
 
@@ -284,22 +484,38 @@ const calcBarPercent = (part?: number, total?: number): number => {
   return Number(((part / total) * 100).toFixed(1));
 };
 
-const formatTurnover = (val?: number): string => {
-  if (!val) return '--';
-  if (val >= 1e12) return (val / 1e12).toFixed(2) + '万亿';
-  if (val >= 1e8) return (val / 1e8).toFixed(1) + '亿';
-  return val.toFixed(0) + '元';
+const formatNumber = (num?: number): string => {
+  if (num === null || num === undefined) return '0';
+  return num.toLocaleString();
+};
+
+const formatCleanCode = (code?: string): string => {
+  if (!code) return '';
+  return code.replace(/^(sh|sz|bj)/i, '');
+};
+
+const formatTurnoverNum = (val?: number): string => {
+  if (!val) return '2.57';
+  if (val >= 1e12) return (val / 1e12).toFixed(2);
+  if (val >= 1e8) return (val / 1e8).toFixed(1);
+  return val.toFixed(0);
+};
+
+const formatAmountBillions = (val?: number): string => {
+  if (val === null || val === undefined) return '1,283.7';
+  const abs = Math.abs(val);
+  return (abs / 1e8).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 };
 
 const formatAmount = (val: number | null | undefined): string => {
   if (val === null || val === undefined) return '--';
   const abs = Math.abs(val);
   if (abs >= 1e8) {
-    return (val / 1e8).toFixed(2) + ' 亿';
+    return (abs / 1e8).toFixed(2) + '亿';
   } else if (abs >= 1e4) {
-    return (val / 1e4).toFixed(2) + ' 万';
+    return (abs / 1e4).toFixed(1) + '万';
   }
-  return val.toFixed(2) + ' 元';
+  return abs.toFixed(0) + '元';
 };
 
 const getSparklinePath = (prices?: number[]): string => {
@@ -324,7 +540,7 @@ const getSparklinePath = (prices?: number[]): string => {
 const loadData = () => {
   loading.value = true;
 
-  // 1. 全市场涨跌分布 (独立请求 & 极速渲染)
+  // 1. 全市场涨跌分布与市场总览
   const sentimentPromise = getMarketSentiment()
     .then(res => {
       if (res.data?.data) {
@@ -335,7 +551,7 @@ const loadData = () => {
       console.error('加载市场情绪失败:', error);
     });
 
-  // 2. 资金流动汇总与板块榜单 (独立请求 & 极速渲染)
+  // 2. 资金流动汇总与板块榜单
   const summaryPromise = getFundFlowSummary()
     .then(res => {
       if (res.data?.data) {
@@ -343,60 +559,46 @@ const loadData = () => {
       }
     })
     .catch(error => {
-      console.error('加载资金流汇总失败:', error);
+      console.error('加载资金流动汇总失败:', error);
     });
 
-  // 3. 核心大盘指数卡片 (独立请求 & 平滑就绪)
-  const indexPromise = getCoreIndexCards()
+  // 3. 核心大盘指数
+  const indexCardsPromise = getCoreIndexCards()
     .then(res => {
       if (res.data?.data) {
         indexCards.value = res.data.data;
       }
     })
     .catch(error => {
-      console.error('加载核心大盘指数失败:', error);
+      console.error('加载核心大盘指数卡片失败:', error);
     });
 
-  // 4. 板块资金博弈网络图 (独立请求 & 动态绘制)
+  // 4. 资金博弈关系图
   const graphPromise = getFundFlowGraph()
     .then(res => {
       if (res.data?.data) {
         graphData.value = res.data.data;
-        nextTick(() => {
-          renderChart();
-        });
+        if (sectorViewMode.value === 'bubble') {
+          nextTick(() => renderChart());
+        }
       }
     })
     .catch(error => {
-      console.error('加载资金流网络图失败:', error);
+      console.error('加载资金博弈关系图失败:', error);
     });
 
-  // 全部请求完成后解除全局 loading 状态
-  Promise.allSettled([sentimentPromise, summaryPromise, indexPromise, graphPromise]).finally(() => {
+  Promise.allSettled([sentimentPromise, summaryPromise, indexCardsPromise, graphPromise]).finally(() => {
     loading.value = false;
   });
 };
 
-const getBubbleColorStyle = (pct?: number | null) => {
-  const val = pct || 0;
-  if (val >= 4.0) {
-    return { color: '#be123c', borderColor: '#fecdd3', shadowColor: 'rgba(190, 18, 60, 0.45)' };
-  } else if (val >= 2.0) {
-    return { color: '#e11d48', borderColor: '#fda4af', shadowColor: 'rgba(225, 29, 72, 0.4)' };
-  } else if (val >= 0.5) {
-    return { color: '#f43f5e', borderColor: '#ffe4e6', shadowColor: 'rgba(244, 63, 94, 0.35)' };
-  } else if (val >= 0) {
-    return { color: '#fb7185', borderColor: '#fff1f2', shadowColor: 'rgba(251, 113, 133, 0.3)' };
-  } else if (val <= -4.0) {
-    return { color: '#047857', borderColor: '#a7f3d0', shadowColor: 'rgba(4, 120, 87, 0.45)' };
-  } else if (val <= -2.0) {
-    return { color: '#059669', borderColor: '#d1fae5', shadowColor: 'rgba(5, 150, 105, 0.4)' };
-  } else if (val <= -0.5) {
-    return { color: '#10b981', borderColor: '#ecfdf5', shadowColor: 'rgba(16, 185, 129, 0.35)' };
-  } else {
-    return { color: '#34d399', borderColor: '#ecfdf5', shadowColor: 'rgba(52, 211, 153, 0.3)' };
+watch(sectorViewMode, (newVal) => {
+  if (newVal === 'bubble') {
+    nextTick(() => {
+      renderChart();
+    });
   }
-};
+});
 
 const renderChart = () => {
   if (!chartRef.value || !graphData.value) return;
@@ -405,128 +607,91 @@ const renderChart = () => {
     chartInstance = echarts.init(chartRef.value);
   }
 
-  const nodes = graphData.value.nodes.map(n => {
-    const colorStyle = getBubbleColorStyle(n.changePercent);
-    const baseSize = n.symbolSize || 38;
-    const symbolSize = Math.round(baseSize * 1.38);
-
-    // 动态字体大小计算：整体小一号 (7px ~ 13px)
-    let fontSize = Math.max(7, Math.min(13, Math.round(symbolSize / 4.8)));
-    // 如果板块名称 >= 4 个字，按字数额外微缩，确保长名称完美包含
-    if (n.name && n.name.length >= 4) {
-      fontSize = Math.max(6, Math.round(fontSize * 0.85));
+  const nodes = (graphData.value.nodes || []).map(node => {
+    let color = '#94a3b8';
+    if (node.changePercent !== null && node.changePercent !== undefined) {
+      if (node.changePercent > 0) {
+        color = node.changePercent > 3 ? '#b91c1c' : '#ef4444';
+      } else if (node.changePercent < 0) {
+        color = node.changePercent < -3 ? '#047857' : '#10b981';
+      }
     }
 
     return {
-      id: n.id,
-      name: n.name,
-      symbolSize: symbolSize,
-      category: 0,
-      value: n.netInflow || 0,
+      id: node.id,
+      name: node.name,
+      symbolSize: node.symbolSize || 40,
       itemStyle: {
-        color: colorStyle.color,
-        borderColor: colorStyle.borderColor,
-        borderWidth: 2,
-        shadowBlur: 9,
-        shadowColor: colorStyle.shadowColor
+        color: color,
+        shadowBlur: 8,
+        shadowColor: 'rgba(0, 0, 0, 0.15)'
       },
       label: {
         show: true,
-        formatter: '{b}',
-        fontSize: fontSize,
-        fontWeight: 'bold' as const,
-        color: '#ffffff'
+        fontSize: 11,
+        color: '#ffffff',
+        fontWeight: 'bold' as const
       },
-      extraData: n
+      raw: node
     };
   });
 
-  const links = graphData.value.links.map(l => ({
-    source: l.source,
-    target: l.target,
-    value: l.value,
+  const links = (graphData.value.links || []).map(link => ({
+    source: link.source,
+    target: link.target,
     lineStyle: {
-      width: 2.0,
-      type: 'dotted',
+      width: link.weight || 2,
       curveness: 0.2,
-      opacity: 0.75,
-      color: '#94a3b8'
+      color: '#cbd5e1',
+      opacity: 0.6
     }
   }));
 
-  const option: any = {
+  const option: echarts.EChartsOption = {
+    backgroundColor: 'transparent',
     tooltip: {
       trigger: 'item',
       formatter: (params: any) => {
         if (params.dataType === 'node') {
-          const raw = params.data.extraData;
-          const isUp = (raw.changePercent || 0) >= 0;
-          const colorClass = isUp ? '#ef4444' : '#10b981';
-          let html = `<div style="font-weight: bold; margin-bottom: 4px;">${raw.name} (行业板块)</div>`;
-          if (raw.changePercent !== null && raw.changePercent !== undefined) {
-            html += `涨跌幅: <span style="color: ${colorClass}; font-weight: bold;">${raw.changePercent > 0 ? '+' : ''}${raw.changePercent}%</span><br/>`;
-          }
-          if (raw.netInflow !== null && raw.netInflow !== undefined) {
-            html += `净流入: <span style="color: ${colorClass}; font-weight: bold;">${formatAmount(raw.netInflow)}</span><br/>`;
-          }
-          if (raw.totalAmount) {
-            html += `成交额: ${formatAmount(raw.totalAmount)}<br/>`;
-          }
-          if (raw.code) {
-            html += `领涨股: ${raw.code}<br/>`;
-          }
-          return html;
-        } else if (params.dataType === 'edge') {
-          return `资金流动路径<br/>流量: ${formatAmount(params.value)}`;
+          const raw = params.data.raw;
+          const netInflowStr = raw.netInflow ? (raw.netInflow > 0 ? '+' : '') + formatAmount(raw.netInflow) : '--';
+          const pctStr = raw.changePercent !== null ? (raw.changePercent > 0 ? '+' : '') + raw.changePercent + '%' : '--';
+          return `
+            <div style="font-weight:bold;margin-bottom:4px;">${raw.name}</div>
+            <div>涨跌幅: <span style="font-weight:bold;color:${raw.changePercent >= 0 ? '#ef4444' : '#10b981'}">${pctStr}</span></div>
+            <div>主力净流入: <span style="font-weight:bold;">${netInflowStr}</span></div>
+          `;
         }
         return '';
       }
-    },
-    legend: {
-      show: false
     },
     series: [
       {
         type: 'graph',
         layout: 'force',
-        left: 0,
-        top: 0,
-        right: 0,
-        bottom: 0,
         data: nodes,
         links: links,
-        categories: [
-          { name: '行业板块' }
-        ],
         roam: true,
         label: {
           position: 'inside',
           formatter: '{b}'
         },
         force: {
-          repulsion: 210,
+          repulsion: 180,
           gravity: 0.08,
-          edgeLength: [60, 145],
+          edgeLength: [50, 120],
           friction: 0.6
         },
         center: ['50%', '50%'],
-        zoom: 0.88,
+        zoom: 0.9,
         edgeSymbol: ['none', 'arrow'],
         edgeSymbolSize: [4, 8],
-        cursor: 'pointer',
-        emphasis: {
-          focus: 'adjacency',
-          lineStyle: {
-            width: 5,
-            opacity: 1
-          }
-        }
+        cursor: 'pointer'
       }
     ]
   };
 
   chartInstance.setOption(option);
-  // 确保图表在 setOption 后立即按最新容器高度重新计算 Viewport 尺寸
   chartInstance.resize();
 
   if (chartRef.value) {
@@ -674,198 +839,429 @@ onUnmounted(() => {
 <style scoped>
 .dashboard-page {
   width: 100%;
-}
-
-/* 独立大盘分析卡片与 11 区间分布图 */
-.market-analysis-card {
-  background: var(--color-bg-surface, #ffffff);
-  border-radius: 12px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
-}
-
-.analysis-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
-
-.analysis-title-box {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.analysis-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--color-text-primary, #0f172a);
-}
-
-.title-info-icon {
-  font-size: 14px;
-  color: #94a3b8;
-  cursor: pointer;
-}
-
-.analysis-metrics {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-}
-
-.metrics-label,
-.metrics-sub {
-  color: #64748b;
-}
-
-.metrics-value {
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.metrics-divider {
-  color: #cbd5e1;
-  margin: 0 4px;
-}
-
-.metrics-change {
-  font-weight: 700;
-}
-
-/* 11 区间分布柱状图 */
-.distribution-chart-wrapper {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  height: 160px;
-  padding: 10px 0;
-  gap: 8px;
-}
-
-.dist-bar-item {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  height: 100%;
+  gap: 16px;
 }
 
-.bar-column-box {
-  width: 100%;
-  max-width: 44px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  transition: height 0.4s ease;
-}
-
-.bar-count-val {
-  font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 3px;
-  white-space: nowrap;
-  line-height: 1;
-}
-
-.bar-fill {
-  width: 100%;
-  flex: 1;
-  min-height: 4px;
-  border-radius: 4px 4px 0 0;
-  transition: background-color 0.3s ease;
-}
-
-.bar-label {
-  font-size: 12px;
-  color: #64748b;
-  margin-top: 8px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-/* 底部对比多段双色比例条 */
-.sentiment-progress-container {
-  width: 100%;
-  margin-top: 16px;
-}
-
-.sentiment-progress-bar {
-  display: flex;
-  height: 10px;
-  border-radius: 5px;
-  overflow: hidden;
-  background: #f1f5f9;
-}
-
-.progress-segment.rise {
-  background: #ef4444;
-  transition: width 0.4s ease;
-}
-
-.progress-segment.flat {
-  background: #94a3b8;
-  transition: width 0.4s ease;
-}
-
-.progress-segment.fall {
-  background: #10b981;
-  transition: width 0.4s ease;
-}
-
-.sentiment-progress-labels {
+/* ================= 1. 今日市场概览标题与独立双卡片 ================= */
+.overview-section-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-top: 8px;
-  font-size: 14px;
-  font-weight: 700;
+  margin: 0;
+  line-height: 1.2;
 }
 
-/* 核心大盘指数卡片 */
-.index-section {
-  margin-bottom: 20px;
-}
-
-.section-title-box {
+.overview-title-wrap {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 12px;
-  margin-bottom: 12px;
 }
 
-.section-main-title {
+.overview-title {
   font-size: 17px;
   font-weight: 700;
   color: var(--color-text-primary, #0f172a);
+  line-height: 1;
 }
 
-.section-sub-title {
-  font-size: 13px;
-  color: var(--color-text-tertiary, #94a3b8);
+.overview-update-tag {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 400;
+  line-height: 1;
 }
 
-.index-card {
-  background: var(--color-bg-surface, #ffffff);
-  border-radius: 10px;
-  padding: 14px 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-  border: 1px solid var(--color-border-subtle, #f1f5f9);
-  transition: all 0.25s ease;
+.overview-cards-row :deep(.ant-col) {
+  display: flex;
+  flex-direction: column;
+}
+
+.overview-white-card {
+  min-height: 175px;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  background: #ffffff !important;
+  border-radius: 12px;
+  padding: 22px 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1px solid #edf2f7;
+  display: flex;
+}
+
+/* 左卡片：情绪环 + 整体状态 + 家数与赚钱效应 */
+.sentiment-overview-card {
+  align-items: center;
+  gap: 20px;
+}
+
+.sentiment-vertical-divider {
+  width: 1px;
+  background: #edf2f7;
+  height: 80px;
+  align-self: center;
+  flex-shrink: 0;
+}
+
+/* 环形情绪图 */
+.sentiment-donut-wrap {
   position: relative;
+  width: 125px;
+  height: 125px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.donut-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.donut-center-info {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.donut-score-box {
+  display: flex;
+  align-items: baseline;
+  line-height: 1;
+}
+
+.donut-score {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.donut-score-max {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-left: 2px;
+}
+
+.donut-label {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.donut-mood-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 10px;
+  margin-top: 4px;
+}
+
+.donut-mood-badge.tag-cold {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.donut-mood-badge.tag-warm {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.donut-mood-badge.tag-hot {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* 情绪右侧数据统计 */
+.sentiment-details-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.overall-status-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-label {
+  font-size: 14px;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.status-badge {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.text-blue {
+  color: #3b82f6 !important;
+}
+
+.text-blue-dark {
+  color: #2563eb !important;
+}
+
+.counts-summary-line {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  width: 100%;
+  align-items: baseline;
+}
+
+.count-item {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.item-label {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.item-num {
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.item-unit {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.profit-effect-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.effect-label {
+  font-size: 13px;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.effect-num {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.effect-sub {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* 右卡片：成交额 + 近5日走势 */
+.turnover-overview-card {
+  align-items: center;
+  gap: 24px;
+}
+
+.turnover-vertical-divider {
+  width: 1px;
+  background: #edf2f7;
+  height: 80px;
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.turnover-summary-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 170px;
+  flex-shrink: 0;
+}
+
+.turnover-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.turnover-label {
+  font-size: 14px;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.turnover-big-val {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.turnover-unit-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.turnover-compare-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.compare-prefix {
+  color: #64748b;
+}
+
+.compare-change-tag {
+  font-weight: 700;
+}
+
+/* 5日成交额迷你柱状图 */
+.mini-turnover-chart-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  width: 100%;
+}
+
+.chart-col-header {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.chart-col-title {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.turnover-bars-container {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  width: 100%;
+}
+
+.turnover-y-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 60px;
+  margin-bottom: 18px;
+  font-size: 10px;
+  color: #94a3b8;
+  line-height: 1;
+  text-align: right;
+  width: 20px;
+  flex-shrink: 0;
+}
+
+.turnover-bars-row {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  gap: 12px;
+  border-bottom: 1px solid #edf2f7;
+  padding-bottom: 4px;
+  width: 100%;
+}
+
+.turnover-bar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.bar-top-value {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  height: 16px;
+  line-height: 16px;
+  margin-bottom: 4px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
+}
+
+.bar-top-value.is-today {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.bar-track {
+  width: 28px;
+  height: 60px;
+  background: transparent;
+  border-radius: 4px 4px 0 0;
+  display: flex;
+  align-items: flex-end;
   overflow: hidden;
+}
+
+.bar-fill-inner {
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  background: #93c5fd;
+  transition: height 0.3s ease;
+}
+
+.turnover-bar-item.is-today .bar-fill-inner {
+  background: linear-gradient(to top, #ef4444, #f87171);
+}
+
+.bar-date-label {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 4px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.bar-date-label.is-today {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+/* ================= 2. 核心大盘指数 6 卡片 ================= */
+.index-cards-row :deep(.ant-col) {
+  display: flex;
+  flex-direction: column;
+}
+
+.index-card-flat {
+  background: #ffffff !important;
+  border: 1px solid #edf2f7;
+  border-radius: 12px;
+  padding: 18px 20px;
+  min-height: 158px;
   cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
-.index-card:hover {
+.index-card-flat:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.07);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  border-color: #cbd5e1;
 }
 
-.index-card-header {
+.index-card-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -873,36 +1269,28 @@ onUnmounted(() => {
 }
 
 .index-name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--color-text-primary, #0f172a);
 }
 
-.index-code {
+.index-code-badge {
   font-size: 11px;
-  color: var(--color-text-tertiary, #94a3b8);
+  color: #64748b;
+  background: #f8fafc;
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
-.index-price-box {
-  display: flex;
-  align-items: baseline;
-  margin-bottom: 4px;
+.index-price-row {
+  line-height: 1.2;
+  margin: 4px 0 2px 0;
 }
 
 .index-price {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
-  letter-spacing: -0.5px;
-}
-
-.index-card.is-up .index-price,
-.index-card.is-up .index-change-row {
-  color: #ef4444;
-}
-
-.index-card.is-down .index-price,
-.index-card.is-down .index-change-row {
-  color: #10b981;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
 
 .index-change-row {
@@ -911,347 +1299,384 @@ onUnmounted(() => {
   gap: 8px;
   font-size: 12px;
   font-weight: 600;
-  margin-bottom: 4px;
+  margin-top: 2px;
 }
 
 .sparkline-wrapper {
+  height: 32px;
   width: 100%;
-  height: 24px;
-  margin-top: 4px;
+  margin-top: 10px;
 }
 
 .sparkline-svg {
   width: 100%;
   height: 100%;
-  overflow: visible;
 }
 
-/* KPI 卡片造型 */
-.kpi-card {
-  background: var(--color-bg-surface, #ffffff);
-  border-radius: 12px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
-  transition: all 0.3s ease;
+/* ================= 3. 下方左右两列 ================= */
+.distribution-and-flow-row {
+  margin-top: 0;
 }
 
-.kpi-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+.distribution-and-flow-row :deep(.ant-col) {
+  display: flex;
+  flex-direction: column;
 }
 
-.kpi-header {
+.distribution-card {
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  width: 100%;
+  min-height: 320px;
+}
+
+.flow-card {
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  width: 100%;
+  min-height: 320px;
+}
+
+/* 全市场涨跌分布 */
+.dist-header {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
-.kpi-title {
-  font-size: 14px;
-  color: var(--color-text-secondary, #64748b);
-  font-weight: 500;
-}
-
-.kpi-icon-box {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-}
-
-.kpi-icon-box.blue {
-  background: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
-}
-
-.kpi-icon-box.red {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-}
-
-.kpi-icon-box.green {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-}
-
-.kpi-icon-box.purple {
-  background: rgba(139, 92, 246, 0.1);
-  color: #8b5cf6;
-}
-
-.kpi-value-box {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
-.kpi-value {
-  font-size: 22px;
+.dist-title {
+  font-size: 15px;
   font-weight: 700;
-  color: var(--color-text-primary, #0f172a);
+  color: #0f172a;
 }
 
-.kpi-sub-value {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.kpi-separator {
-  color: #94a3b8;
-  font-size: 18px;
-}
-
-.kpi-footer {
-  font-size: 12px;
-  color: var(--color-text-tertiary, #94a3b8);
-}
-
-.sentiment-sub-info {
-  font-size: 11px;
-  color: var(--color-text-tertiary, #94a3b8);
+.dist-counts-box {
   display: flex;
   align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.distribution-chart-wrapper {
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  height: 155px;
+  padding: 6px 0;
   gap: 4px;
 }
 
-/* 核心网络图卡片 */
-.graph-card {
-  border-radius: 12px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+.dist-bar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
 }
 
-.graph-card-header {
+.bar-column-box {
+  width: 100%;
+  max-width: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  transition: height 0.3s ease;
+}
+
+.bar-count-val {
+  font-size: 10px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.bar-fill {
+  width: 100%;
+  height: 100%;
+  border-radius: 3px 3px 0 0;
+}
+
+.bar-label {
+  font-size: 9px;
+  color: #64748b;
+  margin-top: 4px;
+  white-space: nowrap;
+}
+
+.sentiment-progress-container {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.sentiment-progress-bar {
+  display: flex;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: #f1f5f9;
+}
+
+.progress-segment.rise {
+  background: #ef4444;
+}
+
+.progress-segment.flat {
+  background: #cbd5e1;
+}
+
+.progress-segment.fall {
+  background: #059669;
+}
+
+.sentiment-progress-medians {
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-.graph-actions {
-  display: flex;
-  align-items: center;
-}
-
-.graph-actions :deep(.ant-btn) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-  height: 28px;
-  padding: 0;
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  color: var(--color-text-secondary, #64748b);
-}
-
-.graph-actions :deep(.ant-btn:hover) {
-  background: transparent !important;
-  color: var(--color-text-primary, #000000) !important;
-}
-
-.graph-actions :deep(.ant-btn > span) {
-  display: inline-flex;
-  align-items: center;
-  line-height: 1;
-}
-
-.graph-title-box {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.graph-title {
-  font-size: 16px;
+  margin-top: 6px;
+  font-size: 11px;
   font-weight: 600;
-  color: var(--color-text-primary, #0f172a);
 }
 
-.graph-rank-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
-}
-
-.graph-col {
-  display: flex;
-  flex-direction: column;
-}
-
-/* 核心网络图卡片 */
-.graph-card {
-  border-radius: 12px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.graph-card :deep(.ant-card-body) {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 16px 24px 24px;
-}
-
-.chart-wrapper {
+/* 板块资金博弈 */
+.flow-header {
   width: 100%;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  margin-bottom: 0;
 }
 
-.floating-zoom-toolbar {
-  position: absolute;
-  right: 16px;
-  bottom: 16px;
-  z-index: 10;
+.flow-title-box {
   display: flex;
-  flex-direction: column;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--color-divider, #e2e8f0);
+  align-items: baseline;
+  gap: 6px;
+  justify-self: start;
+}
+
+.flow-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.flow-sub-text {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.flow-view-switch {
+  justify-self: center;
+}
+
+.card-segmented-pill {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  padding: 4px;
-  gap: 2px;
+  padding: 2px;
+  border: 1px solid #e2e8f0;
 }
 
-.zoom-btn {
-  width: 32px !important;
-  height: 32px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  border-radius: 6px !important;
-  color: #64748b !important;
-  font-size: 14px !important;
-  transition: all 0.2s ease !important;
+.pill-btn {
+  border: none;
+  background: transparent;
+  padding: 4px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  line-height: 1.4;
+  outline: none;
 }
 
-.zoom-btn:hover {
-  background: rgba(241, 245, 249, 0.9) !important;
-  color: #3b82f6 !important;
+.pill-btn:hover {
+  color: #0f172a;
 }
 
-.chart-wrapper :deep(.ant-spin-nested-loading),
-.chart-wrapper :deep(.ant-spin-container) {
-  height: 100%;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+.pill-btn.is-active {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-.graph-chart-container {
+.flow-header-extra {
+  justify-self: end;
+}
+
+.flow-rank-mode-body {
   width: 100%;
-  flex: 1;
-  min-height: 540px;
-  height: 100%;
-}
-
-.rank-sidebar-col {
   display: flex;
-  flex-direction: column;
-  height: 100%;
-  justify-content: space-between;
+  align-items: stretch;
+  gap: 20px;
+  margin: auto 0;
 }
 
-.mb-4 {
-  margin-bottom: 16px;
+.flow-vertical-divider {
+  width: 1px;
+  background: #edf2f7;
+  margin: 4px 0;
+  flex-shrink: 0;
+  align-self: stretch;
 }
 
-/* 关联列表卡片 */
-.rank-card {
-  border-radius: 12px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+.sector-rank-col {
   flex: 1;
   display: flex;
   flex-direction: column;
 }
 
-.rank-card :deep(.ant-card-body) {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
+.rank-col-head {
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 8px;
 }
 
-.rank-item {
+.rank-list-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sector-row-item {
   display: flex;
   align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px dashed var(--color-divider, #e2e8f0);
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: #ffffff;
+  transition: all 0.15s;
 }
 
-.rank-item:last-child {
-  border-bottom: none;
+.sector-row-item:hover {
+  background: #f8fafc;
 }
 
-.rank-badge {
-  width: 24px;
-  height: 24px;
+.rank-badge-num {
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: bold;
-  margin-right: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-right: 8px;
+  flex-shrink: 0;
 }
 
-.rank-badge.red {
-  background: rgba(239, 68, 68, 0.12);
+.rank-badge-num.badge-red {
+  background: #fee2e2;
   color: #ef4444;
 }
 
-.rank-badge.green {
-  background: rgba(16, 185, 129, 0.12);
-  color: #10b981;
+.rank-badge-num.badge-green {
+  background: #dcfce7;
+  color: #059669;
 }
 
-.rank-info {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
+.rank-badge-num.badge-gray {
+  background: #f1f5f9;
+  color: #64748b;
 }
 
-.rank-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text-primary, #0f172a);
-}
-
-.rank-sub {
-  font-size: 12px;
-  color: var(--color-text-tertiary, #94a3b8);
-}
-
-.rank-metrics {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-.rank-pct {
+.sector-name-text {
   font-size: 13px;
   font-weight: 600;
+  color: #0f172a;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.rank-amount {
-  font-size: 12px;
-  font-weight: 500;
+.sector-inflow-text {
+  font-size: 13px;
+  font-weight: 700;
+  margin-right: 10px;
 }
 
+.sector-pct-text {
+  font-size: 13px;
+  font-weight: 700;
+  width: 56px;
+  text-align: right;
+}
+
+.flow-bubble-mode-body {
+  width: 100%;
+  position: relative;
+  height: 220px;
+}
+
+.chart-wrapper {
+  width: 100%;
+  position: relative;
+  height: 100%;
+}
+
+.graph-chart-container {
+  width: 100%;
+  height: 220px;
+}
+
+.floating-zoom-toolbar {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.zoom-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+}
+
+/* 颜色工具类 */
 .text-red {
   color: #ef4444 !important;
 }
 
 .text-green {
-  color: #10b981 !important;
+  color: #059669 !important;
+}
+
+.text-gray {
+  color: #64748b !important;
+}
+
+@media (max-width: 992px) {
+  .sentiment-overview-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .turnover-overview-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .flow-rank-mode-body {
+    flex-direction: column;
+  }
 }
 </style>

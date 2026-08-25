@@ -17,6 +17,8 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import com.brotherc.aquant.index.repository.StockIndexHistoryRepository;
+
 @ExtendWith(MockitoExtension.class)
 class StockMarketSentimentTest {
 
@@ -25,6 +27,9 @@ class StockMarketSentimentTest {
 
     @Mock
     private StockQuoteRepository stockQuoteRepository;
+
+    @Mock
+    private StockIndexHistoryRepository stockIndexHistoryRepository;
 
     @InjectMocks
     private StockMarketService stockMarketService;
