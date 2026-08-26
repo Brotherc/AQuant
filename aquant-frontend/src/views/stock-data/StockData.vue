@@ -68,29 +68,30 @@
     <div class="stock-terminal-main">
       <!-- 顶部标的概览 Header -->
       <div class="stock-main-header" v-if="selectedStock">
-        <div class="stock-header-left">
+        <div class="header-left">
           <div class="stock-title-row">
-            <span class="stock-title-name">{{ selectedStock.name }}</span>
-            <span class="stock-title-code">{{ selectedStock.code }}</span>
+            <span class="main-stock-name">{{ selectedStock.name }}</span>
+            <span class="main-stock-code">{{ selectedStock.code }}</span>
           </div>
           <div class="stock-price-row">
-            <span class="stock-current-price" :class="getPriceColorClass(selectedStock.changePercent)">
+            <span class="main-latest-price" :class="getPriceColorClass(selectedStock.changePercent)">
               {{ selectedStock.latestPrice != null ? selectedStock.latestPrice.toFixed(2) : '-' }}
             </span>
-            <span class="stock-price-change" :class="getPriceColorClass(selectedStock.changePercent)">
+            <span class="main-change-amount" :class="getPriceColorClass(selectedStock.changePercent)">
               {{ selectedStock.changeAmount != null && selectedStock.changeAmount > 0 ? '+' : '' }}{{ selectedStock.changeAmount != null ? selectedStock.changeAmount.toFixed(2) : '-' }}
+            </span>
+            <span class="main-change-percent" :class="getPriceColorClass(selectedStock.changePercent)">
               ({{ selectedStock.changePercent != null && selectedStock.changePercent > 0 ? '+' : '' }}{{ selectedStock.changePercent != null ? selectedStock.changePercent.toFixed(2) : '-' }}%)
             </span>
           </div>
         </div>
 
-        <div class="stock-header-actions">
+        <div class="header-right">
           <!-- 加入自选按钮 -->
           <a-button
-            type="primary"
-            :ghost="!isInWatchlist"
             size="small"
-            class="watchlist-btn"
+            class="watchlist-action-btn"
+            :class="{ 'in-watchlist': isInWatchlist }"
             @click="showAddWatchlist"
             :loading="addLoading"
           >
@@ -186,8 +187,8 @@
       :destroyOnClose="true"
       width="420px"
     >
-      <div style="margin-bottom: 12px; font-weight: 500;">
-        将 <span style="font-weight: 700; color: #1677ff;">{{ selectedStock?.name }} ({{ selectedStock?.code }})</span> 加入分组：
+      <div style="margin-bottom: 14px; font-size: 14px; color: #1e293b;">
+        将 {{ selectedStock?.name }} ({{ selectedStock?.code }}) 加入分组：
       </div>
       <a-select
         v-model:value="targetGroupId"
@@ -671,6 +672,9 @@ onMounted(() => {
 }
 
 .watchlist-action-btn {
+  background: #18181b !important;
+  border: 1px solid #18181b !important;
+  color: #ffffff !important;
   border-radius: 6px;
   height: 30px;
   font-size: 13px;
@@ -678,12 +682,25 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.watchlist-action-btn:hover {
+  background: #27272a !important;
+  border-color: #27272a !important;
+  color: #ffffff !important;
 }
 
 .watchlist-action-btn.in-watchlist {
-  background: #f0fdf4;
-  border-color: #bbf7d0;
-  color: #16a34a;
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #475569 !important;
+}
+
+.watchlist-action-btn.in-watchlist:hover {
+  background: #e2e8f0 !important;
+  border-color: #94a3b8 !important;
+  color: #1e293b !important;
 }
 
 .refresh-icon-btn {
