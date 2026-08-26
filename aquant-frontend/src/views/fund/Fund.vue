@@ -1,5 +1,26 @@
 <template>
   <div class="stock-terminal-layout">
+    <!-- 顶部全局操作区 (传送至卡片外部顶部) -->
+    <Teleport to="#page-header-extra" v-if="isMounted">
+      <div class="page-header-extra-actions">
+        <span class="refresh-time-text" v-if="lastRefreshTime">
+          更新于 {{ lastRefreshTime }}
+        </span>
+        <a-button
+          type="text"
+          size="small"
+          class="global-refresh-btn"
+          :loading="loading"
+          @click="handleRefresh"
+          title="刷新基金数据"
+        >
+          <template #icon>
+            <sync-outlined />
+          </template>
+        </a-button>
+      </div>
+    </Teleport>
+
     <!-- 左侧列表栏 -->
     <div class="stock-terminal-sidebar">
       <!-- 顶部搜索框与筛选 -->
@@ -190,17 +211,6 @@
             </template>
             {{ isInWatchlist ? '已自选' : '加自选' }}
           </a-button>
-
-          <a-button
-            type="text"
-            size="small"
-            class="refresh-icon-btn"
-            :loading="loading"
-            @click="loadData"
-            title="刷新数据"
-          >
-            <sync-outlined />
-          </a-button>
         </div>
       </div>
 
@@ -376,6 +386,7 @@ import {
   getFundPurchaseLimits,
   getLatestFundHoldings,
   getFundTypes,
+  getStockFundInfoLatest,
   type FundInfoVO,
   type FundInfoPageReqVO,
   type StockFundPurchaseLimitVO,
@@ -397,6 +408,12 @@ import {
   PlusOutlined,
   CheckOutlined
 } from '@ant-design/icons-vue';
+
+// 挂载状态
+const isMounted = ref(false);
+
+// 刷新状态与时间
+const lastRefreshTime = ref('');
 
 // 用户登录状态与自选
 const isLoggedIn = ref(!!localStorage.getItem('token'));
@@ -699,9 +716,30 @@ const handleConfirmAdd = async () => {
   }
 };
 
+// 获取最新同步时间
+const fetchRefreshTime = async () => {
+  try {
+    const res = await getStockFundInfoLatest();
+    if (res.data.success) {
+      lastRefreshTime.value = res.data.data;
+    }
+  } catch (error) {
+    console.error('Failed to fetch refresh time:', error);
+  }
+};
+
+// 刷新基金数据
+const handleRefresh = async () => {
+  await loadData();
+  await fetchRefreshTime();
+  message.success('基金数据已刷新');
+};
+
 onMounted(() => {
+  isMounted.value = true;
   fetchFundTypes();
   loadData();
+  fetchRefreshTime();
   fetchWatchlistStockCodes();
 });
 </script>
@@ -717,6 +755,40 @@ onMounted(() => {
   height: calc(100vh - 100px);
   min-height: 640px;
   box-sizing: border-box;
+}
+
+/* 顶部全局操作区 */
+.page-header-extra-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.refresh-time-text {
+  font-size: 12px;
+  color: #64748b;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.global-refresh-btn {
+  color: #475569;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.global-refresh-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
 }
 
 /* 左侧栏 */
@@ -1072,22 +1144,6 @@ onMounted(() => {
   background: #e2e8f0 !important;
   border-color: #94a3b8 !important;
   color: #1e293b !important;
-}
-
-.refresh-icon-btn {
-  color: #64748b;
-  font-size: 16px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-}
-
-.refresh-icon-btn:hover {
-  background: #f8fafc;
-  color: #0f172a;
 }
 
 /* 下部区域：图表 + Tab + 档案看板 */

@@ -1,5 +1,26 @@
 <template>
   <div class="stock-terminal-layout">
+    <!-- 顶部全局操作区 (传送至卡片外部顶部) -->
+    <Teleport to="#page-header-extra" v-if="isMounted">
+      <div class="page-header-extra-actions">
+        <span class="refresh-time-text" v-if="lastRefreshTime">
+          更新于 {{ lastRefreshTime }}
+        </span>
+        <a-button
+          type="text"
+          size="small"
+          class="global-refresh-btn"
+          :loading="refreshLoading"
+          @click="handleRefresh"
+          title="刷新全市场行情"
+        >
+          <template #icon>
+            <sync-outlined />
+          </template>
+        </a-button>
+      </div>
+    </Teleport>
+
     <!-- 左侧列表栏 -->
     <div class="stock-terminal-sidebar">
       <!-- 顶部搜索框 -->
@@ -100,18 +121,6 @@
               <plus-outlined v-else />
             </template>
             {{ isInWatchlist ? '已自选' : '加自选' }}
-          </a-button>
-
-          <!-- 刷新按钮 -->
-          <a-button
-            type="text"
-            size="small"
-            class="refresh-icon-btn"
-            :loading="refreshLoading"
-            @click="handleRefresh"
-            title="刷新全市场行情"
-          >
-            <sync-outlined />
           </a-button>
         </div>
       </div>
@@ -225,6 +234,9 @@ import { message } from 'ant-design-vue';
 import StockHistoryChart from './components/StockHistoryChart.vue';
 import { SearchOutlined, SyncOutlined, PlusOutlined, CheckOutlined } from '@ant-design/icons-vue';
 import { formatCurrencyAmount, formatVolume } from '@/utils/format';
+
+// 挂载状态
+const isMounted = ref(false);
 
 // 用户登录状态
 const isLoggedIn = ref(!!localStorage.getItem('token'));
@@ -434,6 +446,7 @@ const handleConfirmAdd = async () => {
 };
 
 onMounted(() => {
+  isMounted.value = true;
   fetchData();
   fetchRefreshTime();
   fetchWatchlistStockCodes();
@@ -703,19 +716,36 @@ onMounted(() => {
   color: #1e293b !important;
 }
 
-.refresh-icon-btn {
+.page-header-extra-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.refresh-time-text {
+  font-size: 12px;
   color: #64748b;
-  font-size: 16px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.global-refresh-btn {
+  color: #475569;
+  font-size: 15px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 6px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
 }
 
-.refresh-icon-btn:hover {
+.global-refresh-btn:hover {
   background: #f8fafc;
+  border-color: #cbd5e1;
   color: #0f172a;
 }
 

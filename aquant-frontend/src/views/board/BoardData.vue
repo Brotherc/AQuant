@@ -1,5 +1,26 @@
 <template>
   <div class="stock-terminal-layout">
+    <!-- 顶部全局操作区 (传送至卡片外部顶部) -->
+    <Teleport to="#page-header-extra" v-if="isMounted">
+      <div class="page-header-extra-actions">
+        <span class="refresh-time-text" v-if="lastRefreshTime">
+          更新于 {{ lastRefreshTime }}
+        </span>
+        <a-button
+          type="text"
+          size="small"
+          class="global-refresh-btn"
+          :loading="refreshLoading"
+          @click="handleRefresh"
+          title="刷新板块行情"
+        >
+          <template #icon>
+            <sync-outlined />
+          </template>
+        </a-button>
+      </div>
+    </Teleport>
+
     <!-- 左侧列表栏 -->
     <div class="stock-terminal-sidebar">
       <!-- 顶部搜索框 -->
@@ -99,17 +120,6 @@
               {{ selectedBoard.leadingStockChangePercent > 0 ? '+' : '' }}{{ selectedBoard.leadingStockChangePercent != null ? selectedBoard.leadingStockChangePercent + '%' : '' }}
             </span>
           </div>
-
-          <a-button
-            type="text"
-            size="small"
-            class="refresh-icon-btn"
-            :loading="refreshLoading"
-            @click="handleRefresh"
-            title="刷新最新行情"
-          >
-            <sync-outlined />
-          </a-button>
         </div>
       </div>
 
@@ -193,6 +203,9 @@ import { getBoardPage, getStockBoardIndustryLatest, type StockIndustryBoardVO } 
 import BoardHistoryChart from './components/BoardHistoryChart.vue';
 import { SearchOutlined, SyncOutlined } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
+
+// 挂载状态
+const isMounted = ref(false);
 
 // 刷新状态
 const refreshLoading = ref(false);
@@ -307,6 +320,7 @@ const handleRefresh = async () => {
 };
 
 onMounted(() => {
+  isMounted.value = true;
   fetchData();
   fetchRefreshTime();
 });
@@ -323,6 +337,40 @@ onMounted(() => {
   height: calc(100vh - 100px);
   min-height: 640px;
   box-sizing: border-box;
+}
+
+/* 顶部全局操作区 */
+.page-header-extra-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.refresh-time-text {
+  font-size: 12px;
+  color: #64748b;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.global-refresh-btn {
+  color: #475569;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.global-refresh-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
 }
 
 /* 左侧栏 */
@@ -571,22 +619,6 @@ onMounted(() => {
 
 .capsule-change {
   font-weight: 700;
-}
-
-.refresh-icon-btn {
-  color: #64748b;
-  font-size: 16px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-}
-
-.refresh-icon-btn:hover {
-  background: #f8fafc;
-  color: #0f172a;
 }
 
 /* 下部区域：图表 + 行情数据 */
