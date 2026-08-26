@@ -275,7 +275,8 @@ public class StockWatchlistService {
         StockWatchlistGroup group = groupRepository.findByIdAndUserId(reqVO.getId(), userId)
                 .orElseThrow(() -> new BusinessException(ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND));
 
-        if (!group.getName().equals(reqVO.getName()) && groupRepository.existsByUserIdAndName(userId, reqVO.getName())) {
+        if (!group.getName().equals(reqVO.getName()) &&
+                groupRepository.existsByUserIdAndNameAndType(userId, reqVO.getName(), group.getType())) {
             throw new BusinessException(ExceptionEnum.WATCHLIST_GROUP_NAME_DUPLICATE);
         }
 
