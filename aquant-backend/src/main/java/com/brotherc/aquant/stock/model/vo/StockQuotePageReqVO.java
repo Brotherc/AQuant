@@ -14,6 +14,9 @@ public class StockQuotePageReqVO {
     @Nonnull
     private Boolean refresh;
 
+    @Schema(description = "关键字（股票代码或名称模糊匹配）")
+    private String keyword;
+
     @Schema(description = "股票代码")
     private String code;
 

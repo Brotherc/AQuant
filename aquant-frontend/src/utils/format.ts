@@ -25,8 +25,8 @@ export const formatUnitValue = (
 export const formatAmount = (value: number | null | undefined) => {
   return formatUnitValue(value, [
     { threshold: 100000000, divisor: 100000000, suffix: '亿' },
+    { threshold: 10000000, divisor: 10000000, suffix: '千万' },
     { threshold: 10000, divisor: 10000, suffix: '万' },
-    { threshold: 1000, divisor: 1000, suffix: '千' },
   ], '元')
 }
 

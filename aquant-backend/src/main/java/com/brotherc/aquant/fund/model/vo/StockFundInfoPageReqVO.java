@@ -7,6 +7,9 @@ import lombok.Data;
 @Schema(description = "股票基金数据分页查询入参")
 public class StockFundInfoPageReqVO {
 
+    @Schema(description = "关键字（基金代码、简称或拼音模糊匹配）")
+    private String keyword;
+
     @Schema(description = "基金代码")
     private String fundCode;
 

@@ -135,6 +135,17 @@ public class StockFundInfoService {
         Specification<StockFundInfo> specification = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
+            if (StringUtils.isNotBlank(reqVO.getKeyword())) {
+                String kw = "%" + reqVO.getKeyword().trim() + "%";
+                String kwLower = "%" + reqVO.getKeyword().trim().toLowerCase() + "%";
+                predicates.add(cb.or(
+                    cb.like(root.get("fundCode"), kw),
+                    cb.like(root.get("fundName"), kw),
+                    cb.like(cb.lower(root.get("pinyinAbbr")), kwLower),
+                    cb.like(cb.lower(root.get("pinyinFull")), kwLower)
+                ));
+            }
+
             if (StringUtils.isNotBlank(reqVO.getFundCode())) {
                 predicates.add(cb.like(root.get("fundCode"), "%" + reqVO.getFundCode() + "%"));
             }
@@ -180,6 +191,10 @@ public class StockFundInfoService {
             }
             return vo;
         });
+    }
+
+    public List<String> getFundTypes() {
+        return stockFundInfoRepository.findDistinctFundTypes();
     }
 
 }

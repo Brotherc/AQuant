@@ -35,6 +35,7 @@ export interface WatchlistGroupVO {
     name: string;
     type?: string;
     sortNo: number;
+    count?: number;
     stocks?: WatchlistStockVO[];
 }
 

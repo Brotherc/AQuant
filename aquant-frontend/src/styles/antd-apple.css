@@ -73,14 +73,19 @@
   transition: none !important;
 }
 
-.ant-table-tbody > tr:hover > td {
+.ant-table-tbody > tr:not(.ant-table-placeholder):hover > td {
   background: var(--color-bg-surface) !important;
   transition: none !important;
 }
 
-.ant-table-tbody > tr > td.ant-table-cell-row-hover {
+.ant-table-tbody > tr:not(.ant-table-placeholder) > td.ant-table-cell-row-hover {
   background: var(--color-bg-surface) !important;
   transition: none !important;
+}
+
+.ant-table-tbody > tr.ant-table-placeholder:hover > td,
+.ant-table-tbody > tr.ant-table-placeholder > td.ant-table-cell-row-hover {
+  background: transparent !important;
 }
 
 .ant-table-tbody > tr > td {
@@ -988,36 +993,54 @@
    ======================================== */
 
 .ant-dropdown-menu {
-  background: var(--color-bg-secondary) !important;
-  border: 1px solid var(--color-border) !important;
-  box-shadow: var(--shadow-lg) !important;
-  border-radius: var(--radius-lg) !important;
-  padding: 0 !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
+  border-radius: 8px !important;
+  padding: 4px !important;
   overflow: hidden;
 }
 
 .ant-dropdown .ant-menu,
 .ant-dropdown-menu {
-  padding: 0 !important;
   margin: 0 !important;
 }
 
 .ant-dropdown-menu-item,
 .ant-dropdown .ant-menu-item {
-  color: var(--color-text-primary) !important;
-  border-radius: 0 !important;
-  margin: 0 !important;
+  color: #1e293b !important;
+  border-radius: 6px !important;
+  margin: 2px 0 !important;
+  padding: 6px 12px !important;
+  font-size: 13px !important;
+  transition: all 0.15s ease !important;
 }
 
 .ant-dropdown-menu-item:hover,
 .ant-dropdown .ant-menu-item:hover {
-  background: var(--color-bg-surface) !important;
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.ant-dropdown-menu-item-selected,
+.ant-dropdown .ant-menu-item-selected,
+.ant-dropdown-menu-item.ant-dropdown-menu-item-selected {
+  color: #0f172a !important;
+  background: #f1f5f9 !important;
+  font-weight: 700 !important;
+}
+
+.ant-dropdown-menu-item-selected:hover,
+.ant-dropdown .ant-menu-item-selected:hover {
+  color: #0f172a !important;
+  background: #e2e8f0 !important;
+  font-weight: 700 !important;
 }
 
 .ant-dropdown-menu-item-divider,
 .ant-dropdown .ant-menu-item-divider {
-  margin: 0 !important;
-  background-color: var(--color-divider) !important;
+  margin: 4px 0 !important;
+  background-color: #f1f5f9 !important;
 }
 
 /* ========================================

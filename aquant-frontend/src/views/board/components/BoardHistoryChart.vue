@@ -1,21 +1,49 @@
 <template>
-  <div class="board-history-chart-container">
-    <div v-if="!boardCode" style="display: flex; justify-content: center; align-items: center; min-height: 400px;">
-      <a-empty description="请在左侧列表中选择一个板块以查看历史行情" />
-    </div>
-    <div v-else>
-      <div class="mb-2" style="display: flex; justify-content: flex-start;">
-        <a-radio-group v-model:value="frequency" @change="fetchHistory" size="small">
-          <a-radio-button value="1d">日K</a-radio-button>
-          <a-radio-button value="1w">周K</a-radio-button>
-          <a-radio-button value="1M">月K</a-radio-button>
-          <a-radio-button value="1Q">季K</a-radio-button>
-          <a-radio-button value="1Y">年K</a-radio-button>
-        </a-radio-group>
+  <div class="board-history-chart-wrapper" v-if="boardCode">
+    <!-- 顶部工具栏：周期 Tab + MA 均线动态图例 -->
+    <div class="chart-toolbar">
+      <div class="period-tabs">
+        <span
+          class="period-tab-item"
+          :class="{ active: frequency === '1d' }"
+          @click="changeFrequency('1d')"
+        >日K</span>
+        <span
+          class="period-tab-item"
+          :class="{ active: frequency === '1w' }"
+          @click="changeFrequency('1w')"
+        >周K</span>
+        <span
+          class="period-tab-item"
+          :class="{ active: frequency === '1M' }"
+          @click="changeFrequency('1M')"
+        >月K</span>
+        <span
+          class="period-tab-item"
+          :class="{ active: frequency === '1Q' }"
+          @click="changeFrequency('1Q')"
+        >季K</span>
+        <span
+          class="period-tab-item"
+          :class="{ active: frequency === '1Y' }"
+          @click="changeFrequency('1Y')"
+        >年K</span>
       </div>
-      <div ref="chartContainer" style="width: 100%; height: 700px"></div>
+
+      <!-- 实时均线数值展示 -->
+      <div class="ma-legend-bar" v-if="currentMA">
+        <span class="ma-label">均线:</span>
+        <span class="ma-item ma5">MA5: {{ currentMA.ma5 }}</span>
+        <span class="ma-item ma10">MA10: {{ currentMA.ma10 }}</span>
+        <span class="ma-item ma20">MA20: {{ currentMA.ma20 }}</span>
+        <span class="ma-item ma60">MA60: {{ currentMA.ma60 }}</span>
+      </div>
     </div>
+
+    <!-- ECharts 画布容器 -->
+    <div ref="chartContainer" class="board-echart-box"></div>
   </div>
+  <a-empty v-else description="请选择板块查看行情" class="chart-empty" />
 </template>
 
 <script setup lang="ts">
@@ -29,23 +57,24 @@ const props = defineProps<{
   boardName: string;
 }>();
 
-// Removed emit for visible
-
-const frequency = ref('1d');
+const frequency = ref<'1d' | '1w' | '1M' | '1Q' | '1Y'>('1d');
 const chartContainer = ref<HTMLElement>();
 let chartInstance: echarts.ECharts | null = null;
 let resizeObserver: ResizeObserver | null = null;
 
-// Removed handleClose
+const currentMA = ref<{ ma5: string | number; ma10: string | number; ma20: string | number; ma60: string | number } | null>(null);
+
+const changeFrequency = (freq: '1d' | '1w' | '1M' | '1Q' | '1Y') => {
+  if (frequency.value === freq) return;
+  frequency.value = freq;
+  fetchHistory();
+};
 
 const initChart = () => {
-  if (chartContainer.value) {
+  if (chartContainer.value && !chartInstance) {
     chartInstance = echarts.init(chartContainer.value);
-    
-    // 如果已有观察者，先断开
+
     if (resizeObserver) resizeObserver.disconnect();
-    
-    // 创建新的观察者
     resizeObserver = new ResizeObserver(() => {
       chartInstance?.resize();
     });
@@ -53,18 +82,39 @@ const initChart = () => {
   }
 };
 
+const calculateMA = (dayCount: number, data: StockIndustryBoardHistory[]) => {
+  const result = [];
+  for (let i = 0, len = data.length; i < len; i++) {
+    if (i < dayCount - 1) {
+      result.push('-');
+      continue;
+    }
+    let sum = 0;
+    for (let j = 0; j < dayCount; j++) {
+      sum += data[i - j]!.closePrice;
+    }
+    result.push(+(sum / dayCount).toFixed(2));
+  }
+  return result;
+};
+
 const fetchHistory = async () => {
   if (!props.boardCode) return;
-  
+
   try {
     const res = await getBoardHistory({
       boardCode: props.boardCode,
       frequency: frequency.value,
     });
-    
+
     if (String(res.data.code) === '0' || String(res.data.code) === '200') {
       const data = res.data.data;
-      renderChart(data);
+      if (data && data.length > 0) {
+        renderChart(data);
+      } else {
+        chartInstance?.clear();
+        currentMA.value = null;
+      }
     }
   } catch (error) {
     console.error('Failed to fetch board history:', error);
@@ -73,62 +123,48 @@ const fetchHistory = async () => {
 
 const renderChart = (data: StockIndustryBoardHistory[]) => {
   if (!chartInstance) initChart();
-  
+
   const dates = data.map(item => item.tradeDate);
   const values = data.map(item => [
     item.openPrice,
-    item.closePrice, // close
+    item.closePrice,
     item.lowPrice,
     item.highPrice
   ]);
   const volumes = data.map(item => item.volume);
 
-  const calculateMA = (dayCount: number, data: StockIndustryBoardHistory[]) => {
-    const result = [];
-    for (let i = 0, len = data.length; i < len; i++) {
-        if (i < dayCount - 1) {
-            result.push('-');
-            continue;
-        }
-        let sum = 0;
-        for (let j = 0; j < dayCount; j++) {
-            sum += data[i - j]!.closePrice;
-        }
-        result.push(+(sum / dayCount).toFixed(2));
-    }
-    return result;
-  };
-
   const ma5 = calculateMA(5, data);
   const ma10 = calculateMA(10, data);
   const ma20 = calculateMA(20, data);
   const ma60 = calculateMA(60, data);
-  const ma120 = calculateMA(120, data);
+
+  const lastIdx = data.length - 1;
+  if (lastIdx >= 0) {
+    currentMA.value = {
+      ma5: ma5[lastIdx] ?? '-',
+      ma10: ma10[lastIdx] ?? '-',
+      ma20: ma20[lastIdx] ?? '-',
+      ma60: ma60[lastIdx] ?? '-',
+    };
+  }
 
   const option = {
     animation: false,
-    legend: {
-      data: ['K线', 'MA5', 'MA10', 'MA20', 'MA60', 'MA120'],
-      inactiveColor: '#ccc',
-      textStyle: { color: '#8c8c8c', fontSize: 11 },
-      top: 0,
-      right: 20
-    },
     tooltip: {
       trigger: 'axis',
-      axisPointer: { 
-        type: 'cross', 
+      axisPointer: {
+        type: 'cross',
         lineStyle: { type: 'dashed', color: chartTooltipTheme.axisPointerColor },
         label: {
-            backgroundColor: chartTooltipTheme.backgroundColor,
-            color: chartTooltipTheme.primaryTextColor,
-            borderColor: chartTooltipTheme.borderColor,
-            borderWidth: 1,
-            padding: [4, 8],
-            fontSize: 11,
-            shadowBlur: 4,
-            shadowColor: chartTooltipTheme.shadowColor,
-            borderRadius: chartTooltipTheme.axisPointerLabelRadius
+          backgroundColor: chartTooltipTheme.backgroundColor,
+          color: chartTooltipTheme.primaryTextColor,
+          borderColor: chartTooltipTheme.borderColor,
+          borderWidth: 1,
+          padding: [4, 8],
+          fontSize: 11,
+          shadowBlur: 4,
+          shadowColor: chartTooltipTheme.shadowColor,
+          borderRadius: chartTooltipTheme.axisPointerLabelRadius
         }
       },
       backgroundColor: chartTooltipTheme.backgroundColor,
@@ -136,10 +172,15 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
       borderWidth: 1,
       padding: 10,
       textStyle: { fontSize: 11, color: chartTooltipTheme.primaryTextColor },
-      extraCssText: `border-radius: ${chartTooltipTheme.tooltipBorderRadius}px;`,
-      formatter: function (params: any) {
+      extraCssText: `border-radius: ${chartTooltipTheme.tooltipBorderRadius}px; box-shadow: 0 8px 20px rgba(0,0,0,0.08);`,
+      formatter: (params: any) => {
         let res = '';
         let date = '';
+        let m5 = '-';
+        let m10 = '-';
+        let m20 = '-';
+        let m60 = '-';
+
         params.forEach((param: any) => {
           if (param.seriesType === 'candlestick') {
             date = param.name;
@@ -148,7 +189,7 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
             const low = param.value[3];
             const high = param.value[4];
             const color = close >= open ? '#EF4444' : '#10B981';
-            res += `<div style="font-weight:bold;margin-bottom:6px;font-size:13px;color:${chartTooltipTheme.primaryTextColor};">${date}</div>`;
+            res += `<div style="font-weight:bold;margin-bottom:6px;font-size:12px;color:${chartTooltipTheme.primaryTextColor};">${date}</div>`;
             res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:2px;"><span style="color:${chartTooltipTheme.secondaryTextColor};">收盘:</span> <span style="color:${color};font-weight:bold;">${close}</span></div>`;
             res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:2px;"><span style="color:${chartTooltipTheme.secondaryTextColor};">开盘:</span> <span style="color:${chartTooltipTheme.primaryTextColor};">${open}</span></div>`;
             res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:2px;"><span style="color:${chartTooltipTheme.secondaryTextColor};">最高:</span> <span style="color:#EF4444;">${high}</span></div>`;
@@ -157,53 +198,62 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
             res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:6px;"><span style="color:${chartTooltipTheme.mutedTextColor};">成交量:</span> <span style="color:${chartTooltipTheme.primaryTextColor};">${param.value}</span></div>`;
           } else if (param.seriesType === 'line') {
             const val = param.value === '-' || param.value === undefined ? '-' : param.value;
+            if (param.seriesName === 'MA5') m5 = val;
+            if (param.seriesName === 'MA10') m10 = val;
+            if (param.seriesName === 'MA20') m20 = val;
+            if (param.seriesName === 'MA60') m60 = val;
             res += `<div style="display:flex;justify-content:space-between;gap:15px;margin-bottom:1px;">
                       <span style="color:${chartTooltipTheme.mutedTextColor};">${param.seriesName}:</span> 
                       <span style="color:${param.color};font-weight:500;">${val}</span>
                     </div>`;
           }
         });
+
+        if (m5 !== '-') {
+          currentMA.value = { ma5: m5, ma10: m10, ma20: m20, ma60: m60 };
+        }
+
         return `<div style="min-width:130px;">${res}</div>`;
       }
     },
     dataZoom: [
       {
-        type: 'inside', 
+        type: 'inside',
         xAxisIndex: [0, 1],
-        zoomLock: true, 
-        startValue: dates.length > 50 ? dates.length - 50 : 0,
+        zoomLock: false,
+        startValue: dates.length > 60 ? dates.length - 60 : 0,
         endValue: dates.length > 0 ? dates.length - 1 : 0
       },
       {
-        type: 'slider', 
+        type: 'slider',
         xAxisIndex: [0, 1],
         show: true,
-        height: 6, 
-        bottom: 8,
+        height: 6,
+        bottom: 4,
         borderColor: 'transparent',
-        backgroundColor: '#f5f5f5',
-        fillerColor: 'rgba(140, 140, 140, 0.4)', 
-        showDetail: false, 
-        zoomLock: true, 
-        showDataShadow: false, 
-        handleSize: 0, 
-        moveHandleSize: 0, 
-        startValue: dates.length > 50 ? dates.length - 50 : 0,
+        backgroundColor: '#f1f5f9',
+        fillerColor: 'rgba(148, 163, 184, 0.4)',
+        showDetail: false,
+        zoomLock: false,
+        showDataShadow: false,
+        handleSize: 0,
+        moveHandleSize: 0,
+        startValue: dates.length > 60 ? dates.length - 60 : 0,
         endValue: dates.length > 0 ? dates.length - 1 : 0
       }
     ],
     grid: [
       {
-        left: 50,
+        left: 45,
         right: 15,
-        top: 40,
-        height: '73%', 
+        top: 20,
+        height: '66%',
       },
       {
-        left: 50,
+        left: 45,
         right: 15,
-        top: '86%',
-        height: '10%', 
+        top: '78%',
+        height: '16%',
       }
     ],
     xAxis: [
@@ -211,12 +261,12 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
         type: 'category',
         data: dates,
         show: true,
-        axisLine: { show: false },
+        axisLine: { lineStyle: { color: '#e2e8f0' } },
         axisTick: { show: false },
         axisLabel: {
           fontSize: 10,
-          color: '#999',
-          margin: 8,
+          color: '#94a3b8',
+          margin: 6,
           interval: 'auto',
         }
       },
@@ -225,7 +275,7 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
         gridIndex: 1,
         data: dates,
         axisLabel: { show: false },
-        axisLine: { show: false },
+        axisLine: { lineStyle: { color: '#e2e8f0' } },
         axisTick: { show: false }
       }
     ],
@@ -233,11 +283,11 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
       {
         scale: true,
         splitArea: { show: false },
-        splitLine: { show: false }, 
+        splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
         axisLabel: {
           fontSize: 10,
-          color: '#999',
-          formatter: (val: number) => val.toString()
+          color: '#94a3b8',
+          formatter: (val: number) => val.toFixed(2)
         }
       },
       {
@@ -255,13 +305,14 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
         name: 'K线',
         type: 'candlestick',
         data: values,
+        barMaxWidth: 20,
+        barMinWidth: 1,
         itemStyle: {
-          color: '#EF4444',      // 阳线 红色
-          color0: '#10B981',     // 阴线 绿色
+          color: '#EF4444',
+          color0: '#10B981',
           borderColor: '#EF4444',
-          borderColor0: '#10B981'
-        },
-        barWidth: '60%'
+          borderColor0: '#10B981',
+        }
       },
       {
         name: 'MA5',
@@ -269,8 +320,8 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
         data: ma5,
         smooth: true,
         showSymbol: false,
-        lineStyle: { width: 1, color: '#e8b004' },
-        itemStyle: { color: '#e8b004' }
+        lineStyle: { width: 1.2, color: '#3B82F6' },
+        itemStyle: { color: '#3B82F6' }
       },
       {
         name: 'MA10',
@@ -278,8 +329,8 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
         data: ma10,
         smooth: true,
         showSymbol: false,
-        lineStyle: { width: 1, color: '#e677fd' },
-        itemStyle: { color: '#e677fd' }
+        lineStyle: { width: 1.2, color: '#F59E0B' },
+        itemStyle: { color: '#F59E0B' }
       },
       {
         name: 'MA20',
@@ -287,8 +338,8 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
         data: ma20,
         smooth: true,
         showSymbol: false,
-        lineStyle: { width: 1, color: '#1890ff' },
-        itemStyle: { color: '#1890ff' }
+        lineStyle: { width: 1.2, color: '#EC4899' },
+        itemStyle: { color: '#EC4899' }
       },
       {
         name: 'MA60',
@@ -296,32 +347,26 @@ const renderChart = (data: StockIndustryBoardHistory[]) => {
         data: ma60,
         smooth: true,
         showSymbol: false,
-        lineStyle: { width: 1, color: '#52c41a' },
-        itemStyle: { color: '#52c41a' }
-      },
-      {
-        name: 'MA120',
-        type: 'line',
-        data: ma120,
-        smooth: true,
-        showSymbol: false,
-        lineStyle: { width: 1, color: '#8c8c8c' },
-        itemStyle: { color: '#8c8c8c' }
+        lineStyle: { width: 1.2, color: '#10B981' },
+        itemStyle: { color: '#10B981' }
       },
       {
         name: '成交量',
         type: 'bar',
         xAxisIndex: 1,
         yAxisIndex: 1,
-        data: volumes,
-        itemStyle: {
-            color: (params: any) => {
-                const i = params.dataIndex;
-                const v = values[i];
-                if (!v || v.length < 2) return '#EF4444';
-                return v[1]! >= v[0]! ? '#EF4444' : '#10B981';
+        barMaxWidth: 20,
+        barMinWidth: 1,
+        data: volumes.map((v, i) => {
+          const val = values[i];
+          const isUp = val && val[1] !== undefined && val[0] !== undefined ? val[1] >= val[0] : true;
+          return {
+            value: v,
+            itemStyle: {
+              color: isUp ? '#EF4444' : '#10B981'
             }
-        }
+          };
+        })
       }
     ]
   };
@@ -339,9 +384,9 @@ watch(
         fetchHistory();
       });
     } else {
-        if (chartInstance) {
-          chartInstance.clear();
-        }
+      if (chartInstance) {
+        chartInstance.clear();
+      }
     }
   },
   { immediate: true }
@@ -354,3 +399,90 @@ onUnmounted(() => {
   chartInstance?.dispose();
 });
 </script>
+
+<style scoped>
+.board-history-chart-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.period-tabs {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  border-radius: 6px;
+  padding: 2px;
+  border: 1px solid #edf2f7;
+}
+
+.period-tab-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  height: 24px;
+  line-height: 24px;
+  font-size: 12px;
+  color: #64748b;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.period-tab-item:hover {
+  color: #0f172a;
+}
+
+.period-tab-item.active {
+  background: #ffffff;
+  color: #0f172a;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.ma-legend-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.ma-label {
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.ma-item {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
+  font-weight: 500;
+}
+
+.ma-item.ma5 { color: #3B82F6; }
+.ma-item.ma10 { color: #F59E0B; }
+.ma-item.ma20 { color: #EC4899; }
+.ma-item.ma60 { color: #10B981; }
+
+.board-echart-box {
+  width: 100%;
+  height: 480px;
+  min-height: 420px;
+  flex: 1;
+}
+
+.chart-empty {
+  margin-top: 120px;
+}
+</style>

@@ -205,7 +205,8 @@ const renderChart = (data: StockQuoteHistory[]) => {
           borderColor: '#EF4444',
           borderColor0: '#10B981'
         },
-        barWidth: '60%'
+        barMaxWidth: 12,
+        barMinWidth: 1
       },
       {
         name: 'MA5',
@@ -267,13 +268,49 @@ onUnmounted(() => {
 .kline-header {
   display: flex;
   justify-content: flex-end;
-  height: 20px;
+  align-items: center;
+  height: 22px;
   margin-bottom: 2px;
 }
 
 .freq-selector {
-  transform: scale(0.75); /* 缩小比例以适应迷你卡片 */
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  border-radius: 6px;
+  padding: 2px;
+  border: 1px solid #edf2f7;
+  transform: scale(0.8);
   transform-origin: right top;
+}
+
+.freq-selector :deep(.ant-radio-button-wrapper) {
+  border: none !important;
+  background: transparent !important;
+  color: #64748b !important;
+  box-shadow: none !important;
+  border-radius: 4px !important;
+  padding: 0 6px !important;
+  height: 20px !important;
+  line-height: 20px !important;
+  font-size: 12px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.freq-selector :deep(.ant-radio-button-wrapper::before) {
+  display: none !important;
+}
+
+.freq-selector :deep(.ant-radio-button-wrapper:hover) {
+  color: #0f172a !important;
+}
+
+.freq-selector :deep(.ant-radio-button-wrapper-checked) {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  border: none !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08) !important;
 }
 
 .mini-kline-container {

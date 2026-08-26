@@ -37,7 +37,7 @@
         <div class="chart-controls">
           <div class="chart-controls-left">
             <span class="section-title">技术走势</span>
-            <a-radio-group v-model:value="frequency" size="small">
+            <a-radio-group v-model:value="frequency" size="small" class="detail-freq-selector">
               <a-radio-button value="1d">日线</a-radio-button>
               <a-radio-button value="1w">周线</a-radio-button>
               <a-radio-button value="1M">月线</a-radio-button>
@@ -598,6 +598,8 @@ const renderChart = (data: StockQuoteHistory[]) => {
         name: 'K线',
         type: 'candlestick',
         data: values,
+        barMaxWidth: 20,
+        barMinWidth: 1,
         itemStyle: {
           color: '#EF4444',
           color0: '#10B981',
@@ -895,6 +897,44 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.detail-freq-selector {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  border-radius: 6px;
+  padding: 2px;
+  border: 1px solid #edf2f7;
+}
+
+.detail-freq-selector :deep(.ant-radio-button-wrapper) {
+  border: none !important;
+  background: transparent !important;
+  color: #64748b !important;
+  box-shadow: none !important;
+  border-radius: 4px !important;
+  padding: 0 10px !important;
+  height: 24px !important;
+  line-height: 24px !important;
+  font-size: 12px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.detail-freq-selector :deep(.ant-radio-button-wrapper::before) {
+  display: none !important;
+}
+
+.detail-freq-selector :deep(.ant-radio-button-wrapper:hover) {
+  color: #0f172a !important;
+}
+
+.detail-freq-selector :deep(.ant-radio-button-wrapper-checked) {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  border: none !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08) !important;
 }
 
 .indicator-switches {

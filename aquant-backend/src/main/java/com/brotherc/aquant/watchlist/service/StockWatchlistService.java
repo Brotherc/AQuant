@@ -62,12 +62,29 @@ public class StockWatchlistService {
         } else {
             groups = groupRepository.findAllByUserIdOrderBySortNoAsc(userId);
         }
+        if (CollectionUtils.isEmpty(groups)) {
+            String defaultType = StringUtils.isNotBlank(type) ? type : "STOCK";
+            StockWatchlistGroup defaultGroup = new StockWatchlistGroup();
+            defaultGroup.setUserId(userId);
+            defaultGroup.setName("默认分组");
+            defaultGroup.setType(defaultType);
+            defaultGroup.setSortNo(1);
+            defaultGroup.setCreatedAt(LocalDateTime.now());
+            defaultGroup.setUpdatedAt(LocalDateTime.now());
+            groups = List.of(groupRepository.save(defaultGroup));
+        }
+        List<Long> groupIds = groups.stream().map(StockWatchlistGroup::getId).toList();
+        List<StockWatchlistStock> allStocks = stockRepository.findByGroupIdIn(groupIds);
+        Map<Long, Long> countMap = allStocks.stream()
+                .collect(Collectors.groupingBy(StockWatchlistStock::getGroupId, Collectors.counting()));
+
         return groups.stream().map(g -> {
             WatchlistGroupVO vo = new WatchlistGroupVO();
             vo.setId(g.getId());
             vo.setName(g.getName());
             vo.setType(g.getType());
             vo.setSortNo(g.getSortNo());
+            vo.setCount(countMap.getOrDefault(g.getId(), 0L).intValue());
             return vo;
         }).toList();
     }
@@ -258,7 +275,8 @@ public class StockWatchlistService {
         StockWatchlistGroup group = groupRepository.findByIdAndUserId(reqVO.getId(), userId)
                 .orElseThrow(() -> new BusinessException(ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND));
 
-        if (!group.getName().equals(reqVO.getName()) && groupRepository.existsByUserIdAndName(userId, reqVO.getName())) {
+        if (!group.getName().equals(reqVO.getName()) &&
+                groupRepository.existsByUserIdAndNameAndType(userId, reqVO.getName(), group.getType())) {
             throw new BusinessException(ExceptionEnum.WATCHLIST_GROUP_NAME_DUPLICATE);
         }
 

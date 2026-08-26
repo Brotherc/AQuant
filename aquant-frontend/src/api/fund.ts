@@ -21,6 +21,7 @@ export interface FundInfoVO {
 export interface FundInfoPageReqVO {
   page: number
   size: number
+  keyword?: string
   fundCode?: string
   fundName?: string
   fundType?: string
@@ -114,6 +115,13 @@ export function getFundPurchaseLimits(fundCode: string) {
 export function getStockFundInfoLatest() {
   return request<ResponseDTO<string>>({
     url: '/stockSync/stockFundInfoLatest',
+    method: 'GET'
+  })
+}
+
+export function getFundTypes() {
+  return request<ResponseDTO<string[]>>({
+    url: '/stockFund/types',
     method: 'GET'
   })
 }
