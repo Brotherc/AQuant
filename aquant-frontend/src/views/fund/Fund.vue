@@ -176,6 +176,21 @@
             </span>
           </div>
 
+          <!-- 加入自选按钮 -->
+          <a-button
+            size="small"
+            class="watchlist-action-btn"
+            :class="{ 'in-watchlist': isInWatchlist }"
+            @click="showAddWatchlist"
+            :loading="addLoading"
+          >
+            <template #icon>
+              <check-outlined v-if="isInWatchlist" />
+              <plus-outlined v-else />
+            </template>
+            {{ isInWatchlist ? '已自选' : '加自选' }}
+          </a-button>
+
           <a-button
             type="text"
             size="small"
@@ -324,11 +339,38 @@
       <a-empty v-else description="请从左侧选择基金查看详情" class="main-terminal-empty" />
     </div>
 
+    <!-- 加入自选模态框 -->
+    <a-modal
+      v-model:visible="watchlistVisible"
+      title="加入自选分组"
+      @ok="handleConfirmAdd"
+      :confirmLoading="addLoading"
+      :destroyOnClose="true"
+      width="420px"
+    >
+      <div style="margin-bottom: 14px; font-size: 14px; color: #1e293b;">
+        将 {{ selectedFund?.fundName }} ({{ selectedFund?.fundCode }}) 加入分组：
+      </div>
+      <a-select
+        v-model:value="targetGroupId"
+        placeholder="选择自选分组"
+        style="width: 100%"
+        :loading="watchlistGroupsLoading"
+      >
+        <a-select-option
+          v-for="group in watchlistGroups"
+          :key="group.id"
+          :value="group.id"
+        >
+          {{ group.name }}
+        </a-select-option>
+      </a-select>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted } from 'vue';
+import { ref, reactive, computed, watch, onMounted } from 'vue';
 import {
   getFundPage,
   getFundPurchaseLimits,
@@ -339,8 +381,37 @@ import {
   type StockFundPurchaseLimitVO,
   type StockFundPortfolioHoldingVO
 } from '@/api/fund';
+import {
+  getWatchlistGroups,
+  getWatchlistStocks,
+  addStockToWatchlist,
+  type WatchlistGroupVO
+} from '@/api/watchlist';
+import { message } from 'ant-design-vue';
 import FundNetValueChart from './components/FundNetValueChart.vue';
-import { SearchOutlined, SyncOutlined, FilterOutlined, SortDescendingOutlined } from '@ant-design/icons-vue';
+import {
+  SearchOutlined,
+  SyncOutlined,
+  FilterOutlined,
+  SortDescendingOutlined,
+  PlusOutlined,
+  CheckOutlined
+} from '@ant-design/icons-vue';
+
+// 用户登录状态与自选
+const isLoggedIn = ref(!!localStorage.getItem('token'));
+const watchlistGroups = ref<WatchlistGroupVO[]>([]);
+const watchlistStockCodes = ref<Set<string>>(new Set());
+const watchlistVisible = ref(false);
+const addLoading = ref(false);
+const watchlistGroupsLoading = ref(false);
+const targetGroupId = ref<number | undefined>(undefined);
+
+// 判断当前选中的基金是否在自选列表中
+const isInWatchlist = computed(() => {
+  if (!selectedFund.value?.fundCode) return false;
+  return watchlistStockCodes.value.has(selectedFund.value.fundCode);
+});
 
 // 搜索参数
 const queryParams = reactive<FundInfoPageReqVO>({
@@ -549,9 +620,89 @@ watch(selectedFund, async (newVal) => {
   }
 });
 
+// 加载自选分组及所有自选基金代码
+const fetchWatchlistStockCodes = async () => {
+  if (!isLoggedIn.value) return;
+  try {
+    const res = await getWatchlistGroups('FUND');
+    if (res.data.success && res.data.data) {
+      watchlistGroups.value = res.data.data;
+      const codes = new Set<string>();
+      await Promise.all(
+        res.data.data.map(async (g) => {
+          try {
+            const stockRes = await getWatchlistStocks(g.id);
+            if (stockRes.data.success && stockRes.data.data) {
+              stockRes.data.data.forEach(s => codes.add(s.stockCode));
+            }
+          } catch (e) {
+            // ignore
+          }
+        })
+      );
+      watchlistStockCodes.value = codes;
+    }
+  } catch (error) {
+    console.error('Failed to fetch watchlist:', error);
+  }
+};
+
+// 弹出加入自选弹窗
+const showAddWatchlist = async () => {
+  if (!isLoggedIn.value) {
+    message.info('请先登录后再加入自选');
+    return;
+  }
+  if (!selectedFund.value) return;
+
+  targetGroupId.value = watchlistGroups.value[0]?.id;
+  watchlistVisible.value = true;
+
+  if (watchlistGroups.value.length === 0) {
+    watchlistGroupsLoading.value = true;
+    try {
+      const res = await getWatchlistGroups('FUND');
+      if (res.data.success && res.data.data) {
+        watchlistGroups.value = res.data.data;
+        targetGroupId.value = watchlistGroups.value[0]?.id;
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      watchlistGroupsLoading.value = false;
+    }
+  }
+};
+
+// 确认加入自选
+const handleConfirmAdd = async () => {
+  if (!targetGroupId.value || !selectedFund.value) {
+    message.warning('请选择一个自选分组');
+    return;
+  }
+
+  addLoading.value = true;
+  try {
+    const res = await addStockToWatchlist({
+      groupId: targetGroupId.value,
+      stockCode: selectedFund.value.fundCode,
+    });
+    if (res.data.success) {
+      message.success('已成功加入自选');
+      watchlistStockCodes.value.add(selectedFund.value.fundCode);
+      watchlistVisible.value = false;
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    addLoading.value = false;
+  }
+};
+
 onMounted(() => {
   fetchFundTypes();
   loadData();
+  fetchWatchlistStockCodes();
 });
 </script>
 
@@ -889,6 +1040,38 @@ onMounted(() => {
 
 .capsule-status {
   font-weight: 700;
+}
+
+.watchlist-action-btn {
+  background: #18181b !important;
+  border: 1px solid #18181b !important;
+  color: #ffffff !important;
+  border-radius: 6px;
+  height: 30px;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.watchlist-action-btn:hover {
+  background: #27272a !important;
+  border-color: #27272a !important;
+  color: #ffffff !important;
+}
+
+.watchlist-action-btn.in-watchlist {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #475569 !important;
+}
+
+.watchlist-action-btn.in-watchlist:hover {
+  background: #e2e8f0 !important;
+  border-color: #94a3b8 !important;
+  color: #1e293b !important;
 }
 
 .refresh-icon-btn {

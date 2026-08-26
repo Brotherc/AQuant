@@ -63,7 +63,15 @@ public class StockWatchlistService {
             groups = groupRepository.findAllByUserIdOrderBySortNoAsc(userId);
         }
         if (CollectionUtils.isEmpty(groups)) {
-            return new ArrayList<>();
+            String defaultType = StringUtils.isNotBlank(type) ? type : "STOCK";
+            StockWatchlistGroup defaultGroup = new StockWatchlistGroup();
+            defaultGroup.setUserId(userId);
+            defaultGroup.setName("默认分组");
+            defaultGroup.setType(defaultType);
+            defaultGroup.setSortNo(1);
+            defaultGroup.setCreatedAt(LocalDateTime.now());
+            defaultGroup.setUpdatedAt(LocalDateTime.now());
+            groups = List.of(groupRepository.save(defaultGroup));
         }
         List<Long> groupIds = groups.stream().map(StockWatchlistGroup::getId).toList();
         List<StockWatchlistStock> allStocks = stockRepository.findByGroupIdIn(groupIds);
