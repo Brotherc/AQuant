@@ -450,7 +450,7 @@ onMounted(() => {
 }
 
 .stock-rank--top {
-  color: #2563eb;
+  color: #0f172a;
 }
 
 .stock-meta {
