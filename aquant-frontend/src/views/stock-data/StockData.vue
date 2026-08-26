@@ -1,110 +1,187 @@
 <template>
-  <div class="stock-data-container">
-    <!-- 顶部独立搜索表单卡片 -->
-    <a-card style="margin-bottom: 16px;">
-      <a-form
-        layout="inline"
-        :model="searchParams"
-        @finish="handleSearch"
-        class="stock-data-search-form"
-        style="width: 100%; display: flex; flex-wrap: wrap;"
-      >
-        <a-form-item label="股票代码">
-          <a-input v-model:value="searchParams.code" placeholder="输入代码" allow-clear style="width: 140px" />
-        </a-form-item>
-        <a-form-item label="股票名称">
-          <a-input v-model:value="searchParams.name" placeholder="输入名称" allow-clear style="width: 140px" />
-        </a-form-item>
-        <a-form-item class="stock-data-search-actions" style="margin-left: auto; margin-right: 0;">
-          <a-button type="primary" html-type="submit" :loading="loading">查询</a-button>
-          <a-button type="primary" ghost style="margin-left: 8px" @click="resetSearch">重置</a-button>
-        </a-form-item>
-      </a-form>
-    </a-card>
-    
-    <a-row :gutter="16">
-      <a-col :span="11">
-        <!-- 股票列表卡片 -->
-        <a-card style="height: 100%;" title="股票列表">
-          <template #extra>
-            <div style="display: flex; align-items: center; gap: 12px; font-weight: normal; font-size: 14px;">
-              <div v-if="lastRefreshTime" class="page-sync-meta refresh-time" style="margin-left: 0;">
-                <span class="page-sync-meta__label">最后同步时间:</span>
-                <span class="page-sync-meta__value">{{ lastRefreshTime }}</span>
-              </div>
-              <a-button type="primary" ghost @click="handleRefresh" :loading="refreshLoading" size="small" title="刷新" style="display: inline-flex; align-items: center; justify-content: center;">
-                <template #icon><SyncOutlined /></template>
-              </a-button>
-            </div>
+  <div class="stock-terminal-layout">
+    <!-- 左侧列表栏 -->
+    <div class="stock-terminal-sidebar">
+      <!-- 顶部搜索框 -->
+      <div class="sidebar-search-box">
+        <a-input
+          v-model:value="searchKeyword"
+          placeholder="搜索股票 / 代码"
+          allow-clear
+          class="sidebar-search-input"
+          @pressEnter="handleSearch"
+        >
+          <template #prefix>
+            <search-outlined style="color: #94a3b8;" />
           </template>
-          
-          <!-- 数据表格 -->
-          <a-table
-            :columns="columns"
-            :data-source="dataSource"
-            :pagination="pagination"
-            :loading="loading"
-            @change="handleTableChange"
-            row-key="id"
-            :custom-row="customRow"
-            :row-class-name="rowClassName"
-            :scroll="pagination.pageSize <= 20 ? { x: 'max-content' } : { x: 'max-content', y: 760 }" 
-            size="small"
-            class="stock-table"
-          >
-            <template #bodyCell="{ column, record }">
-              <template v-if="column.dataIndex === 'code'">
-                <a-tag class="stock-code-tag">{{ record.code }}</a-tag>
-              </template>
-              <template v-if="column.dataIndex === 'changePercent'">
-                <span :class="['change-value', record.changePercent > 0 ? 'price-up' : record.changePercent < 0 ? 'price-down' : '']">
-                  {{ record.changePercent > 0 ? '+' : '' }}{{ record.changePercent }}%
-                </span>
-              </template>
-            </template>
-          </a-table>
-        </a-card>
-      </a-col>
+        </a-input>
+      </div>
 
-      <a-col :span="13">
-        <!-- 图表与详情 -->
-        <a-card :title="currentStockName ? `股票详情 - ${currentStockName}` : '股票详情'" style="height: 100%;">
-          <template #extra>
-            <a-button type="primary" @click="showAddWatchlist" :disabled="!selectedStock || !isLoggedIn">加入自选</a-button>
-          </template>
-          <div v-if="selectedStock" style="margin-bottom: 24px;">
-            <a-descriptions bordered :column="3" size="small">
-              <a-descriptions-item label="涨跌额">
-                <span :class="['change-value', selectedStock.changeAmount > 0 ? 'price-up' : selectedStock.changeAmount < 0 ? 'price-down' : '']">
-                  {{ selectedStock.changeAmount > 0 ? '+' : '' }}{{ selectedStock.changeAmount }}
-                </span>
-              </a-descriptions-item>
-              <a-descriptions-item label="成交量">{{ formatVolume(selectedStock.volume) }}</a-descriptions-item>
-              <a-descriptions-item label="成交额">{{ formatCurrencyAmount(selectedStock.turnover) }}</a-descriptions-item>
-              <a-descriptions-item label="昨收">{{ selectedStock.prevClose }}</a-descriptions-item>
-              <a-descriptions-item label="今开">{{ selectedStock.openPrice }}</a-descriptions-item>
-              <a-descriptions-item label="最高">{{ selectedStock.highPrice }}</a-descriptions-item>
-              <a-descriptions-item label="最低">{{ selectedStock.lowPrice }}</a-descriptions-item>
-              <a-descriptions-item label="时间">{{ selectedStock.quoteTime }}</a-descriptions-item>
-            </a-descriptions>
+      <!-- 股票列表 -->
+      <div class="sidebar-stock-list" v-if="filteredStockList.length > 0">
+        <div
+          v-for="(stock, index) in filteredStockList"
+          :key="stock.code"
+          class="sidebar-stock-item"
+          :class="{ 'sidebar-stock-item--active': selectedStock?.code === stock.code }"
+          @click="selectStock(stock)"
+        >
+          <!-- 序号 -->
+          <span class="stock-rank" :class="{ 'stock-rank--top': index < 3 }">
+            {{ (pagination.current - 1) * pagination.pageSize + index + 1 }}
+          </span>
+
+          <!-- 股票信息 -->
+          <div class="stock-meta">
+            <div class="stock-name" :title="stock.name">{{ stock.name }}</div>
+            <div class="stock-code">{{ stock.code }}</div>
           </div>
+
+          <!-- 涨跌幅 -->
+          <div class="stock-change" :class="getPriceColorClass(stock.changePercent)">
+            {{ stock.changePercent > 0 ? '+' : '' }}{{ stock.changePercent != null ? stock.changePercent.toFixed(2) + '%' : '-' }}
+          </div>
+        </div>
+      </div>
+
+      <!-- 空状态或加载状态 -->
+      <div v-else-if="loading" class="sidebar-loading">
+        <a-spin size="small" />
+      </div>
+      <a-empty v-else description="暂无匹配股票" class="sidebar-empty" />
+
+      <!-- 底部简易分页器 -->
+      <div class="sidebar-pagination">
+        <a-pagination
+          v-model:current="pagination.current"
+          :total="pagination.total"
+          :page-size="pagination.pageSize"
+          size="small"
+          simple
+          @change="handlePageChange"
+        />
+      </div>
+    </div>
+
+    <!-- 右侧主看板区 -->
+    <div class="stock-terminal-main">
+      <!-- 顶部标的概览 Header -->
+      <div class="stock-main-header" v-if="selectedStock">
+        <div class="header-left">
+          <div class="stock-title-row">
+            <span class="main-stock-name">{{ selectedStock.name }}</span>
+            <span class="main-stock-code">{{ selectedStock.code }}</span>
+          </div>
+          <div class="stock-price-row" :class="getPriceColorClass(selectedStock.changePercent)">
+            <span class="main-latest-price">{{ selectedStock.latestPrice != null ? selectedStock.latestPrice.toFixed(2) : '-' }}</span>
+            <span class="main-change-amount">
+              {{ selectedStock.changeAmount > 0 ? '+' : '' }}{{ selectedStock.changeAmount != null ? selectedStock.changeAmount.toFixed(2) : '-' }}
+            </span>
+            <span class="main-change-percent">
+              ({{ selectedStock.changePercent > 0 ? '+' : '' }}{{ selectedStock.changePercent != null ? selectedStock.changePercent.toFixed(2) + '%' : '-' }})
+            </span>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <a-button
+            v-if="isInWatchlist"
+            type="primary"
+            ghost
+            size="small"
+            class="watchlist-action-btn in-watchlist"
+            @click="showAddWatchlist"
+          >
+            <check-outlined /> 已自选
+          </a-button>
+          <a-button
+            v-else
+            type="primary"
+            size="small"
+            class="watchlist-action-btn"
+            @click="showAddWatchlist"
+            :disabled="!isLoggedIn"
+          >
+            <plus-outlined /> 加自选
+          </a-button>
+
+          <a-button
+            type="text"
+            size="small"
+            class="refresh-icon-btn"
+            :loading="refreshLoading"
+            @click="handleRefresh"
+            title="刷新最新行情"
+          >
+            <sync-outlined />
+          </a-button>
+        </div>
+      </div>
+
+      <!-- 下部区域：左侧K线图 + 右侧行情数据看板 -->
+      <div class="stock-main-body" v-if="selectedStock">
+        <!-- 左侧图表区 -->
+        <div class="chart-container-section">
           <StockHistoryChart
             :stockCode="currentStockCode"
             :stockName="currentStockName"
           />
-        </a-card>
-      </a-col>
-    </a-row>
+        </div>
+
+        <!-- 右侧行情数据看板 -->
+        <div class="market-quotes-panel">
+          <div class="quotes-panel-title">行情数据</div>
+          <div class="quotes-list">
+            <div class="quotes-item">
+              <span class="quote-label">最高</span>
+              <span class="quote-value price-up">{{ selectedStock.highPrice != null ? selectedStock.highPrice.toFixed(2) : '-' }}</span>
+            </div>
+            <div class="quotes-item">
+              <span class="quote-label">最低</span>
+              <span class="quote-value price-down">{{ selectedStock.lowPrice != null ? selectedStock.lowPrice.toFixed(2) : '-' }}</span>
+            </div>
+            <div class="quotes-item">
+              <span class="quote-label">今开</span>
+              <span class="quote-value">{{ selectedStock.openPrice != null ? selectedStock.openPrice.toFixed(2) : '-' }}</span>
+            </div>
+            <div class="quotes-item">
+              <span class="quote-label">昨收</span>
+              <span class="quote-value">{{ selectedStock.prevClose != null ? selectedStock.prevClose.toFixed(2) : '-' }}</span>
+            </div>
+            <div class="quotes-item">
+              <span class="quote-label">成交额</span>
+              <span class="quote-value">{{ formatCurrencyAmount(selectedStock.turnover) }}</span>
+            </div>
+            <div class="quotes-item">
+              <span class="quote-label">成交量</span>
+              <span class="quote-value">{{ formatVolume(selectedStock.volume) }}</span>
+            </div>
+            <div class="quotes-item">
+              <span class="quote-label">振幅</span>
+              <span class="quote-value">{{ calculateAmplitude(selectedStock) }}</span>
+            </div>
+            <div class="quotes-item" v-if="selectedStock.quoteTime">
+              <span class="quote-label">时间</span>
+              <span class="quote-value quote-time">{{ selectedStock.quoteTime }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 无选中股票时空状态 -->
+      <a-empty v-else description="请从左侧选择股票查看详情" style="margin-top: 160px;" />
+    </div>
 
     <!-- 加入自选模态框 -->
     <a-modal
       v-model:visible="watchlistVisible"
-      title="加入自选"
+      title="加入自选分组"
       @ok="handleConfirmAdd"
       :confirmLoading="addLoading"
+      width="380px"
     >
-      <a-form layout="vertical">
-        <a-form-item label="选择分组">
+      <a-form layout="vertical" style="padding-top: 12px;">
+        <a-form-item label="选择分组" required>
           <a-select v-model:value="targetGroupId" placeholder="请选择自选分组" :loading="watchlistGroupsLoading">
             <a-select-option v-for="group in watchlistGroups" :key="group.id" :value="group.id">
               {{ group.name }}
@@ -117,54 +194,74 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
-import { getStockQuotePage, getStockDailyLatest, type StockQuoteVO, type StockQuotePageReqVO } from '@/api/stock';
-import { getWatchlistGroups, addStockToWatchlist, type WatchlistGroupVO } from '@/api/watchlist';
+import { ref, reactive, computed, onMounted } from 'vue';
+import { getStockQuotePage, getStockDailyLatest, type StockQuoteVO } from '@/api/stock';
+import { getWatchlistGroups, getWatchlistStocks, addStockToWatchlist, type WatchlistGroupVO } from '@/api/watchlist';
 import { message } from 'ant-design-vue';
 import StockHistoryChart from './components/StockHistoryChart.vue';
-import type { TableProps } from 'ant-design-vue';
-import { SyncOutlined } from '@ant-design/icons-vue';
+import { SearchOutlined, SyncOutlined, PlusOutlined, CheckOutlined } from '@ant-design/icons-vue';
 import { formatCurrencyAmount, formatVolume } from '@/utils/format';
 
-// 刷新状态
+// 用户登录状态
+const isLoggedIn = ref(!!localStorage.getItem('token'));
 const refreshLoading = ref(false);
 const lastRefreshTime = ref('');
-const isLoggedIn = ref(!!localStorage.getItem('token'));
 
-// 图表与选中状态
-const currentStockCode = ref('');
-const currentStockName = ref('');
-const selectedStock = ref<StockQuoteVO | null>(null);
+// 搜索关键字
+const searchKeyword = ref('');
 
-// 搜索参数
-const searchParams = reactive<StockQuotePageReqVO>({
-  code: '',
-  name: '',
-  latestPriceMin: undefined,
-  latestPriceMax: undefined,
-});
-
-// 表格数据
+// 列表与分页
 const loading = ref(false);
 const dataSource = ref<StockQuoteVO[]>([]);
 const pagination = reactive({
   current: 1,
-  pageSize: 20,
-  pageSizeOptions: ['20', '50', '100', '200'],
+  pageSize: 25,
   total: 0,
-  showSizeChanger: true,
-  showQuickJumper: true,
-  showTotal: (total: number) => `共 ${total} 条数据`,
 });
-// 默认按涨跌幅降序
-const sortState = ref<string[]>(['changePercent,desc']);
 
-const columns: TableProps['columns'] = [
-  { title: '代码', dataIndex: 'code', width: 100 },
-  { title: '名称', dataIndex: 'name', width: 120 },
-  { title: '最新价', dataIndex: 'latestPrice', sorter: true, showSorterTooltip: false, width: 100 },
-  { title: '涨跌幅(%)', dataIndex: 'changePercent', sorter: true, showSorterTooltip: false, width: 100 },
-];
+// 当前选中标的
+const selectedStock = ref<StockQuoteVO | null>(null);
+const currentStockCode = computed(() => selectedStock.value?.code || '');
+const currentStockName = computed(() => selectedStock.value?.name || '');
+
+// 自选分组与当前股票自选状态缓存
+const watchlistGroups = ref<WatchlistGroupVO[]>([]);
+const watchlistStockCodes = ref<Set<string>>(new Set());
+const watchlistVisible = ref(false);
+const addLoading = ref(false);
+const watchlistGroupsLoading = ref(false);
+const targetGroupId = ref<number | undefined>(undefined);
+
+// 判断当前股票是否在自选股中
+const isInWatchlist = computed(() => {
+  if (!selectedStock.value?.code) return false;
+  return watchlistStockCodes.value.has(selectedStock.value.code);
+});
+
+// 本地即时模糊过滤或后端搜索
+const filteredStockList = computed(() => {
+  if (!searchKeyword.value.trim()) {
+    return dataSource.value;
+  }
+  const q = searchKeyword.value.trim().toLowerCase();
+  return dataSource.value.filter(s =>
+    (s.name && s.name.toLowerCase().includes(q)) ||
+    (s.code && s.code.toLowerCase().includes(q))
+  );
+});
+
+// 价格颜色类
+const getPriceColorClass = (changePercent: number | undefined | null) => {
+  if (changePercent == null) return 'price-neutral';
+  return changePercent > 0 ? 'price-up' : changePercent < 0 ? 'price-down' : 'price-neutral';
+};
+
+// 计算振幅: (最高 - 最低) / 昨收 * 100
+const calculateAmplitude = (stock: StockQuoteVO) => {
+  if (stock.highPrice == null || stock.lowPrice == null || !stock.prevClose) return '-';
+  const amp = ((stock.highPrice - stock.lowPrice) / stock.prevClose) * 100;
+  return `${amp.toFixed(2)}%`;
+};
 
 // 获取最新同步时间
 const fetchRefreshTime = async () => {
@@ -178,44 +275,59 @@ const fetchRefreshTime = async () => {
   }
 };
 
-// 刷新操作
-const handleRefresh = async () => {
-  refreshLoading.value = true;
+// 加载自选分组及所有自选股票代码（用于准确判定是否已自选）
+const fetchWatchlistStockCodes = async () => {
+  if (!isLoggedIn.value) return;
   try {
-    // 1. 调用数据接口，refresh 传 true
-    await fetchData(true);
-    // 2. 成功后调用同步时间接口
-    await fetchRefreshTime();
-  } finally {
-    refreshLoading.value = false;
+    const res = await getWatchlistGroups();
+    if (res.data.success && res.data.data) {
+      watchlistGroups.value = res.data.data;
+      const codes = new Set<string>();
+      // 批量查询各分组自选股票
+      await Promise.all(
+        res.data.data.map(async (g) => {
+          try {
+            const stockRes = await getWatchlistStocks(g.id);
+            if (stockRes.data.success && stockRes.data.data) {
+              stockRes.data.data.forEach(s => codes.add(s.stockCode));
+            }
+          } catch (e) {
+            // ignore
+          }
+        })
+      );
+      watchlistStockCodes.value = codes;
+    }
+  } catch (error) {
+    console.error('Failed to fetch watchlist:', error);
   }
 };
 
-// 加载数据
+// 加载全市场股票数据
 const fetchData = async (refresh: boolean = false) => {
   loading.value = true;
   try {
     const res = await getStockQuotePage({
-      ...searchParams,
+      code: searchKeyword.value.trim() ? searchKeyword.value.trim() : undefined,
       page: pagination.current - 1,
       size: pagination.pageSize,
-      sort: sortState.value,
-      refresh, // 传入 refresh 参数
+      sort: ['changePercent,desc'],
+      refresh,
     });
     const { data } = res;
-    if (data.success || data.code === 0) { 
-        const pageResult = data.data; 
-        dataSource.value = pageResult.content;
-        pagination.total = pageResult.totalElements;
-        if (dataSource.value.length > 0) {
+    if (data.success || data.code === 0) {
+      const pageResult = data.data;
+      dataSource.value = pageResult.content;
+      pagination.total = pageResult.totalElements;
+
+      // 如果当前没有选中股票，或选中的股票不在新列表中，默认选中第一项
+      if (dataSource.value.length > 0) {
+        if (!selectedStock.value || !dataSource.value.some(s => s.code === selectedStock.value?.code)) {
           selectedStock.value = dataSource.value[0] || null;
-          currentStockCode.value = dataSource.value[0]?.code || '';
-          currentStockName.value = dataSource.value[0]?.name || '';
-        } else {
-          selectedStock.value = null;
-          currentStockCode.value = '';
-          currentStockName.value = '';
         }
+      } else {
+        selectedStock.value = null;
+      }
     }
   } catch (error) {
     console.error('Failed to fetch stock data:', error);
@@ -224,82 +336,79 @@ const fetchData = async (refresh: boolean = false) => {
   }
 };
 
-// 事件处理
+// 切换选中的股票
+const selectStock = (stock: StockQuoteVO) => {
+  selectedStock.value = stock;
+};
+
+// 搜索操作
 const handleSearch = () => {
   pagination.current = 1;
   fetchData();
 };
 
-const resetSearch = () => {
-  searchParams.code = '';
-  searchParams.name = '';
-  searchParams.latestPriceMin = undefined;
-  searchParams.latestPriceMax = undefined;
-  // 重置排序为默认
-  sortState.value = ['changePercent,desc'];
-  handleSearch();
-};
-
-const handleTableChange: TableProps['onChange'] = (pag: any, _filters: any, sorter: any) => {
-  pagination.current = pag.current;
-  pagination.pageSize = pag.pageSize;
-  
-  if (sorter.field && sorter.order) {
-    const order = sorter.order === 'ascend' ? 'asc' : 'desc';
-    sortState.value = [`${sorter.field},${order}`];
-  } else {
-    // 如果取消排序，则回到默认降序
-    sortState.value = ['changePercent,desc'];
-  }
-
+// 分页变化
+const handlePageChange = (page: number) => {
+  pagination.current = page;
   fetchData();
 };
 
-// Watchlist Modal
-const watchlistVisible = ref(false);
-const addLoading = ref(false);
-const watchlistGroupsLoading = ref(false);
-const targetGroupId = ref<number | undefined>(undefined);
-const selectedStockCode = ref('');
-const watchlistGroups = ref<WatchlistGroupVO[]>([]);
-
-const showAddWatchlist = async () => {
-  if (!isLoggedIn.value) {
-    return;
-  }
-  const record = selectedStock.value;
-  if (!record || !record.code) return;
-  
-  selectedStockCode.value = record.code;
-  targetGroupId.value = undefined;
-  watchlistVisible.value = true;
-  watchlistGroupsLoading.value = true;
+// 刷新最新行情
+const handleRefresh = async () => {
+  refreshLoading.value = true;
   try {
-    const res = await getWatchlistGroups();
-    if (res.data.success) {
-      watchlistGroups.value = res.data.data;
-    }
-  } catch (error) {
-    console.error('加载自选分组失败:', error);
+    await fetchData(true);
+    await fetchRefreshTime();
+    await fetchWatchlistStockCodes();
+    message.success('行情数据已刷新');
   } finally {
-    watchlistGroupsLoading.value = false;
+    refreshLoading.value = false;
   }
 };
 
+// 加入自选弹窗
+const showAddWatchlist = async () => {
+  if (!isLoggedIn.value) {
+    message.info('请先登录后再加入自选');
+    return;
+  }
+  if (!selectedStock.value) return;
+
+  targetGroupId.value = watchlistGroups.value[0]?.id;
+  watchlistVisible.value = true;
+
+  if (watchlistGroups.value.length === 0) {
+    watchlistGroupsLoading.value = true;
+    try {
+      const res = await getWatchlistGroups();
+      if (res.data.success) {
+        watchlistGroups.value = res.data.data;
+        targetGroupId.value = watchlistGroups.value[0]?.id;
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      watchlistGroupsLoading.value = false;
+    }
+  }
+};
+
+// 确认加入自选
 const handleConfirmAdd = async () => {
-  if (!targetGroupId.value) {
+  if (!targetGroupId.value || !selectedStock.value) {
     message.warning('请选择一个自选分组');
     return;
   }
-  
+
   addLoading.value = true;
   try {
     const res = await addStockToWatchlist({
       groupId: targetGroupId.value,
-      stockCode: selectedStockCode.value,
+      stockCode: selectedStock.value.code,
     });
     if (res.data.success) {
       message.success('已成功加入自选');
+      watchlistStockCodes.value.add(selectedStock.value.code);
       watchlistVisible.value = false;
     }
   } catch (error) {
@@ -309,96 +418,332 @@ const handleConfirmAdd = async () => {
   }
 };
 
-
-const rowClassName = (record: StockQuoteVO) => {
-  return selectedStock.value?.id === record.id ? 'stock-table-row-selected' : '';
-};
-
-const customRow = (record: StockQuoteVO) => {
-  return {
-    onClick: () => {
-      selectedStock.value = record;
-      currentStockCode.value = record.code;
-      currentStockName.value = record.name;
-    },
-    style: { cursor: 'pointer' }
-  };
-};
-
-onMounted(async () => {
+onMounted(() => {
   fetchData();
   fetchRefreshTime();
-  isLoggedIn.value = !!localStorage.getItem('token');
+  fetchWatchlistStockCodes();
 });
 </script>
 
 <style scoped>
 /* ========================================
-   Stock Data - Apple Design 深色模式
+   Trading Terminal Layout (交易终端式双栏布局)
    ======================================== */
-
-.stock-data-container {
-  padding: 0;
-  max-width: 100%;
-  margin: 0 auto;
+.stock-terminal-layout {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+  height: calc(100vh - 100px);
+  min-height: 640px;
+  box-sizing: border-box;
 }
 
-.stock-data-search-form {
-  row-gap: var(--spacing-md);
+/* 左侧栏 */
+.stock-terminal-sidebar {
+  width: 290px;
+  flex-shrink: 0;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #edf2f7;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  padding: 14px 12px;
+  overflow: hidden;
 }
 
-.stock-data-search-actions {
-  margin-inline-start: auto;
-  margin-inline-end: 0;
+.sidebar-search-box {
+  margin-bottom: 10px;
 }
 
-.price-range-group {
-  display: inline-flex;
+.sidebar-search-input {
+  border-radius: 8px;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.sidebar-search-input:focus-within {
+  background: #ffffff;
+  border-color: #3b82f6;
+}
+
+.sidebar-stock-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 2px;
+}
+
+/* 自定义纤细滚动条 */
+.sidebar-stock-list::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-stock-list::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 4px;
+}
+
+.sidebar-stock-item {
+  display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  padding: 10px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.price-range-input {
-  width: 80px;
-  text-align: center;
+.sidebar-stock-item:hover {
+  background: #f8fafc;
 }
 
-.price-range-separator {
-  display: inline-flex;
+.sidebar-stock-item--active {
+  background: #f0f7ff !important;
+  border-color: #bae0ff !important;
+}
+
+.stock-rank {
+  font-size: 13px;
+  font-weight: 700;
+  color: #94a3b8;
+  width: 24px;
+  flex-shrink: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
+}
+
+.stock-rank--top {
+  color: #2563eb;
+}
+
+.stock-meta {
+  flex: 1;
+  min-width: 0;
+  margin-left: 4px;
+  margin-right: 8px;
+}
+
+.stock-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stock-code {
+  font-size: 11px;
+  color: #64748b;
+  font-family: var(--font-family-mono, monospace);
+  margin-top: 1px;
+}
+
+.stock-change {
+  font-size: 13px;
+  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.sidebar-pagination {
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: center;
+}
+
+.sidebar-loading,
+.sidebar-empty {
+  flex: 1;
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 12px;
-  color: var(--color-text-tertiary);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+}
+
+/* 右侧主看板区 */
+.stock-terminal-main {
+  flex: 1;
+  min-width: 0;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #edf2f7;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 24px;
+  overflow: hidden;
+}
+
+/* 顶部 Header */
+.stock-main-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #edf2f7;
+  margin-bottom: 14px;
+}
+
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stock-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.main-stock-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.main-stock-code {
+  font-size: 13px;
+  color: #64748b;
+  font-family: var(--font-family-mono, monospace);
+  font-weight: 500;
+}
+
+.stock-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.main-latest-price {
+  font-size: 26px;
+  font-weight: 800;
+  font-family: 'DIN Alternate', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   line-height: 1;
 }
 
-.refresh-time {
-  margin-left: 12px;
-}
-
-.stock-code-tag {
-  margin-inline-end: 0;
-}
-
-.change-value {
-  font-weight: var(--font-weight-semibold);
-  font-size: var(--font-size-sm);
-}
-
-.stock-table :deep(.ant-table-row:hover) {
-  background-color: #fafafa;
-}
-.stock-table :deep(.ant-table-tbody > tr.stock-table-row-selected > td),
-.stock-table :deep(.ant-table-tbody > tr.stock-table-row-selected:hover > td),
-.stock-table :deep(.ant-table-tbody > tr.stock-table-row-selected > td.ant-table-cell-row-hover) {
-  background: #f3f3f3 !important;
-  color: #1f2d3d;
+.main-change-amount,
+.main-change-percent {
+  font-size: 15px;
   font-weight: 600;
-  transition: none !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
 }
-.stock-table :deep(.stock-table-row-selected > td:first-child) {
-  box-shadow: inset 3px 0 0 #6f6f6f;
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.watchlist-action-btn {
+  border-radius: 6px;
+  height: 30px;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.watchlist-action-btn.in-watchlist {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #16a34a;
+}
+
+.refresh-icon-btn {
+  color: #64748b;
+  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+}
+
+.refresh-icon-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+/* 下部区域：图表 + 行情数据 */
+.stock-main-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 20px;
+}
+
+.chart-container-section {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.market-quotes-panel {
+  width: 210px;
+  flex-shrink: 0;
+  border-left: 1px solid #f1f5f9;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.quotes-panel-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 14px;
+}
+
+.quotes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quotes-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.quote-label {
+  color: #64748b;
+  font-weight: 400;
+}
+
+.quote-value {
+  color: #0f172a;
+  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
+}
+
+.quote-value.quote-time {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+/* 红涨绿跌规范色值 */
+.price-up {
+  color: #ef4444 !important;
+}
+
+.price-down {
+  color: #10b981 !important;
+}
+
+.price-neutral {
+  color: #64748b !important;
 }
 </style>
+

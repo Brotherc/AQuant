@@ -598,6 +598,8 @@ const renderChart = (data: StockQuoteHistory[]) => {
         name: 'K线',
         type: 'candlestick',
         data: values,
+        barMaxWidth: 20,
+        barMinWidth: 1,
         itemStyle: {
           color: '#EF4444',
           color0: '#10B981',

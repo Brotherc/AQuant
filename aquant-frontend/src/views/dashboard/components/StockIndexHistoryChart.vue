@@ -254,7 +254,8 @@ const renderChart = (data: StockQuoteHistory[]) => {
           borderColor: '#EF4444',
           borderColor0: '#10B981'
         },
-        barWidth: '60%'
+        barMaxWidth: 20,
+        barMinWidth: 1
       },
       {
         name: 'MA5',
