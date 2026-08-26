@@ -86,6 +86,7 @@ export interface StockTradeBacktestVO {
 }
 
 export interface StockQuotePageReqVO {
+    keyword?: string;
     code?: string;
     name?: string;
     latestPriceMin?: number;

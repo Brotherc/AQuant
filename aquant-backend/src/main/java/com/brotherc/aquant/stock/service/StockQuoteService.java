@@ -104,6 +104,15 @@ public class StockQuoteService {
 
             List<Predicate> predicates = new ArrayList<>();
 
+            // 关键字搜索（代码或名称模糊匹配）
+            if (StringUtils.isNotBlank(reqVO.getKeyword())) {
+                String kw = "%" + reqVO.getKeyword().trim() + "%";
+                predicates.add(cb.or(
+                    cb.like(root.get("code"), kw),
+                    cb.like(root.get("name"), kw)
+                ));
+            }
+
             // 股票代码（模糊）
             if (StringUtils.isNotBlank(reqVO.getCode())) {
                 predicates.add(cb.like(root.get("code"), "%" + reqVO.getCode() + "%"));

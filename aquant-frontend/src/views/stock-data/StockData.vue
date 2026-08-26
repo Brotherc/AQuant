@@ -10,6 +10,7 @@
           allow-clear
           class="sidebar-search-input"
           @pressEnter="handleSearch"
+          @change="handleSearch"
         >
           <template #prefix>
             <search-outlined style="color: #94a3b8;" />
@@ -67,51 +68,47 @@
     <div class="stock-terminal-main">
       <!-- 顶部标的概览 Header -->
       <div class="stock-main-header" v-if="selectedStock">
-        <div class="header-left">
+        <div class="stock-header-left">
           <div class="stock-title-row">
-            <span class="main-stock-name">{{ selectedStock.name }}</span>
-            <span class="main-stock-code">{{ selectedStock.code }}</span>
+            <span class="stock-title-name">{{ selectedStock.name }}</span>
+            <span class="stock-title-code">{{ selectedStock.code }}</span>
           </div>
-          <div class="stock-price-row" :class="getPriceColorClass(selectedStock.changePercent)">
-            <span class="main-latest-price">{{ selectedStock.latestPrice != null ? selectedStock.latestPrice.toFixed(2) : '-' }}</span>
-            <span class="main-change-amount">
-              {{ selectedStock.changeAmount > 0 ? '+' : '' }}{{ selectedStock.changeAmount != null ? selectedStock.changeAmount.toFixed(2) : '-' }}
+          <div class="stock-price-row">
+            <span class="stock-current-price" :class="getPriceColorClass(selectedStock.changePercent)">
+              {{ selectedStock.latestPrice != null ? selectedStock.latestPrice.toFixed(2) : '-' }}
             </span>
-            <span class="main-change-percent">
-              ({{ selectedStock.changePercent > 0 ? '+' : '' }}{{ selectedStock.changePercent != null ? selectedStock.changePercent.toFixed(2) + '%' : '-' }})
+            <span class="stock-price-change" :class="getPriceColorClass(selectedStock.changePercent)">
+              {{ selectedStock.changeAmount != null && selectedStock.changeAmount > 0 ? '+' : '' }}{{ selectedStock.changeAmount != null ? selectedStock.changeAmount.toFixed(2) : '-' }}
+              ({{ selectedStock.changePercent != null && selectedStock.changePercent > 0 ? '+' : '' }}{{ selectedStock.changePercent != null ? selectedStock.changePercent.toFixed(2) : '-' }}%)
             </span>
           </div>
         </div>
 
-        <div class="header-right">
+        <div class="stock-header-actions">
+          <!-- 加入自选按钮 -->
           <a-button
-            v-if="isInWatchlist"
             type="primary"
-            ghost
+            :ghost="!isInWatchlist"
             size="small"
-            class="watchlist-action-btn in-watchlist"
+            class="watchlist-btn"
             @click="showAddWatchlist"
+            :loading="addLoading"
           >
-            <check-outlined /> 已自选
-          </a-button>
-          <a-button
-            v-else
-            type="primary"
-            size="small"
-            class="watchlist-action-btn"
-            @click="showAddWatchlist"
-            :disabled="!isLoggedIn"
-          >
-            <plus-outlined /> 加自选
+            <template #icon>
+              <check-outlined v-if="isInWatchlist" />
+              <plus-outlined v-else />
+            </template>
+            {{ isInWatchlist ? '已自选' : '加自选' }}
           </a-button>
 
+          <!-- 刷新按钮 -->
           <a-button
             type="text"
             size="small"
             class="refresh-icon-btn"
             :loading="refreshLoading"
             @click="handleRefresh"
-            title="刷新最新行情"
+            title="刷新全市场行情"
           >
             <sync-outlined />
           </a-button>
@@ -160,8 +157,16 @@
               <span class="quote-label">振幅</span>
               <span class="quote-value">{{ calculateAmplitude(selectedStock) }}</span>
             </div>
-            <div class="quotes-item" v-if="selectedStock.quoteTime">
-              <span class="quote-label">时间</span>
+            <div class="quotes-item" v-if="selectedStock.buyPrice != null">
+              <span class="quote-label">买一价</span>
+              <span class="quote-value">{{ selectedStock.buyPrice.toFixed(2) }}</span>
+            </div>
+            <div class="quotes-item" v-if="selectedStock.sellPrice != null">
+              <span class="quote-label">卖一价</span>
+              <span class="quote-value">{{ selectedStock.sellPrice.toFixed(2) }}</span>
+            </div>
+            <div class="quotes-item">
+              <span class="quote-label">更新时间</span>
               <span class="quote-value quote-time">{{ selectedStock.quoteTime }}</span>
             </div>
           </div>
@@ -178,25 +183,43 @@
       title="加入自选分组"
       @ok="handleConfirmAdd"
       :confirmLoading="addLoading"
-      width="380px"
+      :destroyOnClose="true"
+      width="420px"
     >
-      <a-form layout="vertical" style="padding-top: 12px;">
-        <a-form-item label="选择分组" required>
-          <a-select v-model:value="targetGroupId" placeholder="请选择自选分组" :loading="watchlistGroupsLoading">
-            <a-select-option v-for="group in watchlistGroups" :key="group.id" :value="group.id">
-              {{ group.name }}
-            </a-select-option>
-          </a-select>
-        </a-form-item>
-      </a-form>
+      <div style="margin-bottom: 12px; font-weight: 500;">
+        将 <span style="font-weight: 700; color: #1677ff;">{{ selectedStock?.name }} ({{ selectedStock?.code }})</span> 加入分组：
+      </div>
+      <a-select
+        v-model:value="targetGroupId"
+        placeholder="选择自选分组"
+        style="width: 100%"
+        :loading="watchlistGroupsLoading"
+      >
+        <a-select-option
+          v-for="group in watchlistGroups"
+          :key="group.id"
+          :value="group.id"
+        >
+          {{ group.name }}
+        </a-select-option>
+      </a-select>
     </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue';
-import { getStockQuotePage, getStockDailyLatest, type StockQuoteVO } from '@/api/stock';
-import { getWatchlistGroups, getWatchlistStocks, addStockToWatchlist, type WatchlistGroupVO } from '@/api/watchlist';
+import {
+  getStockQuotePage,
+  getStockDailyLatest,
+  type StockQuoteVO
+} from '@/api/stock';
+import {
+  getWatchlistGroups,
+  getWatchlistStocks,
+  addStockToWatchlist,
+  type WatchlistGroupVO
+} from '@/api/watchlist';
 import { message } from 'ant-design-vue';
 import StockHistoryChart from './components/StockHistoryChart.vue';
 import { SearchOutlined, SyncOutlined, PlusOutlined, CheckOutlined } from '@ant-design/icons-vue';
@@ -238,17 +261,8 @@ const isInWatchlist = computed(() => {
   return watchlistStockCodes.value.has(selectedStock.value.code);
 });
 
-// 本地即时模糊过滤或后端搜索
-const filteredStockList = computed(() => {
-  if (!searchKeyword.value.trim()) {
-    return dataSource.value;
-  }
-  const q = searchKeyword.value.trim().toLowerCase();
-  return dataSource.value.filter(s =>
-    (s.name && s.name.toLowerCase().includes(q)) ||
-    (s.code && s.code.toLowerCase().includes(q))
-  );
-});
+// 全局分页数据源
+const filteredStockList = computed(() => dataSource.value);
 
 // 价格颜色类
 const getPriceColorClass = (changePercent: number | undefined | null) => {
@@ -308,7 +322,7 @@ const fetchData = async (refresh: boolean = false) => {
   loading.value = true;
   try {
     const res = await getStockQuotePage({
-      code: searchKeyword.value.trim() ? searchKeyword.value.trim() : undefined,
+      keyword: searchKeyword.value.trim() ? searchKeyword.value.trim() : undefined,
       page: pagination.current - 1,
       size: pagination.pageSize,
       sort: ['changePercent,desc'],
