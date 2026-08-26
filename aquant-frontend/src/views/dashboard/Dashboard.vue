@@ -462,16 +462,16 @@ const mockTopOutflow: FundFlowGraphNode[] = [
 
 const moodTagClass = computed(() => {
   const score = sentimentData.value?.sentimentScore ?? 32;
-  if (score >= 70) return 'tag-hot';
-  if (score >= 50) return 'tag-warm';
+  if (score >= 60) return 'tag-hot';
+  if (score >= 40) return 'tag-warm';
   return 'tag-cold';
 });
 
 const statusBadgeClass = computed(() => {
   const score = sentimentData.value?.sentimentScore ?? 32;
-  if (score >= 70) return 'text-red';
-  if (score >= 50) return 'text-blue';
-  return 'text-blue-dark';
+  if (score >= 60) return 'text-red';
+  if (score >= 40) return 'text-gray';
+  return 'text-green';
 });
 
 const turnover5Days = computed(() => {
@@ -1015,7 +1015,7 @@ onUnmounted(() => {
 }
 
 .gauge-bottom-mood.tag-cold {
-  color: #2563eb;
+  color: var(--color-success, #1ea55b);
 }
 
 .gauge-bottom-mood.tag-warm {
@@ -1023,7 +1023,7 @@ onUnmounted(() => {
 }
 
 .gauge-bottom-mood.tag-hot {
-  color: #dc2626;
+  color: var(--color-error, #e05454);
 }
 
 /* 情绪右侧数据统计 */
@@ -1049,14 +1049,6 @@ onUnmounted(() => {
 .status-badge {
   font-size: 20px;
   font-weight: 800;
-}
-
-.text-blue {
-  color: #3b82f6 !important;
-}
-
-.text-blue-dark {
-  color: #2563eb !important;
 }
 
 .counts-summary-line {
