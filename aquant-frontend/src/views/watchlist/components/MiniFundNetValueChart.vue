@@ -264,13 +264,49 @@ onUnmounted(() => {
 .fund-chart-header {
   display: flex;
   justify-content: flex-end;
-  height: 20px;
+  align-items: center;
+  height: 22px;
   margin-bottom: 2px;
 }
 
 .time-range-selector {
-  transform: scale(0.72);
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  border-radius: 6px;
+  padding: 2px;
+  border: 1px solid #edf2f7;
+  transform: scale(0.75);
   transform-origin: right top;
+}
+
+.time-range-selector :deep(.ant-radio-button-wrapper) {
+  border: none !important;
+  background: transparent !important;
+  color: #64748b !important;
+  box-shadow: none !important;
+  border-radius: 4px !important;
+  padding: 0 6px !important;
+  height: 20px !important;
+  line-height: 20px !important;
+  font-size: 12px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.time-range-selector :deep(.ant-radio-button-wrapper::before) {
+  display: none !important;
+}
+
+.time-range-selector :deep(.ant-radio-button-wrapper:hover) {
+  color: #0f172a !important;
+}
+
+.time-range-selector :deep(.ant-radio-button-wrapper-checked) {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  border: none !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08) !important;
 }
 
 .mini-fund-chart-container {

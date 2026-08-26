@@ -1,7 +1,7 @@
 <template>
   <div v-if="stockCode">
     <div class="mb-2" style="display: flex; justify-content: flex-start;">
-      <a-radio-group v-model:value="frequency" @change="fetchHistory" size="small">
+      <a-radio-group v-model:value="frequency" @change="fetchHistory" size="small" class="stock-freq-selector">
         <a-radio-button value="1d">日K</a-radio-button>
         <a-radio-button value="1w">周K</a-radio-button>
         <a-radio-button value="1M">月K</a-radio-button>
@@ -350,3 +350,43 @@ onUnmounted(() => {
   chartInstance?.dispose();
 });
 </script>
+
+<style scoped>
+.stock-freq-selector {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  border-radius: 6px;
+  padding: 2px;
+  border: 1px solid #edf2f7;
+}
+
+.stock-freq-selector :deep(.ant-radio-button-wrapper) {
+  border: none !important;
+  background: transparent !important;
+  color: #64748b !important;
+  box-shadow: none !important;
+  border-radius: 4px !important;
+  padding: 0 10px !important;
+  height: 24px !important;
+  line-height: 24px !important;
+  font-size: 12px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stock-freq-selector :deep(.ant-radio-button-wrapper::before) {
+  display: none !important;
+}
+
+.stock-freq-selector :deep(.ant-radio-button-wrapper:hover) {
+  color: #0f172a !important;
+}
+
+.stock-freq-selector :deep(.ant-radio-button-wrapper-checked) {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  border: none !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08) !important;
+}
+</style>
