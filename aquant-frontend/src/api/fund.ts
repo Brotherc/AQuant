@@ -21,6 +21,7 @@ export interface FundInfoVO {
 export interface FundInfoPageReqVO {
   page: number
   size: number
+  keyword?: string
   fundCode?: string
   fundName?: string
   fundType?: string

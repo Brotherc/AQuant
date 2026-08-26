@@ -5,11 +5,12 @@
       <!-- 顶部搜索框与筛选 -->
       <div class="sidebar-search-box">
         <a-input
-          v-model:value="queryParams.fundName"
-          placeholder="搜索基金代码 / 简称"
+          v-model:value="queryParams.keyword"
+          placeholder="搜索基金代码 / 简称 / 拼音"
           allow-clear
           class="sidebar-search-input"
           @pressEnter="onSearch"
+          @change="onSearch"
         >
           <template #prefix>
             <search-outlined style="color: #94a3b8;" />
@@ -345,6 +346,7 @@ import { SearchOutlined, SyncOutlined, FilterOutlined, SortDescendingOutlined } 
 const queryParams = reactive<FundInfoPageReqVO>({
   page: 0,
   size: 25,
+  keyword: '',
   fundCode: '',
   fundName: '',
   fundType: undefined,
