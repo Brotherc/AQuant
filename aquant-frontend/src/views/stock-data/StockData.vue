@@ -169,7 +169,7 @@
       </div>
 
       <!-- 无选中股票时空状态 -->
-      <a-empty v-else description="请从左侧选择股票查看详情" style="margin-top: 160px;" />
+      <a-empty v-else description="请从左侧选择股票查看详情" class="main-terminal-empty" />
     </div>
 
     <!-- 加入自选模态框 -->
@@ -501,8 +501,8 @@ onMounted(() => {
 }
 
 .sidebar-stock-item--active {
-  background: #f0f7ff !important;
-  border-color: #bae0ff !important;
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
 }
 
 .stock-rank {
@@ -556,12 +556,20 @@ onMounted(() => {
   justify-content: center;
 }
 
-.sidebar-loading,
-.sidebar-empty {
+.sidebar-loading {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.sidebar-empty {
+  flex: 1;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
 }
 
 /* 右侧主看板区 */
@@ -576,6 +584,15 @@ onMounted(() => {
   flex-direction: column;
   padding: 20px 24px;
   overflow: hidden;
+}
+
+.main-terminal-empty {
+  flex: 1;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
 }
 
 /* 顶部 Header */

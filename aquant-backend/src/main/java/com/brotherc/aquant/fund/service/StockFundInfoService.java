@@ -182,4 +182,8 @@ public class StockFundInfoService {
         });
     }
 
+    public List<String> getFundTypes() {
+        return stockFundInfoRepository.findDistinctFundTypes();
+    }
+
 }

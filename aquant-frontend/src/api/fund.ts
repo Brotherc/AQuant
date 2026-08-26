@@ -117,3 +117,10 @@ export function getStockFundInfoLatest() {
     method: 'GET'
   })
 }
+
+export function getFundTypes() {
+  return request<ResponseDTO<string[]>>({
+    url: '/stockFund/types',
+    method: 'GET'
+  })
+}

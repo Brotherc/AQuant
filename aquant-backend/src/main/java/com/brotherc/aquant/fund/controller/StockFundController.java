@@ -64,4 +64,10 @@ public class StockFundController {
         return ResponseDTO.success(stockFundPurchaseLimitService.getCurrentLimits(fundCode));
     }
 
+    @Operation(summary = "获取所有基金类型列表")
+    @GetMapping("/types")
+    public ResponseDTO<List<String>> getFundTypes() {
+        return ResponseDTO.success(stockFundInfoService.getFundTypes());
+    }
+
 }
