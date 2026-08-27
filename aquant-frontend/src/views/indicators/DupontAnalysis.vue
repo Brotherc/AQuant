@@ -181,7 +181,7 @@
 
               <!-- 行业列 -->
               <template v-else-if="column.dataIndex === 'industry'">
-                <span class="industry-tag">{{ text || '其他' }}</span>
+                <span class="industry-badge">{{ text || '-' }}</span>
               </template>
 
               <!-- ROE 列 -->
@@ -206,12 +206,15 @@
 
               <!-- 质量评分 列 -->
               <template v-else-if="column.dataIndex === 'qualityScore'">
-                <div class="quality-badge-wrap">
+                <div class="score-cell">
+                  <span class="score-num" :class="getScoreColorClass(record.qualityScore)">
+                    {{ Math.round(Number(record.qualityScore || 0)) }}
+                  </span>
                   <span
                     class="quality-badge"
                     :class="getQualityBadgeClass(record.qualityScore, record.qualityLevel)"
                   >
-                    {{ Math.round(Number(record.qualityScore || 0)) }} {{ record.qualityLevel || getQualityLevelText(record.qualityScore) }}
+                    {{ record.qualityLevel || getQualityLevelText(record.qualityScore) }}
                   </span>
                 </div>
               </template>
@@ -653,6 +656,13 @@ const getQualityBadgeClass = (score: any, level?: string) => {
   return 'quality-badge--poor';
 };
 
+const getScoreColorClass = (score: any) => {
+  const s = Number(score || 0);
+  if (s >= 65) return 'score-num--high';
+  if (s >= 50) return 'score-num--mid';
+  return 'score-num--low';
+};
+
 const getMarketPercentileText = (score: any) => {
   const s = Number(score || 0);
   if (s >= 85) return '前 8%';
@@ -1068,38 +1078,36 @@ onMounted(() => {
 .quick-tabs-bar {
   display: flex;
   align-items: center;
-  margin-top: -4px;
 }
 
 .quick-tabs {
   display: flex;
   gap: 8px;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 10px;
 }
 
 .quick-tab-btn {
+  border: none;
+  background: transparent;
   padding: 6px 16px;
-  border-radius: 20px;
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
-  color: #475569;
+  color: #64748b;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .quick-tab-btn:hover {
-  background: #f8fafc;
   color: #0f172a;
-  border-color: #cbd5e1;
 }
 
 .quick-tab-btn.active {
   background: #0f172a;
-  border-color: #0f172a;
   color: #ffffff;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 /* ==========================================================================
@@ -1138,11 +1146,44 @@ onMounted(() => {
   margin-left: auto;
 }
 
+/* 表格样式与单元格 */
+:deep(.dupont-main-table .ant-table) {
+  font-size: 13px;
+}
+
+:deep(.dupont-main-table .ant-table-thead > tr > th) {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 12px 14px;
+  white-space: nowrap !important;
+}
+
+:deep(.dupont-main-table .ant-table-tbody > tr > td) {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 12px 14px;
+  transition: background 0.15s ease;
+  cursor: pointer;
+}
+
+:deep(.dupont-main-table .ant-table-tbody > tr:hover > td) {
+  background: #f8fafc !important;
+}
+
+:deep(.dupont-row--selected td) {
+  background-color: #f8fafc !important;
+}
+
+:deep(.dupont-main-table .ant-table-row) {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
 /* 股票列 */
 .stock-cell {
   display: flex;
   flex-direction: column;
-  gap: 2px;
 }
 
 .stock-name {
@@ -1153,25 +1194,25 @@ onMounted(() => {
 
 .stock-code {
   font-size: 11px;
-  color: #64748b;
-  font-family: 'SF Mono', Consolas, Monaco, monospace;
+  color: #94a3b8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-.industry-tag {
+.industry-badge {
   display: inline-block;
   padding: 2px 8px;
   background: #f1f5f9;
+  color: #475569;
   border-radius: 4px;
   font-size: 12px;
-  color: #475569;
-  font-weight: 500;
 }
 
 /* 指标数值 */
 .metric-value {
+  font-weight: 600;
+  color: #0f172a;
   font-variant-numeric: tabular-nums;
   font-size: 13px;
-  color: #1e293b;
 }
 
 .text-rose {
@@ -1179,66 +1220,63 @@ onMounted(() => {
 }
 
 /* 质量评分徽章 */
-.quality-badge-wrap {
+.score-cell {
   display: flex;
+  align-items: center;
   justify-content: center;
+  gap: 8px;
+}
+
+.score-num {
+  font-weight: 700;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.score-num--high {
+  color: #10b981;
+}
+
+.score-num--mid {
+  color: #f59e0b;
+}
+
+.score-num--low {
+  color: #f43f5e;
 }
 
 .quality-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
 }
 
 .quality-badge--excellent {
   background: #ecfdf5;
   color: #059669;
-  border: 1px solid #a7f3d0;
 }
 
 .quality-badge--good {
-  background: #f0fdf4;
-  color: #16a34a;
-  border: 1px solid #bbf7d0;
+  background: #eff6ff;
+  color: #2563eb;
 }
 
 .quality-badge--mid {
   background: #fffbeb;
   color: #d97706;
-  border: 1px solid #fde68a;
 }
 
 .quality-badge--poor {
-  background: #fff1f2;
-  color: #e11d48;
-  border: 1px solid #fecdd3;
+  background: #fef2f2;
+  color: #dc2626;
 }
 
 .conclusion-text {
+  color: #64748b;
   font-size: 12px;
-  color: #475569;
   line-height: 1.4;
-}
-
-:deep(.dupont-main-table .ant-table-thead > tr > th) {
-  white-space: nowrap !important;
-}
-
-:deep(.dupont-main-table .ant-table-cell) {
-  white-space: nowrap;
-}
-
-:deep(.dupont-row--selected td) {
-  background-color: #f8fafc !important;
-}
-
-:deep(.dupont-main-table .ant-table-row) {
-  cursor: pointer;
-  transition: background-color 0.15s ease;
 }
 
 /* ==========================================================================
