@@ -12,6 +12,21 @@ public class DupontAnalysisPageReqVO {
     @Schema(description = "股票代码")
     private String stockCode;
 
+    @Schema(description = "关键字（股票代码或名称）")
+    private String keyword;
+
+    @Schema(description = "所属行业")
+    private String industry;
+
+    @Schema(description = "快捷筛选标签：ALL/HIGH_QUALITY/HIGH_LEVERAGE/STABLE_PROFIT/WATCHLIST")
+    private String tabFilter;
+
+    @Schema(description = "质量评级：优秀/良好/中等/较差")
+    private String qualityLevel;
+
+    @Schema(description = "质量评分最小值")
+    private BigDecimal qualityScoreMin;
+
     @Schema(description = "ROE-3年平均【最小值】")
     private BigDecimal roe3yAvgMin;
 

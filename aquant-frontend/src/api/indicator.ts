@@ -54,12 +54,28 @@ export interface StockDupontAnalysis {
     equityMultiplierLastYAIndustryMed: number;
     equityMultiplierLastYAIndustryAvg: number;
     roe3yAvgRank: number;
+    industry?: string;
+    qualityScore?: number;
+    qualityLevel?: string;
+    conclusion?: string;
 
     createdAt: string;
 }
 
+export interface DupontOverviewVO {
+    highQualityCount: number;
+    industryRoeMedian: number;
+    watchlistHighQualityCount: number;
+    leverageWarningCount: number;
+}
+
 export interface DupontAnalysisPageReqVO {
     stockCode?: string;
+    keyword?: string;
+    industry?: string;
+    tabFilter?: string;
+    qualityLevel?: string;
+    qualityScoreMin?: number;
     roe3yAvgMin?: number;
     roe3yAvgMax?: number;
     roeHigherThanIndustryAvg?: boolean;
@@ -72,6 +88,14 @@ export const getDupontAnalysisPage = (params: DupontAnalysisPageReqVO & { page: 
             indexes: null
         }
     });
+};
+
+export const getDupontOverview = () => {
+    return api.get<ResponseDTO<DupontOverviewVO>>('/stockIndicator/dupontAnalysis/overview');
+};
+
+export const getDupontIndustries = () => {
+    return api.get<ResponseDTO<string[]>>('/stockIndicator/dupontAnalysis/industries');
 };
 
 export interface CalculatedValuationMetricsPage {

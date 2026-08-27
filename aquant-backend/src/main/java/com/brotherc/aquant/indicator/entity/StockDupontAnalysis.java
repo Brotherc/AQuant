@@ -325,6 +325,30 @@ public class StockDupontAnalysis {
     private BigDecimal roe3yAvgRank;
 
     /**
+     * 所处行业
+     */
+    @Column(name = "industry")
+    private String industry;
+
+    /**
+     * 杜邦质量评分 (0-100)
+     */
+    @Column(name = "quality_score")
+    private BigDecimal qualityScore;
+
+    /**
+     * 质量等级 (优秀 / 良好 / 中等 / 较差)
+     */
+    @Column(name = "quality_level")
+    private String qualityLevel;
+
+    /**
+     * 结论摘要
+     */
+    @Column(name = "conclusion")
+    private String conclusion;
+
+    /**
      * 创建时间
      */
     @Column(name = "created_at")
