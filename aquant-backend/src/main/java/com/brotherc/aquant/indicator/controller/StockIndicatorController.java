@@ -24,6 +24,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.brotherc.aquant.indicator.model.vo.DupontOverviewVO;
+import com.brotherc.aquant.common.utils.UserContext;
+
+import java.util.List;
+
 @Validated
 @Tag(name = "股票指标")
 @RestController
@@ -40,6 +45,19 @@ public class StockIndicatorController {
     public ResponseDTO<Page<StockDupontAnalysis>> dupontAnalysisPage(
             @Valid @ParameterObject DupontAnalysisPageReqVO reqVO, @ParameterObject Pageable pageable) {
         return ResponseDTO.success(stockDupontAnalysisService.pageQuery(reqVO, pageable));
+    }
+
+    @Operation(summary = "杜邦分析顶部概览统计数据")
+    @GetMapping("/dupontAnalysis/overview")
+    public ResponseDTO<DupontOverviewVO> dupontAnalysisOverview() {
+        Long userId = UserContext.getCurrentUserId();
+        return ResponseDTO.success(stockDupontAnalysisService.getDupontOverview(userId));
+    }
+
+    @Operation(summary = "杜邦分析行业列表查询")
+    @GetMapping("/dupontAnalysis/industries")
+    public ResponseDTO<List<String>> dupontAnalysisIndustries() {
+        return ResponseDTO.success(stockDupontAnalysisService.getIndustries());
     }
 
     @Operation(summary = "估值指标分页查询")

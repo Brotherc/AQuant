@@ -3,15 +3,21 @@ package com.brotherc.aquant.indicator.service;
 import com.brotherc.aquant.indicator.entity.StockBalanceSheet;
 import com.brotherc.aquant.indicator.entity.StockDupontAnalysis;
 import com.brotherc.aquant.indicator.entity.StockPerformanceReport;
-import com.brotherc.aquant.stock.entity.StockQuote;
-import com.brotherc.aquant.integration.akshare.model.StockZhDupontComparisonEm;
 import com.brotherc.aquant.indicator.model.dto.DupontIndustryMetrics;
 import com.brotherc.aquant.indicator.model.vo.DupontAnalysisPageReqVO;
+import com.brotherc.aquant.indicator.model.vo.DupontOverviewVO;
 import com.brotherc.aquant.indicator.repository.StockBalanceSheetRepository;
 import com.brotherc.aquant.indicator.repository.StockDupontAnalysisRepository;
 import com.brotherc.aquant.indicator.repository.StockPerformanceReportRepository;
+import com.brotherc.aquant.integration.akshare.model.StockZhDupontComparisonEm;
+import com.brotherc.aquant.stock.entity.StockQuote;
 import com.brotherc.aquant.stock.repository.StockQuoteRepository;
+import com.brotherc.aquant.watchlist.entity.StockWatchlistGroup;
+import com.brotherc.aquant.watchlist.entity.StockWatchlistStock;
+import com.brotherc.aquant.watchlist.repository.StockWatchlistGroupRepository;
+import com.brotherc.aquant.watchlist.repository.StockWatchlistStockRepository;
 import com.brotherc.aquant.common.utils.StockUtils;
+import com.brotherc.aquant.common.utils.UserContext;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,14 +34,7 @@ import org.springframework.util.CollectionUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -54,23 +53,69 @@ public class StockDupontAnalysisService {
     private final StockQuoteRepository stockQuoteRepository;
     private final StockPerformanceReportRepository stockPerformanceReportRepository;
     private final StockBalanceSheetRepository stockBalanceSheetRepository;
+    private final StockWatchlistGroupRepository watchlistGroupRepository;
+    private final StockWatchlistStockRepository watchlistStockRepository;
 
     public Page<StockDupontAnalysis> pageQuery(DupontAnalysisPageReqVO query, Pageable pageable) {
         if (pageable.getSort().isUnsorted()) {
-            pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.ASC, "roe3yAvgRank"));
+            pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.DESC, "roe3yAvg"));
         }
 
         Specification<StockDupontAnalysis> specification = (root, cq, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
             if (query != null) {
-                // 等值/模糊查询 stockCode 或 stockName
-                if (StringUtils.isNotBlank(query.getStockCode())) {
-                    String keyword = "%" + query.getStockCode().trim() + "%";
+                // 等值/模糊查询 keyword 或 stockCode
+                String keyword = StringUtils.isNotBlank(query.getKeyword()) ? query.getKeyword().trim() : query.getStockCode();
+                if (StringUtils.isNotBlank(keyword)) {
+                    String kw = "%" + keyword.trim() + "%";
                     predicates.add(cb.or(
-                            cb.like(root.get("stockCode"), keyword),
-                            cb.like(root.get("stockName"), keyword)
+                            cb.like(root.get("stockCode"), kw),
+                            cb.like(root.get("stockName"), kw)
                     ));
+                }
+
+                // 行业筛选
+                if (StringUtils.isNotBlank(query.getIndustry())) {
+                    predicates.add(cb.equal(root.get("industry"), query.getIndustry().trim()));
+                }
+
+                // 质量等级筛选
+                if (StringUtils.isNotBlank(query.getQualityLevel())) {
+                    predicates.add(cb.equal(root.get("qualityLevel"), query.getQualityLevel().trim()));
+                }
+
+                // 质量评分最小值
+                if (query.getQualityScoreMin() != null) {
+                    predicates.add(cb.ge(root.get("qualityScore"), query.getQualityScoreMin()));
+                }
+
+                // 快捷标签筛选
+                if (StringUtils.isNotBlank(query.getTabFilter())) {
+                    switch (query.getTabFilter()) {
+                        case "HIGH_QUALITY" -> {
+                            predicates.add(cb.ge(root.get(ROE_3Y_AVG), new BigDecimal("15")));
+                            predicates.add(cb.ge(root.get("qualityScore"), new BigDecimal("75")));
+                        }
+                        case "HIGH_LEVERAGE" -> {
+                            predicates.add(cb.ge(root.get("equityMultiplier3yAvg"), new BigDecimal("2.5")));
+                        }
+                        case "STABLE_PROFIT" -> {
+                            predicates.add(cb.ge(root.get(ROE_3Y_AVG), new BigDecimal("10")));
+                            predicates.add(cb.ge(root.get("netMargin3yAvg"), new BigDecimal("5")));
+                            predicates.add(cb.le(root.get("equityMultiplier3yAvg"), new BigDecimal("2.0")));
+                        }
+                        case "WATCHLIST" -> {
+                            Long userId = UserContext.getCurrentUserId();
+                            Set<String> watchlistCodes = getUserWatchlistStockCodes(userId);
+                            if (CollectionUtils.isEmpty(watchlistCodes)) {
+                                predicates.add(cb.disjunction());
+                            } else {
+                                predicates.add(root.get("stockCode").in(watchlistCodes));
+                            }
+                        }
+                        default -> {}
+                    }
                 }
 
                 // ROE-3年平均 范围
@@ -107,6 +152,87 @@ public class StockDupontAnalysisService {
         };
 
         return stockDupontAnalysisRepository.findAll(specification, pageable);
+    }
+
+    /**
+     * 获取杜邦分析顶部概览统计数据
+     */
+    public DupontOverviewVO getDupontOverview(Long userId) {
+        List<StockDupontAnalysis> list = stockDupontAnalysisRepository.findAll();
+        if (list.isEmpty()) {
+            return new DupontOverviewVO(0L, BigDecimal.ZERO, 0L, 0L);
+        }
+
+        long highQualityCount = list.stream()
+                .filter(item -> item.getRoe3yAvg() != null && item.getRoe3yAvg().compareTo(new BigDecimal("15")) >= 0
+                        && item.getQualityScore() != null && item.getQualityScore().compareTo(new BigDecimal("75")) >= 0)
+                .count();
+
+        long leverageWarningCount = list.stream()
+                .filter(item -> {
+                    BigDecimal em = item.getEquityMultiplier3yAvg() != null ? item.getEquityMultiplier3yAvg() : item.getEquityMultiplierLastYA();
+                    return em != null && em.compareTo(new BigDecimal("2.5")) > 0;
+                })
+                .count();
+
+        // 行业/全市场加权中位数 (取全市场 roe3yAvg 的中位数)
+        List<BigDecimal> roeList = list.stream()
+                .map(StockDupontAnalysis::getRoe3yAvg)
+                .filter(Objects::nonNull)
+                .sorted()
+                .toList();
+
+        BigDecimal industryRoeMedian = BigDecimal.ZERO;
+        if (!roeList.isEmpty()) {
+            int size = roeList.size();
+            if (size % 2 == 1) {
+                industryRoeMedian = roeList.get(size / 2);
+            } else {
+                industryRoeMedian = roeList.get(size / 2 - 1).add(roeList.get(size / 2)).divide(TWO, 2, RoundingMode.HALF_UP);
+            }
+        }
+
+        // 用户自选高质量
+        long watchlistHighQualityCount = 0L;
+        if (userId != null) {
+            Set<String> userWatchlistCodes = getUserWatchlistStockCodes(userId);
+            if (!userWatchlistCodes.isEmpty()) {
+                watchlistHighQualityCount = list.stream()
+                        .filter(item -> userWatchlistCodes.contains(item.getStockCode()) || userWatchlistCodes.contains(StockUtils.getPlainCode(item.getStockCode())))
+                        .filter(item -> item.getQualityScore() != null && item.getQualityScore().compareTo(new BigDecimal("75")) >= 0)
+                        .count();
+            }
+        }
+
+        return DupontOverviewVO.builder()
+                .highQualityCount(highQualityCount)
+                .industryRoeMedian(industryRoeMedian)
+                .watchlistHighQualityCount(watchlistHighQualityCount)
+                .leverageWarningCount(leverageWarningCount)
+                .build();
+    }
+
+    /**
+     * 获取全市场可选行业列表（直接按SQL仅查询去重后的行业字段）
+     */
+    public List<String> getIndustries() {
+        List<String> list = stockDupontAnalysisRepository.findDistinctIndustries();
+        if (!CollectionUtils.isEmpty(list)) {
+            return list;
+        }
+        return stockPerformanceReportRepository.findDistinctIndustries();
+    }
+
+    /**
+     * 获取用户所有自选股票代码集合
+     */
+    private Set<String> getUserWatchlistStockCodes(Long userId) {
+        if (userId == null) return Collections.emptySet();
+        List<StockWatchlistGroup> groups = watchlistGroupRepository.findAllByUserIdOrderBySortNoAsc(userId);
+        if (groups.isEmpty()) return Collections.emptySet();
+        List<Long> groupIds = groups.stream().map(StockWatchlistGroup::getId).toList();
+        List<StockWatchlistStock> watchlistStocks = watchlistStockRepository.findByGroupIdIn(groupIds);
+        return watchlistStocks.stream().map(StockWatchlistStock::getStockCode).collect(Collectors.toSet());
     }
 
     /**
@@ -336,6 +462,142 @@ public class StockDupontAnalysisService {
                 rankedList.get(i).setRoe3yAvgRank(BigDecimal.valueOf(i + 1));
             }
         }
+
+        // 计算所有标的的杜邦质量评分与智能结论
+        for (StockDupontAnalysis item : list) {
+            calculateScoreAndConclusion(item);
+        }
+    }
+
+    public void calculateScoreAndConclusion(StockDupontAnalysis item) {
+        if (item == null) return;
+        BigDecimal roe = item.getRoe3yAvg() != null ? item.getRoe3yAvg() : item.getRoeLastYA();
+        BigDecimal netMargin = item.getNetMargin3yAvg() != null ? item.getNetMargin3yAvg() : item.getNetMarginLastYA();
+        BigDecimal turnover = item.getAssetTurnover3yAvg() != null ? item.getAssetTurnover3yAvg() : item.getAssetTurnoverLastYA();
+        BigDecimal equityMult = item.getEquityMultiplier3yAvg() != null ? item.getEquityMultiplier3yAvg() : item.getEquityMultiplierLastYA();
+
+        BigDecimal netMarginMed = item.getNetMargin3yAvgIndustryMed();
+        BigDecimal turnoverMed = item.getAssetTurnover3yAvgIndustryMed();
+
+        double score = 0.0;
+
+        // 1. ROE 水平 (35 分)
+        if (roe != null) {
+            double r = roe.doubleValue();
+            if (r >= 20.0) {
+                score += 35.0;
+            } else if (r >= 15.0) {
+                score += 30.0 + (r - 15.0);
+            } else if (r >= 10.0) {
+                score += 22.0 + (r - 10.0) * 1.6;
+            } else if (r >= 5.0) {
+                score += 12.0 + (r - 5.0) * 2.0;
+            } else if (r > 0) {
+                score += r * 2.4;
+            }
+        }
+
+        // 2. 净利率盈利驱动 (30 分)
+        if (netMargin != null) {
+            double nm = netMargin.doubleValue();
+            double nmMed = (netMarginMed != null && netMarginMed.doubleValue() > 0) ? netMarginMed.doubleValue() : 8.0;
+            if (nm >= nmMed) {
+                double leadRatio = Math.min(2.0, nm / nmMed);
+                score += 18.0 + (leadRatio - 1.0) * 12.0;
+            } else if (nm > 0) {
+                score += Math.max(5.0, 18.0 * (nm / nmMed));
+            }
+        }
+
+        // 3. 资产周转率运营效率 (20 分)
+        if (turnover != null) {
+            double to = turnover.doubleValue();
+            double toMed = (turnoverMed != null && turnoverMed.doubleValue() > 0) ? turnoverMed.doubleValue() : 0.8;
+            if (to >= toMed) {
+                double leadRatio = Math.min(2.0, to / toMed);
+                score += 12.0 + (leadRatio - 1.0) * 8.0;
+            } else if (to > 0) {
+                score += Math.max(3.0, 12.0 * (to / toMed));
+            }
+        }
+
+        // 4. 权益乘数财务杠杆健康度 (15 分)
+        if (equityMult != null) {
+            double em = equityMult.doubleValue();
+            if (em >= 1.2 && em <= 2.2) {
+                score += 15.0; // 黄金杠杆区间
+            } else if (em > 2.2 && em <= 2.6) {
+                score += 12.0; // 略高但可控
+            } else if (em > 2.6 && em <= 3.2) {
+                score += 8.0;  // 偏高
+            } else if (em > 3.2 && em <= 4.5) {
+                score += 4.0;  // 高杠杆风险
+            } else if (em > 0 && em < 1.2) {
+                score += 12.0; // 杠杆很低，财务安全
+            }
+        }
+
+        int finalScore = Math.max(10, Math.min(99, (int) Math.round(score)));
+        item.setQualityScore(BigDecimal.valueOf(finalScore));
+
+        if (finalScore >= 80) {
+            item.setQualityLevel("优秀");
+        } else if (finalScore >= 65) {
+            item.setQualityLevel("良好");
+        } else if (finalScore >= 50) {
+            item.setQualityLevel("中等");
+        } else {
+            item.setQualityLevel("较差");
+        }
+
+        // 结论生成
+        item.setConclusion(generateConclusion(item));
+    }
+
+    private String generateConclusion(StockDupontAnalysis item) {
+        BigDecimal roe = item.getRoe3yAvg() != null ? item.getRoe3yAvg() : item.getRoeLastYA();
+        BigDecimal netMargin = item.getNetMargin3yAvg() != null ? item.getNetMargin3yAvg() : item.getNetMarginLastYA();
+        BigDecimal turnover = item.getAssetTurnover3yAvg() != null ? item.getAssetTurnover3yAvg() : item.getAssetTurnoverLastYA();
+        BigDecimal equityMult = item.getEquityMultiplier3yAvg() != null ? item.getEquityMultiplier3yAvg() : item.getEquityMultiplierLastYA();
+
+        BigDecimal netMarginMed = item.getNetMargin3yAvgIndustryMed();
+        BigDecimal turnoverMed = item.getAssetTurnover3yAvgIndustryMed();
+
+        boolean highRoe = roe != null && roe.compareTo(new BigDecimal("15")) >= 0;
+        boolean moderateRoe = roe != null && roe.compareTo(new BigDecimal("10")) >= 0;
+        boolean highMargin = netMargin != null && (netMarginMed != null ? netMargin.compareTo(netMarginMed) > 0 : netMargin.compareTo(new BigDecimal("10")) >= 0);
+        boolean highTurnover = turnover != null && (turnoverMed != null ? turnover.compareTo(turnoverMed) > 0 : turnover.compareTo(new BigDecimal("1.0")) >= 0);
+        boolean highLeverage = equityMult != null && equityMult.compareTo(new BigDecimal("2.5")) > 0;
+        boolean safeLeverage = equityMult != null && equityMult.compareTo(new BigDecimal("2.2")) <= 0;
+
+        if (highRoe) {
+            if (highMargin && safeLeverage) {
+                return "ROE较高，主要来自盈利能力，杠杆可控。";
+            } else if (highMargin && highTurnover) {
+                return "盈利与周转双轮驱动，经营质量优秀，财务稳健。";
+            } else if (highMargin && highLeverage) {
+                return "盈利能力较强，周转一般，杠杆偏高。";
+            } else if (highTurnover && safeLeverage) {
+                return "运营周转效率极佳，杠杆可控，盈利质量良好。";
+            } else if (highLeverage) {
+                return "ROE较高但主要依赖财务杠杆，需注意杠杆与偿债压力。";
+            }
+            return "ROE表现优异，综合经营质量领先行业。";
+        } else if (moderateRoe) {
+            if (highMargin) {
+                return "盈利能力较好，周转尚可，杠杆可控。";
+            } else if (highTurnover) {
+                return "运营周转良好，盈利一般，财务稳健。";
+            } else if (highLeverage) {
+                return "盈利与周转一般，财务杠杆偏高。";
+            }
+            return "经营质量稳健，ROE处于行业中游水平。";
+        } else {
+            if (highLeverage) {
+                return "ROE偏低且杠杆偏高，盈利与周转待改善。";
+            }
+            return "盈利与周转表现偏弱，综合质量有待提升。";
+        }
     }
 
     private DupontIndustryMetrics buildIndustryMetrics(List<StockDupontAnalysis> group) {
@@ -524,6 +786,10 @@ public class StockDupontAnalysisService {
         target.setEquityMultiplierLastYAIndustryAvg(source.getEquityMultiplierLastYAIndustryAvg());
 
         target.setRoe3yAvgRank(source.getRoe3yAvgRank());
+        target.setIndustry(source.getIndustry());
+        target.setQualityScore(source.getQualityScore());
+        target.setQualityLevel(source.getQualityLevel());
+        target.setConclusion(source.getConclusion());
     }
 
     @Transactional(rollbackFor = Exception.class)
