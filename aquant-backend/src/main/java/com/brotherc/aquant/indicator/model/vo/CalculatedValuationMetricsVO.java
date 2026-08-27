@@ -19,6 +19,9 @@ public class CalculatedValuationMetricsVO {
     @Schema(description = "股票名称")
     private String stockName;
 
+    @Schema(description = "所属行业")
+    private String industry;
+
     @Schema(description = "历史PEG")
     private BigDecimal peg;
 
@@ -99,6 +102,27 @@ public class CalculatedValuationMetricsVO {
 
     @Schema(description = "市现率年报-行业平均")
     private BigDecimal pcfAnnualIndustryAverage;
+
+    @Schema(description = "市盈率2年前实际")
+    private BigDecimal peLast2yA;
+
+    @Schema(description = "市盈率3年前实际")
+    private BigDecimal peLast3yA;
+
+    @Schema(description = "估值评分 (0~100)")
+    private BigDecimal valuationScore;
+
+    @Schema(description = "估值等级 (低估, 偏低估, 合理偏低, 合理偏高, 偏高估, 高估)")
+    private String valuationLevel;
+
+    @Schema(description = "估值结论")
+    private String conclusion;
+
+    @Schema(description = "总市值 (元)")
+    private BigDecimal totalMarketCap;
+
+    @Schema(description = "归母净利润 TTM (元)")
+    private BigDecimal netProfitTtm;
 
     @Schema(description = "计算时间")
     private LocalDateTime calculatedAt;

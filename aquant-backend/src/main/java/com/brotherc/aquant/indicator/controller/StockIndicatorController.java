@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.brotherc.aquant.indicator.model.vo.DupontOverviewVO;
+import com.brotherc.aquant.indicator.model.vo.ValuationOverviewVO;
 import com.brotherc.aquant.common.utils.UserContext;
 
 import java.util.List;
@@ -64,7 +65,21 @@ public class StockIndicatorController {
     @GetMapping("/valuationMetrics/page")
     public ResponseDTO<Page<CalculatedValuationMetricsPageVO>> valuationMetricsPage(
             @Valid @ParameterObject ValuationMetricsPageReqVO reqVO, @ParameterObject Pageable pageable) {
-        return ResponseDTO.success(stockValuationMetricsService.pageQuery(reqVO, pageable));
+        Long userId = UserContext.getCurrentUserId();
+        return ResponseDTO.success(stockValuationMetricsService.pageQuery(reqVO, pageable, userId));
+    }
+
+    @Operation(summary = "估值指标顶部概览统计数据")
+    @GetMapping("/valuationMetrics/overview")
+    public ResponseDTO<ValuationOverviewVO> valuationMetricsOverview() {
+        Long userId = UserContext.getCurrentUserId();
+        return ResponseDTO.success(stockValuationMetricsService.getOverview(userId));
+    }
+
+    @Operation(summary = "估值指标行业列表查询")
+    @GetMapping("/valuationMetrics/industries")
+    public ResponseDTO<List<String>> valuationMetricsIndustries() {
+        return ResponseDTO.success(stockValuationMetricsService.getIndustries());
     }
 
     @Operation(summary = "估值指标详情查询")

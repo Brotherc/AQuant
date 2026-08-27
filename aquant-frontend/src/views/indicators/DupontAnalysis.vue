@@ -1319,9 +1319,9 @@ onMounted(() => {
 }
 
 .detail-stock-code {
-  font-size: 12px;
-  color: #64748b;
-  font-family: 'SF Mono', Consolas, Monaco, monospace;
+  font-size: 13px;
+  color: #94a3b8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .detail-industry-tag {
@@ -1484,25 +1484,39 @@ onMounted(() => {
 
 /* 杜邦拆解公式卡片 */
 .dupont-formula-card {
-  background: #f8fafc;
-  border: 1px solid #f1f5f9;
-  border-radius: 8px;
-  padding: 12px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 4px;
 }
 
 .formula-item {
+  flex: 1;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 4px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  text-align: center;
   gap: 2px;
+}
+
+.formula-item--roe {
+  background: #fff1f2;
+  border-color: #fecdd3;
 }
 
 .formula-label {
   font-size: 11px;
   color: #64748b;
+  white-space: nowrap;
+}
+
+.formula-item--roe .formula-label {
+  color: #e11d48;
+  font-weight: 600;
 }
 
 .formula-value {
@@ -1514,8 +1528,9 @@ onMounted(() => {
 
 .formula-operator {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   color: #94a3b8;
+  padding: 0 1px;
 }
 
 /* 年度快照表格 */
@@ -1661,11 +1676,7 @@ onMounted(() => {
 .interpretations-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  background: #f8fafc;
-  border-radius: 8px;
-  padding: 12px 14px;
-  border: 1px solid #f1f5f9;
+  gap: 8px;
 }
 
 .interpretation-item {
@@ -1673,15 +1684,15 @@ onMounted(() => {
   align-items: flex-start;
   gap: 8px;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .point-dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: #0f172a;
-  margin-top: 6px;
+  margin-top: 7px;
   flex-shrink: 0;
 }
 
@@ -1694,7 +1705,7 @@ onMounted(() => {
 }
 
 .point-desc {
-  color: #475569;
+  color: #334155;
 }
 
 /* 底部操作区 */

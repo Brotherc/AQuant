@@ -98,19 +98,38 @@ export const getDupontIndustries = () => {
     return api.get<ResponseDTO<string[]>>('/stockIndicator/dupontAnalysis/industries');
 };
 
+export interface ValuationOverviewVO {
+    undervaluedCount: number;
+    marketPeMedian: number;
+    watchlistUndervaluedCount: number;
+    dailyChangeCount: number;
+}
+
 export interface CalculatedValuationMetricsPage {
     id: number;
     stockCode: string;
     stockName: string;
-    peg: number;
-    peTtm: number;
+    industry?: string;
+    peg?: number;
+    pegIndustryMed?: number;
+    peTtm?: number;
+    peTtmIndustryMed?: number;
     peAnnual?: number;
-    psTtm: number;
+    peLast2yA?: number;
+    peLast3yA?: number;
+    psTtm?: number;
+    psTtmIndustryMed?: number;
     psAnnual?: number;
-    pbMrq: number;
+    pbMrq?: number;
+    pbMrqIndustryMed?: number;
     pbAnnual?: number;
     pcfTtm?: number;
     pcfAnnual?: number;
+    valuationScore?: number;
+    valuationLevel?: string;
+    conclusion?: string;
+    totalMarketCap?: number;
+    netProfitTtm?: number;
     calculatedAt: string;
 }
 
@@ -118,38 +137,50 @@ export interface CalculatedValuationMetrics {
     id: number;
     stockCode: string;
     stockName: string;
-    peg: number;
-    pegIndustryMedian: number;
-    pegIndustryAverage: number;
-    peTtm: number;
-    peTtmIndustryMedian: number;
-    peTtmIndustryAverage: number;
-    peAnnual: number;
-    peAnnualIndustryMedian: number;
-    peAnnualIndustryAverage: number;
-    psTtm: number;
-    psTtmIndustryMedian: number;
-    psTtmIndustryAverage: number;
-    psAnnual: number;
-    psAnnualIndustryMedian: number;
-    psAnnualIndustryAverage: number;
-    pbMrq: number;
-    pbMrqIndustryMedian: number;
-    pbMrqIndustryAverage: number;
-    pbAnnual: number;
-    pbAnnualIndustryMedian: number;
-    pbAnnualIndustryAverage: number;
-    pcfTtm: number;
-    pcfTtmIndustryMedian: number;
-    pcfTtmIndustryAverage: number;
-    pcfAnnual: number;
-    pcfAnnualIndustryMedian: number;
-    pcfAnnualIndustryAverage: number;
+    industry?: string;
+    peg?: number;
+    pegIndustryMedian?: number;
+    pegIndustryAverage?: number;
+    peTtm?: number;
+    peTtmIndustryMedian?: number;
+    peTtmIndustryAverage?: number;
+    peAnnual?: number;
+    peAnnualIndustryMedian?: number;
+    peAnnualIndustryAverage?: number;
+    peLast2yA?: number;
+    peLast3yA?: number;
+    psTtm?: number;
+    psTtmIndustryMedian?: number;
+    psTtmIndustryAverage?: number;
+    psAnnual?: number;
+    psAnnualIndustryMedian?: number;
+    psAnnualIndustryAverage?: number;
+    pbMrq?: number;
+    pbMrqIndustryMedian?: number;
+    pbMrqIndustryAverage?: number;
+    pbAnnual?: number;
+    pbAnnualIndustryMedian?: number;
+    pbAnnualIndustryAverage?: number;
+    pcfTtm?: number;
+    pcfTtmIndustryMedian?: number;
+    pcfTtmIndustryAverage?: number;
+    pcfAnnual?: number;
+    pcfAnnualIndustryMedian?: number;
+    pcfAnnualIndustryAverage?: number;
+    valuationScore?: number;
+    valuationLevel?: string;
+    conclusion?: string;
+    totalMarketCap?: number;
+    netProfitTtm?: number;
     calculatedAt: string;
 }
 
 export interface ValuationMetricsPageReqVO {
     stockCode?: string;
+    keyword?: string;
+    industry?: string;
+    tabFilter?: string;
+    valuationLevel?: string;
     pegMin?: number;
     pegMax?: number;
     peTtmMin?: number;
@@ -169,6 +200,14 @@ export const getValuationMetricsPage = (params: ValuationMetricsPageReqVO & { pa
             indexes: null
         }
     });
+};
+
+export const getValuationOverview = () => {
+    return api.get<ResponseDTO<ValuationOverviewVO>>('/stockIndicator/valuationMetrics/overview');
+};
+
+export const getValuationIndustries = () => {
+    return api.get<ResponseDTO<string[]>>('/stockIndicator/valuationMetrics/industries');
 };
 
 export const getValuationMetricsDetail = (stockCode: string) => {
