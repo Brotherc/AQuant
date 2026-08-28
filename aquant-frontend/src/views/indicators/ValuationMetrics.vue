@@ -311,29 +311,61 @@
               </div>
             </div>
 
-            <!-- 模块 2: 年度 PE 快照 -->
+            <!-- 模块 2: 年度估值快照 -->
             <div class="drawer-section">
               <div class="drawer-section__title-row">
-                <span class="drawer-section__title">年度 PE 快照</span>
+                <span class="drawer-section__title">年度估值快照</span>
               </div>
 
-              <div class="snapshot-grid">
-                <div class="snapshot-col">
-                  <div class="snapshot-year">2022</div>
-                  <div class="snapshot-val">{{ formatNumber(selectedStock.peLast3yA) }}</div>
-                </div>
-                <div class="snapshot-col">
-                  <div class="snapshot-year">2023</div>
-                  <div class="snapshot-val">{{ formatNumber(selectedStock.peLast2yA) }}</div>
-                </div>
-                <div class="snapshot-col">
-                  <div class="snapshot-year">2024</div>
-                  <div class="snapshot-val">{{ formatNumber(selectedStock.peAnnual) }}</div>
-                </div>
-                <div class="snapshot-col snapshot-col--highlight">
-                  <div class="snapshot-year">2025 (TTM)</div>
-                  <div class="snapshot-val">{{ formatNumber(selectedStock.peTtm) }}</div>
-                </div>
+              <div class="annual-table-wrap">
+                <table class="annual-snapshot-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 28%">指标</th>
+                      <th style="width: 18%">3年前</th>
+                      <th style="width: 18%">2年前</th>
+                      <th style="width: 18%">去年</th>
+                      <th style="width: 18%">最新</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="metric-name-td font-semibold">市盈率 PE</td>
+                      <td>{{ formatNumber(selectedStock.peLast3yA) }}</td>
+                      <td>{{ formatNumber(selectedStock.peLast2yA) }}</td>
+                      <td>{{ formatNumber(selectedStock.peAnnual) }}</td>
+                      <td class="font-semibold text-blue">{{ formatNumber(selectedStock.peTtm) }}</td>
+                    </tr>
+                    <tr>
+                      <td class="metric-name-td">市净率 PB</td>
+                      <td>-</td>
+                      <td>-</td>
+                      <td>{{ formatNumber(selectedStock.pbAnnual) }}</td>
+                      <td class="font-semibold text-blue">{{ formatNumber(selectedStock.pbMrq) }}</td>
+                    </tr>
+                    <tr>
+                      <td class="metric-name-td">市销率 PS</td>
+                      <td>-</td>
+                      <td>-</td>
+                      <td>{{ formatNumber(selectedStock.psAnnual) }}</td>
+                      <td class="font-semibold text-blue">{{ formatNumber(selectedStock.psTtm) }}</td>
+                    </tr>
+                    <tr>
+                      <td class="metric-name-td">市现率 PCF</td>
+                      <td>-</td>
+                      <td>-</td>
+                      <td>{{ formatNumber(selectedStock.pcfAnnual) }}</td>
+                      <td class="font-semibold text-blue">{{ formatNumber(selectedStock.pcfTtm) }}</td>
+                    </tr>
+                    <tr v-if="selectedStock.peg !== undefined && selectedStock.peg !== null">
+                      <td class="metric-name-td">PEG</td>
+                      <td>-</td>
+                      <td>-</td>
+                      <td>-</td>
+                      <td class="font-semibold text-blue">{{ formatNumber(selectedStock.peg) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
 
@@ -1440,46 +1472,52 @@ onMounted(() => {
   background: #2563eb;
 }
 
-/* 模块 1: 年度 PE 快照 */
-.snapshot-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
-
-.snapshot-col {
-  background: #f8fafc;
+/* 模块 2: 年度估值快照表格 */
+.annual-table-wrap {
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  padding: 10px 8px;
-  text-align: center;
+  overflow: hidden;
 }
 
-.snapshot-col--highlight {
-  background: #ecfdf5;
-  border-color: #a7f3d0;
+.annual-snapshot-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: right;
 }
 
-.snapshot-year {
-  font-size: 11px;
+.annual-snapshot-table th,
+.annual-snapshot-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.annual-snapshot-table th {
+  background: #f8fafc;
   color: #64748b;
-  margin-bottom: 4px;
+  font-weight: 500;
 }
 
-.snapshot-col--highlight .snapshot-year {
-  color: #059669;
+.annual-snapshot-table tr:last-child td {
+  border-bottom: none;
+}
+
+.annual-snapshot-table th:first-child,
+.annual-snapshot-table td:first-child {
+  text-align: left;
+}
+
+.metric-name-td {
+  text-align: left;
+  color: #334155;
+}
+
+.text-blue {
+  color: #2563eb;
+}
+
+.font-semibold {
   font-weight: 600;
-}
-
-.snapshot-val {
-  font-size: 15px;
-  font-weight: 700;
-  color: #0f172a;
-  font-variant-numeric: tabular-nums;
-}
-
-.snapshot-col--highlight .snapshot-val {
-  color: #059669;
 }
 
 /* 模块 1: 指标怎么算 (公式卡片) */
