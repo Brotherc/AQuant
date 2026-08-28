@@ -1,15 +1,20 @@
 package com.brotherc.aquant.indicator.service;
 
+import com.brotherc.aquant.common.utils.StockUtils;
 import com.brotherc.aquant.indicator.entity.StockGrowthMetrics;
 import com.brotherc.aquant.indicator.entity.StockPerformanceReport;
-import com.brotherc.aquant.stock.entity.StockQuote;
-import com.brotherc.aquant.integration.akshare.model.StockZhGrowthComparisonEm;
 import com.brotherc.aquant.indicator.model.dto.GrowthIndustryMetrics;
 import com.brotherc.aquant.indicator.model.vo.GrowthMetricsPageReqVO;
+import com.brotherc.aquant.indicator.model.vo.GrowthOverviewVO;
 import com.brotherc.aquant.indicator.repository.StockGrowthMetricsRepository;
 import com.brotherc.aquant.indicator.repository.StockPerformanceReportRepository;
+import com.brotherc.aquant.integration.akshare.model.StockZhGrowthComparisonEm;
+import com.brotherc.aquant.stock.entity.StockQuote;
 import com.brotherc.aquant.stock.repository.StockQuoteRepository;
-import com.brotherc.aquant.common.utils.StockUtils;
+import com.brotherc.aquant.watchlist.entity.StockWatchlistGroup;
+import com.brotherc.aquant.watchlist.entity.StockWatchlistStock;
+import com.brotherc.aquant.watchlist.repository.StockWatchlistGroupRepository;
+import com.brotherc.aquant.watchlist.repository.StockWatchlistStockRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,15 +48,89 @@ public class StockGrowthMetricsService {
     private final StockGrowthMetricsRepository stockGrowthMetricsRepository;
     private final StockQuoteRepository stockQuoteRepository;
     private final StockPerformanceReportRepository stockPerformanceReportRepository;
+    private final StockWatchlistGroupRepository watchlistGroupRepository;
+    private final StockWatchlistStockRepository watchlistStockRepository;
 
-    public Page<StockGrowthMetrics> pageQuery(GrowthMetricsPageReqVO reqVO, Pageable pageable) {
+    public Page<StockGrowthMetrics> pageQuery(GrowthMetricsPageReqVO reqVO, Pageable pageable, Long userId) {
+        if (pageable.getSort().isUnsorted()) {
+            // 默认按成长评分降序排序
+            int page = pageable.getPageNumber();
+            int size = pageable.getPageSize();
+            pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "growthScore"));
+        }
+
         Specification<StockGrowthMetrics> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // 股票代码等值查询
             if (reqVO != null) {
-                if (StringUtils.isNotBlank(reqVO.getStockCode())) {
-                    predicates.add(cb.equal(root.get("stockCode"), reqVO.getStockCode().trim()));
+                // 关键字搜索 (代码或名称)
+                String keyword = StringUtils.isNotBlank(reqVO.getKeyword()) ? reqVO.getKeyword().trim() : reqVO.getStockCode();
+                if (StringUtils.isNotBlank(keyword)) {
+                    String kw = "%" + keyword + "%";
+                    predicates.add(cb.or(
+                            cb.like(root.get("stockCode"), kw),
+                            cb.like(root.get("stockName"), kw)
+                    ));
+                }
+
+                // 行业筛选
+                if (StringUtils.isNotBlank(reqVO.getIndustry())) {
+                    predicates.add(cb.equal(root.get("industry"), reqVO.getIndustry().trim()));
+                }
+
+                // 成长等级筛选
+                if (StringUtils.isNotBlank(reqVO.getGrowthLevel())) {
+                    predicates.add(cb.equal(root.get("growthLevel"), reqVO.getGrowthLevel().trim()));
+                }
+
+                // 快捷标签筛选
+                if (StringUtils.isNotBlank(reqVO.getTabFilter()) && !"ALL".equalsIgnoreCase(reqVO.getTabFilter())) {
+                    switch (reqVO.getTabFilter().toUpperCase()) {
+                        case "HIGH_GROWTH" -> {
+                            // 高成长榜：成长评分 >= 80 (优秀)
+                            predicates.add(cb.ge(root.get("growthScore"), new BigDecimal("80.0")));
+                        }
+                        case "STABLE_GROWTH" -> {
+                            // 稳健成长：成长评分 65~80 (良好)
+                            predicates.add(cb.ge(root.get("growthScore"), new BigDecimal("65.0")));
+                            predicates.add(cb.lt(root.get("growthScore"), new BigDecimal("80.0")));
+                        }
+                        case "PROFIT_RECOVERY" -> {
+                            // 盈利修复：成长评分 50~65 (中等) 或 TTM净利增速 > 0 且 去年实际增速 < 0
+                            predicates.add(cb.or(
+                                    cb.and(cb.ge(root.get("growthScore"), new BigDecimal("50.0")), cb.lt(root.get("growthScore"), new BigDecimal("65.0"))),
+                                    cb.and(cb.gt(root.get("netProfitGrowthTtm"), BigDecimal.ZERO), cb.lt(root.get("netProfitGrowthLastYA"), BigDecimal.ZERO))
+                            ));
+                        }
+                        case "WATCHLIST" -> {
+                            // 我的自选
+                            Set<String> watchlistCodes = getUserWatchlistStockCodes(userId);
+                            if (watchlistCodes.isEmpty()) {
+                                predicates.add(cb.disjunction());
+                            } else {
+                                List<String> allVariants = new ArrayList<>(watchlistCodes);
+                                for (String c : watchlistCodes) {
+                                    if (c.length() == 6) {
+                                        allVariants.add("sh" + c);
+                                        allVariants.add("sz" + c);
+                                        allVariants.add("bj" + c);
+                                    } else if (c.length() > 6) {
+                                        allVariants.add(c.substring(2));
+                                    }
+                                }
+                                predicates.add(root.get("stockCode").in(allVariants));
+                            }
+                        }
+                        default -> {}
+                    }
+                }
+
+                // 成长评分范围
+                if (reqVO.getGrowthScoreMin() != null) {
+                    predicates.add(cb.greaterThanOrEqualTo(root.get("growthScore"), reqVO.getGrowthScoreMin()));
+                }
+                if (reqVO.getGrowthScoreMax() != null) {
+                    predicates.add(cb.lessThanOrEqualTo(root.get("growthScore"), reqVO.getGrowthScoreMax()));
                 }
 
                 // EPS 3年复合增长率范围
@@ -60,6 +139,14 @@ public class StockGrowthMetricsService {
                 }
                 if (reqVO.getEpsGrowth3yCagrMax() != null) {
                     predicates.add(cb.lessThanOrEqualTo(root.get("epsGrowth3yCagr"), reqVO.getEpsGrowth3yCagrMax()));
+                }
+
+                // EPS TTM
+                if (reqVO.getEpsGrowthTtmMin() != null) {
+                    predicates.add(cb.greaterThanOrEqualTo(root.get("epsGrowthTtm"), reqVO.getEpsGrowthTtmMin()));
+                }
+                if (reqVO.getEpsGrowthTtmMax() != null) {
+                    predicates.add(cb.lessThanOrEqualTo(root.get("epsGrowthTtm"), reqVO.getEpsGrowthTtmMax()));
                 }
 
                 // 营收增长率(TTM)范围
@@ -82,14 +169,96 @@ public class StockGrowthMetricsService {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        if (pageable.getSort().isUnsorted()) {
-            // 默认按 EPS 3年复合增长率排名升序排序
-            int page = pageable.getPageNumber();
-            int size = pageable.getPageSize();
-            pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "epsGrowth3yCagrRank"));
+        return stockGrowthMetricsRepository.findAll(spec, pageable);
+    }
+
+    /**
+     * 获取全市场可选行业列表
+     */
+    public List<String> getIndustries() {
+        List<String> list = stockGrowthMetricsRepository.findDistinctIndustries();
+        if (!CollectionUtils.isEmpty(list)) {
+            return list;
+        }
+        return stockPerformanceReportRepository.findDistinctIndustries();
+    }
+
+    /**
+     * 顶部 4 维指标统计概览
+     */
+    public GrowthOverviewVO getOverview(Long userId) {
+        List<StockGrowthMetrics> list = stockGrowthMetricsRepository.findAll();
+        if (CollectionUtils.isEmpty(list)) {
+            return new GrowthOverviewVO(0L, BigDecimal.ZERO, BigDecimal.ZERO, 0L);
         }
 
-        return stockGrowthMetricsRepository.findAll(spec, pageable);
+        // 1. 高成长机会 (评分>=80)
+        long highGrowthCount = list.stream()
+                .filter(item -> item.getGrowthScore() != null && item.getGrowthScore().compareTo(new BigDecimal("80.0")) >= 0)
+                .count();
+
+        // 2. 市场营收增长中位数 (全市场 TTM 营收增速)
+        List<BigDecimal> revGrowthList = list.stream()
+                .map(StockGrowthMetrics::getRevenueGrowthTtm)
+                .filter(Objects::nonNull)
+                .sorted()
+                .toList();
+        BigDecimal marketRevMedian = BigDecimal.ZERO;
+        if (!revGrowthList.isEmpty()) {
+            int size = revGrowthList.size();
+            if (size % 2 == 0) {
+                marketRevMedian = revGrowthList.get(size / 2 - 1).add(revGrowthList.get(size / 2))
+                        .divide(new BigDecimal("2"), 2, RoundingMode.HALF_UP);
+            } else {
+                marketRevMedian = revGrowthList.get(size / 2).setScale(2, RoundingMode.HALF_UP);
+            }
+        }
+
+        // 3. 市场净利润增长中位数 (全市场 TTM 净利增速)
+        List<BigDecimal> netProfitGrowthList = list.stream()
+                .map(StockGrowthMetrics::getNetProfitGrowthTtm)
+                .filter(Objects::nonNull)
+                .sorted()
+                .toList();
+        BigDecimal marketNetProfitMedian = BigDecimal.ZERO;
+        if (!netProfitGrowthList.isEmpty()) {
+            int size = netProfitGrowthList.size();
+            if (size % 2 == 0) {
+                marketNetProfitMedian = netProfitGrowthList.get(size / 2 - 1).add(netProfitGrowthList.get(size / 2))
+                        .divide(new BigDecimal("2"), 2, RoundingMode.HALF_UP);
+            } else {
+                marketNetProfitMedian = netProfitGrowthList.get(size / 2).setScale(2, RoundingMode.HALF_UP);
+            }
+        }
+
+        // 4. 我的自选高成长
+        Set<String> watchlistStockCodes = getUserWatchlistStockCodes(userId);
+        long watchlistHighGrowthCount = 0;
+        if (!watchlistStockCodes.isEmpty()) {
+            watchlistHighGrowthCount = list.stream()
+                    .filter(item -> watchlistStockCodes.contains(item.getStockCode()) || (item.getStockCode().length() > 2 && watchlistStockCodes.contains(item.getStockCode().substring(2))))
+                    .filter(item -> item.getGrowthScore() != null && item.getGrowthScore().compareTo(new BigDecimal("80.0")) >= 0)
+                    .count();
+        }
+
+        return GrowthOverviewVO.builder()
+                .highGrowthOpportunityCount(highGrowthCount)
+                .marketRevenueGrowthMedian(marketRevMedian)
+                .marketNetProfitGrowthMedian(marketNetProfitMedian)
+                .watchlistHighGrowthCount(watchlistHighGrowthCount)
+                .build();
+    }
+
+    /**
+     * 获取用户所有自选股票代码集合
+     */
+    private Set<String> getUserWatchlistStockCodes(Long userId) {
+        if (userId == null) return Collections.emptySet();
+        List<StockWatchlistGroup> groups = watchlistGroupRepository.findAllByUserIdOrderBySortNoAsc(userId);
+        if (groups.isEmpty()) return Collections.emptySet();
+        List<Long> groupIds = groups.stream().map(StockWatchlistGroup::getId).toList();
+        List<StockWatchlistStock> watchlistStocks = watchlistStockRepository.findByGroupIdIn(groupIds);
+        return watchlistStocks.stream().map(StockWatchlistStock::getStockCode).collect(Collectors.toSet());
     }
 
     /**
@@ -123,7 +292,7 @@ public class StockGrowthMetricsService {
     }
 
     /**
-     * 核心计算：计算每股收益、营收、净利润的 TTM、去年实际及 3年复合增长率
+     * 核心计算：计算每股收益、营收、净利润的 TTM、去年实际、近3年历史年报及 3年复合增长率
      */
     public List<StockGrowthMetrics> calculateGrowthMetrics() {
         List<StockPerformanceReport> performanceReports = stockPerformanceReportRepository.findAll();
@@ -138,6 +307,7 @@ public class StockGrowthMetricsService {
                 .filter(report -> report != null && StringUtils.isNotBlank(report.getStockCode()) && report.getReportDate() != null)
                 .collect(Collectors.groupingBy(StockPerformanceReport::getStockCode));
 
+        Map<String, String> industryMap = buildIndustryMap(performanceReports);
         List<StockGrowthMetrics> resultList = new ArrayList<>();
 
         for (StockQuote quote : stockQuotes) {
@@ -160,15 +330,26 @@ public class StockGrowthMetricsService {
             StockGrowthMetrics item = new StockGrowthMetrics();
             item.setStockCode(quote.getCode());
             item.setStockName(quote.getName());
+            item.setIndustry(getIndustry(quote.getCode(), industryMap));
 
-            // 1. 去年实际增长率 (LastYA: 最新完整年报 vs 前一年年报)
-            StockPerformanceReport latestAnnual = !annualReports.isEmpty() ? annualReports.get(0) : null;
-            StockPerformanceReport prevAnnual = annualReports.size() > 1 ? annualReports.get(1) : null;
-
-            if (latestAnnual != null && prevAnnual != null) {
-                item.setRevenueGrowthLastYA(calculateGrowthRate(latestAnnual.getTotalRevenue(), prevAnnual.getTotalRevenue()));
-                item.setNetProfitGrowthLastYA(calculateGrowthRate(latestAnnual.getNetProfit(), prevAnnual.getNetProfit()));
-                item.setEpsGrowthLastYA(calculateGrowthRate(latestAnnual.getEarningsPerShare(), prevAnnual.getEarningsPerShare()));
+            // 1. 近 3 年历史年报增长率
+            if (annualReports.size() > 1) {
+                // 去年实际 (annualReports[0] vs annualReports[1])
+                item.setRevenueGrowthLastYA(calculateGrowthRate(annualReports.get(0).getTotalRevenue(), annualReports.get(1).getTotalRevenue()));
+                item.setNetProfitGrowthLastYA(calculateGrowthRate(annualReports.get(0).getNetProfit(), annualReports.get(1).getNetProfit()));
+                item.setEpsGrowthLastYA(calculateGrowthRate(annualReports.get(0).getEarningsPerShare(), annualReports.get(1).getEarningsPerShare()));
+            }
+            if (annualReports.size() > 2) {
+                // 2年前实际 (annualReports[1] vs annualReports[2])
+                item.setRevenueGrowthLast2yA(calculateGrowthRate(annualReports.get(1).getTotalRevenue(), annualReports.get(2).getTotalRevenue()));
+                item.setNetProfitGrowthLast2yA(calculateGrowthRate(annualReports.get(1).getNetProfit(), annualReports.get(2).getNetProfit()));
+                item.setEpsGrowthLast2yA(calculateGrowthRate(annualReports.get(1).getEarningsPerShare(), annualReports.get(2).getEarningsPerShare()));
+            }
+            if (annualReports.size() > 3) {
+                // 3年前实际 (annualReports[2] vs annualReports[3])
+                item.setRevenueGrowthLast3yA(calculateGrowthRate(annualReports.get(2).getTotalRevenue(), annualReports.get(3).getTotalRevenue()));
+                item.setNetProfitGrowthLast3yA(calculateGrowthRate(annualReports.get(2).getNetProfit(), annualReports.get(3).getNetProfit()));
+                item.setEpsGrowthLast3yA(calculateGrowthRate(annualReports.get(2).getEarningsPerShare(), annualReports.get(3).getEarningsPerShare()));
             }
 
             // 2. TTM 滚动增长率 (TTM: 最新滚动4季度 vs 去年同期滚动4季度)
@@ -185,6 +366,7 @@ public class StockGrowthMetricsService {
             item.setEpsGrowthTtm(calculateGrowthRate(epsTtm, prevEpsTtm));
 
             // 3. 3年复合增长率 (3yCAGR: 终期年报 vs 3年前基期年报)
+            StockPerformanceReport latestAnnual = !annualReports.isEmpty() ? annualReports.get(0) : null;
             StockPerformanceReport baseAnnual = findBaseAnnualReport(annualReports, latestAnnual, 3);
             if (latestAnnual != null && baseAnnual != null) {
                 item.setRevenueGrowth3yCagr(calculateCagr(latestAnnual.getTotalRevenue(), baseAnnual.getTotalRevenue(), 3));
@@ -196,13 +378,92 @@ public class StockGrowthMetricsService {
         }
 
         // 4. 行业中位数与均值聚合
-        Map<String, String> industryMap = buildIndustryMap(performanceReports);
         fillIndustryMetrics(resultList, industryMap);
 
         // 5. 行业排名 (按 epsGrowth3yCagr 降序)
         fillIndustryRanks(resultList, industryMap);
 
+        // 6. 计算成长评分 (growthScore)、等级 (growthLevel) 与结论 (conclusion)
+        for (StockGrowthMetrics item : resultList) {
+            calculateScoreAndConclusion(item);
+        }
+
         return resultList;
+    }
+
+    /**
+     * 智能成长综合评分引擎
+     */
+    private void calculateScoreAndConclusion(StockGrowthMetrics item) {
+        BigDecimal score = new BigDecimal("50.0");
+
+        // 1. EPS 增速评分 (TTM)
+        if (item.getEpsGrowthTtm() != null) {
+            double val = item.getEpsGrowthTtm().doubleValue();
+            if (val >= 50.0) score = score.add(new BigDecimal("15.0"));
+            else if (val >= 20.0) score = score.add(new BigDecimal("10.0"));
+            else if (val >= 0.0) score = score.add(new BigDecimal("5.0"));
+            else if (val < -20.0) score = score.subtract(new BigDecimal("12.0"));
+            else score = score.subtract(new BigDecimal("6.0"));
+        }
+
+        // 2. 营收增速评分 (TTM)
+        if (item.getRevenueGrowthTtm() != null) {
+            double val = item.getRevenueGrowthTtm().doubleValue();
+            if (val >= 30.0) score = score.add(new BigDecimal("15.0"));
+            else if (val >= 15.0) score = score.add(new BigDecimal("10.0"));
+            else if (val >= 0.0) score = score.add(new BigDecimal("5.0"));
+            else if (val < -10.0) score = score.subtract(new BigDecimal("10.0"));
+            else score = score.subtract(new BigDecimal("5.0"));
+        }
+
+        // 3. 净利增速评分 (TTM)
+        if (item.getNetProfitGrowthTtm() != null) {
+            double val = item.getNetProfitGrowthTtm().doubleValue();
+            if (val >= 50.0) score = score.add(new BigDecimal("15.0"));
+            else if (val >= 20.0) score = score.add(new BigDecimal("10.0"));
+            else if (val >= 0.0) score = score.add(new BigDecimal("5.0"));
+            else if (val < -20.0) score = score.subtract(new BigDecimal("12.0"));
+            else score = score.subtract(new BigDecimal("6.0"));
+        }
+
+        // 4. 行业中位数对比加成
+        if (item.getRevenueGrowthTtm() != null && item.getRevenueGrowthTtmIndustryMed() != null) {
+            if (item.getRevenueGrowthTtm().compareTo(item.getRevenueGrowthTtmIndustryMed()) > 0) {
+                score = score.add(new BigDecimal("5.0"));
+            }
+        }
+        if (item.getNetProfitGrowthTtm() != null && item.getNetProfitGrowthTtmIndustryMed() != null) {
+            if (item.getNetProfitGrowthTtm().compareTo(item.getNetProfitGrowthTtmIndustryMed()) > 0) {
+                score = score.add(new BigDecimal("5.0"));
+            }
+        }
+
+        // 5. 3年复合 CAGR 稳健加成
+        if (item.getNetProfitGrowth3yCagr() != null && item.getRevenueGrowth3yCagr() != null) {
+            if (item.getNetProfitGrowth3yCagr().doubleValue() > 15.0 && item.getRevenueGrowth3yCagr().doubleValue() > 15.0) {
+                score = score.add(new BigDecimal("8.0"));
+            }
+        }
+
+        // 边界限制 20 ~ 98
+        double finalScore = Math.max(20.0, Math.min(98.0, score.doubleValue()));
+        item.setGrowthScore(BigDecimal.valueOf(finalScore).setScale(1, RoundingMode.HALF_UP));
+
+        // 等级与结论
+        if (finalScore >= 80.0) {
+            item.setGrowthLevel("优秀");
+            item.setConclusion("高增长龙头，业绩持续优于行业大盘");
+        } else if (finalScore >= 65.0) {
+            item.setGrowthLevel("良好");
+            item.setConclusion("稳健成长，盈利能力保持扩张");
+        } else if (finalScore >= 50.0) {
+            item.setGrowthLevel("中等");
+            item.setConclusion("营收改善中，盈利波动处于修复期");
+        } else {
+            item.setGrowthLevel("较弱");
+            item.setConclusion("多项增长指标承压，成长放缓");
+        }
     }
 
     private void fillIndustryMetrics(List<StockGrowthMetrics> list, Map<String, String> industryMap) {
@@ -436,6 +697,10 @@ public class StockGrowthMetricsService {
     private void copyProperties(StockGrowthMetrics source, StockGrowthMetrics target) {
         target.setStockCode(source.getStockCode());
         target.setStockName(source.getStockName());
+        target.setIndustry(source.getIndustry());
+        target.setGrowthScore(source.getGrowthScore());
+        target.setGrowthLevel(source.getGrowthLevel());
+        target.setConclusion(source.getConclusion());
 
         target.setEpsGrowth3yCagr(source.getEpsGrowth3yCagr());
         target.setEpsGrowth3yCagrIndustryMed(source.getEpsGrowth3yCagrIndustryMed());
@@ -443,6 +708,8 @@ public class StockGrowthMetricsService {
         target.setEpsGrowth3yCagrRank(source.getEpsGrowth3yCagrRank());
 
         target.setEpsGrowthLastYA(source.getEpsGrowthLastYA());
+        target.setEpsGrowthLast2yA(source.getEpsGrowthLast2yA());
+        target.setEpsGrowthLast3yA(source.getEpsGrowthLast3yA());
         target.setEpsGrowthLastYAIndustryMed(source.getEpsGrowthLastYAIndustryMed());
         target.setEpsGrowthLastYAIndustryAvg(source.getEpsGrowthLastYAIndustryAvg());
 
@@ -455,6 +722,8 @@ public class StockGrowthMetricsService {
         target.setRevenueGrowth3yCagrIndustryAvg(source.getRevenueGrowth3yCagrIndustryAvg());
 
         target.setRevenueGrowthLastYA(source.getRevenueGrowthLastYA());
+        target.setRevenueGrowthLast2yA(source.getRevenueGrowthLast2yA());
+        target.setRevenueGrowthLast3yA(source.getRevenueGrowthLast3yA());
         target.setRevenueGrowthLastYAIndustryMed(source.getRevenueGrowthLastYAIndustryMed());
         target.setRevenueGrowthLastYAIndustryAvg(source.getRevenueGrowthLastYAIndustryAvg());
 
@@ -467,6 +736,8 @@ public class StockGrowthMetricsService {
         target.setNetProfitGrowth3yCagrIndustryAvg(source.getNetProfitGrowth3yCagrIndustryAvg());
 
         target.setNetProfitGrowthLastYA(source.getNetProfitGrowthLastYA());
+        target.setNetProfitGrowthLast2yA(source.getNetProfitGrowthLast2yA());
+        target.setNetProfitGrowthLast3yA(source.getNetProfitGrowthLast3yA());
         target.setNetProfitGrowthLastYAIndustryMed(source.getNetProfitGrowthLastYAIndustryMed());
         target.setNetProfitGrowthLastYAIndustryAvg(source.getNetProfitGrowthLastYAIndustryAvg());
 
@@ -560,6 +831,7 @@ public class StockGrowthMetricsService {
                 stockGrowthMetrics.setCreatedAt(LocalDateTime.now());
             }
         }
+        calculateScoreAndConclusion(stockGrowthMetrics);
         stockGrowthMetricsRepository.save(stockGrowthMetrics);
     }
 

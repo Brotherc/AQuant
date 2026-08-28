@@ -216,14 +216,28 @@ export const getValuationMetricsDetail = (stockCode: string) => {
     });
 };
 
+export interface GrowthOverviewVO {
+    highGrowthOpportunityCount: number;
+    marketRevenueGrowthMedian: number;
+    marketNetProfitGrowthMedian: number;
+    watchlistHighGrowthCount: number;
+}
+
 export interface StockGrowthMetrics {
     id: number;
     stockCode: string;
     stockName: string;
+    industry?: string;
+    growthScore?: number;
+    growthLevel?: string;
+    conclusion?: string;
+
     epsGrowth3yCagr: number;
     epsGrowth3yCagrIndustryMed: number;
     epsGrowth3yCagrIndustryAvg: number;
     epsGrowthLastYA: number;
+    epsGrowthLast2yA?: number;
+    epsGrowthLast3yA?: number;
     epsGrowthLastYAIndustryMed: number;
     epsGrowthLastYAIndustryAvg: number;
     epsGrowthTtm: number;
@@ -241,10 +255,13 @@ export interface StockGrowthMetrics {
     epsGrowth3yCagrRank: number;
     epsGrowth3yCagrRankIndustryMed: number;
     epsGrowth3yCagrRankIndustryAvg: number;
+
     revenueGrowth3yCagr: number;
     revenueGrowth3yCagrIndustryMed: number;
     revenueGrowth3yCagrIndustryAvg: number;
     revenueGrowthLastYA: number;
+    revenueGrowthLast2yA?: number;
+    revenueGrowthLast3yA?: number;
     revenueGrowthLastYAIndustryMed: number;
     revenueGrowthLastYAIndustryAvg: number;
     revenueGrowthTtm: number;
@@ -259,10 +276,13 @@ export interface StockGrowthMetrics {
     revenueGrowthNext2YE: number;
     revenueGrowthNext2YEIndustryMed: number;
     revenueGrowthNext2YEIndustryAvg: number;
+
     netProfitGrowth3yCagr: number;
     netProfitGrowth3yCagrIndustryMed: number;
     netProfitGrowth3yCagrIndustryAvg: number;
     netProfitGrowthLastYA: number;
+    netProfitGrowthLast2yA?: number;
+    netProfitGrowthLast3yA?: number;
     netProfitGrowthLastYAIndustryMed: number;
     netProfitGrowthLastYAIndustryAvg: number;
     netProfitGrowthTtm: number;
@@ -277,13 +297,22 @@ export interface StockGrowthMetrics {
     netProfitGrowthNext2YE: number;
     netProfitGrowthNext2YEIndustryMed: number;
     netProfitGrowthNext2YEIndustryAvg: number;
+
     createdAt: string;
 }
 
 export interface GrowthMetricsPageReqVO {
     stockCode?: string;
+    keyword?: string;
+    industry?: string;
+    tabFilter?: string;
+    growthLevel?: string;
+    growthScoreMin?: number;
+    growthScoreMax?: number;
     epsGrowth3yCagrMin?: number;
     epsGrowth3yCagrMax?: number;
+    epsGrowthTtmMin?: number;
+    epsGrowthTtmMax?: number;
     revenueGrowthTtmMin?: number;
     revenueGrowthTtmMax?: number;
     netProfitGrowthTtmMin?: number;
@@ -297,6 +326,14 @@ export const getGrowthMetricsPage = (params: GrowthMetricsPageReqVO & { page: nu
             indexes: null
         }
     });
+};
+
+export const getGrowthOverview = () => {
+    return api.get<ResponseDTO<GrowthOverviewVO>>('/stockIndicator/growthMetrics/overview');
+};
+
+export const getGrowthIndustries = () => {
+    return api.get<ResponseDTO<string[]>>('/stockIndicator/growthMetrics/industries');
 };
 
 

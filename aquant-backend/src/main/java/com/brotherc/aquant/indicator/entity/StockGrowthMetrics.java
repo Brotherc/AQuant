@@ -373,6 +373,66 @@ public class StockGrowthMetrics {
     private BigDecimal netProfitGrowthNext2YEIndustryAvg;
 
     /**
+     * 所属行业
+     */
+    @Column(name = "industry")
+    private String industry;
+
+    /**
+     * 成长评分 (0~100)
+     */
+    @Column(name = "growth_score")
+    private BigDecimal growthScore;
+
+    /**
+     * 成长等级 (优秀, 良好, 中等, 较弱)
+     */
+    @Column(name = "growth_level")
+    private String growthLevel;
+
+    /**
+     * 成长结论 / 简要解读
+     */
+    @Column(name = "conclusion")
+    private String conclusion;
+
+    /**
+     * 基本每股收益增长率-2年前实际
+     */
+    @Column(name = "eps_growth_last_2y_a")
+    private BigDecimal epsGrowthLast2yA;
+
+    /**
+     * 基本每股收益增长率-3年前实际
+     */
+    @Column(name = "eps_growth_last_3y_a")
+    private BigDecimal epsGrowthLast3yA;
+
+    /**
+     * 营业收入增长率-2年前实际
+     */
+    @Column(name = "revenue_growth_last_2y_a")
+    private BigDecimal revenueGrowthLast2yA;
+
+    /**
+     * 营业收入增长率-3年前实际
+     */
+    @Column(name = "revenue_growth_last_3y_a")
+    private BigDecimal revenueGrowthLast3yA;
+
+    /**
+     * 净利润增长率-2年前实际
+     */
+    @Column(name = "net_profit_growth_last_2y_a")
+    private BigDecimal netProfitGrowthLast2yA;
+
+    /**
+     * 净利润增长率-3年前实际
+     */
+    @Column(name = "net_profit_growth_last_3y_a")
+    private BigDecimal netProfitGrowthLast3yA;
+
+    /**
      * 创建时间
      */
     @Column(name = "created_at")

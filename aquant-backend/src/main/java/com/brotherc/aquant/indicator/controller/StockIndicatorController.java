@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.brotherc.aquant.indicator.model.vo.DupontOverviewVO;
+import com.brotherc.aquant.indicator.model.vo.GrowthOverviewVO;
 import com.brotherc.aquant.indicator.model.vo.ValuationOverviewVO;
 import com.brotherc.aquant.common.utils.UserContext;
 
@@ -92,7 +93,21 @@ public class StockIndicatorController {
     @GetMapping("/growthMetrics/page")
     public ResponseDTO<Page<StockGrowthMetrics>> growthMetricsPage(
             @Valid @ParameterObject GrowthMetricsPageReqVO reqVO, @ParameterObject Pageable pageable) {
-        return ResponseDTO.success(stockGrowthMetricsService.pageQuery(reqVO, pageable));
+        Long userId = UserContext.getCurrentUserId();
+        return ResponseDTO.success(stockGrowthMetricsService.pageQuery(reqVO, pageable, userId));
+    }
+
+    @Operation(summary = "成长性指标顶部概览统计数据")
+    @GetMapping("/growthMetrics/overview")
+    public ResponseDTO<GrowthOverviewVO> growthMetricsOverview() {
+        Long userId = UserContext.getCurrentUserId();
+        return ResponseDTO.success(stockGrowthMetricsService.getOverview(userId));
+    }
+
+    @Operation(summary = "成长性指标行业列表查询")
+    @GetMapping("/growthMetrics/industries")
+    public ResponseDTO<List<String>> growthMetricsIndustries() {
+        return ResponseDTO.success(stockGrowthMetricsService.getIndustries());
     }
 
 }
