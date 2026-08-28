@@ -361,6 +361,54 @@ public class StockValuationMetrics {
     private BigDecimal evEbitdaLastYAIndustryAvg;
 
     /**
+     * 所属行业
+     */
+    @Column(name = "industry")
+    private String industry;
+
+    /**
+     * 估值评分 (0~100)
+     */
+    @Column(name = "valuation_score")
+    private BigDecimal valuationScore;
+
+    /**
+     * 估值等级 (低估, 偏低估, 合理偏低, 合理偏高, 偏高估, 高估)
+     */
+    @Column(name = "valuation_level")
+    private String valuationLevel;
+
+    /**
+     * 估值结论
+     */
+    @Column(name = "conclusion", length = 500)
+    private String conclusion;
+
+    /**
+     * 总市值 (元)
+     */
+    @Column(name = "total_market_cap")
+    private BigDecimal totalMarketCap;
+
+    /**
+     * 归母净利润 TTM (元)
+     */
+    @Column(name = "net_profit_ttm")
+    private BigDecimal netProfitTtm;
+
+    /**
+     * 市盈率(2年前实际)
+     */
+    @Column(name = "pe_last_2y_a")
+    private BigDecimal peLast2yA;
+
+    /**
+     * 市盈率(3年前实际)
+     */
+    @Column(name = "pe_last_3y_a")
+    private BigDecimal peLast3yA;
+
+    /**
      * 创建时间
      */
     @Column(name = "created_at")

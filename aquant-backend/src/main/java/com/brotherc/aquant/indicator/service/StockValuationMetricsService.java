@@ -1,17 +1,22 @@
 package com.brotherc.aquant.indicator.service;
 
 import com.brotherc.aquant.indicator.entity.StockPerformanceReport;
-import com.brotherc.aquant.stock.entity.StockQuote;
-import com.brotherc.aquant.stock.entity.StockShareChange;
 import com.brotherc.aquant.indicator.entity.StockValuationMetrics;
-import com.brotherc.aquant.integration.akshare.model.StockZhValuationComparisonEm;
 import com.brotherc.aquant.indicator.model.vo.CalculatedValuationMetricsPageVO;
 import com.brotherc.aquant.indicator.model.vo.CalculatedValuationMetricsVO;
 import com.brotherc.aquant.indicator.model.vo.ValuationMetricsPageReqVO;
+import com.brotherc.aquant.indicator.model.vo.ValuationOverviewVO;
 import com.brotherc.aquant.indicator.repository.StockPerformanceReportRepository;
+import com.brotherc.aquant.indicator.repository.StockValuationMetricsRepository;
+import com.brotherc.aquant.integration.akshare.model.StockZhValuationComparisonEm;
+import com.brotherc.aquant.stock.entity.StockQuote;
+import com.brotherc.aquant.stock.entity.StockShareChange;
 import com.brotherc.aquant.stock.repository.StockQuoteRepository;
 import com.brotherc.aquant.stock.repository.StockShareChangeRepository;
-import com.brotherc.aquant.indicator.repository.StockValuationMetricsRepository;
+import com.brotherc.aquant.watchlist.entity.StockWatchlistGroup;
+import com.brotherc.aquant.watchlist.entity.StockWatchlistStock;
+import com.brotherc.aquant.watchlist.repository.StockWatchlistGroupRepository;
+import com.brotherc.aquant.watchlist.repository.StockWatchlistStockRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,12 +35,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Month;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -51,22 +51,81 @@ public class StockValuationMetricsService {
     private final StockQuoteRepository stockQuoteRepository;
     private final StockPerformanceReportRepository stockPerformanceReportRepository;
     private final StockShareChangeRepository stockShareChangeRepository;
+    private final StockWatchlistGroupRepository watchlistGroupRepository;
+    private final StockWatchlistStockRepository watchlistStockRepository;
 
-    public Page<CalculatedValuationMetricsPageVO> pageQuery(ValuationMetricsPageReqVO reqVO, Pageable pageable) {
+    public Page<CalculatedValuationMetricsPageVO> pageQuery(ValuationMetricsPageReqVO reqVO, Pageable pageable, Long userId) {
         if (pageable.getSort().isUnsorted()) {
-            pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.ASC, "peg"));
+            pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.DESC, "valuationScore"));
         }
 
         Specification<StockValuationMetrics> specification = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
             if (reqVO != null) {
-                if (StringUtils.isNotBlank(reqVO.getStockCode())) {
-                    String keyword = "%" + reqVO.getStockCode().trim() + "%";
+                // 搜索关键字（股票代码或名称）
+                String keyword = StringUtils.isNotBlank(reqVO.getKeyword()) ? reqVO.getKeyword().trim() : reqVO.getStockCode();
+                if (StringUtils.isNotBlank(keyword)) {
+                    String kw = "%" + keyword + "%";
                     predicates.add(cb.or(
-                            cb.like(root.get("stockCode"), keyword),
-                            cb.like(root.get("stockName"), keyword)
+                            cb.like(root.get("stockCode"), kw),
+                            cb.like(root.get("stockName"), kw)
                     ));
+                }
+
+                // 行业筛选
+                if (StringUtils.isNotBlank(reqVO.getIndustry())) {
+                    predicates.add(cb.equal(root.get("industry"), reqVO.getIndustry().trim()));
+                }
+
+                // 估值等级筛选
+                if (StringUtils.isNotBlank(reqVO.getValuationLevel())) {
+                    predicates.add(cb.equal(root.get("valuationLevel"), reqVO.getValuationLevel().trim()));
+                }
+
+                // 快捷标签筛选
+                if (StringUtils.isNotBlank(reqVO.getTabFilter()) && !"ALL".equalsIgnoreCase(reqVO.getTabFilter())) {
+                    switch (reqVO.getTabFilter().toUpperCase()) {
+                        case "LOW_VALUATION" -> {
+                            // 低估榜：PE(TTM) > 0 且 PE(TTM) < 行业中位 * 0.8
+                            predicates.add(cb.gt(root.get("peTtm"), BigDecimal.ZERO));
+                            predicates.add(cb.isNotNull(root.get("peTtmIndustryMed")));
+                            predicates.add(cb.lt(root.get("peTtm"), cb.prod(root.get("peTtmIndustryMed"), new BigDecimal("0.8"))));
+                        }
+                        case "HIGH_VALUATION" -> {
+                            // 高估榜：PE(TTM) > 行业中位 * 1.2
+                            predicates.add(cb.gt(root.get("peTtm"), BigDecimal.ZERO));
+                            predicates.add(cb.isNotNull(root.get("peTtmIndustryMed")));
+                            predicates.add(cb.gt(root.get("peTtm"), cb.prod(root.get("peTtmIndustryMed"), new BigDecimal("1.2"))));
+                        }
+                        case "FAIR_VALUATION" -> {
+                            // 合理估值：0.8 * 行业中位 <= PE(TTM) <= 1.2 * 行业中位
+                            predicates.add(cb.gt(root.get("peTtm"), BigDecimal.ZERO));
+                            predicates.add(cb.isNotNull(root.get("peTtmIndustryMed")));
+                            predicates.add(cb.ge(root.get("peTtm"), cb.prod(root.get("peTtmIndustryMed"), new BigDecimal("0.8"))));
+                            predicates.add(cb.le(root.get("peTtm"), cb.prod(root.get("peTtmIndustryMed"), new BigDecimal("1.2"))));
+                        }
+                        case "WATCHLIST" -> {
+                            // 我的自选
+                            Set<String> watchlistCodes = getUserWatchlistStockCodes(userId);
+                            if (watchlistCodes.isEmpty()) {
+                                predicates.add(cb.disjunction());
+                            } else {
+                                List<String> allVariants = new ArrayList<>(watchlistCodes);
+                                for (String c : watchlistCodes) {
+                                    if (c.length() == 6) {
+                                        allVariants.add("sh" + c);
+                                        allVariants.add("sz" + c);
+                                        allVariants.add("bj" + c);
+                                    } else if (c.length() > 6) {
+                                        allVariants.add(c.substring(2));
+                                    }
+                                }
+                                predicates.add(root.get("stockCode").in(allVariants));
+                            }
+                        }
+                        default -> {}
+                    }
                 }
 
                 if (reqVO.getPegMin() != null) {
@@ -112,6 +171,90 @@ public class StockValuationMetricsService {
         return pageResult.map(this::toPageVO);
     }
 
+    /**
+     * 获取估值指标顶部 4 维统计看板数据
+     */
+    public ValuationOverviewVO getOverview(Long userId) {
+        List<StockValuationMetrics> list = stockValuationMetricsRepository.findAll();
+        if (list.isEmpty()) {
+            return new ValuationOverviewVO(0L, BigDecimal.ZERO, 0L, 0L);
+        }
+
+        // 1. 低估机会 (低于行业中位数20%以上)
+        long undervaluedCount = list.stream()
+                .filter(item -> item.getPeTtm() != null && item.getPeTtmIndustryMed() != null
+                        && item.getPeTtm().compareTo(BigDecimal.ZERO) > 0
+                        && item.getPeTtmIndustryMed().compareTo(BigDecimal.ZERO) > 0
+                        && item.getPeTtm().compareTo(item.getPeTtmIndustryMed().multiply(new BigDecimal("0.8"))) < 0)
+                .count();
+
+        // 2. 市场 PE 中位数 (全市场剔除负值)
+        List<BigDecimal> positivePeList = list.stream()
+                .map(StockValuationMetrics::getPeTtm)
+                .filter(pe -> pe != null && pe.compareTo(BigDecimal.ZERO) > 0)
+                .sorted()
+                .toList();
+        BigDecimal marketPeMedian = BigDecimal.ZERO;
+        if (!positivePeList.isEmpty()) {
+            int size = positivePeList.size();
+            if (size % 2 == 0) {
+                marketPeMedian = positivePeList.get(size / 2 - 1).add(positivePeList.get(size / 2))
+                        .divide(new BigDecimal("2"), 2, RoundingMode.HALF_UP);
+            } else {
+                marketPeMedian = positivePeList.get(size / 2).setScale(2, RoundingMode.HALF_UP);
+            }
+        }
+
+        // 3. 我的自选低估
+        Set<String> watchlistStockCodes = getUserWatchlistStockCodes(userId);
+        long watchlistUndervaluedCount = 0;
+        if (!watchlistStockCodes.isEmpty()) {
+            watchlistUndervaluedCount = list.stream()
+                    .filter(item -> watchlistStockCodes.contains(item.getStockCode()) || (item.getStockCode().length() > 2 && watchlistStockCodes.contains(item.getStockCode().substring(2))))
+                    .filter(item -> item.getPeTtm() != null && item.getPeTtmIndustryMed() != null
+                            && item.getPeTtm().compareTo(BigDecimal.ZERO) > 0
+                            && item.getPeTtmIndustryMed().compareTo(BigDecimal.ZERO) > 0
+                            && item.getPeTtm().compareTo(item.getPeTtmIndustryMed().multiply(new BigDecimal("0.8"))) < 0)
+                    .count();
+        }
+
+        // 4. 今日估值异动 (较昨日变动超10%)
+        List<StockQuote> quotes = stockQuoteRepository.findAll();
+        long dailyChangeCount = quotes.stream()
+                .filter(q -> q.getChangePercent() != null && q.getChangePercent().abs().compareTo(new BigDecimal("10.0")) >= 0)
+                .count();
+
+        return ValuationOverviewVO.builder()
+                .undervaluedCount(undervaluedCount)
+                .marketPeMedian(marketPeMedian)
+                .watchlistUndervaluedCount(watchlistUndervaluedCount)
+                .dailyChangeCount(dailyChangeCount)
+                .build();
+    }
+
+    /**
+     * 获取全市场可选行业列表
+     */
+    public List<String> getIndustries() {
+        List<String> list = stockValuationMetricsRepository.findDistinctIndustries();
+        if (!CollectionUtils.isEmpty(list)) {
+            return list;
+        }
+        return stockPerformanceReportRepository.findDistinctIndustries();
+    }
+
+    /**
+     * 获取用户所有自选股票代码集合
+     */
+    private Set<String> getUserWatchlistStockCodes(Long userId) {
+        if (userId == null) return Collections.emptySet();
+        List<StockWatchlistGroup> groups = watchlistGroupRepository.findAllByUserIdOrderBySortNoAsc(userId);
+        if (groups.isEmpty()) return Collections.emptySet();
+        List<Long> groupIds = groups.stream().map(StockWatchlistGroup::getId).toList();
+        List<StockWatchlistStock> watchlistStocks = watchlistStockRepository.findByGroupIdIn(groupIds);
+        return watchlistStocks.stream().map(StockWatchlistStock::getStockCode).collect(Collectors.toSet());
+    }
+
     public CalculatedValuationMetricsVO detail(String stockCode) {
         if (StringUtils.isBlank(stockCode)) {
             return null;
@@ -147,6 +290,7 @@ public class StockValuationMetricsService {
             StockValuationMetrics entity = existingMap.getOrDefault(vo.getStockCode(), new StockValuationMetrics());
             entity.setStockCode(vo.getStockCode());
             entity.setStockName(vo.getStockName());
+            entity.setIndustry(vo.getIndustry());
             entity.setPeg(vo.getPeg());
             entity.setPegIndustryMed(vo.getPegIndustryMedian());
             entity.setPegIndustryAvg(vo.getPegIndustryAverage());
@@ -158,6 +302,8 @@ public class StockValuationMetricsService {
             entity.setPeLastYearA(vo.getPeAnnual());
             entity.setPeLastYearIndustryMed(vo.getPeAnnualIndustryMedian());
             entity.setPeLastYearIndustryAvg(vo.getPeAnnualIndustryAverage());
+            entity.setPeLast2yA(vo.getPeLast2yA());
+            entity.setPeLast3yA(vo.getPeLast3yA());
 
             entity.setPsTtm(vo.getPsTtm());
             entity.setPsTtmIndustryMed(vo.getPsTtmIndustryMedian());
@@ -183,6 +329,11 @@ public class StockValuationMetricsService {
             entity.setPcfLastYAIndustryMed(vo.getPcfAnnualIndustryMedian());
             entity.setPcfLastYAIndustryAvg(vo.getPcfAnnualIndustryAverage());
 
+            entity.setTotalMarketCap(vo.getTotalMarketCap());
+            entity.setNetProfitTtm(vo.getNetProfitTtm());
+
+            calculateScoreAndConclusion(entity);
+
             entity.setCreatedAt(now);
             toSave.add(entity);
         }
@@ -191,20 +342,137 @@ public class StockValuationMetricsService {
         log.info("股票估值指标数据离线落库完成，共更新 {} 条数据。", toSave.size());
     }
 
+    public void calculateScoreAndConclusion(StockValuationMetrics item) {
+        if (item == null) return;
+        BigDecimal pe = item.getPeTtm();
+        BigDecimal peMed = item.getPeTtmIndustryMed();
+        BigDecimal pb = item.getPbMrq();
+        BigDecimal pbMed = item.getPbMrqIndustryMed();
+        BigDecimal ps = item.getPsTtm();
+        BigDecimal psMed = item.getPsTtmIndustryMed();
+        BigDecimal peg = item.getPeg();
+
+        double score = 50.0; // 基础分
+
+        // 1. PE(TTM) 相对行业中位 (权重 40分)
+        if (pe != null && peMed != null && pe.compareTo(BigDecimal.ZERO) > 0 && peMed.compareTo(BigDecimal.ZERO) > 0) {
+            double ratio = pe.doubleValue() / peMed.doubleValue();
+            if (ratio <= 0.6) {
+                score += 20.0;
+            } else if (ratio <= 0.8) {
+                score += 15.0;
+            } else if (ratio <= 1.0) {
+                score += 8.0;
+            } else if (ratio <= 1.2) {
+                score -= 5.0;
+            } else if (ratio <= 1.5) {
+                score -= 12.0;
+            } else {
+                score -= 20.0;
+            }
+        }
+
+        // 2. PB(MRQ) 相对行业中位 (权重 25分)
+        if (pb != null && pbMed != null && pb.compareTo(BigDecimal.ZERO) > 0 && pbMed.compareTo(BigDecimal.ZERO) > 0) {
+            double ratio = pb.doubleValue() / pbMed.doubleValue();
+            if (ratio <= 0.7) {
+                score += 12.5;
+            } else if (ratio <= 1.0) {
+                score += 6.0;
+            } else if (ratio <= 1.3) {
+                score -= 4.0;
+            } else {
+                score -= 10.0;
+            }
+        }
+
+        // 3. PS(TTM) 相对行业中位 (权重 20分)
+        if (ps != null && psMed != null && ps.compareTo(BigDecimal.ZERO) > 0 && psMed.compareTo(BigDecimal.ZERO) > 0) {
+            double ratio = ps.doubleValue() / psMed.doubleValue();
+            if (ratio <= 0.7) {
+                score += 10.0;
+            } else if (ratio <= 1.0) {
+                score += 4.0;
+            } else if (ratio <= 1.3) {
+                score -= 3.0;
+            } else {
+                score -= 8.0;
+            }
+        }
+
+        // 4. PEG 水平 (权重 15分)
+        if (peg != null && peg.compareTo(BigDecimal.ZERO) > 0) {
+            double p = peg.doubleValue();
+            if (p < 0.8) {
+                score += 7.5;
+            } else if (p <= 1.0) {
+                score += 4.0;
+            } else if (p <= 1.5) {
+                score -= 2.0;
+            } else {
+                score -= 6.0;
+            }
+        }
+
+        score = Math.max(10.0, Math.min(98.0, score));
+        BigDecimal finalScore = BigDecimal.valueOf(score).setScale(0, RoundingMode.HALF_UP);
+        item.setValuationScore(finalScore);
+
+        // 等级判定
+        String level;
+        if (score >= 80.0) {
+            level = "偏低估";
+        } else if (score >= 65.0) {
+            level = "偏低估";
+        } else if (score >= 55.0) {
+            level = "合理偏低";
+        } else if (score >= 45.0) {
+            level = "合理偏高";
+        } else if (score >= 35.0) {
+            level = "偏高估";
+        } else {
+            level = "高估";
+        }
+        item.setValuationLevel(level);
+
+        // 简明结论
+        if (score >= 70.0) {
+            item.setConclusion("当前估值偏低，具备较好投资性价比与安全边际");
+        } else if (score >= 55.0) {
+            item.setConclusion("估值处于合理偏低区间，投资吸引力良好");
+        } else if (score >= 45.0) {
+            item.setConclusion("估值处于行业合理中枢水平");
+        } else {
+            item.setConclusion("当前估值处于行业偏高位置，建议关注回调风险");
+        }
+    }
+
     private CalculatedValuationMetricsPageVO toPageVO(StockValuationMetrics entity) {
         CalculatedValuationMetricsPageVO pageVO = new CalculatedValuationMetricsPageVO();
         pageVO.setId(entity.getId());
         pageVO.setStockCode(entity.getStockCode());
         pageVO.setStockName(entity.getStockName());
+        pageVO.setIndustry(entity.getIndustry());
         pageVO.setPeg(entity.getPeg());
+        pageVO.setPegIndustryMed(entity.getPegIndustryMed());
         pageVO.setPeTtm(entity.getPeTtm());
+        pageVO.setPeTtmIndustryMed(entity.getPeTtmIndustryMed());
         pageVO.setPeAnnual(entity.getPeLastYearA());
+        pageVO.setPeLast2yA(entity.getPeLast2yA());
+        pageVO.setPeLast3yA(entity.getPeLast3yA());
         pageVO.setPsTtm(entity.getPsTtm());
+        pageVO.setPsTtmIndustryMed(entity.getPsTtmIndustryMed());
         pageVO.setPsAnnual(entity.getPsLastYA());
         pageVO.setPbMrq(entity.getPbMrq());
+        pageVO.setPbMrqIndustryMed(entity.getPbMrqIndustryMed());
         pageVO.setPbAnnual(entity.getPbLastYA());
         pageVO.setPcfTtm(entity.getPcfTtm());
         pageVO.setPcfAnnual(entity.getPcfLastYA());
+        pageVO.setValuationScore(entity.getValuationScore());
+        pageVO.setValuationLevel(entity.getValuationLevel());
+        pageVO.setConclusion(entity.getConclusion());
+        pageVO.setTotalMarketCap(entity.getTotalMarketCap());
+        pageVO.setNetProfitTtm(entity.getNetProfitTtm());
         pageVO.setCalculatedAt(entity.getCreatedAt());
         return pageVO;
     }
@@ -214,6 +482,7 @@ public class StockValuationMetricsService {
         vo.setId(entity.getId());
         vo.setStockCode(entity.getStockCode());
         vo.setStockName(entity.getStockName());
+        vo.setIndustry(entity.getIndustry());
 
         vo.setPeg(entity.getPeg());
         vo.setPegIndustryMedian(entity.getPegIndustryMed());
@@ -226,6 +495,8 @@ public class StockValuationMetricsService {
         vo.setPeAnnual(entity.getPeLastYearA());
         vo.setPeAnnualIndustryMedian(entity.getPeLastYearIndustryMed());
         vo.setPeAnnualIndustryAverage(entity.getPeLastYearIndustryAvg());
+        vo.setPeLast2yA(entity.getPeLast2yA());
+        vo.setPeLast3yA(entity.getPeLast3yA());
 
         vo.setPsTtm(entity.getPsTtm());
         vo.setPsTtmIndustryMedian(entity.getPsTtmIndustryMed());
@@ -250,6 +521,12 @@ public class StockValuationMetricsService {
         vo.setPcfAnnual(entity.getPcfLastYA());
         vo.setPcfAnnualIndustryMedian(entity.getPcfLastYAIndustryMed());
         vo.setPcfAnnualIndustryAverage(entity.getPcfLastYAIndustryAvg());
+
+        vo.setValuationScore(entity.getValuationScore());
+        vo.setValuationLevel(entity.getValuationLevel());
+        vo.setConclusion(entity.getConclusion());
+        vo.setTotalMarketCap(entity.getTotalMarketCap());
+        vo.setNetProfitTtm(entity.getNetProfitTtm());
 
         vo.setCalculatedAt(entity.getCreatedAt());
         return vo;
@@ -309,6 +586,21 @@ public class StockValuationMetricsService {
                     metrics.setPcfAnnual(annualReport == null ? null : divide(stockQuote.getLatestPrice(), annualReport.getOperatingCashFlowPerShare()));
 
                     metrics.setPeg(calculatePeg(metrics.getPeTtm(), netProfitTtm, previousNetProfitTtm));
+
+                    metrics.setTotalMarketCap(marketCap);
+                    metrics.setNetProfitTtm(netProfitTtm);
+
+                    List<StockPerformanceReport> annualReports = reports.stream()
+                            .filter(report -> report.getReportDate().getMonth() == Month.DECEMBER)
+                            .sorted(Comparator.comparing(StockPerformanceReport::getReportDate).reversed())
+                            .toList();
+                    if (annualReports.size() > 1 && annualReports.get(1).getEarningsPerShare() != null) {
+                        metrics.setPeLast2yA(divide(stockQuote.getLatestPrice(), annualReports.get(1).getEarningsPerShare()));
+                    }
+                    if (annualReports.size() > 2 && annualReports.get(2).getEarningsPerShare() != null) {
+                        metrics.setPeLast3yA(divide(stockQuote.getLatestPrice(), annualReports.get(2).getEarningsPerShare()));
+                    }
+
                     result.add(metrics);
                 }
             }
@@ -407,6 +699,7 @@ public class StockValuationMetricsService {
         Map<String, IndustryMetrics> industryMetricsCache = new HashMap<>();
         for (CalculatedValuationMetricsVO metrics : metricsList) {
             String industry = getIndustry(metrics.getStockCode(), industryMap);
+            metrics.setIndustry(industry);
             if (StringUtils.isBlank(industry)) {
                 continue;
             }
@@ -625,6 +918,18 @@ public class StockValuationMetricsService {
                 stockValuationMetrics.setCreatedAt(LocalDateTime.now());
             }
         }
+
+        if (StringUtils.isBlank(stockValuationMetrics.getIndustry())) {
+            final String plainCode = code;
+            List<StockPerformanceReport> reports = stockPerformanceReportRepository.findAll().stream()
+                    .filter(r -> r != null && plainCode.equals(r.getStockCode()) && StringUtils.isNotBlank(r.getIndustry()))
+                    .toList();
+            if (!reports.isEmpty()) {
+                stockValuationMetrics.setIndustry(reports.get(0).getIndustry());
+            }
+        }
+        calculateScoreAndConclusion(stockValuationMetrics);
+
         stockValuationMetricsRepository.save(stockValuationMetrics);
     }
 
