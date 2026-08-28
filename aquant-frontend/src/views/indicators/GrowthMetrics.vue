@@ -1002,12 +1002,6 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  transition: all 0.2s ease;
-}
-
-.overview-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  transform: translateY(-1px);
 }
 
 .overview-card__header {
