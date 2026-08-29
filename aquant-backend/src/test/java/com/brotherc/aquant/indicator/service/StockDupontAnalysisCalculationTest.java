@@ -92,6 +92,7 @@ class StockDupontAnalysisCalculationTest {
                 .findFirst().orElseThrow();
 
         // 茅台 2025 指标验证
+        assertThat(moutai.getIndustry()).isEqualTo("白酒");
         assertThat(moutai.getNetMarginLastYA()).isEqualByComparingTo("50.0000");
         assertThat(moutai.getAssetTurnoverLastYA()).isEqualByComparingTo("0.5000");
         assertThat(moutai.getEquityMultiplierLastYA()).isEqualByComparingTo("1.4000");
