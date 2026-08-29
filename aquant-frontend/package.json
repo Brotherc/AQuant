@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
+    "test:indicators": "tsc -p tsconfig.indicator-tests.json && node --test node_modules/.tmp/indicator-tests/tests/technicalIndicators.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

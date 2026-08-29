@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "skipLibCheck": true,
+    "rootDir": ".",
+    "outDir": "node_modules/.tmp/indicator-tests",
+    "types": ["node"]
+  },
+  "include": [
+    "src/utils/technicalIndicators.ts",
+    "tests/technicalIndicators.test.ts"
+  ]
+}
