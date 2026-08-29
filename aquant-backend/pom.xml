@@ -69,6 +69,13 @@
             <version>4.11.0</version>
         </dependency>
 
+        <!-- 基金公司官网当前额度表 HTML 解析 -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.17.2</version>
+        </dependency>
+
         <!-- 建信基金公告附件同时存在旧版 .doc 和新版 .docx -->
         <dependency>
             <groupId>org.apache.poi</groupId>
