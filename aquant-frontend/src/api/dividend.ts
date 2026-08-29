@@ -1,21 +1,49 @@
 import api from '@/utils/request';
 import type { PageResult, ResponseDTO } from './stock';
 
+export interface DividendOverviewVO {
+    highDividendOpportunityCount: number;
+    consecutiveDividendCount: number;
+    watchlistDividendCount: number;
+    todayFocusCount: number;
+}
+
+export interface AnnualDividendSnapshotVO {
+    year: number;
+    yearLabel: string;
+    dividendPerShare: number;
+    dividendYield?: number;
+    payoutRatio?: number;
+}
+
 export interface StockDividendStatVO {
     stockCode: string;
     stockName: string;
-    latestPrice: number;
-    avgDividend: number;
-    latestYearDividend: number;
+    industry?: string;
+    latestPrice?: number;
+    avgDividend?: number;
+    latestYearDividend?: number;
+    dividendYield?: number;
     peg?: number;
+    dividendScore?: number;
+    dividendLevel?: string;
+    conclusion?: string;
+    consecutiveYears?: number;
+    dividendGrowth3y?: number;
+    cashFlowStatus?: string;
     pe?: number;
     peIndustryAvg?: number;
     roeActual?: number;
     roe3yAvg?: number;
+    roeIndustryAvg?: number;
+    industryDividendYieldAvg?: number;
     latestYearTransfer?: number;
+    latestAnnouncementDate?: string;
+    annualSnapshots?: AnnualDividendSnapshotVO[];
 }
 
 export interface StockDividendStatPageReqVO {
+    quickTab?: string;
     recentYears?: number;
     minAvgDividend?: number;
     stockCode?: string;
@@ -41,6 +69,10 @@ export interface StockDividendDetailVO {
     reportDate: string;
 }
 
+export const getDividendOverview = (params?: { watchlistGroupId?: number }) => {
+    return api.get<ResponseDTO<DividendOverviewVO>>('/stockDividend/overview', { params });
+};
+
 export const getDividendPage = (params: StockDividendStatPageReqVO & { page: number; size: number; sort?: string[] }) => {
     return api.get<ResponseDTO<PageResult<StockDividendStatVO>>>('/stockDividend/page', {
         params,
@@ -53,4 +85,3 @@ export const getDividendPage = (params: StockDividendStatPageReqVO & { page: num
 export const getDividendDetail = (params: { stockCode: string }) => {
     return api.get<ResponseDTO<StockDividendDetailVO[]>>('/stockDividend/getDetailByCode', { params });
 };
-

@@ -9,6 +9,9 @@ import java.math.BigDecimal;
 @Schema(description = "股票分红数据分页查询入参")
 public class StockDividendStatPageReqVO {
 
+    @Schema(description = "快捷榜单Tab: HIGH_DIVIDEND(高分红榜), STABLE_DIVIDEND(稳定分红), DIVIDEND_GROWTH(分红增长), MY_WATCHLIST(我的自选)")
+    private String quickTab;
+
     @Schema(description = "最近N年")
     private Integer recentYears;
 
@@ -24,7 +27,7 @@ public class StockDividendStatPageReqVO {
     @Schema(description = "自选分组ID")
     private Long watchlistGroupId;
 
-    @Schema(description = "PEG范围: 1(>0), 2(0.5-1)")
+    @Schema(description = "PEG范围: 1(0-0.5), 2(0.5-1.0)")
     private String pegRange;
 
 }
