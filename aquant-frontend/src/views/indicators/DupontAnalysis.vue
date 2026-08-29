@@ -245,10 +245,10 @@
           </div>
 
           <div class="detail-drawer__body">
-            <!-- Section 1: 质量位置 -->
+            <!-- Section 1: 评分 -->
             <div class="detail-section">
               <div class="detail-section__header">
-                <span class="detail-section__title">质量位置</span>
+                <span class="detail-section__title">评分</span>
                 <span class="detail-rank-percentile">行业内名次：{{ selectedStock.roe3yAvgRank ? `第 ${Math.round(selectedStock.roe3yAvgRank)} 名` : '-' }}</span>
               </div>
               
