@@ -283,36 +283,7 @@
               </div>
             </div>
 
-            <!-- Section 2: 杜邦拆解公式 (去年) -->
-            <div class="detail-section">
-              <div class="detail-section__header">
-                <span class="detail-section__title">杜邦拆解 ({{ snapshotYears.last1 }})</span>
-              </div>
-
-              <div class="dupont-formula-card">
-                <div class="formula-item formula-item--roe">
-                  <span class="formula-label">ROE</span>
-                  <span class="formula-value text-rose">{{ formatPercent(selectedStock.roeLastYA) }}</span>
-                </div>
-                <div class="formula-operator">=</div>
-                <div class="formula-item">
-                  <span class="formula-label">净利率</span>
-                  <span class="formula-value">{{ formatPercent(selectedStock.netMarginLastYA) }}</span>
-                </div>
-                <div class="formula-operator">×</div>
-                <div class="formula-item">
-                  <span class="formula-label">周转率</span>
-                  <span class="formula-value">{{ formatValue(selectedStock.assetTurnoverLastYA) }}次</span>
-                </div>
-                <div class="formula-operator">×</div>
-                <div class="formula-item">
-                  <span class="formula-label">权益乘数</span>
-                  <span class="formula-value">{{ formatValue(selectedStock.equityMultiplierLastYA) }}倍</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Section 3: 年度杜邦快照 -->
+            <!-- Section 2: 年度杜邦快照 -->
             <div class="detail-section">
               <div class="detail-section__header">
                 <span class="detail-section__title">年度杜邦快照</span>
@@ -356,7 +327,7 @@
                       <td>{{ formatValue(selectedStock.equityMultiplierLastYA) }}</td>
                       <td>{{ formatValue(selectedStock.equityMultiplierLast2yA) }}</td>
                       <td>{{ formatValue(selectedStock.equityMultiplierLast3yA) }}</td>
-                      <td class="font-semibold">{{ formatValue(selectedStock.equityMultiplier3yAvg) }}</td>
+                      <td class="font-semibold">{{ formatEquityMultiplier(selectedStock.equityMultiplier3yAvg) }}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -442,13 +413,6 @@
                       <span class="comp-bar-val comp-bar-val--median">{{ formatValue(currentCompareData.roeMed) }}</span>
                     </div>
                   </div>
-                  <div
-                    class="comp-row-status"
-                    :class="getCompareStatusClass(currentCompareData.roe, currentCompareData.roeMed)"
-                  >
-                    <span class="status-label">{{ getCompareInfo(currentCompareData.roe, currentCompareData.roeMed).label }}</span>
-                    <span class="status-percent">{{ getCompareInfo(currentCompareData.roe, currentCompareData.roeMed).percent }}</span>
-                  </div>
                 </div>
 
                 <!-- 2. 净利率 对比 -->
@@ -473,13 +437,6 @@
                       </div>
                       <span class="comp-bar-val comp-bar-val--median">{{ formatValue(currentCompareData.netMarginMed) }}</span>
                     </div>
-                  </div>
-                  <div
-                    class="comp-row-status"
-                    :class="getCompareStatusClass(currentCompareData.netMargin, currentCompareData.netMarginMed)"
-                  >
-                    <span class="status-label">{{ getCompareInfo(currentCompareData.netMargin, currentCompareData.netMarginMed).label }}</span>
-                    <span class="status-percent">{{ getCompareInfo(currentCompareData.netMargin, currentCompareData.netMarginMed).percent }}</span>
                   </div>
                 </div>
 
@@ -506,13 +463,6 @@
                       <span class="comp-bar-val comp-bar-val--median">{{ formatValue(currentCompareData.turnoverMed) }}</span>
                     </div>
                   </div>
-                  <div
-                    class="comp-row-status"
-                    :class="getCompareStatusClass(currentCompareData.turnover, currentCompareData.turnoverMed)"
-                  >
-                    <span class="status-label">{{ getCompareInfo(currentCompareData.turnover, currentCompareData.turnoverMed).label }}</span>
-                    <span class="status-percent">{{ getCompareInfo(currentCompareData.turnover, currentCompareData.turnoverMed).percent }}</span>
-                  </div>
                 </div>
 
                 <!-- 4. 权益乘数 对比 -->
@@ -537,13 +487,6 @@
                       </div>
                       <span class="comp-bar-val comp-bar-val--median">{{ formatValue(currentCompareData.emMed) }}</span>
                     </div>
-                  </div>
-                  <div
-                    class="comp-row-status"
-                    :class="getCompareStatusClass(currentCompareData.em, currentCompareData.emMed, true)"
-                  >
-                    <span class="status-label">{{ getCompareInfo(currentCompareData.em, currentCompareData.emMed, true).label }}</span>
-                    <span class="status-percent">{{ getCompareInfo(currentCompareData.em, currentCompareData.emMed, true).percent }}</span>
                   </div>
                 </div>
               </div>
@@ -701,6 +644,13 @@ const formatValue = (val: any) => {
   return isNaN(num) ? '-' : num.toFixed(2);
 };
 
+const formatEquityMultiplier = (val: any) => {
+  if (val == null || val === '') return '-';
+  const num = Number(val);
+  if (isNaN(num) || num < 0) return '-';
+  return num.toFixed(2);
+};
+
 // 质量等级与样式
 const getQualityLevelText = (score: any) => {
   const s = Number(score || 0);
@@ -764,6 +714,7 @@ const currentCompareData = computed(() => {
   }
   const s = selectedStock.value;
   if (compareYearIndex.value === 0) {
+    const em3y = (s.equityMultiplier3yAvg != null && Number(s.equityMultiplier3yAvg) < 0) ? null : s.equityMultiplier3yAvg;
     return {
       year: '3年均值',
       roe: s.roe3yAvg,
@@ -772,7 +723,7 @@ const currentCompareData = computed(() => {
       netMarginMed: s.netMargin3yAvgIndustryMed,
       turnover: s.assetTurnover3yAvg,
       turnoverMed: s.assetTurnover3yAvgIndustryMed,
-      em: s.equityMultiplier3yAvg,
+      em: em3y,
       emMed: s.equityMultiplier3yAvgIndustryMed,
     };
   } else if (compareYearIndex.value === 1) {
@@ -813,44 +764,6 @@ const currentCompareData = computed(() => {
     };
   }
 });
-
-// 行业对比超额百分比计算
-const getCompareInfo = (val: any, med: any, isLeverage = false) => {
-  if (val == null || med == null) {
-    return { label: '-', percent: '' };
-  }
-  const v = Number(val);
-  const m = Number(med);
-  if (m === 0) {
-    if (v === 0) return { label: '持平行业', percent: '0%' };
-    return { label: v > 0 ? '优于行业' : '落后行业', percent: '-' };
-  }
-  const diffPercent = Math.round(((v - m) / Math.abs(m)) * 100);
-  if (isLeverage) {
-    if (Math.abs(diffPercent) < 3) return { label: '持平行业', percent: '0%' };
-    return {
-      label: diffPercent > 0 ? '高出行业' : '低于行业',
-      percent: `${Math.abs(diffPercent)}%`,
-    };
-  }
-  if (Math.abs(diffPercent) < 1) return { label: '持平行业', percent: '0%' };
-  return {
-    label: diffPercent > 0 ? '优于行业' : '落后行业',
-    percent: `${Math.abs(diffPercent)}%`,
-  };
-};
-
-const getCompareStatusClass = (val: any, med: any, isLeverage = false) => {
-  if (val == null || med == null) return '';
-  const v = Number(val);
-  const m = Number(med);
-  const diff = v - m;
-  if (isLeverage) {
-    return diff > 0.5 ? 'status--warning' : 'status--neutral';
-  }
-  if (Math.abs(diff) < 0.05) return 'status--neutral';
-  return diff > 0 ? 'status--better' : 'status--worse';
-};
 
 const getBarWidth = (val: any, maxScale: number) => {
   if (val == null) return 0;
