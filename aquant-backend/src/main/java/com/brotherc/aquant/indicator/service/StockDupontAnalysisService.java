@@ -372,8 +372,6 @@ public class StockDupontAnalysisService {
 
         if (pr != null && pr.getRoe() != null) {
             roe = pr.getRoe();
-        } else if (pr != null && pr.getNetProfit() != null && bs != null && bs.getTotalEquity() != null && bs.getTotalEquity().compareTo(BigDecimal.ZERO) != 0) {
-            roe = pr.getNetProfit().multiply(ONE_HUNDRED).divide(bs.getTotalEquity(), SCALE, RoundingMode.HALF_UP);
         }
 
         if (yearIndex == 1) {
