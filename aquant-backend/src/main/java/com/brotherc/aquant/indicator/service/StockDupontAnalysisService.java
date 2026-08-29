@@ -344,6 +344,10 @@ public class StockDupontAnalysisService {
         // 行业归属映射
         Map<String, String> industryMap = buildIndustryMap(performanceReports);
 
+        for (StockDupontAnalysis item : resultList) {
+            item.setIndustry(getIndustry(item.getStockCode(), industryMap));
+        }
+
         // 填充行业中值与行业均值
         fillIndustryMetrics(resultList, industryMap);
 
