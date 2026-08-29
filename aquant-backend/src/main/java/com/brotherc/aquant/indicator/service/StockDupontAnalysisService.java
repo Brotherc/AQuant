@@ -47,6 +47,7 @@ public class StockDupontAnalysisService {
     private static final String ROE_3Y_AVG = "roe3yAvg";
     private static final BigDecimal ONE_HUNDRED = new BigDecimal("100");
     private static final BigDecimal TWO = new BigDecimal("2");
+    private static final BigDecimal THREE = new BigDecimal("3");
     private static final int SCALE = 4;
 
     private final StockDupontAnalysisRepository stockDupontAnalysisRepository;
@@ -321,21 +322,21 @@ public class StockDupontAnalysisService {
             item.setStockName(quote.getName());
 
             // 计算去年 (yearLast1) 指标
-            calculateYearMetrics(item, prYears.get(yearLast1), bsYears.get(yearLast1), 1);
+            calculateYearMetrics(item, prYears.get(yearLast1), bsYears.get(yearLast1), bsYears.get(yearLast1 - 1), 1);
             // 计算2年前 (yearLast2) 指标
             if (yearLast2 != null) {
-                calculateYearMetrics(item, prYears.get(yearLast2), bsYears.get(yearLast2), 2);
+                calculateYearMetrics(item, prYears.get(yearLast2), bsYears.get(yearLast2), bsYears.get(yearLast2 - 1), 2);
             }
             // 计算3年前 (yearLast3) 指标
             if (yearLast3 != null) {
-                calculateYearMetrics(item, prYears.get(yearLast3), bsYears.get(yearLast3), 3);
+                calculateYearMetrics(item, prYears.get(yearLast3), bsYears.get(yearLast3), bsYears.get(yearLast3 - 1), 3);
             }
 
-            // 计算 3 年平均指标
-            item.setRoe3yAvg(calculateAverage(item.getRoeLastYA(), item.getRoeLast2yA(), item.getRoeLast3yA()));
-            item.setNetMargin3yAvg(calculateAverage(item.getNetMarginLastYA(), item.getNetMarginLast2yA(), item.getNetMarginLast3yA()));
-            item.setAssetTurnover3yAvg(calculateAverage(item.getAssetTurnoverLastYA(), item.getAssetTurnoverLast2yA(), item.getAssetTurnoverLast3yA()));
-            item.setEquityMultiplier3yAvg(calculateAverage(item.getEquityMultiplierLastYA(), item.getEquityMultiplierLast2yA(), item.getEquityMultiplierLast3yA()));
+            // 计算 3 年平均指标（任一年份数据缺失则保持为 null，不进行不完全均值计算）
+            item.setRoe3yAvg(calculateStrictThreeYearAverage(item.getRoeLastYA(), item.getRoeLast2yA(), item.getRoeLast3yA()));
+            item.setNetMargin3yAvg(calculateStrictThreeYearAverage(item.getNetMarginLastYA(), item.getNetMarginLast2yA(), item.getNetMarginLast3yA()));
+            item.setAssetTurnover3yAvg(calculateStrictThreeYearAverage(item.getAssetTurnoverLastYA(), item.getAssetTurnoverLast2yA(), item.getAssetTurnoverLast3yA()));
+            item.setEquityMultiplier3yAvg(calculateStrictThreeYearAverage(item.getEquityMultiplierLastYA(), item.getEquityMultiplierLast2yA(), item.getEquityMultiplierLast3yA()));
 
             resultList.add(item);
         }
@@ -352,7 +353,7 @@ public class StockDupontAnalysisService {
         return resultList;
     }
 
-    private void calculateYearMetrics(StockDupontAnalysis item, StockPerformanceReport pr, StockBalanceSheet bs, int yearIndex) {
+    private void calculateYearMetrics(StockDupontAnalysis item, StockPerformanceReport pr, StockBalanceSheet bs, StockBalanceSheet bsPrior, int yearIndex) {
         BigDecimal netMargin = null;
         BigDecimal assetTurnover = null;
         BigDecimal equityMultiplier = null;
@@ -362,8 +363,18 @@ public class StockDupontAnalysisService {
             netMargin = pr.getNetProfit().multiply(ONE_HUNDRED).divide(pr.getTotalRevenue(), SCALE, RoundingMode.HALF_UP);
         }
 
-        if (pr != null && pr.getTotalRevenue() != null && bs != null && bs.getTotalAssets() != null && bs.getTotalAssets().compareTo(BigDecimal.ZERO) != 0) {
-            assetTurnover = pr.getTotalRevenue().divide(bs.getTotalAssets(), SCALE, RoundingMode.HALF_UP);
+        // 资产周转率 = 营业总收入 / 平均总资产；平均总资产 = (期初总资产 + 期末总资产) / 2
+        BigDecimal avgAssets = null;
+        if (bs != null && bs.getTotalAssets() != null) {
+            if (bsPrior != null && bsPrior.getTotalAssets() != null && bsPrior.getTotalAssets().compareTo(BigDecimal.ZERO) > 0) {
+                avgAssets = bs.getTotalAssets().add(bsPrior.getTotalAssets()).divide(TWO, SCALE, RoundingMode.HALF_UP);
+            } else {
+                avgAssets = bs.getTotalAssets();
+            }
+        }
+
+        if (pr != null && pr.getTotalRevenue() != null && avgAssets != null && avgAssets.compareTo(BigDecimal.ZERO) != 0) {
+            assetTurnover = pr.getTotalRevenue().divide(avgAssets, SCALE, RoundingMode.HALF_UP);
         }
 
         if (bs != null && bs.getTotalAssets() != null && bs.getTotalEquity() != null && bs.getTotalEquity().compareTo(BigDecimal.ZERO) != 0) {
@@ -667,6 +678,16 @@ public class StockDupontAnalysisService {
         BigDecimal mid1 = values.get(size / 2 - 1);
         BigDecimal mid2 = values.get(size / 2);
         return mid1.add(mid2).divide(TWO, SCALE, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * 计算严格 3 年平均值（若有任意 1 年数据为 null，则返回 null，不进行残缺年份计算）
+     */
+    private BigDecimal calculateStrictThreeYearAverage(BigDecimal v1, BigDecimal v2, BigDecimal v3) {
+        if (v1 == null || v2 == null || v3 == null) {
+            return null;
+        }
+        return v1.add(v2).add(v3).divide(THREE, SCALE, RoundingMode.HALF_UP);
     }
 
     private BigDecimal calculateAverage(BigDecimal... values) {
