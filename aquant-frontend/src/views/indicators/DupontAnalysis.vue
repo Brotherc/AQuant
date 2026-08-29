@@ -6,61 +6,61 @@
       <div class="overview-cards-grid">
         <!-- 卡片 1: 高质量 ROE -->
         <div class="overview-card overview-card--emerald">
-          <div class="overview-card__header">
-            <span class="overview-card__title">高质量ROE</span>
-            <div class="overview-card__icon-wrap">
-              <RiseOutlined />
+          <div class="overview-card__icon-wrap">
+            <RiseOutlined />
+          </div>
+          <div class="overview-card__content">
+            <div class="overview-card__title">高质量ROE</div>
+            <div class="overview-card__value-row">
+              <span class="overview-card__value">{{ overviewData.highQualityCount }}</span>
+              <span class="overview-card__unit">家</span>
             </div>
+            <div class="overview-card__subtext">ROE &gt; 15% 且 质量评分 ≥ 75</div>
           </div>
-          <div class="overview-card__value-row">
-            <span class="overview-card__value">{{ overviewData.highQualityCount }}</span>
-            <span class="overview-card__unit">家</span>
-          </div>
-          <div class="overview-card__subtext">ROE &gt; 15% 且 质量评分 ≥ 75</div>
         </div>
 
         <!-- 卡片 2: 行业 ROE 中位 -->
         <div class="overview-card overview-card--indigo">
-          <div class="overview-card__header">
-            <span class="overview-card__title">行业ROE中位</span>
-            <div class="overview-card__icon-wrap">
-              <BarChartOutlined />
+          <div class="overview-card__icon-wrap">
+            <BarChartOutlined />
+          </div>
+          <div class="overview-card__content">
+            <div class="overview-card__title">行业ROE中位</div>
+            <div class="overview-card__value-row">
+              <span class="overview-card__value">{{ formatPercent(overviewData.industryRoeMedian) }}</span>
             </div>
+            <div class="overview-card__subtext">全市场加权中位数</div>
           </div>
-          <div class="overview-card__value-row">
-            <span class="overview-card__value">{{ formatPercent(overviewData.industryRoeMedian) }}</span>
-          </div>
-          <div class="overview-card__subtext">全市场加权中位数</div>
         </div>
 
         <!-- 卡片 3: 我的自选高质量 -->
         <div class="overview-card overview-card--amber">
-          <div class="overview-card__header">
-            <span class="overview-card__title">我的自选高质量</span>
-            <div class="overview-card__icon-wrap">
-              <StarFilled />
+          <div class="overview-card__icon-wrap">
+            <StarFilled />
+          </div>
+          <div class="overview-card__content">
+            <div class="overview-card__title">我的自选高质量</div>
+            <div class="overview-card__value-row">
+              <span class="overview-card__value">{{ overviewData.watchlistHighQualityCount }}</span>
+              <span class="overview-card__unit">支</span>
             </div>
+            <div class="overview-card__subtext">自选中质量评分 ≥ 75</div>
           </div>
-          <div class="overview-card__value-row">
-            <span class="overview-card__value">{{ overviewData.watchlistHighQualityCount }}</span>
-            <span class="overview-card__unit">支</span>
-          </div>
-          <div class="overview-card__subtext">自选中质量评分 ≥ 75</div>
         </div>
 
         <!-- 卡片 4: 杠杆预警 -->
         <div class="overview-card overview-card--rose">
-          <div class="overview-card__header">
-            <span class="overview-card__title">杠杆预警</span>
-            <div class="overview-card__icon-wrap">
-              <WarningOutlined />
+          <div class="overview-card__icon-wrap">
+            <WarningOutlined />
+          </div>
+          <div class="overview-card__content">
+            <div class="overview-card__title">杠杆预警</div>
+            <div class="overview-card__value-row">
+              <span class="overview-card__value">{{ overviewData.leverageWarningCount }}</span>
+              <span class="overview-card__unit">家</span>
             </div>
+            <div class="overview-card__subtext">权益乘数 &gt; 2.5</div>
           </div>
-          <div class="overview-card__value-row">
-            <span class="overview-card__value">{{ overviewData.leverageWarningCount }}</span>
-            <span class="overview-card__unit">家</span>
-          </div>
-          <div class="overview-card__subtext">权益乘数 &gt; 2.5</div>
         </div>
       </div>
 
@@ -249,7 +249,7 @@
             <div class="detail-section">
               <div class="detail-section__header">
                 <span class="detail-section__title">质量位置</span>
-                <span class="detail-rank-percentile">全市场排位：{{ getMarketPercentileText(selectedStock.qualityScore) }}</span>
+                <span class="detail-rank-percentile">行业内名次：{{ selectedStock.roe3yAvgRank ? `第 ${Math.round(selectedStock.roe3yAvgRank)} 名` : '-' }}</span>
               </div>
               
               <div class="quality-position-card">
@@ -622,7 +622,7 @@ const pagination = reactive({
 // 表格列定义（支持表头原生排序）
 const columns = computed<TableProps['columns']>(() => [
   { title: '股票', dataIndex: 'stockName', width: 130 },
-  { title: '行业', dataIndex: 'industry', width: 90 },
+  { title: '行业', dataIndex: 'industry', width: 125 },
   { title: 'ROE3年平均(%)', dataIndex: 'roe3yAvg', width: 155, align: 'right', sorter: true, defaultSortOrder: 'descend' },
   { title: '净利率3年平均(%)', dataIndex: 'netMargin3yAvg', width: 160, align: 'right', sorter: true },
   { title: '资产周转率(次)', dataIndex: 'assetTurnover3yAvg', width: 135, align: 'right', sorter: true },
@@ -673,16 +673,6 @@ const getScoreColorClass = (score: any) => {
   if (s >= 65) return 'score-num--high';
   if (s >= 50) return 'score-num--mid';
   return 'score-num--low';
-};
-
-const getMarketPercentileText = (score: any) => {
-  const s = Number(score || 0);
-  if (s >= 85) return '前 8%';
-  if (s >= 80) return '前 15%';
-  if (s >= 75) return '前 25%';
-  if (s >= 65) return '前 40%';
-  if (s >= 50) return '前 60%';
-  return '后 30%';
 };
 
 // 动态计算快照年份
@@ -1063,44 +1053,48 @@ onMounted(() => {
   border: 1px solid rgba(0, 0, 0, 0.06);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 2px 8px rgba(0, 0, 0, 0.03);
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
   position: relative;
   overflow: hidden;
 }
 
-.overview-card__header {
+.overview-card__icon-wrap {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.overview-card__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .overview-card__title {
   font-size: 13px;
   font-weight: 500;
   color: #64748b;
-}
-
-.overview-card__icon-wrap {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
+  margin-bottom: 3px;
 }
 
 .overview-card__value-row {
   display: flex;
   align-items: baseline;
   gap: 4px;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .overview-card__value {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
@@ -1116,6 +1110,7 @@ onMounted(() => {
 .overview-card__subtext {
   font-size: 11px;
   color: #94a3b8;
+  white-space: nowrap;
 }
 
 /* 卡片颜色主题 */
@@ -1216,12 +1211,20 @@ onMounted(() => {
 }
 
 :deep(.dupont-main-table .ant-table-thead > tr > th) {
-  background: #f8fafc;
-  color: #475569;
+  background: #f1f5f9 !important;
+  color: #334155;
   font-weight: 600;
   border-bottom: 1px solid #e2e8f0;
   padding: 12px 14px;
   white-space: nowrap !important;
+}
+
+:deep(.dupont-main-table .ant-table-thead th.ant-table-column-has-sorters:hover) {
+  background: #e2e8f0 !important;
+}
+
+:deep(.dupont-main-table .ant-table-thead th.ant-table-column-sort) {
+  background: #f1f5f9 !important;
 }
 
 :deep(.dupont-main-table .ant-table-tbody > tr > td) {
@@ -1286,9 +1289,11 @@ onMounted(() => {
 /* 质量评分徽章 */
 .score-cell {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 3px;
+  line-height: 1.2;
 }
 
 .score-num {
@@ -1611,9 +1616,9 @@ onMounted(() => {
 }
 
 .annual-snapshot-table th {
-  background: #f8fafc;
-  color: #64748b;
-  font-weight: 500;
+  background: #f1f5f9;
+  color: #334155;
+  font-weight: 600;
 }
 
 .annual-snapshot-table tr:last-child td {
