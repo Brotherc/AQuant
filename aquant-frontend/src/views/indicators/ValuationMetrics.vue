@@ -194,6 +194,7 @@
           :row-class-name="rowClassName"
           size="middle"
           class="valuation-table"
+          :scroll="{ x: 'max-content' }"
         >
           <!-- 自定义单元格渲染 -->
           <template #bodyCell="{ column, record }">
@@ -1246,9 +1247,11 @@ onMounted(() => {
 
 .score-cell {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 3px;
+  line-height: 1.2;
 }
 
 .score-num {
