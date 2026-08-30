@@ -65,6 +65,8 @@ public class StockIndustryBoardHistoryService {
             saveList.add(entity);
         }
 
+        applyChangeMetrics(existedList, saveList);
+
         // 批量保存
         stockIndustryBoardHistoryRepository.saveAll(saveList);
     }
@@ -104,7 +106,83 @@ public class StockIndustryBoardHistoryService {
             entity.setCreateTime(now);
             saveList.add(entity);
         }
+        Map<String, List<StockIndustryBoardHistory>> saveListBySector = saveList.stream()
+                .collect(Collectors.groupingBy(StockIndustryBoardHistory::getSectorName));
+        for (Map.Entry<String, List<StockIndustryBoardHistory>> entry : saveListBySector.entrySet()) {
+            List<StockIndustryBoardHistory> completeHistory = stockIndustryBoardHistoryRepository
+                    .findBySectorNameOrderByTradeDateAsc(entry.getKey());
+            applyChangeMetrics(completeHistory, entry.getValue());
+        }
         stockIndustryBoardHistoryRepository.saveAll(saveList);
+    }
+
+    private void applyChangeMetrics(
+            List<StockIndustryBoardHistory> existingHistory,
+            List<StockIndustryBoardHistory> changedHistory
+    ) {
+        Map<String, StockIndustryBoardHistory> historyByDate = new TreeMap<>();
+        for (StockIndustryBoardHistory history : existingHistory) {
+            historyByDate.put(history.getTradeDate(), history);
+        }
+        for (StockIndustryBoardHistory history : changedHistory) {
+            historyByDate.put(history.getTradeDate(), history);
+        }
+
+        BigDecimal previousClose = null;
+        for (StockIndustryBoardHistory history : historyByDate.values()) {
+            if (history.getClosePrice() == null) {
+                continue;
+            }
+            if (previousClose == null) {
+                history.setChangeAmount(null);
+                history.setChangePercent(null);
+            } else {
+                BigDecimal changeAmount = history.getClosePrice().subtract(previousClose);
+                history.setChangeAmount(changeAmount);
+                if (previousClose.compareTo(BigDecimal.ZERO) == 0) {
+                    history.setChangePercent(BigDecimal.ZERO);
+                } else {
+                    history.setChangePercent(changeAmount.divide(previousClose, 6, RoundingMode.HALF_UP)
+                            .multiply(BigDecimal.valueOf(100))
+                            .setScale(4, RoundingMode.HALF_UP));
+                }
+            }
+            previousClose = history.getClosePrice();
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public int backfillMissingChangeMetrics() {
+        if (stockIndustryBoardHistoryRepository.countCalculableMissingChangeMetrics() == 0) {
+            return 0;
+        }
+        List<StockIndustryBoardHistory> histories = stockIndustryBoardHistoryRepository
+                .findAllByOrderBySectorNameAscTradeDateAsc();
+        Map<String, BigDecimal> previousCloseBySector = new HashMap<>();
+        List<StockIndustryBoardHistory> changedRows = new ArrayList<>();
+
+        for (StockIndustryBoardHistory history : histories) {
+            BigDecimal previousClose = previousCloseBySector.get(history.getSectorName());
+            if (history.getClosePrice() != null && previousClose != null &&
+                    (history.getChangeAmount() == null || history.getChangePercent() == null)) {
+                BigDecimal changeAmount = history.getClosePrice().subtract(previousClose);
+                history.setChangeAmount(changeAmount);
+                history.setChangePercent(previousClose.compareTo(BigDecimal.ZERO) == 0
+                        ? BigDecimal.ZERO
+                        : changeAmount.divide(previousClose, 6, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(100))
+                        .setScale(4, RoundingMode.HALF_UP));
+                changedRows.add(history);
+            }
+            if (history.getClosePrice() != null) {
+                previousCloseBySector.put(history.getSectorName(), history.getClosePrice());
+            }
+        }
+
+        if (!changedRows.isEmpty()) {
+            stockIndustryBoardHistoryRepository.saveAll(changedRows);
+        }
+        return changedRows.size();
     }
 
 

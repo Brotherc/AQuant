@@ -226,6 +226,7 @@ const navigationGroups: NavigationGroup[] = [
     children: [
       { key: '/stock-data/index', label: '股票' },
       { key: '/board/index', label: '行业板块' },
+      { key: '/industry-analysis/index', label: '行业涨幅分析' },
       { key: '/fund/index', label: '基金' }
     ]
   },

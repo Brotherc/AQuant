@@ -62,6 +62,17 @@ const router = createRouter({
                     ]
                 },
                 {
+                    path: 'industry-analysis',
+                    name: 'IndustryAnalysisRoot',
+                    children: [
+                        {
+                            path: 'index',
+                            name: 'IndustryRiseAnalysis',
+                            component: () => import('@/views/industry-analysis/IndustryRiseAnalysis.vue')
+                        }
+                    ]
+                },
+                {
                     path: 'fund',
                     name: 'FundRoot',
                     children: [

@@ -45,19 +45,29 @@
               <a-radio-button value="1Y">年线</a-radio-button>
             </a-radio-group>
           </div>
-          <div class="indicator-switches">
-            <span class="indicator-switch">
-              <span>MACD</span>
-              <a-switch v-model:checked="indicatorVisibility.macd" size="small" />
-            </span>
-            <span class="indicator-switch">
-              <span>KDJ</span>
-              <a-switch v-model:checked="indicatorVisibility.kdj" size="small" />
-            </span>
-            <span class="indicator-switch">
-              <span>BOLL</span>
-              <a-switch v-model:checked="indicatorVisibility.boll" size="small" />
-            </span>
+          <div class="chart-toolbar-right">
+            <div v-if="currentMA" class="ma-legend-bar">
+              <span class="ma-label">均线:</span>
+              <span class="ma-item ma5">MA5: {{ currentMA.ma5 }}</span>
+              <span class="ma-item ma10">MA10: {{ currentMA.ma10 }}</span>
+              <span class="ma-item ma20">MA20: {{ currentMA.ma20 }}</span>
+              <span class="ma-item ma60">MA60: {{ currentMA.ma60 }}</span>
+              <span class="ma-item ma120">MA120: {{ currentMA.ma120 }}</span>
+            </div>
+            <div class="indicator-switches">
+              <span class="indicator-switch">
+                <span>MACD</span>
+                <a-switch v-model:checked="indicatorVisibility.macd" size="small" />
+              </span>
+              <span class="indicator-switch">
+                <span>KDJ</span>
+                <a-switch v-model:checked="indicatorVisibility.kdj" size="small" />
+              </span>
+              <span class="indicator-switch">
+                <span>BOLL</span>
+                <a-switch v-model:checked="indicatorVisibility.boll" size="small" />
+              </span>
+            </div>
           </div>
         </div>
         <div class="chart-container" ref="chartContainer"></div>
@@ -105,6 +115,13 @@ const props = defineProps<{
 const chartContainer = ref<HTMLElement | null>(null);
 const frequency = ref<'1d' | '1w' | '1M' | '1Q' | '1Y'>('1d');
 const historyData = ref<StockQuoteHistory[]>([]);
+const currentMA = ref<{
+  ma5: string | number;
+  ma10: string | number;
+  ma20: string | number;
+  ma60: string | number;
+  ma120: string | number;
+} | null>(null);
 const indicatorVisibility = reactive({
   macd: false,
   kdj: false,
@@ -181,8 +198,15 @@ const fetchHistory = async () => {
     if (data && data.length > 0) {
       historyData.value = data;
       renderChart(data);
+    } else {
+      historyData.value = [];
+      currentMA.value = null;
+      chartInstance?.clear();
     }
   } catch (error) {
+    historyData.value = [];
+    currentMA.value = null;
+    chartInstance?.clear();
     console.error('Failed to fetch stock history details:', error);
   }
 };
@@ -306,6 +330,16 @@ const renderChart = (data: StockQuoteHistory[]) => {
   const ma20 = calculateMA(20, data).slice(displayStart);
   const ma60 = calculateMA(60, data).slice(displayStart);
   const ma120 = calculateMA(120, data).slice(displayStart);
+  const lastIndex = displayData.length - 1;
+  if (lastIndex >= 0) {
+    currentMA.value = {
+      ma5: ma5[lastIndex] ?? '-',
+      ma10: ma10[lastIndex] ?? '-',
+      ma20: ma20[lastIndex] ?? '-',
+      ma60: ma60[lastIndex] ?? '-',
+      ma120: ma120[lastIndex] ?? '-'
+    };
+  }
   const macd = calculateMACD(data);
   const kdj = calculateKDJ(data);
   const boll = calculateBollingerBands(data);
@@ -351,25 +385,8 @@ const renderChart = (data: StockQuoteHistory[]) => {
   const bollGrid = getSubGridLayout(indicatorVisibility.boll);
   const showMacdDates = indicatorVisibility.macd && !indicatorVisibility.kdj && !indicatorVisibility.boll;
   const showKdjDates = indicatorVisibility.kdj && !indicatorVisibility.boll;
-  const legendData = [
-    'K线', 'MA5', 'MA10', 'MA20', 'MA60', 'MA120',
-    ...(indicatorVisibility.boll ? ['BOLL K线', 'BOLL上轨', 'BOLL中轨', 'BOLL下轨'] : []),
-    ...(indicatorVisibility.macd ? ['MACD', 'DIF', 'DEA'] : []),
-    ...(indicatorVisibility.kdj ? ['K', 'D', 'J'] : [])
-  ];
-
   const option = {
     animation: false,
-    legend: {
-      type: 'scroll',
-      data: legendData,
-      inactiveColor: chartTooltipTheme.mutedTextColor,
-      textStyle: { color: chartTooltipTheme.secondaryTextColor, fontSize: 11 },
-      top: 0,
-      right: '6%',
-      itemWidth: 20,
-      itemHeight: 10
-    },
     tooltip: { 
       show: true,
       trigger: 'axis',
@@ -399,6 +416,11 @@ const renderChart = (data: StockQuoteHistory[]) => {
       formatter: function (params: any) {
         let res = '';
         let date = '';
+        let ma5Value: string | number = '-';
+        let ma10Value: string | number = '-';
+        let ma20Value: string | number = '-';
+        let ma60Value: string | number = '-';
+        let ma120Value: string | number = '-';
         params.forEach((param: any) => {
           if (param.seriesType === 'candlestick' && param.seriesName === 'K线') {
             date = param.name;
@@ -425,12 +447,26 @@ const renderChart = (data: StockQuoteHistory[]) => {
                     </div>`;
           } else if (param.seriesType === 'line') {
             const val = param.value === '-' || param.value === undefined ? '-' : param.value;
+            if (param.seriesName === 'MA5') ma5Value = val;
+            if (param.seriesName === 'MA10') ma10Value = val;
+            if (param.seriesName === 'MA20') ma20Value = val;
+            if (param.seriesName === 'MA60') ma60Value = val;
+            if (param.seriesName === 'MA120') ma120Value = val;
             res += `<div style="display:flex;justify-content:space-between;gap:20px;font-size:11px;color:${chartTooltipTheme.mutedTextColor};margin-bottom:2px;">
                       <span>${param.seriesName}:</span> 
                       <span style="color:${param.color};font-weight:500;">${val}</span>
                     </div>`;
           }
         });
+        if (ma5Value !== '-') {
+          currentMA.value = {
+            ma5: ma5Value,
+            ma10: ma10Value,
+            ma20: ma20Value,
+            ma60: ma60Value,
+            ma120: ma120Value
+          };
+        }
         return `<div style="min-width:140px;padding:4px;">${res}</div>`;
       }
     },
@@ -463,7 +499,7 @@ const renderChart = (data: StockQuoteHistory[]) => {
       {
         left: '3%',
         right: '6%',
-        top: '10%',
+        top: '3%',
         height: mainGridHeight,
         containLabel: true
       },
@@ -500,7 +536,7 @@ const renderChart = (data: StockQuoteHistory[]) => {
       {
         type: 'category',
         data: dates,
-        axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } },
+        axisLine: { lineStyle: { color: '#e2e8f0' } },
         axisLabel: { show: subIndicatorCount === 0, color: '#999', fontSize: 11 }
       },
       {
@@ -516,7 +552,7 @@ const renderChart = (data: StockQuoteHistory[]) => {
         gridIndex: 2,
         data: dates,
         show: indicatorVisibility.macd,
-        axisLine: { show: showMacdDates, lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } },
+        axisLine: { show: showMacdDates, lineStyle: { color: '#e2e8f0' } },
         axisLabel: { show: showMacdDates, color: '#999', fontSize: 10 },
         axisTick: { show: false }
       },
@@ -525,7 +561,7 @@ const renderChart = (data: StockQuoteHistory[]) => {
         gridIndex: 3,
         data: dates,
         show: indicatorVisibility.kdj,
-        axisLine: { show: showKdjDates, lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } },
+        axisLine: { show: showKdjDates, lineStyle: { color: '#e2e8f0' } },
         axisLabel: { show: showKdjDates, color: '#999', fontSize: 10 },
         axisTick: { show: false }
       },
@@ -534,7 +570,7 @@ const renderChart = (data: StockQuoteHistory[]) => {
         gridIndex: 4,
         data: dates,
         show: indicatorVisibility.boll,
-        axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } },
+        axisLine: { lineStyle: { color: '#e2e8f0' } },
         axisLabel: { color: '#999', fontSize: 10 },
         axisTick: { show: false }
       }
@@ -543,18 +579,21 @@ const renderChart = (data: StockQuoteHistory[]) => {
       {
         scale: true,
         position: 'right',
-        splitLine: { lineStyle: { type: 'dashed', color: 'rgba(255, 255, 255, 0.08)' } },
-        axisLabel: { color: '#999', fontSize: 11 }
+        splitLine: { lineStyle: { type: 'dashed', color: '#f1f5f9' } },
+        axisLabel: { color: '#94a3b8', fontSize: 11 }
       },
       {
         scale: true,
         gridIndex: 1,
-        splitNumber: 2,
-        position: 'right',
+        name: '成交量',
+        nameLocation: 'middle',
+        nameGap: 30,
+        nameTextStyle: { color: '#64748b', fontSize: 10 },
+        splitNumber: 3,
         axisLine: { show: false },
         axisLabel: { show: false },
         axisTick: { show: false },
-        splitLine: { show: false }
+        splitLine: { show: true, lineStyle: { type: 'dashed', color: '#e2e8f0' } }
       },
       {
         scale: true,
@@ -562,11 +601,11 @@ const renderChart = (data: StockQuoteHistory[]) => {
         show: indicatorVisibility.macd,
         name: 'MACD',
         nameLocation: 'middle',
-        nameGap: 32,
-        nameTextStyle: { color: '#999', fontSize: 10 },
-        position: 'right',
-        axisLabel: { color: '#999', fontSize: 10 },
-        splitLine: { lineStyle: { type: 'dashed', color: 'rgba(255, 255, 255, 0.08)' } }
+        nameGap: 30,
+        nameTextStyle: { color: '#64748b', fontSize: 10 },
+        axisLabel: { color: '#94a3b8', fontSize: 10 },
+        splitNumber: 3,
+        splitLine: { show: true, lineStyle: { type: 'dashed', color: '#e2e8f0' } }
       },
       {
         scale: true,
@@ -574,11 +613,11 @@ const renderChart = (data: StockQuoteHistory[]) => {
         show: indicatorVisibility.kdj,
         name: 'KDJ',
         nameLocation: 'middle',
-        nameGap: 32,
-        nameTextStyle: { color: '#999', fontSize: 10 },
-        position: 'right',
-        axisLabel: { color: '#999', fontSize: 10 },
-        splitLine: { lineStyle: { type: 'dashed', color: 'rgba(255, 255, 255, 0.08)' } }
+        nameGap: 30,
+        nameTextStyle: { color: '#64748b', fontSize: 10 },
+        axisLabel: { color: '#94a3b8', fontSize: 10 },
+        splitNumber: 3,
+        splitLine: { show: true, lineStyle: { type: 'dashed', color: '#e2e8f0' } }
       },
       {
         scale: true,
@@ -586,11 +625,11 @@ const renderChart = (data: StockQuoteHistory[]) => {
         show: indicatorVisibility.boll,
         name: 'BOLL',
         nameLocation: 'middle',
-        nameGap: 32,
-        nameTextStyle: { color: '#999', fontSize: 10 },
-        position: 'right',
-        axisLabel: { color: '#999', fontSize: 10 },
-        splitLine: { lineStyle: { type: 'dashed', color: 'rgba(255, 255, 255, 0.08)' } }
+        nameGap: 30,
+        nameTextStyle: { color: '#64748b', fontSize: 10 },
+        axisLabel: { color: '#94a3b8', fontSize: 10 },
+        splitNumber: 3,
+        splitLine: { show: true, lineStyle: { type: 'dashed', color: '#e2e8f0' } }
       }
     ],
     series: [
@@ -889,14 +928,25 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 10px 16px;
   margin-bottom: 12px;
 }
 
 .chart-controls-left {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 16px;
+}
+
+.chart-toolbar-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  min-width: 0;
 }
 
 .detail-freq-selector {
@@ -940,7 +990,10 @@ onUnmounted(() => {
 .indicator-switches {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
+  flex-basis: 100%;
+  justify-content: flex-end;
 }
 
 .indicator-switch {
@@ -949,7 +1002,33 @@ onUnmounted(() => {
   gap: 5px;
   color: var(--color-text-secondary);
   font-size: 12px;
+  white-space: nowrap;
 }
+
+.ma-legend-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.ma-label {
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.ma-item {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  font-weight: 500;
+}
+
+.ma-item.ma5 { color: #3B82F6; }
+.ma-item.ma10 { color: #F59E0B; }
+.ma-item.ma20 { color: #EC4899; }
+.ma-item.ma60 { color: #10B981; }
+.ma-item.ma120 { color: #8C8C8C; }
 
 .section-title {
   font-size: 16px;
@@ -962,6 +1041,18 @@ onUnmounted(() => {
   width: 100%;
   background: var(--color-bg-elevated);
   border-radius: 8px;
+}
+
+@media (max-width: 1100px) {
+  .chart-controls,
+  .chart-toolbar-right {
+    align-items: flex-start;
+  }
+
+  .chart-toolbar-right,
+  .indicator-switches {
+    justify-content: flex-start;
+  }
 }
 
 .info-sidebar {
