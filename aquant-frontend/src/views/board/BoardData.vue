@@ -1,5 +1,12 @@
 <template>
   <div class="stock-terminal-layout">
+    <Teleport to="#page-header-extra-left" v-if="isMounted && isFromIndustryAnalysis">
+      <a-button type="text" class="analysis-return-button" @click="handleReturnToIndustryAnalysis">
+        <template #icon><arrow-left-outlined /></template>
+        返回行业涨幅分析
+      </a-button>
+    </Teleport>
+
     <!-- 顶部全局操作区 (传送至卡片外部顶部) -->
     <Teleport to="#page-header-extra" v-if="isMounted">
       <div class="page-header-extra-actions">
@@ -198,14 +205,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { getBoardPage, getStockBoardIndustryLatest, type StockIndustryBoardVO } from '@/api/board';
 import BoardHistoryChart from './components/BoardHistoryChart.vue';
-import { SearchOutlined, SyncOutlined } from '@ant-design/icons-vue';
+import { ArrowLeftOutlined, SearchOutlined, SyncOutlined } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
+import {
+  buildIndustryAnalysisStateQuery,
+  parseIndustryAnalysisViewState
+} from '@/utils/industryAnalysis';
 
 // 挂载状态
 const isMounted = ref(false);
+const route = useRoute();
+const router = useRouter();
+const isFromIndustryAnalysis = computed(() => route.query.from === 'industry-analysis');
 
 // 刷新状态
 const refreshLoading = ref(false);
@@ -276,6 +291,12 @@ const fetchData = async (refresh: boolean = false) => {
       pagination.total = pageResult.totalElements;
 
       if (dataSource.value.length > 0) {
+        const requestedIndustry = typeof route.query.industry === 'string' ? route.query.industry : '';
+        const requestedBoard = dataSource.value.find(board => board.sectorName === requestedIndustry);
+        if (requestedBoard) {
+          selectedBoard.value = requestedBoard;
+          return;
+        }
         if (!selectedBoard.value || !dataSource.value.some(b => b.sectorName === selectedBoard.value?.sectorName)) {
           selectedBoard.value = dataSource.value[0] || null;
         }
@@ -319,10 +340,33 @@ const handleRefresh = async () => {
   }
 };
 
+const handleReturnToIndustryAnalysis = () => {
+  const viewState = parseIndustryAnalysisViewState(route.query as Record<string, unknown>);
+  router.push({
+    path: '/industry-analysis/index',
+    query: {
+      restore: '1',
+      ...(viewState ? buildIndustryAnalysisStateQuery(viewState) : {})
+    }
+  });
+};
+
 onMounted(() => {
   isMounted.value = true;
+  if (typeof route.query.industry === 'string') {
+    searchKeyword.value = route.query.industry;
+  }
   fetchData();
   fetchRefreshTime();
+});
+
+watch(() => route.query.industry, industry => {
+  if (typeof industry !== 'string' || industry === searchKeyword.value) {
+    return;
+  }
+  searchKeyword.value = industry;
+  pagination.current = 1;
+  fetchData();
 });
 </script>
 
@@ -344,6 +388,21 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 12px;
+}
+
+.analysis-return-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 8px;
+  color: #475569;
+  font-size: 13px;
+}
+
+.analysis-return-button:hover {
+  color: #0f172a;
+  background: #f1f5f9;
 }
 
 .refresh-time-text {

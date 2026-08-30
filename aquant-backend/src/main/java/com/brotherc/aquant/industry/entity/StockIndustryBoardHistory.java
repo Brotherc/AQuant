@@ -11,7 +11,10 @@ import java.time.LocalDateTime;
  */
 @Data
 @Entity
-@Table(name = "stock_industry_board_history")
+@Table(name = "stock_industry_board_history", indexes = {
+        @Index(name = "idx_industry_history_trade_date", columnList = "trade_date"),
+        @Index(name = "idx_industry_history_sector_date", columnList = "sector_name, trade_date")
+})
 public class StockIndustryBoardHistory {
 
     @Id
@@ -47,6 +50,18 @@ public class StockIndustryBoardHistory {
      */
     @Column(name = "close_price")
     private BigDecimal closePrice;
+
+    /**
+     * 涨跌额
+     */
+    @Column(name = "change_amount")
+    private BigDecimal changeAmount;
+
+    /**
+     * 涨跌幅（百分比）
+     */
+    @Column(name = "change_percent")
+    private BigDecimal changePercent;
 
     /**
      * 成交量

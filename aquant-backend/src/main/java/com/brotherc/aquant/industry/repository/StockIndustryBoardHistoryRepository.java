@@ -22,6 +22,23 @@ public interface StockIndustryBoardHistoryRepository extends JpaRepository<Stock
 
     List<StockIndustryBoardHistory> findByTradeDateBetween(String startTradeDate, String endTradeDate);
 
+    List<StockIndustryBoardHistory> findAllByOrderBySectorNameAscTradeDateAsc();
+
+    List<StockIndustryBoardHistory> findByTradeDateBetweenOrderByTradeDateAscSectorNameAsc(String startTradeDate,
+                                                                                           String endTradeDate);
+
+    @Query("select h from StockIndustryBoardHistory h where h.tradeDate = (" +
+            "select max(p.tradeDate) from StockIndustryBoardHistory p " +
+            "where p.sectorName = h.sectorName and p.tradeDate < :startDate) " +
+            "order by h.sectorName asc")
+    List<StockIndustryBoardHistory> findLatestBeforeTradeDateForEachSector(@Param("startDate") String startDate);
+
+    @Query("select count(h) from StockIndustryBoardHistory h " +
+            "where h.changePercent is null and h.closePrice is not null and exists (" +
+            "select p.id from StockIndustryBoardHistory p where p.sectorName = h.sectorName " +
+            "and p.tradeDate < h.tradeDate and p.closePrice is not null)")
+    long countCalculableMissingChangeMetrics();
+
     @Query("select max(s.tradeDate) from StockIndustryBoardHistory s")
     String findMaxTradeDate();
 

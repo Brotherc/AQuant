@@ -40,6 +40,14 @@ export interface StockIndustryBoardHistory {
     createTime: string;
 }
 
+export interface IndustryRiseAnalysisPoint {
+    tradeDate: string;
+    sectorName: string;
+    rank: number;
+    changePercent: number | null;
+    changeAmount: number | null;
+}
+
 import api from '@/utils/request';
 
 export const getBoardPage = (params: StockIndustryBoardPageReqVO & { page: number; size: number; sort?: string[] }) => {
@@ -53,6 +61,13 @@ export const getBoardPage = (params: StockIndustryBoardPageReqVO & { page: numbe
 
 export const getBoardHistory = (params: { boardCode: string; frequency?: string }) => {
     return api.get<ResponseDTO<StockIndustryBoardHistory[]>>('/stockIndustryBoard/history/kline', { params });
+};
+
+export const getIndustryRiseAnalysis = (params: { startDate: string; endDate: string; rankLimit?: number }) => {
+    return api.get<ResponseDTO<IndustryRiseAnalysisPoint[]>>('/stockIndustryBoard/analysis', {
+        params,
+        timeout: 60000
+    });
 };
 
 export const getStockBoardIndustryLatest = () => {

@@ -12,6 +12,7 @@ import com.brotherc.aquant.stock.model.dto.FundHoldingSyncWindow;
 import com.brotherc.aquant.fund.repository.StockFundInfoRepository;
 import com.brotherc.aquant.industry.repository.StockIndustryBoardHistoryRepository;
 import com.brotherc.aquant.industry.repository.StockIndustryBoardRepository;
+import com.brotherc.aquant.industry.service.StockIndustryBoardHistoryService;
 import com.brotherc.aquant.stock.repository.StockQuoteHistoryRepository;
 import com.brotherc.aquant.stock.repository.StockQuoteRepository;
 import com.brotherc.aquant.sync.repository.StockSyncRepository;
@@ -81,6 +82,7 @@ public class StockSyncTask {
     private final StockGrowthMetricsService stockGrowthMetricsService;
     private final StockShareChangeService stockShareChangeService;
     private final StockIndexService stockIndexService;
+    private final StockIndustryBoardHistoryService stockIndustryBoardHistoryService;
 
     private final StockSyncRepository stockSyncRepository;
     private final StockQuoteRepository stockQuoteRepository;
@@ -501,6 +503,10 @@ public class StockSyncTask {
         }
 
         backfillMissingStockBoardHistory(localHistoryTargets, latestClosedTradeDay, now);
+        int backfilledChangeMetrics = stockIndustryBoardHistoryService.backfillMissingChangeMetrics();
+        if (backfilledChangeMetrics > 0) {
+            log.info("行业历史涨跌指标回补完成，更新记录数={}", backfilledChangeMetrics);
+        }
     }
 
     private boolean shouldRefreshLatestBoard(StockSync stockSync, LocalDateTime now) {
