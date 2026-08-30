@@ -54,12 +54,24 @@ public class StockGrowthMetricsService {
     private final StockWatchlistStockRepository watchlistStockRepository;
 
     public Page<StockGrowthMetrics> pageQuery(GrowthMetricsPageReqVO reqVO, Pageable pageable, Long userId) {
-        if (pageable.getSort().isUnsorted()) {
-            // 默认按成长评分降序排序
-            int page = pageable.getPageNumber();
-            int size = pageable.getPageSize();
-            pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "growthScore"));
+        List<Sort.Order> orders = pageable.getSort().stream().collect(Collectors.toCollection(ArrayList::new));
+        if (orders.isEmpty()) {
+            orders.add(Sort.Order.desc("growthScore"));
         }
+        Set<String> sortedProperties = orders.stream()
+                .map(Sort.Order::getProperty)
+                .collect(Collectors.toSet());
+        List<Sort.Order> fallbackOrders = List.of(
+                Sort.Order.desc("growthScore"),
+                Sort.Order.desc("revenueGrowthTtm"),
+                Sort.Order.desc("netProfitGrowthTtm"),
+                Sort.Order.desc("epsGrowthTtm"),
+                Sort.Order.asc("stockCode")
+        );
+        fallbackOrders.stream()
+                .filter(order -> !sortedProperties.contains(order.getProperty()))
+                .forEach(orders::add);
+        pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(orders));
 
         Specification<StockGrowthMetrics> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
