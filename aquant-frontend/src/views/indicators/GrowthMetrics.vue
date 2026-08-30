@@ -119,7 +119,7 @@
                   placeholder="基本每股收益增长率 (TTM)"
                   allow-clear
                   @change="handleEpsRangeChange"
-                  style="width: 195px"
+                  style="width: 215px"
                 >
                   <a-select-option value="G50">&gt; 50%</a-select-option>
                   <a-select-option value="20_50">20% ~ 50%</a-select-option>
@@ -282,7 +282,7 @@
             <div class="detail-section">
               <div class="detail-section__header">
                 <div class="detail-section__title-group">
-                  <span class="detail-section__title">成长评分</span>
+                  <span class="detail-section__title">评分</span>
                   <a-tooltip placement="topLeft" :overlayStyle="{ maxWidth: '480px' }">
                     <template #title>
                       <div class="score-rule-tip">
