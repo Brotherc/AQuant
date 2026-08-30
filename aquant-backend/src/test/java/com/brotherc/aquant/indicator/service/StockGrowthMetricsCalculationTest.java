@@ -55,13 +55,12 @@ class StockGrowthMetricsCalculationTest {
         StockPerformanceReport pr1_2023 = createPR("600519", "贵州茅台", "2023-12-31", "白酒", "500", "1000", "3.5");
         StockPerformanceReport pr1_2022 = createPR("600519", "贵州茅台", "2022-12-31", "白酒", "350", "700", "2.5");
 
-        // 茅台 季报数据用于 TTM 计算 (2026-03-31 最新季报):
+        // 茅台 季报数据用于验证报告期覆盖率：只有1/2股票披露2026Q1，因此统一退回2025年报。
         // 2026-03-31: 营收=400, 净利=200, EPS=1.5
         // 2025-03-31: 营收=350, 净利=175, EPS=1.2
         // 2024-03-31: 营收=300, 净利=150, EPS=1.0
         // TTM (2026-03-31) = 2026Q1(400) + 2025年报(1400) - 2025Q1(350) = 1450 (净利: 200+700-175 = 725, EPS: 1.5+5.0-1.2 = 5.3)
         // Prev TTM (2025-03-31) = 2025Q1(350) + 2024年报(1200) - 2024Q1(300) = 1250 (净利: 175+600-150 = 625, EPS: 1.2+4.0-1.0 = 4.2)
-        // TTM 增长率: 营收 (1450-1250)/1250 = 16.0%, 净利 (725-625)/625 = 16.0%, EPS (5.3-4.2)/4.2 = 26.1905%
         StockPerformanceReport pr1_2026Q1 = createPR("600519", "贵州茅台", "2026-03-31", "白酒", "200", "400", "1.5");
         StockPerformanceReport pr1_2025Q1 = createPR("600519", "贵州茅台", "2025-03-31", "白酒", "175", "350", "1.2");
         StockPerformanceReport pr1_2024Q1 = createPR("600519", "贵州茅台", "2024-03-31", "白酒", "150", "300", "1.0");
@@ -101,10 +100,10 @@ class StockGrowthMetricsCalculationTest {
         assertThat(moutai.getNetProfitGrowthLastYA()).isEqualByComparingTo("16.6667");
         assertThat(moutai.getEpsGrowthLastYA()).isEqualByComparingTo("25.0000");
 
-        // 茅台 TTM 增长率
-        assertThat(moutai.getRevenueGrowthTtm()).isEqualByComparingTo("16.0000");
-        assertThat(moutai.getNetProfitGrowthTtm()).isEqualByComparingTo("16.0000");
-        assertThat(moutai.getEpsGrowthTtm()).isEqualByComparingTo("26.1905");
+        // 统一使用2025年报口径计算TTM增长率，不与披露覆盖率不足的2026Q1混用。
+        assertThat(moutai.getRevenueGrowthTtm()).isEqualByComparingTo("16.6667");
+        assertThat(moutai.getNetProfitGrowthTtm()).isEqualByComparingTo("16.6667");
+        assertThat(moutai.getEpsGrowthTtm()).isEqualByComparingTo("25.0000");
 
         // 茅台 3年复合增长率 (CAGR)
         assertThat(moutai.getEpsGrowth3yCagr()).isEqualByComparingTo("25.9921");
@@ -115,6 +114,8 @@ class StockGrowthMetricsCalculationTest {
         assertThat(moutai.getEpsGrowthLastYAIndustryAvg()).isNotNull();
         assertThat(moutai.getEpsGrowthLastYAIndustryMed()).isNotNull();
         assertThat(moutai.getEpsGrowth3yCagrRank()).isNotNull();
+        assertThat(moutai.getGrowthScore()).isEqualByComparingTo("83");
+        assertThat(moutai.getGrowthLevel()).isEqualTo("优秀");
     }
 
     @Test
@@ -143,9 +144,36 @@ class StockGrowthMetricsCalculationTest {
 
         // 2024 营收为 0，去年实际营收增长率分母为 0，安全返回 null
         assertThat(bank.getRevenueGrowthLastYA()).isNull();
+        assertThat(bank.getRevenueGrowthLast2yA()).isNull();
         // 基期为负数，3年 CAGR 应安全返回 null
         assertThat(bank.getNetProfitGrowth3yCagr()).isNull();
         assertThat(bank.getEpsGrowth3yCagr()).isNull();
+        assertThat(bank.getGrowthScore()).isNull();
+        assertThat(bank.getGrowthLevel()).isEqualTo("数据不足");
+    }
+
+    @Test
+    @DisplayName("Should rate zero growth as weak instead of good")
+    void shouldNotRewardZeroGrowth() {
+        StockQuote quote = createQuote("sh600001", "零增长公司");
+        List<StockPerformanceReport> reports = List.of(
+                createPR("600001", "零增长公司", "2025-12-31", "测试行业", "100", "500", "1.0"),
+                createPR("600001", "零增长公司", "2024-12-31", "测试行业", "100", "500", "1.0"),
+                createPR("600001", "零增长公司", "2023-12-31", "测试行业", "100", "500", "1.0"),
+                createPR("600001", "零增长公司", "2022-12-31", "测试行业", "100", "500", "1.0")
+        );
+        when(stockQuoteRepository.findAll()).thenReturn(List.of(quote));
+        when(stockPerformanceReportRepository.findAll()).thenReturn(reports);
+        when(stockGrowthMetricsRepository.findAll()).thenReturn(List.of());
+
+        stockGrowthMetricsService.refreshGrowthMetrics();
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<StockGrowthMetrics>> captor = ArgumentCaptor.forClass(List.class);
+        verify(stockGrowthMetricsRepository).saveAll(captor.capture());
+        StockGrowthMetrics result = captor.getValue().get(0);
+        assertThat(result.getGrowthScore()).isEqualByComparingTo("17");
+        assertThat(result.getGrowthLevel()).isEqualTo("较弱");
     }
 
     private StockQuote createQuote(String code, String name) {

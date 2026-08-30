@@ -15,7 +15,7 @@
                 <span class="overview-card__value">{{ overviewData.highGrowthOpportunityCount }}</span>
                 <span class="overview-card__unit">家</span>
               </div>
-              <div class="overview-card__subtext">优于行业中位数20%以上</div>
+              <div class="overview-card__subtext">成长评分 ≥ 80</div>
             </div>
           </div>
 
@@ -58,7 +58,7 @@
                 <span class="overview-card__value">{{ overviewData.watchlistHighGrowthCount }}</span>
                 <span class="overview-card__unit">支</span>
               </div>
-              <div class="overview-card__subtext">优于行业中位数20%以上</div>
+              <div class="overview-card__subtext">自选中成长评分 ≥ 80</div>
             </div>
           </div>
         </div>
@@ -239,7 +239,7 @@
               <template v-else-if="column.key === 'growthScore'">
                 <div class="score-cell">
                   <span class="score-num" :class="getScoreColorClass(record.growthScore)">
-                    {{ Math.round(Number(record.growthScore || 0)) }}
+                    {{ formatGrowthScore(record.growthScore) }}
                   </span>
                   <span
                     class="quality-badge"
@@ -287,9 +287,10 @@
                     <template #title>
                       <div class="score-rule-tip">
                         <div class="score-rule-tip__title">成长评分规则</div>
-                        <div>基准分50分；</div>
-                        <div>综合基本每股收益增长率(TTM)、营收增长率(TTM)、净利增长率(TTM)加减分；</div>
-                        <div>跑赢行业中位数及3年复合CAGR稳健分别加成；</div>
+                        <div>核心TTM及连续年度数据完整时才进行评分。</div>
+                        <div>短期增长55分：营收25分、净利润20分、EPS 10分。</div>
+                        <div>长期增长30分；行业相对表现10分；近三年增长持续性5分。</div>
+                        <div>零增长仅获得低基础分；负增长、长期盈利不可持续时限制最高等级。</div>
                         <div>优秀≥80，良好65-79，中等50-64，较弱&lt;50。</div>
                       </div>
                     </template>
@@ -305,7 +306,7 @@
               
               <div class="quality-position-card">
                 <div class="quality-score-display">
-                  <span class="quality-score-num">{{ Math.round(Number(selectedStock.growthScore || 0)) }}</span>
+                  <span class="quality-score-num">{{ formatGrowthScore(selectedStock.growthScore) }}</span>
                   <span class="quality-score-tag" :class="getQualityBadgeClass(selectedStock.growthScore, selectedStock.growthLevel)">
                     {{ selectedStock.growthLevel || getQualityLevelText(selectedStock.growthScore) }}
                   </span>
@@ -722,7 +723,8 @@ const getBarWidth = (val: any, maxScale: number) => {
 };
 
 const getQualityBadgeClass = (score: any, level?: string) => {
-  const s = Number(score || 0);
+  if (level === '数据不足' || score == null || score === '') return 'quality-badge--insufficient';
+  const s = Number(score);
   if (level === '优秀' || s >= 80) return 'quality-badge--excellent';
   if (level === '良好' || s >= 65) return 'quality-badge--good';
   if (level === '中等' || s >= 50) return 'quality-badge--mid';
@@ -730,7 +732,8 @@ const getQualityBadgeClass = (score: any, level?: string) => {
 };
 
 const getQualityLevelText = (score: any) => {
-  const s = Number(score || 0);
+  if (score == null || score === '') return '数据不足';
+  const s = Number(score);
   if (s >= 80) return '优秀';
   if (s >= 65) return '良好';
   if (s >= 50) return '中等';
@@ -738,17 +741,26 @@ const getQualityLevelText = (score: any) => {
 };
 
 const getScoreColorClass = (score: any) => {
-  const s = Number(score || 0);
-  if (s >= 80) return 'text-emerald font-semibold';
-  if (s >= 65) return 'text-blue font-semibold';
-  if (s >= 50) return 'text-amber font-semibold';
-  return 'text-rose font-semibold';
+  if (score == null || score === '') return 'score-num--insufficient';
+  const s = Number(score);
+  if (s >= 80) return 'score-num--high';
+  if (s >= 50) return 'score-num--mid';
+  return 'score-num--low';
+};
+
+const formatGrowthScore = (score: any) => {
+  if (score == null || score === '') return '-';
+  const value = Number(score);
+  return Number.isFinite(value) ? Math.round(value) : '-';
 };
 
 const getGrowthAdvice = (stock: StockGrowthMetrics) => {
-  const s = Number(stock.growthScore || 0);
+  if (stock.growthScore == null) {
+    return '统一报告期或连续年度数据不足，暂时无法评价成长质量。';
+  }
+  const s = Number(stock.growthScore);
   if (s >= 80) {
-    return '当前成长质量优于全行业 80% 以上的公司，具备持续扩张动力与较强护城河。';
+    return '短期与长期增长表现较强，且增长持续性较好。';
   } else if (s >= 65) {
     return '公司成长性良好，营收与净利润保持稳健扩张，基本面呈现良好改善态势。';
   } else if (s >= 50) {
@@ -1348,6 +1360,10 @@ onMounted(() => {
   color: #f43f5e;
 }
 
+.score-num--insufficient {
+  color: #94a3b8;
+}
+
 .quality-badge {
   display: inline-block;
   padding: 2px 6px;
@@ -1380,6 +1396,11 @@ onMounted(() => {
 .quality-badge--poor {
   background: #fef2f2;
   color: #dc2626;
+}
+
+.quality-badge--insufficient {
+  background: #f1f5f9;
+  color: #64748b;
 }
 
 .conclusion-text {

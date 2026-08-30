@@ -228,7 +228,7 @@ export interface StockGrowthMetrics {
     stockCode: string;
     stockName: string;
     industry?: string;
-    growthScore?: number;
+    growthScore?: number | null;
     growthLevel?: string;
     conclusion?: string;
 
