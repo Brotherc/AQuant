@@ -15,7 +15,7 @@ import java.math.BigDecimal;
 @Schema(description = "杜邦分析顶部概览统计数据")
 public class DupontOverviewVO {
 
-    @Schema(description = "高质量ROE标的数量（ROE>15% 且 质量评分≥75）")
+    @Schema(description = "高质量ROE标的数量（ROE≥15% 且 质量评分≥75）")
     private Long highQualityCount;
 
     @Schema(description = "全市场/行业ROE加权中位数")

@@ -580,8 +580,8 @@ const pendingStockToAdd = ref<StockGrowthMetrics | null>(null);
 
 // 表格列定义
 const columns: TableProps['columns'] = [
-  { title: '股票', key: 'stock', width: 160 },
-  { title: '行业', key: 'industry', width: 90, align: 'center' },
+  { title: '股票', key: 'stock', width: 130 },
+  { title: '行业', key: 'industry', width: 125, align: 'center' },
   { title: 'EPS 增长 (TTM)', dataIndex: 'epsGrowthTtm', sorter: true, width: 130, align: 'right' },
   { title: '营收增长 (TTM)', dataIndex: 'revenueGrowthTtm', sorter: true, width: 130, align: 'right' },
   { title: '净利增长 (TTM)', dataIndex: 'netProfitGrowthTtm', sorter: true, width: 130, align: 'right' },

@@ -595,7 +595,7 @@ const pagination = reactive({
 // 表格列定义（支持表头原生排序）
 const columns = computed<TableProps['columns']>(() => [
   { title: '股票', dataIndex: 'stockName', width: 130 },
-  { title: '行业', dataIndex: 'industry', width: 95 },
+  { title: '行业', dataIndex: 'industry', width: 125 },
   { title: 'PE (TTM)', dataIndex: 'peTtm', width: 110, align: 'right', sorter: true },
   { title: 'PB (MRQ)', dataIndex: 'pbMrq', width: 110, align: 'right', sorter: true },
   { title: 'PS (TTM)', dataIndex: 'psTtm', width: 110, align: 'right', sorter: true },

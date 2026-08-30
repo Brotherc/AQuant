@@ -55,7 +55,7 @@ export interface StockDupontAnalysis {
     equityMultiplierLastYAIndustryAvg: number;
     roe3yAvgRank: number;
     industry?: string;
-    qualityScore?: number;
+    qualityScore?: number | null;
     qualityLevel?: string;
     conclusion?: string;
 

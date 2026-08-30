@@ -15,7 +15,7 @@
               <span class="overview-card__value">{{ overviewData.highQualityCount }}</span>
               <span class="overview-card__unit">家</span>
             </div>
-            <div class="overview-card__subtext">ROE &gt; 15% 且 质量评分 ≥ 75</div>
+            <div class="overview-card__subtext">ROE ≥ 15% 且 质量评分 ≥ 75</div>
           </div>
         </div>
 
@@ -59,7 +59,7 @@
               <span class="overview-card__value">{{ overviewData.leverageWarningCount }}</span>
               <span class="overview-card__unit">家</span>
             </div>
-            <div class="overview-card__subtext">权益乘数 &gt; 2.5</div>
+            <div class="overview-card__subtext">权益乘数超过行业合理区间</div>
           </div>
         </div>
       </div>
@@ -142,6 +142,7 @@
                 <a-select-option value="良好">良好 (65~79)</a-select-option>
                 <a-select-option value="中等">中等 (50~64)</a-select-option>
                 <a-select-option value="较差">较差 (&lt;50)</a-select-option>
+                <a-select-option value="数据不足">数据不足</a-select-option>
               </a-select>
             </div>
 
@@ -208,7 +209,7 @@
               <template v-else-if="column.dataIndex === 'qualityScore'">
                 <div class="score-cell">
                   <span class="score-num" :class="getScoreColorClass(record.qualityScore)">
-                    {{ Math.round(Number(record.qualityScore || 0)) }}
+                    {{ formatQualityScore(record.qualityScore) }}
                   </span>
                   <span
                     class="quality-badge"
@@ -254,7 +255,7 @@
               
               <div class="quality-position-card">
                 <div class="quality-score-display">
-                  <span class="quality-score-num">{{ Math.round(Number(selectedStock.qualityScore || 0)) }}</span>
+                  <span class="quality-score-num">{{ formatQualityScore(selectedStock.qualityScore) }}</span>
                   <span class="quality-score-tag" :class="getQualityBadgeClass(selectedStock.qualityScore, selectedStock.qualityLevel)">
                     {{ selectedStock.qualityLevel || getQualityLevelText(selectedStock.qualityScore) }}
                   </span>
@@ -265,19 +266,20 @@
                   <div class="scale-segment scale-segment--poor" title="较差 <50">
                     <span class="segment-label">较差 &lt;50</span>
                   </div>
-                  <div class="scale-segment scale-segment--mid" title="一般 50-65">
-                    <span class="segment-label">一般 50-65</span>
+                  <div class="scale-segment scale-segment--mid" title="中等 50-64">
+                    <span class="segment-label">中等 50-64</span>
                   </div>
-                  <div class="scale-segment scale-segment--good" title="良好 65-80">
-                    <span class="segment-label">良好 65-80</span>
+                  <div class="scale-segment scale-segment--good" title="良好 65-79">
+                    <span class="segment-label">良好 65-79</span>
                   </div>
-                  <div class="scale-segment scale-segment--excellent" title="优秀 &gt;80">
-                    <span class="segment-label">优秀 &gt;80</span>
+                  <div class="scale-segment scale-segment--excellent" title="优秀 ≥80">
+                    <span class="segment-label">优秀 ≥80</span>
                   </div>
                   <!-- 刻度指示小游标 -->
                   <div
+                    v-if="selectedStock.qualityScore != null"
                     class="scale-indicator-cursor"
-                    :style="{ left: `${Math.min(100, Math.max(0, Number(selectedStock.qualityScore || 0)))}%` }"
+                    :style="{ left: `${Math.min(100, Math.max(0, Number(selectedStock.qualityScore)))}%` }"
                   ></div>
                 </div>
               </div>
@@ -653,7 +655,8 @@ const formatEquityMultiplier = (val: any) => {
 
 // 质量等级与样式
 const getQualityLevelText = (score: any) => {
-  const s = Number(score || 0);
+  if (score == null || score === '') return '数据不足';
+  const s = Number(score);
   if (s >= 80) return '优秀';
   if (s >= 65) return '良好';
   if (s >= 50) return '中等';
@@ -661,7 +664,8 @@ const getQualityLevelText = (score: any) => {
 };
 
 const getQualityBadgeClass = (score: any, level?: string) => {
-  const s = Number(score || 0);
+  if (level === '数据不足' || score == null || score === '') return 'quality-badge--insufficient';
+  const s = Number(score);
   if (level === '优秀' || s >= 80) return 'quality-badge--excellent';
   if (level === '良好' || s >= 65) return 'quality-badge--good';
   if (level === '中等' || s >= 50) return 'quality-badge--mid';
@@ -669,10 +673,17 @@ const getQualityBadgeClass = (score: any, level?: string) => {
 };
 
 const getScoreColorClass = (score: any) => {
-  const s = Number(score || 0);
+  if (score == null || score === '') return 'score-num--insufficient';
+  const s = Number(score);
   if (s >= 65) return 'score-num--high';
   if (s >= 50) return 'score-num--mid';
   return 'score-num--low';
+};
+
+const formatQualityScore = (score: any) => {
+  if (score == null || score === '') return '-';
+  const value = Number(score);
+  return Number.isFinite(value) ? Math.round(value) : '-';
 };
 
 // 动态计算快照年份
@@ -769,6 +780,8 @@ const getInterpretationPoints = (stock: StockDupontAnalysis) => {
   const turnover = Number(stock.assetTurnover3yAvg || 0);
   const turnoverMed = Number(stock.assetTurnover3yAvgIndustryMed || 0);
   const em = Number(stock.equityMultiplier3yAvg || 0);
+  const emMed = Number(stock.equityMultiplier3yAvgIndustryMed || 0);
+  const financialIndustry = /银行|保险|证券|多元金融|金融服务/.test(stock.industry || '');
 
   // 1. 盈利能力
   if (margin > marginMed && margin > 10) {
@@ -807,7 +820,23 @@ const getInterpretationPoints = (stock: StockDupontAnalysis) => {
   }
 
   // 3. 财务杠杆
-  if (em <= 2.2 && em >= 1.2) {
+  if (financialIndustry) {
+    const relativeLeverage = emMed > 0 ? em / emMed : null;
+    const isHighLeverage = relativeLeverage != null ? relativeLeverage > 1.8 : em > 25;
+    if (isHighLeverage) {
+      points.push({
+        title: '杠杆高于行业',
+        desc: `权益乘数为 ${em.toFixed(2)} 倍，明显高于金融行业合理区间，需关注资本充足与风险资产质量。`
+      });
+    } else {
+      points.push({
+        title: '杠杆符合行业特征',
+        desc: emMed > 0
+          ? `权益乘数为 ${em.toFixed(2)} 倍，接近行业中值 ${emMed.toFixed(2)} 倍，杠杆水平处于合理区间。`
+          : `权益乘数为 ${em.toFixed(2)} 倍，处于金融行业常见杠杆区间。`
+      });
+    }
+  } else if (em <= 2.2 && em >= 1.2) {
     points.push({
       title: '财务杠杆稳健',
       desc: `权益乘数为 ${em.toFixed(2)} 倍，处于健康黄金杠杆区间，资产负债结构安全可控。`
@@ -1314,6 +1343,10 @@ onMounted(() => {
   color: #f43f5e;
 }
 
+.score-num--insufficient {
+  color: #94a3b8;
+}
+
 .quality-badge {
   display: inline-block;
   padding: 2px 6px;
@@ -1340,6 +1373,11 @@ onMounted(() => {
 .quality-badge--poor {
   background: #fef2f2;
   color: #dc2626;
+}
+
+.quality-badge--insufficient {
+  color: #64748b;
+  background: #f1f5f9;
 }
 
 .conclusion-text {
