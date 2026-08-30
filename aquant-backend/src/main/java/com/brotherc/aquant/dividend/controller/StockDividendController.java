@@ -1,6 +1,7 @@
 package com.brotherc.aquant.dividend.controller;
 
 import com.brotherc.aquant.common.model.dto.ResponseDTO;
+import com.brotherc.aquant.dividend.model.vo.DividendOverviewVO;
 import com.brotherc.aquant.dividend.model.vo.StockDividendDetailReqVO;
 import com.brotherc.aquant.dividend.model.vo.StockDividendDetailVO;
 import com.brotherc.aquant.dividend.model.vo.StockDividendStatPageReqVO;
@@ -16,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -28,6 +30,13 @@ import java.util.List;
 public class StockDividendController {
 
     private final StockDividendService stockDividendService;
+
+    @Operation(summary = "获取分红概览看板数据")
+    @GetMapping("/overview")
+    public ResponseDTO<DividendOverviewVO> getOverview(
+            @RequestParam(value = "watchlistGroupId", required = false) Long watchlistGroupId) {
+        return ResponseDTO.success(stockDividendService.getOverview(watchlistGroupId));
+    }
 
     @Operation(summary = "分页查询股票分红数据")
     @GetMapping("/page")

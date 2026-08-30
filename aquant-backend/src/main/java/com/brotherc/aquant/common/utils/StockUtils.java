@@ -194,6 +194,9 @@ public class StockUtils {
 
     public static BigDecimal toAmount(String value, String unit) {
         BigDecimal amount = new BigDecimal(value.replace(",", ""));
+        if ("亿".equals(unit)) {
+            return amount.multiply(BigDecimal.valueOf(100000000));
+        }
         return "万".equals(unit) ? amount.multiply(BigDecimal.valueOf(10000)) : amount;
     }
 

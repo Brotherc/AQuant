@@ -18,6 +18,8 @@ import com.brotherc.aquant.watchlist.repository.StockWatchlistGroupRepository;
 import com.brotherc.aquant.watchlist.repository.StockWatchlistStockRepository;
 import com.brotherc.aquant.common.utils.StockUtils;
 import com.brotherc.aquant.common.utils.UserContext;
+import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +39,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -47,7 +50,9 @@ public class StockDupontAnalysisService {
     private static final String ROE_3Y_AVG = "roe3yAvg";
     private static final BigDecimal ONE_HUNDRED = new BigDecimal("100");
     private static final BigDecimal TWO = new BigDecimal("2");
+    private static final BigDecimal THREE = new BigDecimal("3");
     private static final int SCALE = 4;
+    private static final double MIN_ANNUAL_REPORT_COVERAGE = 0.8;
 
     private final StockDupontAnalysisRepository stockDupontAnalysisRepository;
     private final StockQuoteRepository stockQuoteRepository;
@@ -98,12 +103,40 @@ public class StockDupontAnalysisService {
                             predicates.add(cb.ge(root.get("qualityScore"), new BigDecimal("75")));
                         }
                         case "HIGH_LEVERAGE" -> {
-                            predicates.add(cb.ge(root.get("equityMultiplier3yAvg"), new BigDecimal("2.5")));
+                            Path<String> industry = root.get("industry");
+                            Expression<BigDecimal> equityMultiplier = root.get("equityMultiplier3yAvg");
+                            Expression<BigDecimal> industryMedian = root.get("equityMultiplier3yAvgIndustryMed");
+                            Predicate financial = buildFinancialIndustryPredicate(cb, industry);
+                            Predicate financialHighLeverage = cb.and(financial, cb.or(
+                                    cb.and(cb.isNotNull(industryMedian),
+                                            cb.gt(equityMultiplier, cb.prod(industryMedian, new BigDecimal("1.8")))),
+                                    cb.and(cb.isNull(industryMedian),
+                                            cb.gt(equityMultiplier, new BigDecimal("25")))
+                            ));
+                            Predicate nonFinancialHighLeverage = cb.and(
+                                    cb.or(cb.isNull(industry), cb.not(financial)),
+                                    cb.gt(equityMultiplier, new BigDecimal("2.5"))
+                            );
+                            predicates.add(cb.or(financialHighLeverage, nonFinancialHighLeverage));
                         }
                         case "STABLE_PROFIT" -> {
                             predicates.add(cb.ge(root.get(ROE_3Y_AVG), new BigDecimal("10")));
                             predicates.add(cb.ge(root.get("netMargin3yAvg"), new BigDecimal("5")));
-                            predicates.add(cb.le(root.get("equityMultiplier3yAvg"), new BigDecimal("2.0")));
+                            Path<String> industry = root.get("industry");
+                            Expression<BigDecimal> equityMultiplier = root.get("equityMultiplier3yAvg");
+                            Expression<BigDecimal> industryMedian = root.get("equityMultiplier3yAvgIndustryMed");
+                            Predicate financial = buildFinancialIndustryPredicate(cb, industry);
+                            Predicate financialStable = cb.and(financial, cb.or(
+                                    cb.and(cb.isNotNull(industryMedian),
+                                            cb.le(equityMultiplier, cb.prod(industryMedian, new BigDecimal("1.3")))),
+                                    cb.and(cb.isNull(industryMedian),
+                                            cb.le(equityMultiplier, new BigDecimal("18")))
+                            ));
+                            Predicate nonFinancialStable = cb.and(
+                                    cb.or(cb.isNull(industry), cb.not(financial)),
+                                    cb.le(equityMultiplier, new BigDecimal("2.2"))
+                            );
+                            predicates.add(cb.or(financialStable, nonFinancialStable));
                         }
                         case "WATCHLIST" -> {
                             Long userId = UserContext.getCurrentUserId();
@@ -171,7 +204,10 @@ public class StockDupontAnalysisService {
         long leverageWarningCount = list.stream()
                 .filter(item -> {
                     BigDecimal em = item.getEquityMultiplier3yAvg() != null ? item.getEquityMultiplier3yAvg() : item.getEquityMultiplierLastYA();
-                    return em != null && em.compareTo(new BigDecimal("2.5")) > 0;
+                    if (em == null) return false;
+                    return isFinancialIndustry(item.getIndustry())
+                            ? isExtremeFinancialLeverage(em, item.getEquityMultiplier3yAvgIndustryMed())
+                            : em.compareTo(new BigDecimal("2.5")) > 0;
                 })
                 .count();
 
@@ -279,7 +315,7 @@ public class StockDupontAnalysisService {
         }
 
         // 获取最近 3 个年报年份（降序：yearLast1 > yearLast2 > yearLast3）
-        List<Integer> years = getLatestThreeAnnualYears(performanceReports, balanceSheets);
+        List<Integer> years = getLatestThreeAnnualYears(performanceReports, balanceSheets, stockQuotes);
         if (years.isEmpty()) {
             log.warn("未找到有效的历史年报报告期（12-31），跳过杜邦分析计算。");
             return List.of();
@@ -321,27 +357,31 @@ public class StockDupontAnalysisService {
             item.setStockName(quote.getName());
 
             // 计算去年 (yearLast1) 指标
-            calculateYearMetrics(item, prYears.get(yearLast1), bsYears.get(yearLast1), 1);
+            calculateYearMetrics(item, prYears.get(yearLast1), bsYears.get(yearLast1), bsYears.get(yearLast1 - 1), 1);
             // 计算2年前 (yearLast2) 指标
             if (yearLast2 != null) {
-                calculateYearMetrics(item, prYears.get(yearLast2), bsYears.get(yearLast2), 2);
+                calculateYearMetrics(item, prYears.get(yearLast2), bsYears.get(yearLast2), bsYears.get(yearLast2 - 1), 2);
             }
             // 计算3年前 (yearLast3) 指标
             if (yearLast3 != null) {
-                calculateYearMetrics(item, prYears.get(yearLast3), bsYears.get(yearLast3), 3);
+                calculateYearMetrics(item, prYears.get(yearLast3), bsYears.get(yearLast3), bsYears.get(yearLast3 - 1), 3);
             }
 
-            // 计算 3 年平均指标
-            item.setRoe3yAvg(calculateAverage(item.getRoeLastYA(), item.getRoeLast2yA(), item.getRoeLast3yA()));
-            item.setNetMargin3yAvg(calculateAverage(item.getNetMarginLastYA(), item.getNetMarginLast2yA(), item.getNetMarginLast3yA()));
-            item.setAssetTurnover3yAvg(calculateAverage(item.getAssetTurnoverLastYA(), item.getAssetTurnoverLast2yA(), item.getAssetTurnoverLast3yA()));
-            item.setEquityMultiplier3yAvg(calculateAverage(item.getEquityMultiplierLastYA(), item.getEquityMultiplierLast2yA(), item.getEquityMultiplierLast3yA()));
+            // 计算 3 年平均指标（任一年份数据缺失则保持为 null，不进行不完全均值计算）
+            item.setRoe3yAvg(calculateStrictThreeYearAverage(item.getRoeLastYA(), item.getRoeLast2yA(), item.getRoeLast3yA()));
+            item.setNetMargin3yAvg(calculateStrictThreeYearAverage(item.getNetMarginLastYA(), item.getNetMarginLast2yA(), item.getNetMarginLast3yA()));
+            item.setAssetTurnover3yAvg(calculateStrictThreeYearAverage(item.getAssetTurnoverLastYA(), item.getAssetTurnoverLast2yA(), item.getAssetTurnoverLast3yA()));
+            item.setEquityMultiplier3yAvg(calculateStrictThreeYearAverage(item.getEquityMultiplierLastYA(), item.getEquityMultiplierLast2yA(), item.getEquityMultiplierLast3yA()));
 
             resultList.add(item);
         }
 
         // 行业归属映射
         Map<String, String> industryMap = buildIndustryMap(performanceReports);
+
+        for (StockDupontAnalysis item : resultList) {
+            item.setIndustry(getIndustry(item.getStockCode(), industryMap));
+        }
 
         // 填充行业中值与行业均值
         fillIndustryMetrics(resultList, industryMap);
@@ -352,7 +392,7 @@ public class StockDupontAnalysisService {
         return resultList;
     }
 
-    private void calculateYearMetrics(StockDupontAnalysis item, StockPerformanceReport pr, StockBalanceSheet bs, int yearIndex) {
+    private void calculateYearMetrics(StockDupontAnalysis item, StockPerformanceReport pr, StockBalanceSheet bs, StockBalanceSheet bsPrior, int yearIndex) {
         BigDecimal netMargin = null;
         BigDecimal assetTurnover = null;
         BigDecimal equityMultiplier = null;
@@ -362,18 +402,29 @@ public class StockDupontAnalysisService {
             netMargin = pr.getNetProfit().multiply(ONE_HUNDRED).divide(pr.getTotalRevenue(), SCALE, RoundingMode.HALF_UP);
         }
 
-        if (pr != null && pr.getTotalRevenue() != null && bs != null && bs.getTotalAssets() != null && bs.getTotalAssets().compareTo(BigDecimal.ZERO) != 0) {
-            assetTurnover = pr.getTotalRevenue().divide(bs.getTotalAssets(), SCALE, RoundingMode.HALF_UP);
+        // 资产周转率与权益乘数统一使用期初、期末平均值，缺少期初数据时不生成该年度指标。
+        BigDecimal avgAssets = null;
+        if (bs != null && bsPrior != null && bs.getTotalAssets() != null && bsPrior.getTotalAssets() != null
+                && bs.getTotalAssets().compareTo(BigDecimal.ZERO) > 0
+                && bsPrior.getTotalAssets().compareTo(BigDecimal.ZERO) > 0) {
+            avgAssets = bs.getTotalAssets().add(bsPrior.getTotalAssets())
+                    .divide(TWO, SCALE, RoundingMode.HALF_UP);
         }
 
-        if (bs != null && bs.getTotalAssets() != null && bs.getTotalEquity() != null && bs.getTotalEquity().compareTo(BigDecimal.ZERO) != 0) {
-            equityMultiplier = bs.getTotalAssets().divide(bs.getTotalEquity(), SCALE, RoundingMode.HALF_UP);
+        if (pr != null && pr.getTotalRevenue() != null && avgAssets != null && avgAssets.compareTo(BigDecimal.ZERO) != 0) {
+            assetTurnover = pr.getTotalRevenue().divide(avgAssets, SCALE, RoundingMode.HALF_UP);
+        }
+
+        if (avgAssets != null && bs.getTotalEquity() != null && bsPrior.getTotalEquity() != null) {
+            BigDecimal avgEquity = bs.getTotalEquity().add(bsPrior.getTotalEquity())
+                    .divide(TWO, SCALE, RoundingMode.HALF_UP);
+            if (avgEquity.compareTo(BigDecimal.ZERO) != 0) {
+                equityMultiplier = avgAssets.divide(avgEquity, SCALE, RoundingMode.HALF_UP);
+            }
         }
 
         if (pr != null && pr.getRoe() != null) {
             roe = pr.getRoe();
-        } else if (pr != null && pr.getNetProfit() != null && bs != null && bs.getTotalEquity() != null && bs.getTotalEquity().compareTo(BigDecimal.ZERO) != 0) {
-            roe = pr.getNetProfit().multiply(ONE_HUNDRED).divide(bs.getTotalEquity(), SCALE, RoundingMode.HALF_UP);
         }
 
         if (yearIndex == 1) {
@@ -469,75 +520,49 @@ public class StockDupontAnalysisService {
         }
     }
 
+    /**
+     * 基于连续三年完整年报计算质量评分，并结合行业基准修正盈利、周转和金融行业杠杆得分。
+     */
     public void calculateScoreAndConclusion(StockDupontAnalysis item) {
         if (item == null) return;
-        BigDecimal roe = item.getRoe3yAvg() != null ? item.getRoe3yAvg() : item.getRoeLastYA();
-        BigDecimal netMargin = item.getNetMargin3yAvg() != null ? item.getNetMargin3yAvg() : item.getNetMarginLastYA();
-        BigDecimal turnover = item.getAssetTurnover3yAvg() != null ? item.getAssetTurnover3yAvg() : item.getAssetTurnoverLastYA();
-        BigDecimal equityMult = item.getEquityMultiplier3yAvg() != null ? item.getEquityMultiplier3yAvg() : item.getEquityMultiplierLastYA();
+        if (!hasCompleteThreeYearData(item)) {
+            item.setQualityScore(null);
+            item.setQualityLevel("数据不足");
+            item.setConclusion("近三年年报数据不足，暂不进行质量评分。");
+            return;
+        }
+
+        BigDecimal roe = item.getRoe3yAvg();
+        BigDecimal netMargin = item.getNetMargin3yAvg();
+        BigDecimal turnover = item.getAssetTurnover3yAvg();
+        BigDecimal equityMult = item.getEquityMultiplier3yAvg();
 
         BigDecimal netMarginMed = item.getNetMargin3yAvgIndustryMed();
         BigDecimal turnoverMed = item.getAssetTurnover3yAvgIndustryMed();
+        BigDecimal equityMultMed = item.getEquityMultiplier3yAvgIndustryMed();
+        boolean financialIndustry = isFinancialIndustry(item.getIndustry());
 
-        double score = 0.0;
+        // ROE 40 分；净利率 25 分；资产周转率 20 分；杠杆健康度 15 分。
+        // 净利率和周转率同时考虑绝对水平与同行业相对水平，避免低基数行业仅凭倍数拿满分。
+        double score = calculateRoeScore(roe.doubleValue());
+        score += calculateNetMarginScore(netMargin.doubleValue(), netMarginMed);
+        score += calculateTurnoverScore(turnover.doubleValue(), turnoverMed, financialIndustry);
+        score += calculateLeverageScore(equityMult.doubleValue(), equityMultMed, financialIndustry);
 
-        // 1. ROE 水平 (35 分)
-        if (roe != null) {
-            double r = roe.doubleValue();
-            if (r >= 20.0) {
-                score += 35.0;
-            } else if (r >= 15.0) {
-                score += 30.0 + (r - 15.0);
-            } else if (r >= 10.0) {
-                score += 22.0 + (r - 10.0) * 1.6;
-            } else if (r >= 5.0) {
-                score += 12.0 + (r - 5.0) * 2.0;
-            } else if (r > 0) {
-                score += r * 2.4;
-            }
+        int finalScore = Math.max(0, Math.min(100, (int) Math.round(score)));
+        boolean hasNonPositiveAnnualRoe = item.getRoeLastYA().compareTo(BigDecimal.ZERO) <= 0
+                || item.getRoeLast2yA().compareTo(BigDecimal.ZERO) <= 0
+                || item.getRoeLast3yA().compareTo(BigDecimal.ZERO) <= 0;
+        if (roe.compareTo(BigDecimal.ZERO) <= 0 || netMargin.compareTo(BigDecimal.ZERO) <= 0
+                || equityMult.compareTo(BigDecimal.ZERO) <= 0) {
+            finalScore = Math.min(finalScore, 49);
+        } else if (hasNonPositiveAnnualRoe) {
+            finalScore = Math.min(finalScore, 64);
         }
-
-        // 2. 净利率盈利驱动 (30 分)
-        if (netMargin != null) {
-            double nm = netMargin.doubleValue();
-            double nmMed = (netMarginMed != null && netMarginMed.doubleValue() > 0) ? netMarginMed.doubleValue() : 8.0;
-            if (nm >= nmMed) {
-                double leadRatio = Math.min(2.0, nm / nmMed);
-                score += 18.0 + (leadRatio - 1.0) * 12.0;
-            } else if (nm > 0) {
-                score += Math.max(5.0, 18.0 * (nm / nmMed));
-            }
+        if ((!financialIndustry && equityMult.compareTo(new BigDecimal("4.5")) > 0)
+                || (financialIndustry && isExtremeFinancialLeverage(equityMult, equityMultMed))) {
+            finalScore = Math.min(finalScore, 49);
         }
-
-        // 3. 资产周转率运营效率 (20 分)
-        if (turnover != null) {
-            double to = turnover.doubleValue();
-            double toMed = (turnoverMed != null && turnoverMed.doubleValue() > 0) ? turnoverMed.doubleValue() : 0.8;
-            if (to >= toMed) {
-                double leadRatio = Math.min(2.0, to / toMed);
-                score += 12.0 + (leadRatio - 1.0) * 8.0;
-            } else if (to > 0) {
-                score += Math.max(3.0, 12.0 * (to / toMed));
-            }
-        }
-
-        // 4. 权益乘数财务杠杆健康度 (15 分)
-        if (equityMult != null) {
-            double em = equityMult.doubleValue();
-            if (em >= 1.2 && em <= 2.2) {
-                score += 15.0; // 黄金杠杆区间
-            } else if (em > 2.2 && em <= 2.6) {
-                score += 12.0; // 略高但可控
-            } else if (em > 2.6 && em <= 3.2) {
-                score += 8.0;  // 偏高
-            } else if (em > 3.2 && em <= 4.5) {
-                score += 4.0;  // 高杠杆风险
-            } else if (em > 0 && em < 1.2) {
-                score += 12.0; // 杠杆很低，财务安全
-            }
-        }
-
-        int finalScore = Math.max(10, Math.min(99, (int) Math.round(score)));
         item.setQualityScore(BigDecimal.valueOf(finalScore));
 
         if (finalScore >= 80) {
@@ -554,6 +579,121 @@ public class StockDupontAnalysisService {
         item.setConclusion(generateConclusion(item));
     }
 
+    private boolean hasCompleteThreeYearData(StockDupontAnalysis item) {
+        return Stream.of(
+                item.getRoe3yAvg(), item.getRoeLastYA(), item.getRoeLast2yA(), item.getRoeLast3yA(),
+                item.getNetMargin3yAvg(), item.getNetMarginLastYA(),
+                item.getNetMarginLast2yA(), item.getNetMarginLast3yA(),
+                item.getAssetTurnover3yAvg(), item.getAssetTurnoverLastYA(),
+                item.getAssetTurnoverLast2yA(), item.getAssetTurnoverLast3yA(),
+                item.getEquityMultiplier3yAvg(), item.getEquityMultiplierLastYA(),
+                item.getEquityMultiplierLast2yA(), item.getEquityMultiplierLast3yA()
+        ).allMatch(Objects::nonNull);
+    }
+
+    private double calculateRoeScore(double roe) {
+        if (roe <= 0) return 0;
+        if (roe < 5) return roe * 1.6;
+        if (roe < 10) return 8 + (roe - 5) * 2;
+        if (roe < 15) return 18 + (roe - 10) * 2;
+        if (roe < 20) return 28 + (roe - 15) * 1.6;
+        if (roe < 25) return 36 + (roe - 20) * 0.8;
+        return 40;
+    }
+
+    private double calculateNetMarginScore(double netMargin, BigDecimal industryMedian) {
+        if (netMargin <= 0) return 0;
+        double absoluteScore = 0;
+        if (netMargin < 5) {
+            absoluteScore = netMargin * 0.8;
+        } else if (netMargin < 10) {
+            absoluteScore = 4 + (netMargin - 5) * 0.6;
+        } else if (netMargin < 20) {
+            absoluteScore = 7 + (netMargin - 10) * 0.5;
+        } else if (netMargin >= 20) {
+            absoluteScore = 12;
+        }
+        return Math.max(0, absoluteScore) + calculateRelativeScore(netMargin, industryMedian, 13);
+    }
+
+    private double calculateTurnoverScore(double turnover, BigDecimal industryMedian, boolean financialIndustry) {
+        double absoluteScore;
+        if (financialIndustry) {
+            absoluteScore = turnover > 0 ? 5 : 0;
+        } else if (turnover <= 0) {
+            absoluteScore = 0;
+        } else if (turnover < 0.5) {
+            absoluteScore = turnover * 6;
+        } else if (turnover < 1) {
+            absoluteScore = 3 + (turnover - 0.5) * 6;
+        } else if (turnover < 2) {
+            absoluteScore = 6 + (turnover - 1) * 4;
+        } else {
+            absoluteScore = 10;
+        }
+        return absoluteScore + calculateRelativeScore(turnover, industryMedian, 10);
+    }
+
+    private double calculateRelativeScore(double value, BigDecimal industryMedian, double maxScore) {
+        if (value <= 0) return 0;
+        if (industryMedian == null || industryMedian.compareTo(BigDecimal.ZERO) <= 0) {
+            return maxScore * 0.5;
+        }
+        double ratio = value / industryMedian.doubleValue();
+        if (ratio >= 2) return maxScore;
+        if (ratio >= 1.5) return maxScore * (0.8 + (ratio - 1.5) * 0.4);
+        if (ratio >= 1) return maxScore * (0.55 + (ratio - 1) * 0.5);
+        if (ratio >= 0.5) return maxScore * (0.2 + (ratio - 0.5) * 0.7);
+        return maxScore * 0.2 * ratio / 0.5;
+    }
+
+    private double calculateLeverageScore(
+            double equityMultiplier, BigDecimal industryMedian, boolean financialIndustry
+    ) {
+        if (equityMultiplier <= 0) return 0;
+        if (financialIndustry) {
+            if (industryMedian == null || industryMedian.compareTo(BigDecimal.ZERO) <= 0) {
+                return equityMultiplier >= 6 && equityMultiplier <= 18 ? 12
+                        : equityMultiplier >= 3 && equityMultiplier <= 25 ? 8 : 4;
+            }
+            double ratio = equityMultiplier / industryMedian.doubleValue();
+            if (ratio >= 0.7 && ratio <= 1.3) return 15;
+            if (ratio >= 0.5 && ratio <= 1.5) return 12;
+            if (ratio >= 0.3 && ratio <= 1.8) return 8;
+            return 4;
+        }
+        if (equityMultiplier < 1.2) return 12 + equityMultiplier / 1.2 * 3;
+        if (equityMultiplier <= 2.2) return 15;
+        if (equityMultiplier <= 2.6) return 15 - (equityMultiplier - 2.2) * 7.5;
+        if (equityMultiplier <= 3.2) return 12 - (equityMultiplier - 2.6) * 6.6667;
+        if (equityMultiplier <= 4.5) return 8 - (equityMultiplier - 3.2) * 3.8462;
+        return 0;
+    }
+
+    private boolean isExtremeFinancialLeverage(BigDecimal equityMultiplier, BigDecimal industryMedian) {
+        if (industryMedian != null && industryMedian.compareTo(BigDecimal.ZERO) > 0) {
+            return equityMultiplier.divide(industryMedian, SCALE, RoundingMode.HALF_UP)
+                    .compareTo(new BigDecimal("1.8")) > 0;
+        }
+        return equityMultiplier.compareTo(new BigDecimal("25")) > 0;
+    }
+
+    private boolean isFinancialIndustry(String industry) {
+        return StringUtils.containsAny(industry, "银行", "保险", "证券", "多元金融", "金融服务");
+    }
+
+    private Predicate buildFinancialIndustryPredicate(
+            jakarta.persistence.criteria.CriteriaBuilder cb, Path<String> industry
+    ) {
+        return cb.or(
+                cb.like(industry, "%银行%"),
+                cb.like(industry, "%保险%"),
+                cb.like(industry, "%证券%"),
+                cb.like(industry, "%多元金融%"),
+                cb.like(industry, "%金融服务%")
+        );
+    }
+
     private String generateConclusion(StockDupontAnalysis item) {
         BigDecimal roe = item.getRoe3yAvg() != null ? item.getRoe3yAvg() : item.getRoeLastYA();
         BigDecimal netMargin = item.getNetMargin3yAvg() != null ? item.getNetMargin3yAvg() : item.getNetMarginLastYA();
@@ -567,8 +707,14 @@ public class StockDupontAnalysisService {
         boolean moderateRoe = roe != null && roe.compareTo(new BigDecimal("10")) >= 0;
         boolean highMargin = netMargin != null && (netMarginMed != null ? netMargin.compareTo(netMarginMed) > 0 : netMargin.compareTo(new BigDecimal("10")) >= 0);
         boolean highTurnover = turnover != null && (turnoverMed != null ? turnover.compareTo(turnoverMed) > 0 : turnover.compareTo(new BigDecimal("1.0")) >= 0);
-        boolean highLeverage = equityMult != null && equityMult.compareTo(new BigDecimal("2.5")) > 0;
-        boolean safeLeverage = equityMult != null && equityMult.compareTo(new BigDecimal("2.2")) <= 0;
+        boolean financialIndustry = isFinancialIndustry(item.getIndustry());
+        BigDecimal equityMultMed = item.getEquityMultiplier3yAvgIndustryMed();
+        boolean highLeverage = financialIndustry
+                ? equityMult != null && isExtremeFinancialLeverage(equityMult, equityMultMed)
+                : equityMult != null && equityMult.compareTo(new BigDecimal("2.5")) > 0;
+        boolean safeLeverage = financialIndustry
+                ? equityMult != null && !highLeverage
+                : equityMult != null && equityMult.compareTo(new BigDecimal("2.2")) <= 0;
 
         if (highRoe) {
             if (highMargin && safeLeverage) {
@@ -671,6 +817,16 @@ public class StockDupontAnalysisService {
         return mid1.add(mid2).divide(TWO, SCALE, RoundingMode.HALF_UP);
     }
 
+    /**
+     * 计算严格 3 年平均值（若有任意 1 年数据为 null，则返回 null，不进行残缺年份计算）
+     */
+    private BigDecimal calculateStrictThreeYearAverage(BigDecimal v1, BigDecimal v2, BigDecimal v3) {
+        if (v1 == null || v2 == null || v3 == null) {
+            return null;
+        }
+        return v1.add(v2).add(v3).divide(THREE, SCALE, RoundingMode.HALF_UP);
+    }
+
     private BigDecimal calculateAverage(BigDecimal... values) {
         BigDecimal sum = BigDecimal.ZERO;
         int count = 0;
@@ -686,22 +842,45 @@ public class StockDupontAnalysisService {
         return sum.divide(BigDecimal.valueOf(count), SCALE, RoundingMode.HALF_UP);
     }
 
-    private List<Integer> getLatestThreeAnnualYears(List<StockPerformanceReport> prList, List<StockBalanceSheet> bsList) {
-        Set<Integer> years = new HashSet<>();
+    private List<Integer> getLatestThreeAnnualYears(
+            List<StockPerformanceReport> prList, List<StockBalanceSheet> bsList, List<StockQuote> stockQuotes
+    ) {
+        Set<String> activeCodes = stockQuotes.stream()
+                .filter(Objects::nonNull)
+                .map(StockQuote::getCode)
+                .filter(StringUtils::isNotBlank)
+                .map(StockUtils::getPlainCode)
+                .collect(Collectors.toSet());
+        Map<Integer, Set<String>> performanceCodesByYear = new HashMap<>();
         for (StockPerformanceReport r : prList) {
-            if (r != null && StockUtils.isAnnualReport(r.getReportDate())) {
-                years.add(r.getReportDate().getYear());
+            if (r != null && StringUtils.isNotBlank(r.getStockCode())
+                    && StockUtils.isAnnualReport(r.getReportDate())) {
+                performanceCodesByYear.computeIfAbsent(r.getReportDate().getYear(), key -> new HashSet<>())
+                        .add(StockUtils.getPlainCode(r.getStockCode()));
             }
         }
+        Map<Integer, Set<String>> balanceSheetCodesByYear = new HashMap<>();
         for (StockBalanceSheet b : bsList) {
-            if (b != null && StockUtils.isAnnualReport(b.getReportDate())) {
-                years.add(b.getReportDate().getYear());
+            if (b != null && StringUtils.isNotBlank(b.getStockCode())
+                    && StockUtils.isAnnualReport(b.getReportDate())) {
+                balanceSheetCodesByYear.computeIfAbsent(b.getReportDate().getYear(), key -> new HashSet<>())
+                        .add(StockUtils.getPlainCode(b.getStockCode()));
             }
         }
-        return years.stream()
-                .sorted(Comparator.reverseOrder())
-                .limit(3)
-                .collect(Collectors.toList());
+        Set<Integer> candidateYears = new HashSet<>(performanceCodesByYear.keySet());
+        candidateYears.addAll(balanceSheetCodesByYear.keySet());
+        for (Integer year : candidateYears.stream().sorted(Comparator.reverseOrder()).toList()) {
+            Set<String> completeCodes = new HashSet<>(performanceCodesByYear.getOrDefault(year, Set.of()));
+            completeCodes.retainAll(balanceSheetCodesByYear.getOrDefault(year, Set.of()));
+            completeCodes.retainAll(activeCodes);
+            double coverage = activeCodes.isEmpty() ? 0 : (double) completeCodes.size() / activeCodes.size();
+            if (coverage >= MIN_ANNUAL_REPORT_COVERAGE) {
+                return List.of(year, year - 1, year - 2);
+            }
+            log.info("杜邦分析跳过披露覆盖率不足的年报期，year={}, coverage={}",
+                    year, String.format(Locale.ROOT, "%.2f%%", coverage * 100));
+        }
+        return List.of();
     }
 
     private Map<String, String> buildIndustryMap(List<StockPerformanceReport> performanceReports) {
@@ -876,6 +1055,7 @@ public class StockDupontAnalysisService {
                 stockDupontAnalysis.setCreatedAt(LocalDateTime.now());
             }
         }
+        calculateScoreAndConclusion(stockDupontAnalysis);
         stockDupontAnalysisRepository.save(stockDupontAnalysis);
     }
 

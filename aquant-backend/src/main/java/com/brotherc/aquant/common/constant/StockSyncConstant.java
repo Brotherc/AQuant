@@ -39,6 +39,17 @@ public class StockSyncConstant {
 
     public static final String STOCK_TH_FUND_PURCHASE_LIMIT_LATEST = "stock_th_fund_purchase_limit_latest";
 
+    public static final String STOCK_JS_FUND_PURCHASE_LIMIT_LATEST = "stock_js_fund_purchase_limit_latest";
+
+    public static final String STOCK_CHINA_AMC_FUND_PURCHASE_LIMIT_LATEST =
+            "stock_china_amc_fund_purchase_limit_latest";
+
+    public static final String STOCK_CMF_FUND_PURCHASE_LIMIT_LATEST = "stock_cmf_fund_purchase_limit_latest";
+
+    public static final String STOCK_HTF_FUND_PURCHASE_LIMIT_LATEST = "stock_htf_fund_purchase_limit_latest";
+
+    public static final String STOCK_DC_FUND_PURCHASE_LIMIT_LATEST = "stock_dc_fund_purchase_limit_latest";
+
     public static final String STOCK_INDEX_LATEST = "stock_index_latest";
 
 }

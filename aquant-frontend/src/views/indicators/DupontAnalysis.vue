@@ -6,61 +6,61 @@
       <div class="overview-cards-grid">
         <!-- 卡片 1: 高质量 ROE -->
         <div class="overview-card overview-card--emerald">
-          <div class="overview-card__header">
-            <span class="overview-card__title">高质量ROE</span>
-            <div class="overview-card__icon-wrap">
-              <RiseOutlined />
+          <div class="overview-card__icon-wrap">
+            <RiseOutlined />
+          </div>
+          <div class="overview-card__content">
+            <div class="overview-card__title">高质量ROE</div>
+            <div class="overview-card__value-row">
+              <span class="overview-card__value">{{ overviewData.highQualityCount }}</span>
+              <span class="overview-card__unit">家</span>
             </div>
+            <div class="overview-card__subtext">ROE ≥ 15% 且 质量评分 ≥ 75</div>
           </div>
-          <div class="overview-card__value-row">
-            <span class="overview-card__value">{{ overviewData.highQualityCount }}</span>
-            <span class="overview-card__unit">家</span>
-          </div>
-          <div class="overview-card__subtext">ROE &gt; 15% 且 质量评分 ≥ 75</div>
         </div>
 
         <!-- 卡片 2: 行业 ROE 中位 -->
         <div class="overview-card overview-card--indigo">
-          <div class="overview-card__header">
-            <span class="overview-card__title">行业ROE中位</span>
-            <div class="overview-card__icon-wrap">
-              <BarChartOutlined />
+          <div class="overview-card__icon-wrap">
+            <BarChartOutlined />
+          </div>
+          <div class="overview-card__content">
+            <div class="overview-card__title">行业ROE中位</div>
+            <div class="overview-card__value-row">
+              <span class="overview-card__value">{{ formatPercent(overviewData.industryRoeMedian) }}</span>
             </div>
+            <div class="overview-card__subtext">全市场加权中位数</div>
           </div>
-          <div class="overview-card__value-row">
-            <span class="overview-card__value">{{ formatPercent(overviewData.industryRoeMedian) }}</span>
-          </div>
-          <div class="overview-card__subtext">全市场加权中位数</div>
         </div>
 
         <!-- 卡片 3: 我的自选高质量 -->
         <div class="overview-card overview-card--amber">
-          <div class="overview-card__header">
-            <span class="overview-card__title">我的自选高质量</span>
-            <div class="overview-card__icon-wrap">
-              <StarFilled />
+          <div class="overview-card__icon-wrap">
+            <StarFilled />
+          </div>
+          <div class="overview-card__content">
+            <div class="overview-card__title">我的自选高质量</div>
+            <div class="overview-card__value-row">
+              <span class="overview-card__value">{{ overviewData.watchlistHighQualityCount }}</span>
+              <span class="overview-card__unit">支</span>
             </div>
+            <div class="overview-card__subtext">自选中质量评分 ≥ 75</div>
           </div>
-          <div class="overview-card__value-row">
-            <span class="overview-card__value">{{ overviewData.watchlistHighQualityCount }}</span>
-            <span class="overview-card__unit">支</span>
-          </div>
-          <div class="overview-card__subtext">自选中质量评分 ≥ 75</div>
         </div>
 
         <!-- 卡片 4: 杠杆预警 -->
         <div class="overview-card overview-card--rose">
-          <div class="overview-card__header">
-            <span class="overview-card__title">杠杆预警</span>
-            <div class="overview-card__icon-wrap">
-              <WarningOutlined />
+          <div class="overview-card__icon-wrap">
+            <WarningOutlined />
+          </div>
+          <div class="overview-card__content">
+            <div class="overview-card__title">杠杆预警</div>
+            <div class="overview-card__value-row">
+              <span class="overview-card__value">{{ overviewData.leverageWarningCount }}</span>
+              <span class="overview-card__unit">家</span>
             </div>
+            <div class="overview-card__subtext">权益乘数超过行业合理区间</div>
           </div>
-          <div class="overview-card__value-row">
-            <span class="overview-card__value">{{ overviewData.leverageWarningCount }}</span>
-            <span class="overview-card__unit">家</span>
-          </div>
-          <div class="overview-card__subtext">权益乘数 &gt; 2.5</div>
         </div>
       </div>
 
@@ -142,6 +142,7 @@
                 <a-select-option value="良好">良好 (65~79)</a-select-option>
                 <a-select-option value="中等">中等 (50~64)</a-select-option>
                 <a-select-option value="较差">较差 (&lt;50)</a-select-option>
+                <a-select-option value="数据不足">数据不足</a-select-option>
               </a-select>
             </div>
 
@@ -208,7 +209,7 @@
               <template v-else-if="column.dataIndex === 'qualityScore'">
                 <div class="score-cell">
                   <span class="score-num" :class="getScoreColorClass(record.qualityScore)">
-                    {{ Math.round(Number(record.qualityScore || 0)) }}
+                    {{ formatQualityScore(record.qualityScore) }}
                   </span>
                   <span
                     class="quality-badge"
@@ -245,16 +246,16 @@
           </div>
 
           <div class="detail-drawer__body">
-            <!-- Section 1: 质量位置 -->
+            <!-- Section 1: 评分 -->
             <div class="detail-section">
               <div class="detail-section__header">
-                <span class="detail-section__title">质量位置</span>
-                <span class="detail-rank-percentile">全市场排位：{{ getMarketPercentileText(selectedStock.qualityScore) }}</span>
+                <span class="detail-section__title">评分</span>
+                <span class="detail-rank-percentile">行业内名次：{{ selectedStock.roe3yAvgRank ? `第 ${Math.round(selectedStock.roe3yAvgRank)} 名` : '-' }}</span>
               </div>
               
               <div class="quality-position-card">
                 <div class="quality-score-display">
-                  <span class="quality-score-num">{{ Math.round(Number(selectedStock.qualityScore || 0)) }}</span>
+                  <span class="quality-score-num">{{ formatQualityScore(selectedStock.qualityScore) }}</span>
                   <span class="quality-score-tag" :class="getQualityBadgeClass(selectedStock.qualityScore, selectedStock.qualityLevel)">
                     {{ selectedStock.qualityLevel || getQualityLevelText(selectedStock.qualityScore) }}
                   </span>
@@ -265,54 +266,26 @@
                   <div class="scale-segment scale-segment--poor" title="较差 <50">
                     <span class="segment-label">较差 &lt;50</span>
                   </div>
-                  <div class="scale-segment scale-segment--mid" title="一般 50-65">
-                    <span class="segment-label">一般 50-65</span>
+                  <div class="scale-segment scale-segment--mid" title="中等 50-64">
+                    <span class="segment-label">中等 50-64</span>
                   </div>
-                  <div class="scale-segment scale-segment--good" title="良好 65-80">
-                    <span class="segment-label">良好 65-80</span>
+                  <div class="scale-segment scale-segment--good" title="良好 65-79">
+                    <span class="segment-label">良好 65-79</span>
                   </div>
-                  <div class="scale-segment scale-segment--excellent" title="优秀 &gt;80">
-                    <span class="segment-label">优秀 &gt;80</span>
+                  <div class="scale-segment scale-segment--excellent" title="优秀 ≥80">
+                    <span class="segment-label">优秀 ≥80</span>
                   </div>
                   <!-- 刻度指示小游标 -->
                   <div
+                    v-if="selectedStock.qualityScore != null"
                     class="scale-indicator-cursor"
-                    :style="{ left: `${Math.min(100, Math.max(0, Number(selectedStock.qualityScore || 0)))}%` }"
+                    :style="{ left: `${Math.min(100, Math.max(0, Number(selectedStock.qualityScore)))}%` }"
                   ></div>
                 </div>
               </div>
             </div>
 
-            <!-- Section 2: 杜邦拆解公式 (3年平均) -->
-            <div class="detail-section">
-              <div class="detail-section__header">
-                <span class="detail-section__title">杜邦拆解 (3年平均)</span>
-              </div>
-
-              <div class="dupont-formula-card">
-                <div class="formula-item formula-item--roe">
-                  <span class="formula-label">ROE</span>
-                  <span class="formula-value text-rose">{{ formatPercent(selectedStock.roe3yAvg) }}</span>
-                </div>
-                <div class="formula-operator">=</div>
-                <div class="formula-item">
-                  <span class="formula-label">净利率</span>
-                  <span class="formula-value">{{ formatPercent(selectedStock.netMargin3yAvg) }}</span>
-                </div>
-                <div class="formula-operator">×</div>
-                <div class="formula-item">
-                  <span class="formula-label">周转率</span>
-                  <span class="formula-value">{{ formatValue(selectedStock.assetTurnover3yAvg) }}次</span>
-                </div>
-                <div class="formula-operator">×</div>
-                <div class="formula-item">
-                  <span class="formula-label">权益乘数</span>
-                  <span class="formula-value">{{ formatValue(selectedStock.equityMultiplier3yAvg) }}倍</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Section 3: 年度杜邦快照 -->
+            <!-- Section 2: 年度杜邦快照 -->
             <div class="detail-section">
               <div class="detail-section__header">
                 <span class="detail-section__title">年度杜邦快照</span>
@@ -323,164 +296,199 @@
                   <thead>
                     <tr>
                       <th style="width: 32%">指标</th>
-                      <th style="width: 17%">3年前</th>
-                      <th style="width: 17%">2年前</th>
-                      <th style="width: 17%">去年</th>
+                      <th style="width: 17%">{{ snapshotYears.last1 }}</th>
+                      <th style="width: 17%">{{ snapshotYears.last2 }}</th>
+                      <th style="width: 17%">{{ snapshotYears.last3 }}</th>
                       <th style="width: 17%">3年均值</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
                       <td class="metric-name-td font-semibold">ROE (%)</td>
-                      <td>{{ formatValue(selectedStock.roeLast3yA) }}</td>
-                      <td>{{ formatValue(selectedStock.roeLast2yA) }}</td>
                       <td>{{ formatValue(selectedStock.roeLastYA) }}</td>
+                      <td>{{ formatValue(selectedStock.roeLast2yA) }}</td>
+                      <td>{{ formatValue(selectedStock.roeLast3yA) }}</td>
                       <td class="font-semibold text-rose">{{ formatValue(selectedStock.roe3yAvg) }}</td>
                     </tr>
                     <tr>
                       <td class="metric-name-td">净利率 (%)</td>
-                      <td>{{ formatValue(selectedStock.netMarginLast3yA) }}</td>
-                      <td>{{ formatValue(selectedStock.netMarginLast2yA) }}</td>
                       <td>{{ formatValue(selectedStock.netMarginLastYA) }}</td>
+                      <td>{{ formatValue(selectedStock.netMarginLast2yA) }}</td>
+                      <td>{{ formatValue(selectedStock.netMarginLast3yA) }}</td>
                       <td class="font-semibold">{{ formatValue(selectedStock.netMargin3yAvg) }}</td>
                     </tr>
                     <tr>
                       <td class="metric-name-td">周转率 (次)</td>
-                      <td>{{ formatValue(selectedStock.assetTurnoverLast3yA) }}</td>
-                      <td>{{ formatValue(selectedStock.assetTurnoverLast2yA) }}</td>
                       <td>{{ formatValue(selectedStock.assetTurnoverLastYA) }}</td>
+                      <td>{{ formatValue(selectedStock.assetTurnoverLast2yA) }}</td>
+                      <td>{{ formatValue(selectedStock.assetTurnoverLast3yA) }}</td>
                       <td class="font-semibold">{{ formatValue(selectedStock.assetTurnover3yAvg) }}</td>
                     </tr>
                     <tr>
                       <td class="metric-name-td">权益乘数 (倍)</td>
-                      <td>{{ formatValue(selectedStock.equityMultiplierLast3yA) }}</td>
-                      <td>{{ formatValue(selectedStock.equityMultiplierLast2yA) }}</td>
                       <td>{{ formatValue(selectedStock.equityMultiplierLastYA) }}</td>
-                      <td class="font-semibold">{{ formatValue(selectedStock.equityMultiplier3yAvg) }}</td>
+                      <td>{{ formatValue(selectedStock.equityMultiplierLast2yA) }}</td>
+                      <td>{{ formatValue(selectedStock.equityMultiplierLast3yA) }}</td>
+                      <td class="font-semibold">{{ formatEquityMultiplier(selectedStock.equityMultiplier3yAvg) }}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             </div>
 
-            <!-- Section 4: 与行业中位数对比 (当前) -->
+            <!-- Section 4: 杜邦分析比较 (多年度切换: 去年/前年/前2年) -->
             <div class="detail-section">
-              <div class="drawer-section__title-row">
-                <span class="detail-section__title">与行业中位数对比 (当前)</span>
+              <div class="detail-section__header">
+                <span class="detail-section__title">杜邦分析比较 ({{ currentCompareData.year }})</span>
+              </div>
+
+              <!-- 下一行：周期Tab与图例 -->
+              <div class="compare-controls-row">
+                <div class="year-mini-tabs">
+                  <button
+                    class="year-mini-tab"
+                    :class="{ 'is-active': compareYearIndex === 1 }"
+                    @click="compareYearIndex = 1"
+                    title="去年"
+                  >
+                    {{ snapshotYears.last1 }}
+                  </button>
+                  <button
+                    class="year-mini-tab"
+                    :class="{ 'is-active': compareYearIndex === 2 }"
+                    @click="compareYearIndex = 2"
+                    title="前年"
+                  >
+                    {{ snapshotYears.last2 }}
+                  </button>
+                  <button
+                    class="year-mini-tab"
+                    :class="{ 'is-active': compareYearIndex === 3 }"
+                    @click="compareYearIndex = 3"
+                    title="前2年"
+                  >
+                    {{ snapshotYears.last3 }}
+                  </button>
+                  <button
+                    class="year-mini-tab"
+                    :class="{ 'is-active': compareYearIndex === 0 }"
+                    @click="compareYearIndex = 0"
+                    title="近三年平均"
+                  >
+                    3年均值
+                  </button>
+                </div>
+
                 <div class="drawer-section__legend">
                   <span class="legend-item">
-                    <span class="legend-dot legend-dot--median"></span>
-                    行业中位数
+                    <span class="legend-bar legend-bar--stock"></span>
+                    {{ selectedStock.stockName }}
                   </span>
                   <span class="legend-item">
-                    <span class="legend-line legend-line--stock"></span>
-                    {{ selectedStock.stockName }}
+                    <span class="legend-bar legend-bar--median"></span>
+                    行业中位数
                   </span>
                 </div>
               </div>
 
-              <div class="comparison-bars">
+              <div class="comparison-two-bars-list">
                 <!-- 1. ROE 对比 -->
-                <div class="comp-bar-row">
-                  <div class="comp-bar-label font-semibold">ROE (%)</div>
-                  <div class="comp-bar-track-wrap">
-                    <div class="comp-bar-track">
-                      <div
-                        class="comp-bar-fill"
-                        :style="{ width: `${getBarWidth(selectedStock.roe3yAvg, 30)}%` }"
-                      ></div>
-                      <div
-                        class="comp-bar-median-mark"
-                        :style="{ left: `${getBarWidth(selectedStock.roe3yAvgIndustryMed, 30)}%` }"
-                        :title="`行业中位: ${formatValue(selectedStock.roe3yAvgIndustryMed)}`"
-                      ></div>
+                <div class="comp-row-item">
+                  <div class="comp-row-label font-semibold">ROE (%)</div>
+                  <div class="comp-row-bars">
+                    <div class="comp-bar-line">
+                      <div class="comp-bar-track">
+                        <div
+                          class="comp-bar-fill comp-bar-fill--stock"
+                          :style="{ width: `${getBarWidth(currentCompareData.roe, 30)}%` }"
+                        ></div>
+                      </div>
+                      <span class="comp-bar-val comp-bar-val--stock">{{ formatValue(currentCompareData.roe) }}</span>
                     </div>
-                    <span class="comp-bar-val font-semibold">{{ formatValue(selectedStock.roe3yAvg) }}</span>
-                    <span class="comp-bar-median-text">{{ formatValue(selectedStock.roe3yAvgIndustryMed) }}</span>
-                  </div>
-                  <div
-                    class="comp-bar-diff"
-                    :class="getDiffColorClass(selectedStock.roe3yAvg, selectedStock.roe3yAvgIndustryMed)"
-                  >
-                    {{ getDiffNumberText(selectedStock.roe3yAvg, selectedStock.roe3yAvgIndustryMed) }}
+                    <div class="comp-bar-line">
+                      <div class="comp-bar-track">
+                        <div
+                          class="comp-bar-fill comp-bar-fill--median"
+                          :style="{ width: `${getBarWidth(currentCompareData.roeMed, 30)}%` }"
+                        ></div>
+                      </div>
+                      <span class="comp-bar-val comp-bar-val--median">{{ formatValue(currentCompareData.roeMed) }}</span>
+                    </div>
                   </div>
                 </div>
 
                 <!-- 2. 净利率 对比 -->
-                <div class="comp-bar-row">
-                  <div class="comp-bar-label">净利率 (%)</div>
-                  <div class="comp-bar-track-wrap">
-                    <div class="comp-bar-track">
-                      <div
-                        class="comp-bar-fill"
-                        :style="{ width: `${getBarWidth(selectedStock.netMargin3yAvg, 25)}%` }"
-                      ></div>
-                      <div
-                        class="comp-bar-median-mark"
-                        :style="{ left: `${getBarWidth(selectedStock.netMargin3yAvgIndustryMed, 25)}%` }"
-                        :title="`行业中位: ${formatValue(selectedStock.netMargin3yAvgIndustryMed)}`"
-                      ></div>
+                <div class="comp-row-item">
+                  <div class="comp-row-label">净利率 (%)</div>
+                  <div class="comp-row-bars">
+                    <div class="comp-bar-line">
+                      <div class="comp-bar-track">
+                        <div
+                          class="comp-bar-fill comp-bar-fill--stock"
+                          :style="{ width: `${getBarWidth(currentCompareData.netMargin, 25)}%` }"
+                        ></div>
+                      </div>
+                      <span class="comp-bar-val comp-bar-val--stock">{{ formatValue(currentCompareData.netMargin) }}</span>
                     </div>
-                    <span class="comp-bar-val">{{ formatValue(selectedStock.netMargin3yAvg) }}</span>
-                    <span class="comp-bar-median-text">{{ formatValue(selectedStock.netMargin3yAvgIndustryMed) }}</span>
-                  </div>
-                  <div
-                    class="comp-bar-diff"
-                    :class="getDiffColorClass(selectedStock.netMargin3yAvg, selectedStock.netMargin3yAvgIndustryMed)"
-                  >
-                    {{ getDiffNumberText(selectedStock.netMargin3yAvg, selectedStock.netMargin3yAvgIndustryMed) }}
+                    <div class="comp-bar-line">
+                      <div class="comp-bar-track">
+                        <div
+                          class="comp-bar-fill comp-bar-fill--median"
+                          :style="{ width: `${getBarWidth(currentCompareData.netMarginMed, 25)}%` }"
+                        ></div>
+                      </div>
+                      <span class="comp-bar-val comp-bar-val--median">{{ formatValue(currentCompareData.netMarginMed) }}</span>
+                    </div>
                   </div>
                 </div>
 
                 <!-- 3. 资产周转率 对比 -->
-                <div class="comp-bar-row">
-                  <div class="comp-bar-label">周转率 (次)</div>
-                  <div class="comp-bar-track-wrap">
-                    <div class="comp-bar-track">
-                      <div
-                        class="comp-bar-fill"
-                        :style="{ width: `${getBarWidth(selectedStock.assetTurnover3yAvg, 3)}%` }"
-                      ></div>
-                      <div
-                        class="comp-bar-median-mark"
-                        :style="{ left: `${getBarWidth(selectedStock.assetTurnover3yAvgIndustryMed, 3)}%` }"
-                        :title="`行业中位: ${formatValue(selectedStock.assetTurnover3yAvgIndustryMed)}`"
-                      ></div>
+                <div class="comp-row-item">
+                  <div class="comp-row-label">周转率 (次)</div>
+                  <div class="comp-row-bars">
+                    <div class="comp-bar-line">
+                      <div class="comp-bar-track">
+                        <div
+                          class="comp-bar-fill comp-bar-fill--stock"
+                          :style="{ width: `${getBarWidth(currentCompareData.turnover, 2.5)}%` }"
+                        ></div>
+                      </div>
+                      <span class="comp-bar-val comp-bar-val--stock">{{ formatValue(currentCompareData.turnover) }}</span>
                     </div>
-                    <span class="comp-bar-val">{{ formatValue(selectedStock.assetTurnover3yAvg) }}</span>
-                    <span class="comp-bar-median-text">{{ formatValue(selectedStock.assetTurnover3yAvgIndustryMed) }}</span>
-                  </div>
-                  <div
-                    class="comp-bar-diff"
-                    :class="getDiffColorClass(selectedStock.assetTurnover3yAvg, selectedStock.assetTurnover3yAvgIndustryMed)"
-                  >
-                    {{ getDiffNumberText(selectedStock.assetTurnover3yAvg, selectedStock.assetTurnover3yAvgIndustryMed) }}
+                    <div class="comp-bar-line">
+                      <div class="comp-bar-track">
+                        <div
+                          class="comp-bar-fill comp-bar-fill--median"
+                          :style="{ width: `${getBarWidth(currentCompareData.turnoverMed, 2.5)}%` }"
+                        ></div>
+                      </div>
+                      <span class="comp-bar-val comp-bar-val--median">{{ formatValue(currentCompareData.turnoverMed) }}</span>
+                    </div>
                   </div>
                 </div>
 
                 <!-- 4. 权益乘数 对比 -->
-                <div class="comp-bar-row">
-                  <div class="comp-bar-label">权益乘数 (倍)</div>
-                  <div class="comp-bar-track-wrap">
-                    <div class="comp-bar-track">
-                      <div
-                        class="comp-bar-fill"
-                        :style="{ width: `${getBarWidth(selectedStock.equityMultiplier3yAvg, 5)}%` }"
-                      ></div>
-                      <div
-                        class="comp-bar-median-mark"
-                        :style="{ left: `${getBarWidth(selectedStock.equityMultiplier3yAvgIndustryMed, 5)}%` }"
-                        :title="`行业中位: ${formatValue(selectedStock.equityMultiplier3yAvgIndustryMed)}`"
-                      ></div>
+                <div class="comp-row-item">
+                  <div class="comp-row-label">权益乘数 (倍)</div>
+                  <div class="comp-row-bars">
+                    <div class="comp-bar-line">
+                      <div class="comp-bar-track">
+                        <div
+                          class="comp-bar-fill comp-bar-fill--stock"
+                          :style="{ width: `${getBarWidth(currentCompareData.em, 4.5)}%` }"
+                        ></div>
+                      </div>
+                      <span class="comp-bar-val comp-bar-val--stock">{{ formatValue(currentCompareData.em) }}</span>
                     </div>
-                    <span class="comp-bar-val">{{ formatValue(selectedStock.equityMultiplier3yAvg) }}</span>
-                    <span class="comp-bar-median-text">{{ formatValue(selectedStock.equityMultiplier3yAvgIndustryMed) }}</span>
-                  </div>
-                  <div
-                    class="comp-bar-diff"
-                    :class="getLeverageDiffColorClass(selectedStock.equityMultiplier3yAvg, selectedStock.equityMultiplier3yAvgIndustryMed)"
-                  >
-                    {{ getDiffNumberText(selectedStock.equityMultiplier3yAvg, selectedStock.equityMultiplier3yAvgIndustryMed) }}
+                    <div class="comp-bar-line">
+                      <div class="comp-bar-track">
+                        <div
+                          class="comp-bar-fill comp-bar-fill--median"
+                          :style="{ width: `${getBarWidth(currentCompareData.emMed, 4.5)}%` }"
+                        ></div>
+                      </div>
+                      <span class="comp-bar-val comp-bar-val--median">{{ formatValue(currentCompareData.emMed) }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -616,7 +624,7 @@ const pagination = reactive({
 // 表格列定义（支持表头原生排序）
 const columns = computed<TableProps['columns']>(() => [
   { title: '股票', dataIndex: 'stockName', width: 130 },
-  { title: '行业', dataIndex: 'industry', width: 90 },
+  { title: '行业', dataIndex: 'industry', width: 125 },
   { title: 'ROE3年平均(%)', dataIndex: 'roe3yAvg', width: 155, align: 'right', sorter: true, defaultSortOrder: 'descend' },
   { title: '净利率3年平均(%)', dataIndex: 'netMargin3yAvg', width: 160, align: 'right', sorter: true },
   { title: '资产周转率(次)', dataIndex: 'assetTurnover3yAvg', width: 135, align: 'right', sorter: true },
@@ -638,9 +646,17 @@ const formatValue = (val: any) => {
   return isNaN(num) ? '-' : num.toFixed(2);
 };
 
+const formatEquityMultiplier = (val: any) => {
+  if (val == null || val === '') return '-';
+  const num = Number(val);
+  if (isNaN(num) || num < 0) return '-';
+  return num.toFixed(2);
+};
+
 // 质量等级与样式
 const getQualityLevelText = (score: any) => {
-  const s = Number(score || 0);
+  if (score == null || score === '') return '数据不足';
+  const s = Number(score);
   if (s >= 80) return '优秀';
   if (s >= 65) return '良好';
   if (s >= 50) return '中等';
@@ -648,7 +664,8 @@ const getQualityLevelText = (score: any) => {
 };
 
 const getQualityBadgeClass = (score: any, level?: string) => {
-  const s = Number(score || 0);
+  if (level === '数据不足' || score == null || score === '') return 'quality-badge--insufficient';
+  const s = Number(score);
   if (level === '优秀' || s >= 80) return 'quality-badge--excellent';
   if (level === '良好' || s >= 65) return 'quality-badge--good';
   if (level === '中等' || s >= 50) return 'quality-badge--mid';
@@ -656,42 +673,98 @@ const getQualityBadgeClass = (score: any, level?: string) => {
 };
 
 const getScoreColorClass = (score: any) => {
-  const s = Number(score || 0);
+  if (score == null || score === '') return 'score-num--insufficient';
+  const s = Number(score);
   if (s >= 65) return 'score-num--high';
   if (s >= 50) return 'score-num--mid';
   return 'score-num--low';
 };
 
-const getMarketPercentileText = (score: any) => {
-  const s = Number(score || 0);
-  if (s >= 85) return '前 8%';
-  if (s >= 80) return '前 15%';
-  if (s >= 75) return '前 25%';
-  if (s >= 65) return '前 40%';
-  if (s >= 50) return '前 60%';
-  return '后 30%';
+const formatQualityScore = (score: any) => {
+  if (score == null || score === '') return '-';
+  const value = Number(score);
+  return Number.isFinite(value) ? Math.round(value) : '-';
 };
 
-// 行业对比差值与条形进度
-const getDiffNumberText = (val: any, med: any) => {
-  if (val == null || med == null) return '-';
-  const diff = Number(val) - Number(med);
-  const sign = diff >= 0 ? '+' : '';
-  return `${sign}${diff.toFixed(2)}`;
-};
+// 动态计算快照年份
+const curYear = new Date().getFullYear();
+const snapshotYears = computed(() => {
+  return {
+    last3: String(curYear - 3),
+    last2: String(curYear - 2),
+    last1: String(curYear - 1),
+  };
+});
 
-const getDiffColorClass = (val: any, med: any) => {
-  if (val == null || med == null) return '';
-  const diff = Number(val) - Number(med);
-  return diff >= 0 ? 'metric-sub--positive' : 'metric-sub--negative';
-};
+// 杜邦行业对比当前选中的周期 (1: 去年, 2: 前年, 3: 前2年, 0: 3年均值)
+const compareYearIndex = ref(1);
 
-const getLeverageDiffColorClass = (val: any, med: any) => {
-  if (val == null || med == null) return '';
-  const diff = Number(val) - Number(med);
-  // 权益乘数过高是风险
-  return diff > 1.0 ? 'metric-sub--warning' : 'metric-sub--neutral';
-};
+const currentCompareData = computed(() => {
+  if (!selectedStock.value) {
+    return {
+      year: snapshotYears.value.last1,
+      roe: null,
+      roeMed: null,
+      netMargin: null,
+      netMarginMed: null,
+      turnover: null,
+      turnoverMed: null,
+      em: null,
+      emMed: null,
+    };
+  }
+  const s = selectedStock.value;
+  if (compareYearIndex.value === 0) {
+    const em3y = (s.equityMultiplier3yAvg != null && Number(s.equityMultiplier3yAvg) < 0) ? null : s.equityMultiplier3yAvg;
+    return {
+      year: '3年均值',
+      roe: s.roe3yAvg,
+      roeMed: s.roe3yAvgIndustryMed,
+      netMargin: s.netMargin3yAvg,
+      netMarginMed: s.netMargin3yAvgIndustryMed,
+      turnover: s.assetTurnover3yAvg,
+      turnoverMed: s.assetTurnover3yAvgIndustryMed,
+      em: em3y,
+      emMed: s.equityMultiplier3yAvgIndustryMed,
+    };
+  } else if (compareYearIndex.value === 1) {
+    return {
+      year: snapshotYears.value.last1,
+      roe: s.roeLastYA,
+      roeMed: s.roeLastYAIndustryMed,
+      netMargin: s.netMarginLastYA,
+      netMarginMed: s.netMarginLastYAIndustryMed,
+      turnover: s.assetTurnoverLastYA,
+      turnoverMed: s.assetTurnoverLastYAIndustryMed,
+      em: s.equityMultiplierLastYA,
+      emMed: s.equityMultiplierLastYAIndustryMed,
+    };
+  } else if (compareYearIndex.value === 2) {
+    return {
+      year: snapshotYears.value.last2,
+      roe: s.roeLast2yA,
+      roeMed: s.roeLast2yAIndustryMed,
+      netMargin: s.netMarginLast2yA,
+      netMarginMed: s.netMarginLast2yAIndustryMed,
+      turnover: s.assetTurnoverLast2yA,
+      turnoverMed: s.assetTurnoverLast2yAIndustryMed,
+      em: s.equityMultiplierLast2yA,
+      emMed: s.equityMultiplierLast2yAIndustryMed,
+    };
+  } else {
+    return {
+      year: snapshotYears.value.last3,
+      roe: s.roeLast3yA,
+      roeMed: s.roeLast3yAIndustryMed,
+      netMargin: s.netMarginLast3yA,
+      netMarginMed: s.netMarginLast3yAIndustryMed,
+      turnover: s.assetTurnoverLast3yA,
+      turnoverMed: s.assetTurnoverLast3yAIndustryMed,
+      em: s.equityMultiplierLast3yA,
+      emMed: s.equityMultiplierLast3yAIndustryMed,
+    };
+  }
+});
 
 const getBarWidth = (val: any, maxScale: number) => {
   if (val == null) return 0;
@@ -707,6 +780,8 @@ const getInterpretationPoints = (stock: StockDupontAnalysis) => {
   const turnover = Number(stock.assetTurnover3yAvg || 0);
   const turnoverMed = Number(stock.assetTurnover3yAvgIndustryMed || 0);
   const em = Number(stock.equityMultiplier3yAvg || 0);
+  const emMed = Number(stock.equityMultiplier3yAvgIndustryMed || 0);
+  const financialIndustry = /银行|保险|证券|多元金融|金融服务/.test(stock.industry || '');
 
   // 1. 盈利能力
   if (margin > marginMed && margin > 10) {
@@ -745,7 +820,23 @@ const getInterpretationPoints = (stock: StockDupontAnalysis) => {
   }
 
   // 3. 财务杠杆
-  if (em <= 2.2 && em >= 1.2) {
+  if (financialIndustry) {
+    const relativeLeverage = emMed > 0 ? em / emMed : null;
+    const isHighLeverage = relativeLeverage != null ? relativeLeverage > 1.8 : em > 25;
+    if (isHighLeverage) {
+      points.push({
+        title: '杠杆高于行业',
+        desc: `权益乘数为 ${em.toFixed(2)} 倍，明显高于金融行业合理区间，需关注资本充足与风险资产质量。`
+      });
+    } else {
+      points.push({
+        title: '杠杆符合行业特征',
+        desc: emMed > 0
+          ? `权益乘数为 ${em.toFixed(2)} 倍，接近行业中值 ${emMed.toFixed(2)} 倍，杠杆水平处于合理区间。`
+          : `权益乘数为 ${em.toFixed(2)} 倍，处于金融行业常见杠杆区间。`
+      });
+    }
+  } else if (em <= 2.2 && em >= 1.2) {
     points.push({
       title: '财务杠杆稳健',
       desc: `权益乘数为 ${em.toFixed(2)} 倍，处于健康黄金杠杆区间，资产负债结构安全可控。`
@@ -991,44 +1082,48 @@ onMounted(() => {
   border: 1px solid rgba(0, 0, 0, 0.06);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 2px 8px rgba(0, 0, 0, 0.03);
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
   position: relative;
   overflow: hidden;
 }
 
-.overview-card__header {
+.overview-card__icon-wrap {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.overview-card__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .overview-card__title {
   font-size: 13px;
   font-weight: 500;
   color: #64748b;
-}
-
-.overview-card__icon-wrap {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
+  margin-bottom: 3px;
 }
 
 .overview-card__value-row {
   display: flex;
   align-items: baseline;
   gap: 4px;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .overview-card__value {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
@@ -1044,6 +1139,7 @@ onMounted(() => {
 .overview-card__subtext {
   font-size: 11px;
   color: #94a3b8;
+  white-space: nowrap;
 }
 
 /* 卡片颜色主题 */
@@ -1144,12 +1240,20 @@ onMounted(() => {
 }
 
 :deep(.dupont-main-table .ant-table-thead > tr > th) {
-  background: #f8fafc;
-  color: #475569;
+  background: #f1f5f9 !important;
+  color: #334155;
   font-weight: 600;
   border-bottom: 1px solid #e2e8f0;
   padding: 12px 14px;
   white-space: nowrap !important;
+}
+
+:deep(.dupont-main-table .ant-table-thead th.ant-table-column-has-sorters:hover) {
+  background: #e2e8f0 !important;
+}
+
+:deep(.dupont-main-table .ant-table-thead th.ant-table-column-sort) {
+  background: #f1f5f9 !important;
 }
 
 :deep(.dupont-main-table .ant-table-tbody > tr > td) {
@@ -1214,9 +1318,11 @@ onMounted(() => {
 /* 质量评分徽章 */
 .score-cell {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 3px;
+  line-height: 1.2;
 }
 
 .score-num {
@@ -1235,6 +1341,10 @@ onMounted(() => {
 
 .score-num--low {
   color: #f43f5e;
+}
+
+.score-num--insufficient {
+  color: #94a3b8;
 }
 
 .quality-badge {
@@ -1263,6 +1373,11 @@ onMounted(() => {
 .quality-badge--poor {
   background: #fef2f2;
   color: #dc2626;
+}
+
+.quality-badge--insufficient {
+  color: #64748b;
+  background: #f1f5f9;
 }
 
 .conclusion-text {
@@ -1539,9 +1654,9 @@ onMounted(() => {
 }
 
 .annual-snapshot-table th {
-  background: #f8fafc;
-  color: #64748b;
-  font-weight: 500;
+  background: #f1f5f9;
+  color: #334155;
+  font-weight: 600;
 }
 
 .annual-snapshot-table tr:last-child td {
@@ -1558,11 +1673,44 @@ onMounted(() => {
   color: #334155;
 }
 
-/* 标题行与图例 */
-.drawer-section__title-row {
+/* 周期Tab与图例控制栏 (标题下一行) */
+.compare-controls-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
+}
+
+.year-mini-tabs {
+  display: flex;
+  align-items: center;
+  background: #f1f5f9;
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.year-mini-tab {
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  line-height: 1.2;
+  transition: all 0.15s ease;
+}
+
+.year-mini-tab:hover {
+  color: #0f172a;
+}
+
+.year-mini-tab.is-active {
+  background: #0f172a;
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .drawer-section__legend {
@@ -1576,45 +1724,56 @@ onMounted(() => {
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
-.legend-dot--median {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
+.legend-bar {
+  display: inline-block;
+  width: 14px;
+  height: 5px;
+  border-radius: 2.5px;
+}
+
+.legend-bar--stock {
+  background: #0f172a;
+}
+
+.legend-bar--median {
   background: #94a3b8;
 }
 
-.legend-line--stock {
-  width: 10px;
-  height: 3px;
-  border-radius: 2px;
-  background: #2563eb;
-}
-
-/* 行业对比条形图 (与估值指标完全一致的单行紧凑排版) */
-.comparison-bars {
+/* 行业对比双线设计 (与截图完全一致的两根平行线 + 右侧状态) */
+.comparison-two-bars-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.comp-bar-row {
-  display: flex;
-  align-items: center;
   gap: 10px;
 }
 
-.comp-bar-label {
-  width: 82px;
-  font-size: 12px;
-  font-weight: 500;
-  color: #475569;
+.comp-row-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
 }
 
-.comp-bar-track-wrap {
+.comp-row-label {
+  width: 82px;
+  min-width: 82px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.comp-row-bars {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.comp-bar-line {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1625,67 +1784,78 @@ onMounted(() => {
   height: 6px;
   background: #f1f5f9;
   border-radius: 3px;
-  position: relative;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .comp-bar-fill {
   height: 100%;
   border-radius: 3px;
-  background: linear-gradient(90deg, #93c5fd 0%, #3b82f6 100%);
   transition: width 0.3s ease;
 }
 
-.comp-bar-median-mark {
-  position: absolute;
-  top: -3px;
-  width: 2px;
-  height: 12px;
-  background: #64748b;
-  border-radius: 1px;
-  transform: translateX(-50%);
-  box-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
+.comp-bar-fill--stock {
+  background: #0f172a;
+}
+
+.comp-bar-fill--median {
+  background: #94a3b8;
 }
 
 .comp-bar-val {
+  min-width: 52px;
+  text-align: left;
   font-size: 12px;
-  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.comp-bar-val--stock {
+  font-weight: 700;
   color: #0f172a;
-  width: 38px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
 }
 
-.comp-bar-median-text {
+.comp-bar-val--median {
+  font-weight: 500;
+  color: #64748b;
+}
+
+.comp-row-status {
+  width: 60px;
+  min-width: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  line-height: 1.25;
+}
+
+.status-label {
   font-size: 11px;
-  color: #94a3b8;
-  width: 34px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
-.comp-bar-diff {
-  font-size: 11px;
-  font-weight: 600;
-  width: 52px;
-  text-align: right;
+.status-percent {
+  font-size: 12px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-.metric-sub--positive {
+.status--better {
   color: #059669;
 }
 
-.metric-sub--negative {
-  color: #e11d48;
+.status--worse {
+  color: #dc2626;
 }
 
-.metric-sub--warning {
-  color: #d97706;
-}
-
-.metric-sub--neutral {
+.status--neutral {
   color: #64748b;
+}
+
+.status--warning {
+  color: #d97706;
 }
 
 /* 杜邦解读要点 */

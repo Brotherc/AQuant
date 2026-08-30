@@ -67,6 +67,11 @@ nffund-address: https://www.nffund.com
 thfund-address: https://www.thfund.com.cn
 thfund-disclosure-api-address: https://api.fund.eastmoney.com
 thfund-disclosure-cdn-address: https://pdf.dfcfw.com
+jsfund-address: https://www.jsfund.cn
+chinaamc-address: https://fund.chinaamc.com
+cmffund-address: https://www.cmfchina.com
+htffund-address: https://www.99fund.com
+dcfund-address: https://www.dcfund.com.cn
 
 aquant:
   stock:
