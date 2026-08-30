@@ -283,15 +283,33 @@
               <div class="detail-section__header">
                 <div class="detail-section__title-group">
                   <span class="detail-section__title">成长评分</span>
-                  <a-tooltip placement="topLeft" :overlayStyle="{ maxWidth: '390px' }">
+                  <a-tooltip placement="topLeft" :overlayStyle="{ maxWidth: '480px' }">
                     <template #title>
                       <div class="score-rule-tip">
                         <div class="score-rule-tip__title">成长评分规则</div>
-                        <div>核心TTM及连续年度数据完整时才进行评分。</div>
-                        <div>短期增长55分：营收25分、净利润20分、EPS 10分。</div>
-                        <div>长期增长30分；行业相对表现10分；近三年增长持续性5分。</div>
-                        <div>零增长仅获得低基础分；负增长、长期盈利不可持续时限制最高等级。</div>
-                        <div>优秀≥80，良好65-79，中等50-64，较弱&lt;50。</div>
+                        <div class="score-rule-tip__intro">
+                          使用披露覆盖率达到80%的统一报告期；核心TTM和连续年度数据不完整时显示“数据不足”。
+                        </div>
+                        <div class="score-rule-tip__section">
+                          <div class="score-rule-tip__section-title">短期增长 · 55分</div>
+                          <div>营收TTM 25分：达标15%，强劲30%</div>
+                          <div>净利润TTM 20分：达标20%，强劲50%</div>
+                          <div>EPS TTM 10分：达标20%，强劲50%</div>
+                        </div>
+                        <div class="score-rule-tip__section">
+                          <div class="score-rule-tip__section-title">长期与质量 · 45分</div>
+                          <div>营收3年CAGR 15分：达标10%，强劲20%</div>
+                          <div>净利润3年CAGR 15分：达标10%，强劲25%</div>
+                          <div>正增长且超过行业中位数：营收、净利润各5分</div>
+                          <div>近3年营收、净利润每保持1年正增长，共享5分</div>
+                        </div>
+                        <div class="score-rule-tip__section">
+                          <div class="score-rule-tip__section-title">计分与封顶</div>
+                          <div>各增长维度按-20%、0%、达标、强劲四个节点线性计分，达到强劲线后得该项满分。</div>
+                          <div>营收与净利润TTM同时负增长，或营收3年CAGR为负：最高49分。</div>
+                          <div>任一核心TTM负增长，或净利润3年CAGR缺失/为负：最高64分。</div>
+                        </div>
+                        <div class="score-rule-tip__levels">优秀≥80｜良好65-79｜中等50-64｜较弱&lt;50</div>
                       </div>
                     </template>
                     <span class="score-rule-trigger" tabindex="0" aria-label="查看成长评分规则">
@@ -632,7 +650,7 @@ const pagination = reactive({
   pageSizeOptions: ['10', '15', '20', '50'],
   showTotal: (total: number) => `共 ${total} 条数据`,
 });
-const sortParams = ref<string[]>([]);
+const sortParams = ref<string[]>(['growthScore,desc']);
 
 // 自选股状态
 const watchlistGroups = ref<WatchlistGroupVO[]>([]);
@@ -649,7 +667,7 @@ const columns = computed<TableProps['columns']>(() => [
   { title: '基本每股收益增长率 (TTM)', dataIndex: 'epsGrowthTtm', sorter: true, width: 220, align: 'right' },
   { title: '营收增长率 (TTM)', dataIndex: 'revenueGrowthTtm', sorter: true, width: 160, align: 'right' },
   { title: '净利增长率 (TTM)', dataIndex: 'netProfitGrowthTtm', sorter: true, width: 160, align: 'right' },
-  { title: '成长评分', dataIndex: 'growthScore', key: 'growthScore', sorter: true, width: 110, align: 'center' },
+  { title: '成长评分', dataIndex: 'growthScore', key: 'growthScore', sorter: true, width: 110, align: 'center', defaultSortOrder: 'descend' },
   { title: '结论', dataIndex: 'conclusion', ellipsis: true, minWidth: 150 },
 ]);
 
@@ -845,7 +863,7 @@ const loadData = async () => {
       ...searchParams,
       page: pagination.current - 1,
       size: pagination.pageSize,
-      sort: sortParams.value.length ? sortParams.value : undefined,
+      sort: sortParams.value.length ? sortParams.value : ['growthScore,desc'],
     });
     if (res.data?.success && res.data?.data) {
       dataSource.value = res.data.data.content || [];
@@ -889,6 +907,7 @@ const resetSearch = () => {
   searchParams.revenueGrowthTtmMax = undefined;
   searchParams.netProfitGrowthTtmMin = undefined;
   searchParams.netProfitGrowthTtmMax = undefined;
+  sortParams.value = ['growthScore,desc'];
   handleSearch();
 };
 
@@ -963,11 +982,11 @@ const handleTableChange: TableProps['onChange'] = (pag: any, _filters: any, sort
     pagination.current = pag.current;
     pagination.pageSize = pag.pageSize;
   }
-  if (sorter && sorter.field) {
+  if (sorter && sorter.field && sorter.order) {
     const dir = sorter.order === 'ascend' ? 'asc' : 'desc';
     sortParams.value = [`${sorter.field},${dir}`];
   } else {
-    sortParams.value = [];
+    sortParams.value = ['growthScore,desc'];
   }
   loadData();
 };
@@ -1552,6 +1571,28 @@ onMounted(() => {
 .score-rule-tip__title {
   font-weight: 700;
   font-size: 13px;
+}
+
+.score-rule-tip__intro {
+  color: #e2e8f0;
+}
+
+.score-rule-tip__section {
+  padding-top: 6px;
+  border-top: 1px solid rgb(255 255 255 / 16%);
+}
+
+.score-rule-tip__section-title {
+  margin-bottom: 2px;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.score-rule-tip__levels {
+  padding-top: 6px;
+  border-top: 1px solid rgb(255 255 255 / 16%);
+  color: #ffffff;
+  font-weight: 600;
 }
 
 .detail-rank-percentile {
