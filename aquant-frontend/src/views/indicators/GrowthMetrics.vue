@@ -6,60 +6,60 @@
         <div class="overview-cards-grid">
           <!-- 卡片 1: 高成长机会 -->
           <div class="overview-card overview-card--emerald">
-            <div class="overview-card__header">
-              <span class="overview-card__title">高成长机会</span>
-              <div class="overview-card__icon-wrap">
-                <RiseOutlined />
+            <div class="overview-card__icon-wrap">
+              <RiseOutlined />
+            </div>
+            <div class="overview-card__content">
+              <div class="overview-card__title">高成长机会</div>
+              <div class="overview-card__value-row">
+                <span class="overview-card__value">{{ overviewData.highGrowthOpportunityCount }}</span>
+                <span class="overview-card__unit">家</span>
               </div>
+              <div class="overview-card__subtext">成长评分 ≥ 80</div>
             </div>
-            <div class="overview-card__value-row">
-              <span class="overview-card__value">{{ overviewData.highGrowthOpportunityCount }}</span>
-              <span class="overview-card__unit">家</span>
-            </div>
-            <div class="overview-card__subtext">优于行业中位数20%以上</div>
           </div>
 
-          <!-- 卡片 2: 营收增长中位数 -->
+          <!-- 卡片 2: 营收增长率中位数 -->
           <div class="overview-card overview-card--indigo">
-            <div class="overview-card__header">
-              <span class="overview-card__title">营收增长中位数</span>
-              <div class="overview-card__icon-wrap">
-                <BarChartOutlined />
+            <div class="overview-card__icon-wrap">
+              <BarChartOutlined />
+            </div>
+            <div class="overview-card__content">
+              <div class="overview-card__title">营收增长率中位数</div>
+              <div class="overview-card__value-row">
+                <span class="overview-card__value">{{ formatPercent(overviewData.marketRevenueGrowthMedian) }}</span>
               </div>
+              <div class="overview-card__subtext">全市场 (TTM)</div>
             </div>
-            <div class="overview-card__value-row">
-              <span class="overview-card__value">{{ formatPercent(overviewData.marketRevenueGrowthMedian) }}</span>
-            </div>
-            <div class="overview-card__subtext">全市场 (TTM)</div>
           </div>
 
-          <!-- 卡片 3: 净利润增长中位数 -->
+          <!-- 卡片 3: 净利润增长率中位数 -->
           <div class="overview-card overview-card--violet">
-            <div class="overview-card__header">
-              <span class="overview-card__title">净利润增长中位数</span>
-              <div class="overview-card__icon-wrap">
-                <FundOutlined />
+            <div class="overview-card__icon-wrap">
+              <FundOutlined />
+            </div>
+            <div class="overview-card__content">
+              <div class="overview-card__title">净利润增长率中位数</div>
+              <div class="overview-card__value-row">
+                <span class="overview-card__value">{{ formatPercent(overviewData.marketNetProfitGrowthMedian) }}</span>
               </div>
+              <div class="overview-card__subtext">全市场 (TTM)</div>
             </div>
-            <div class="overview-card__value-row">
-              <span class="overview-card__value">{{ formatPercent(overviewData.marketNetProfitGrowthMedian) }}</span>
-            </div>
-            <div class="overview-card__subtext">全市场 (TTM)</div>
           </div>
 
           <!-- 卡片 4: 我的自选成长 -->
           <div class="overview-card overview-card--amber">
-            <div class="overview-card__header">
-              <span class="overview-card__title">我的自选成长</span>
-              <div class="overview-card__icon-wrap">
-                <StarFilled />
+            <div class="overview-card__icon-wrap">
+              <StarFilled />
+            </div>
+            <div class="overview-card__content">
+              <div class="overview-card__title">我的自选成长</div>
+              <div class="overview-card__value-row">
+                <span class="overview-card__value">{{ overviewData.watchlistHighGrowthCount }}</span>
+                <span class="overview-card__unit">支</span>
               </div>
+              <div class="overview-card__subtext">自选中成长评分 ≥ 80</div>
             </div>
-            <div class="overview-card__value-row">
-              <span class="overview-card__value">{{ overviewData.watchlistHighGrowthCount }}</span>
-              <span class="overview-card__unit">支</span>
-            </div>
-            <div class="overview-card__subtext">优于行业中位数20%以上</div>
           </div>
         </div>
 
@@ -116,10 +116,10 @@
               <div class="filter-item">
                 <a-select
                   v-model:value="selectedEpsRange"
-                  placeholder="EPS 增长 (TTM)"
+                  placeholder="基本每股收益增长率 (TTM)"
                   allow-clear
                   @change="handleEpsRangeChange"
-                  style="width: 155px"
+                  style="width: 215px"
                 >
                   <a-select-option value="G50">&gt; 50%</a-select-option>
                   <a-select-option value="20_50">20% ~ 50%</a-select-option>
@@ -131,10 +131,10 @@
               <div class="filter-item">
                 <a-select
                   v-model:value="selectedRevRange"
-                  placeholder="营收增长 (TTM)"
+                  placeholder="营收增长率 (TTM)"
                   allow-clear
                   @change="handleRevRangeChange"
-                  style="width: 155px"
+                  style="width: 165px"
                 >
                   <a-select-option value="G30">&gt; 30%</a-select-option>
                   <a-select-option value="15_30">15% ~ 30%</a-select-option>
@@ -146,10 +146,10 @@
               <div class="filter-item">
                 <a-select
                   v-model:value="selectedNetProfitRange"
-                  placeholder="净利润增长 (TTM)"
+                  placeholder="净利润增长率 (TTM)"
                   allow-clear
                   @change="handleNetProfitRangeChange"
-                  style="width: 165px"
+                  style="width: 175px"
                 >
                   <a-select-option value="G50">&gt; 50%</a-select-option>
                   <a-select-option value="20_50">20% ~ 50%</a-select-option>
@@ -197,6 +197,7 @@
               :row-class-name="rowClassName"
               size="middle"
               class="growth-table"
+              :scroll="{ x: 'max-content' }"
             >
             <!-- 自定义单元格渲染 -->
             <template #bodyCell="{ column, record }">
@@ -213,32 +214,23 @@
                 <span class="industry-badge">{{ record.industry || '-' }}</span>
               </template>
 
-              <!-- EPS 增长 (TTM) -->
+              <!-- 基本每股收益增长率 (TTM) -->
               <template v-else-if="column.dataIndex === 'epsGrowthTtm'">
-                <span
-                  class="metric-value font-semibold"
-                  :class="getValueColorClass(record.epsGrowthTtm)"
-                >
+                <span class="metric-value font-semibold">
                   {{ formatPercent(record.epsGrowthTtm) }}
                 </span>
               </template>
 
-              <!-- 营收增长 (TTM) -->
+              <!-- 营收增长率 (TTM) -->
               <template v-else-if="column.dataIndex === 'revenueGrowthTtm'">
-                <span
-                  class="metric-value"
-                  :class="getValueColorClass(record.revenueGrowthTtm)"
-                >
+                <span class="metric-value font-semibold">
                   {{ formatPercent(record.revenueGrowthTtm) }}
                 </span>
               </template>
 
-              <!-- 净利润增长 (TTM) -->
+              <!-- 净利增长率 (TTM) -->
               <template v-else-if="column.dataIndex === 'netProfitGrowthTtm'">
-                <span
-                  class="metric-value"
-                  :class="getValueColorClass(record.netProfitGrowthTtm)"
-                >
+                <span class="metric-value font-semibold">
                   {{ formatPercent(record.netProfitGrowthTtm) }}
                 </span>
               </template>
@@ -247,7 +239,7 @@
               <template v-else-if="column.key === 'growthScore'">
                 <div class="score-cell">
                   <span class="score-num" :class="getScoreColorClass(record.growthScore)">
-                    {{ Math.round(Number(record.growthScore || 0)) }}
+                    {{ formatGrowthScore(record.growthScore) }}
                   </span>
                   <span
                     class="quality-badge"
@@ -286,18 +278,79 @@
           </div>
 
           <div class="detail-drawer__body">
-            <!-- 评级综合 Banner -->
-            <div class="quality-summary-banner">
-              <div class="banner-top">
-                <span
-                  class="quality-badge quality-badge--large"
-                  :class="getQualityBadgeClass(selectedStock.growthScore, selectedStock.growthLevel)"
-                >
-                  {{ selectedStock.growthLevel || getQualityLevelText(selectedStock.growthScore) }}
+            <!-- Section 1: 评分 -->
+            <div class="detail-section">
+              <div class="detail-section__header">
+                <div class="detail-section__title-group">
+                  <span class="detail-section__title">评分</span>
+                  <a-tooltip placement="topLeft" :overlayStyle="{ maxWidth: '480px' }">
+                    <template #title>
+                      <div class="score-rule-tip">
+                        <div class="score-rule-tip__title">成长评分规则</div>
+                        <div class="score-rule-tip__intro">
+                          使用披露覆盖率达到80%的统一报告期；核心TTM和连续年度数据不完整时显示“数据不足”。
+                        </div>
+                        <div class="score-rule-tip__section">
+                          <div class="score-rule-tip__section-title">短期增长 · 55分</div>
+                          <div>营收TTM 25分：达标15%，强劲30%</div>
+                          <div>净利润TTM 20分：达标20%，强劲50%</div>
+                          <div>EPS TTM 10分：达标20%，强劲50%</div>
+                        </div>
+                        <div class="score-rule-tip__section">
+                          <div class="score-rule-tip__section-title">长期与质量 · 45分</div>
+                          <div>营收3年CAGR 15分：达标10%，强劲20%</div>
+                          <div>净利润3年CAGR 15分：达标10%，强劲25%</div>
+                          <div>正增长且超过行业中位数：营收、净利润各5分</div>
+                          <div>近3年营收、净利润每保持1年正增长，共享5分</div>
+                        </div>
+                        <div class="score-rule-tip__section">
+                          <div class="score-rule-tip__section-title">计分与封顶</div>
+                          <div>各增长维度按-20%、0%、达标、强劲四个节点线性计分，达到强劲线后得该项满分。</div>
+                          <div>营收与净利润TTM同时负增长，或营收3年CAGR为负：最高49分。</div>
+                          <div>任一核心TTM负增长，或净利润3年CAGR缺失/为负：最高64分。</div>
+                        </div>
+                        <div class="score-rule-tip__levels">优秀≥80｜良好65-79｜中等50-64｜较弱&lt;50</div>
+                      </div>
+                    </template>
+                    <span class="score-rule-trigger" tabindex="0" aria-label="查看成长评分规则">
+                      <ExclamationCircleOutlined />
+                    </span>
+                  </a-tooltip>
+                </div>
+                <span class="detail-rank-percentile" v-if="selectedStock.epsGrowth3yCagrRank">
+                  行业内名次：第 {{ Math.round(Number(selectedStock.epsGrowth3yCagrRank)) }} 名
                 </span>
               </div>
-              <div class="banner-desc">
-                {{ getGrowthAdvice(selectedStock) }}
+              
+              <div class="quality-position-card">
+                <div class="quality-score-display">
+                  <span class="quality-score-num">{{ formatGrowthScore(selectedStock.growthScore) }}</span>
+                  <span class="quality-score-tag" :class="getQualityBadgeClass(selectedStock.growthScore, selectedStock.growthLevel)">
+                    {{ selectedStock.growthLevel || getQualityLevelText(selectedStock.growthScore) }}
+                  </span>
+                </div>
+
+                <!-- 4 档刻度指示条 -->
+                <div class="quality-scale-bar">
+                  <div class="scale-segment scale-segment--poor" title="较弱 <50">
+                    <span class="segment-label">较弱 &lt;50</span>
+                  </div>
+                  <div class="scale-segment scale-segment--mid" title="中等 50-64">
+                    <span class="segment-label">中等 50-64</span>
+                  </div>
+                  <div class="scale-segment scale-segment--good" title="良好 65-79">
+                    <span class="segment-label">良好 65-79</span>
+                  </div>
+                  <div class="scale-segment scale-segment--excellent" title="优秀 ≥80">
+                    <span class="segment-label">优秀 ≥80</span>
+                  </div>
+                  <!-- 刻度指示小游标 -->
+                  <div
+                    v-if="selectedStock.growthScore != null"
+                    class="scale-indicator-cursor"
+                    :style="{ left: `${Math.min(100, Math.max(0, Number(selectedStock.growthScore)))}%` }"
+                  ></div>
+                </div>
               </div>
             </div>
 
@@ -312,32 +365,32 @@
                   <thead>
                     <tr>
                       <th style="width: 32%">指标</th>
-                      <th style="width: 17%">{{ currentYear - 3 }}</th>
-                      <th style="width: 17%">{{ currentYear - 2 }}</th>
                       <th style="width: 17%">{{ currentYear - 1 }}</th>
+                      <th style="width: 17%">{{ currentYear - 2 }}</th>
+                      <th style="width: 17%">{{ currentYear - 3 }}</th>
                       <th style="width: 17%">最新 (TTM)</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td class="metric-name-td font-semibold">EPS 增长 (%)</td>
-                      <td>{{ formatValue(selectedStock.epsGrowthLast3yA) }}</td>
-                      <td>{{ formatValue(selectedStock.epsGrowthLast2yA) }}</td>
+                      <td class="metric-name-td font-semibold">基本每股收益增长率 (%)</td>
                       <td>{{ formatValue(selectedStock.epsGrowthLastYA) }}</td>
-                      <td class="font-semibold text-emerald">{{ formatValue(selectedStock.epsGrowthTtm) }}</td>
+                      <td>{{ formatValue(selectedStock.epsGrowthLast2yA) }}</td>
+                      <td>{{ formatValue(selectedStock.epsGrowthLast3yA) }}</td>
+                      <td class="font-semibold">{{ formatValue(selectedStock.epsGrowthTtm) }}</td>
                     </tr>
                     <tr>
-                      <td class="metric-name-td">营收增长 (%)</td>
-                      <td>{{ formatValue(selectedStock.revenueGrowthLast3yA) }}</td>
-                      <td>{{ formatValue(selectedStock.revenueGrowthLast2yA) }}</td>
+                      <td class="metric-name-td">营收增长率 (%)</td>
                       <td>{{ formatValue(selectedStock.revenueGrowthLastYA) }}</td>
+                      <td>{{ formatValue(selectedStock.revenueGrowthLast2yA) }}</td>
+                      <td>{{ formatValue(selectedStock.revenueGrowthLast3yA) }}</td>
                       <td class="font-semibold">{{ formatValue(selectedStock.revenueGrowthTtm) }}</td>
                     </tr>
                     <tr>
-                      <td class="metric-name-td">净利润增长 (%)</td>
-                      <td>{{ formatValue(selectedStock.netProfitGrowthLast3yA) }}</td>
-                      <td>{{ formatValue(selectedStock.netProfitGrowthLast2yA) }}</td>
+                      <td class="metric-name-td">净利润增长率 (%)</td>
                       <td>{{ formatValue(selectedStock.netProfitGrowthLastYA) }}</td>
+                      <td>{{ formatValue(selectedStock.netProfitGrowthLast2yA) }}</td>
+                      <td>{{ formatValue(selectedStock.netProfitGrowthLast3yA) }}</td>
                       <td class="font-semibold">{{ formatValue(selectedStock.netProfitGrowthTtm) }}</td>
                     </tr>
                   </tbody>
@@ -345,98 +398,126 @@
               </div>
             </div>
 
-            <!-- Section 3: 与行业中位数对比 (当前) -->
+            <!-- Section 3: 与行业中位数对比 (多周期切换) -->
             <div class="detail-section">
-              <div class="drawer-section__title-row">
-                <span class="detail-section__title">与行业中位数对比 (当前)</span>
+              <div class="detail-section__header">
+                <span class="detail-section__title">与行业中位数对比 ({{ currentCompareData.periodName }})</span>
+              </div>
+
+              <!-- 下一行：周期Tab与图例 -->
+              <div class="compare-controls-row">
+                <div class="year-mini-tabs">
+                  <button
+                    class="year-mini-tab"
+                    :class="{ 'is-active': comparePeriod === 'ttm' }"
+                    @click="comparePeriod = 'ttm'"
+                    title="最新 (TTM)"
+                  >
+                    TTM
+                  </button>
+                  <button
+                    class="year-mini-tab"
+                    :class="{ 'is-active': comparePeriod === 'lastYA' }"
+                    @click="comparePeriod = 'lastYA'"
+                    title="去年实际"
+                  >
+                    {{ currentYear - 1 }}
+                  </button>
+                  <button
+                    class="year-mini-tab"
+                    :class="{ 'is-active': comparePeriod === '3yCagr' }"
+                    @click="comparePeriod = '3yCagr'"
+                    title="3年复合增长率"
+                  >
+                    3年复合
+                  </button>
+                </div>
+
                 <div class="drawer-section__legend">
                   <span class="legend-item">
-                    <span class="legend-dot legend-dot--median"></span>
-                    行业中位数
+                    <span class="legend-bar legend-bar--stock"></span>
+                    {{ selectedStock.stockName }}
                   </span>
                   <span class="legend-item">
-                    <span class="legend-line legend-line--stock"></span>
-                    {{ selectedStock.stockName }}
+                    <span class="legend-bar legend-bar--median"></span>
+                    行业中位数
                   </span>
                 </div>
               </div>
 
-              <div class="comparison-bars">
-                <!-- 1. EPS 增长 对比 -->
-                <div class="comp-bar-row">
-                  <div class="comp-bar-label font-semibold">EPS 增长 (%)</div>
-                  <div class="comp-bar-track-wrap">
-                    <div class="comp-bar-track">
-                      <div
-                        class="comp-bar-fill"
-                        :style="{ width: `${getBarWidth(selectedStock.epsGrowthTtm, 100)}%` }"
-                      ></div>
-                      <div
-                        class="comp-bar-median-mark"
-                        :style="{ left: `${getBarWidth(selectedStock.epsGrowthTtmIndustryMed, 100)}%` }"
-                        :title="`行业中位: ${formatValue(selectedStock.epsGrowthTtmIndustryMed)}`"
-                      ></div>
+              <div class="comparison-two-bars-list">
+                <!-- 1. 基本每股收益增长率 对比 -->
+                <div class="comp-row-item">
+                  <div class="comp-row-label font-semibold">基本每股收益增长率 (%)</div>
+                  <div class="comp-row-bars">
+                    <div class="comp-bar-line">
+                      <div class="comp-bar-track">
+                        <div
+                          class="comp-bar-fill comp-bar-fill--stock"
+                          :style="{ width: `${getBarWidth(currentCompareData.eps, 100)}%` }"
+                        ></div>
+                      </div>
+                      <span class="comp-bar-val comp-bar-val--stock">{{ formatValue(currentCompareData.eps) }}</span>
                     </div>
-                    <span class="comp-bar-val font-semibold">{{ formatValue(selectedStock.epsGrowthTtm) }}</span>
-                    <span class="comp-bar-median-text">{{ formatValue(selectedStock.epsGrowthTtmIndustryMed) }}</span>
-                  </div>
-                  <div
-                    class="comp-bar-diff"
-                    :class="getDiffColorClass(selectedStock.epsGrowthTtm, selectedStock.epsGrowthTtmIndustryMed)"
-                  >
-                    {{ getDiffNumberText(selectedStock.epsGrowthTtm, selectedStock.epsGrowthTtmIndustryMed) }}
+                    <div class="comp-bar-line">
+                      <div class="comp-bar-track">
+                        <div
+                          class="comp-bar-fill comp-bar-fill--median"
+                          :style="{ width: `${getBarWidth(currentCompareData.epsMed, 100)}%` }"
+                        ></div>
+                      </div>
+                      <span class="comp-bar-val comp-bar-val--median">{{ formatValue(currentCompareData.epsMed) }}</span>
+                    </div>
                   </div>
                 </div>
 
-                <!-- 2. 营收增长 对比 -->
-                <div class="comp-bar-row">
-                  <div class="comp-bar-label">营收增长 (%)</div>
-                  <div class="comp-bar-track-wrap">
-                    <div class="comp-bar-track">
-                      <div
-                        class="comp-bar-fill"
-                        :style="{ width: `${getBarWidth(selectedStock.revenueGrowthTtm, 50)}%` }"
-                      ></div>
-                      <div
-                        class="comp-bar-median-mark"
-                        :style="{ left: `${getBarWidth(selectedStock.revenueGrowthTtmIndustryMed, 50)}%` }"
-                        :title="`行业中位: ${formatValue(selectedStock.revenueGrowthTtmIndustryMed)}`"
-                      ></div>
+                <!-- 2. 营收增长率 对比 -->
+                <div class="comp-row-item">
+                  <div class="comp-row-label">营收增长率 (%)</div>
+                  <div class="comp-row-bars">
+                    <div class="comp-bar-line">
+                      <div class="comp-bar-track">
+                        <div
+                          class="comp-bar-fill comp-bar-fill--stock"
+                          :style="{ width: `${getBarWidth(currentCompareData.rev, 50)}%` }"
+                        ></div>
+                      </div>
+                      <span class="comp-bar-val comp-bar-val--stock">{{ formatValue(currentCompareData.rev) }}</span>
                     </div>
-                    <span class="comp-bar-val">{{ formatValue(selectedStock.revenueGrowthTtm) }}</span>
-                    <span class="comp-bar-median-text">{{ formatValue(selectedStock.revenueGrowthTtmIndustryMed) }}</span>
-                  </div>
-                  <div
-                    class="comp-bar-diff"
-                    :class="getDiffColorClass(selectedStock.revenueGrowthTtm, selectedStock.revenueGrowthTtmIndustryMed)"
-                  >
-                    {{ getDiffNumberText(selectedStock.revenueGrowthTtm, selectedStock.revenueGrowthTtmIndustryMed) }}
+                    <div class="comp-bar-line">
+                      <div class="comp-bar-track">
+                        <div
+                          class="comp-bar-fill comp-bar-fill--median"
+                          :style="{ width: `${getBarWidth(currentCompareData.revMed, 50)}%` }"
+                        ></div>
+                      </div>
+                      <span class="comp-bar-val comp-bar-val--median">{{ formatValue(currentCompareData.revMed) }}</span>
+                    </div>
                   </div>
                 </div>
 
-                <!-- 3. 净利润增长 对比 -->
-                <div class="comp-bar-row">
-                  <div class="comp-bar-label">净利增长 (%)</div>
-                  <div class="comp-bar-track-wrap">
-                    <div class="comp-bar-track">
-                      <div
-                        class="comp-bar-fill"
-                        :style="{ width: `${getBarWidth(selectedStock.netProfitGrowthTtm, 80)}%` }"
-                      ></div>
-                      <div
-                        class="comp-bar-median-mark"
-                        :style="{ left: `${getBarWidth(selectedStock.netProfitGrowthTtmIndustryMed, 80)}%` }"
-                        :title="`行业中位: ${formatValue(selectedStock.netProfitGrowthTtmIndustryMed)}`"
-                      ></div>
+                <!-- 3. 净利增长率 对比 -->
+                <div class="comp-row-item">
+                  <div class="comp-row-label">净利增长率 (%)</div>
+                  <div class="comp-row-bars">
+                    <div class="comp-bar-line">
+                      <div class="comp-bar-track">
+                        <div
+                          class="comp-bar-fill comp-bar-fill--stock"
+                          :style="{ width: `${getBarWidth(currentCompareData.net, 80)}%` }"
+                        ></div>
+                      </div>
+                      <span class="comp-bar-val comp-bar-val--stock">{{ formatValue(currentCompareData.net) }}</span>
                     </div>
-                    <span class="comp-bar-val">{{ formatValue(selectedStock.netProfitGrowthTtm) }}</span>
-                    <span class="comp-bar-median-text">{{ formatValue(selectedStock.netProfitGrowthTtmIndustryMed) }}</span>
-                  </div>
-                  <div
-                    class="comp-bar-diff"
-                    :class="getDiffColorClass(selectedStock.netProfitGrowthTtm, selectedStock.netProfitGrowthTtmIndustryMed)"
-                  >
-                    {{ getDiffNumberText(selectedStock.netProfitGrowthTtm, selectedStock.netProfitGrowthTtmIndustryMed) }}
+                    <div class="comp-bar-line">
+                      <div class="comp-bar-track">
+                        <div
+                          class="comp-bar-fill comp-bar-fill--median"
+                          :style="{ width: `${getBarWidth(currentCompareData.netMed, 80)}%` }"
+                        ></div>
+                      </div>
+                      <span class="comp-bar-val comp-bar-val--median">{{ formatValue(currentCompareData.netMed) }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -497,7 +578,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
 import {
   RiseOutlined,
   BarChartOutlined,
@@ -506,6 +587,7 @@ import {
   StarOutlined,
   SearchOutlined,
   CloseOutlined,
+  ExclamationCircleOutlined,
 } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
 import type { TableProps } from 'ant-design-vue';
@@ -568,7 +650,7 @@ const pagination = reactive({
   pageSizeOptions: ['10', '15', '20', '50'],
   showTotal: (total: number) => `共 ${total} 条数据`,
 });
-const sortParams = ref<string[]>([]);
+const sortParams = ref<string[]>(['growthScore,desc']);
 
 // 自选股状态
 const watchlistGroups = ref<WatchlistGroupVO[]>([]);
@@ -579,50 +661,78 @@ const targetGroupId = ref<number | undefined>(undefined);
 const pendingStockToAdd = ref<StockGrowthMetrics | null>(null);
 
 // 表格列定义
-const columns: TableProps['columns'] = [
-  { title: '股票', key: 'stock', width: 130 },
-  { title: '行业', key: 'industry', width: 125, align: 'center' },
-  { title: 'EPS 增长 (TTM)', dataIndex: 'epsGrowthTtm', sorter: true, width: 130, align: 'right' },
-  { title: '营收增长 (TTM)', dataIndex: 'revenueGrowthTtm', sorter: true, width: 130, align: 'right' },
-  { title: '净利增长 (TTM)', dataIndex: 'netProfitGrowthTtm', sorter: true, width: 130, align: 'right' },
-  { title: '成长评分', key: 'growthScore', sorter: true, width: 110, align: 'center' },
-  { title: '成长结论', dataIndex: 'conclusion', width: 180, ellipsis: true },
-];
+const columns = computed<TableProps['columns']>(() => [
+  { title: '股票', dataIndex: 'stockName', key: 'stock', width: 130 },
+  { title: '行业', dataIndex: 'industry', key: 'industry', width: 125 },
+  { title: '基本每股收益增长率 (TTM)', dataIndex: 'epsGrowthTtm', sorter: true, width: 220, align: 'right' },
+  { title: '营收增长率 (TTM)', dataIndex: 'revenueGrowthTtm', sorter: true, width: 160, align: 'right' },
+  { title: '净利增长率 (TTM)', dataIndex: 'netProfitGrowthTtm', sorter: true, width: 160, align: 'right' },
+  { title: '成长评分', dataIndex: 'growthScore', key: 'growthScore', sorter: true, width: 110, align: 'center', defaultSortOrder: 'descend' },
+  { title: '结论', dataIndex: 'conclusion', ellipsis: true, minWidth: 150 },
+]);
 
 // 格式化函数
 const formatPercent = (val: any) => {
   if (val == null || val === '') return '-';
   const num = Number(val);
-  return isNaN(num) ? '-' : `${num >= 0 ? '+' : ''}${num.toFixed(2)}%`;
+  return isNaN(num) ? '-' : `${num.toFixed(2)}%`;
 };
 
 const formatValue = (val: any) => {
   if (val == null || val === '') return '-';
   const num = Number(val);
-  return isNaN(num) ? '-' : `${num >= 0 ? '+' : ''}${num.toFixed(2)}`;
-};
-
-const getValueColorClass = (val: any) => {
-  if (val == null) return '';
-  const num = Number(val);
-  if (num > 0) return 'text-emerald font-semibold';
-  if (num < 0) return 'text-rose';
-  return 'text-slate';
+  return isNaN(num) ? '-' : num.toFixed(2);
 };
 
 
-const getDiffNumberText = (val: any, med: any) => {
-  if (val == null || med == null) return '-';
-  const diff = Number(val) - Number(med);
-  const sign = diff >= 0 ? '+' : '';
-  return `${sign}${diff.toFixed(2)}`;
-};
+// 行业对比当前选中的周期 ('ttm' | 'lastYA' | '3yCagr')
+const comparePeriod = ref<'ttm' | 'lastYA' | '3yCagr'>('ttm');
 
-const getDiffColorClass = (val: any, med: any) => {
-  if (val == null || med == null) return '';
-  const diff = Number(val) - Number(med);
-  return diff >= 0 ? 'metric-sub--positive' : 'metric-sub--negative';
-};
+const currentCompareData = computed(() => {
+  if (!selectedStock.value) {
+    return {
+      periodName: 'TTM',
+      eps: null,
+      epsMed: null,
+      rev: null,
+      revMed: null,
+      net: null,
+      netMed: null,
+    };
+  }
+  const s = selectedStock.value;
+  if (comparePeriod.value === 'lastYA') {
+    return {
+      periodName: String(currentYear - 1),
+      eps: s.epsGrowthLastYA,
+      epsMed: s.epsGrowthLastYAIndustryMed,
+      rev: s.revenueGrowthLastYA,
+      revMed: s.revenueGrowthLastYAIndustryMed,
+      net: s.netProfitGrowthLastYA,
+      netMed: s.netProfitGrowthLastYAIndustryMed,
+    };
+  } else if (comparePeriod.value === '3yCagr') {
+    return {
+      periodName: '3年复合',
+      eps: s.epsGrowth3yCagr,
+      epsMed: s.epsGrowth3yCagrIndustryMed,
+      rev: s.revenueGrowth3yCagr,
+      revMed: s.revenueGrowth3yCagrIndustryMed,
+      net: s.netProfitGrowth3yCagr,
+      netMed: s.netProfitGrowth3yCagrIndustryMed,
+    };
+  } else {
+    return {
+      periodName: 'TTM',
+      eps: s.epsGrowthTtm,
+      epsMed: s.epsGrowthTtmIndustryMed,
+      rev: s.revenueGrowthTtm,
+      revMed: s.revenueGrowthTtmIndustryMed,
+      net: s.netProfitGrowthTtm,
+      netMed: s.netProfitGrowthTtmIndustryMed,
+    };
+  }
+});
 
 const getBarWidth = (val: any, maxScale: number) => {
   if (val == null) return 0;
@@ -631,7 +741,8 @@ const getBarWidth = (val: any, maxScale: number) => {
 };
 
 const getQualityBadgeClass = (score: any, level?: string) => {
-  const s = Number(score || 0);
+  if (level === '数据不足' || score == null || score === '') return 'quality-badge--insufficient';
+  const s = Number(score);
   if (level === '优秀' || s >= 80) return 'quality-badge--excellent';
   if (level === '良好' || s >= 65) return 'quality-badge--good';
   if (level === '中等' || s >= 50) return 'quality-badge--mid';
@@ -639,7 +750,8 @@ const getQualityBadgeClass = (score: any, level?: string) => {
 };
 
 const getQualityLevelText = (score: any) => {
-  const s = Number(score || 0);
+  if (score == null || score === '') return '数据不足';
+  const s = Number(score);
   if (s >= 80) return '优秀';
   if (s >= 65) return '良好';
   if (s >= 50) return '中等';
@@ -647,16 +759,26 @@ const getQualityLevelText = (score: any) => {
 };
 
 const getScoreColorClass = (score: any) => {
-  const s = Number(score || 0);
+  if (score == null || score === '') return 'score-num--insufficient';
+  const s = Number(score);
   if (s >= 80) return 'score-num--high';
-  if (s >= 65) return 'score-num--mid';
+  if (s >= 50) return 'score-num--mid';
   return 'score-num--low';
 };
 
+const formatGrowthScore = (score: any) => {
+  if (score == null || score === '') return '-';
+  const value = Number(score);
+  return Number.isFinite(value) ? Math.round(value) : '-';
+};
+
 const getGrowthAdvice = (stock: StockGrowthMetrics) => {
-  const s = Number(stock.growthScore || 0);
+  if (stock.growthScore == null) {
+    return '统一报告期或连续年度数据不足，暂时无法评价成长质量。';
+  }
+  const s = Number(stock.growthScore);
   if (s >= 80) {
-    return '当前成长质量优于全行业 80% 以上的公司，具备持续扩张动力与较强护城河。';
+    return '短期与长期增长表现较强，且增长持续性较好。';
   } else if (s >= 65) {
     return '公司成长性良好，营收与净利润保持稳健扩张，基本面呈现良好改善态势。';
   } else if (s >= 50) {
@@ -676,7 +798,7 @@ const getGrowthInterpretations = (stock: StockGrowthMetrics) => {
   const rev = Number(stock.revenueGrowthTtm || 0);
   const net = Number(stock.netProfitGrowthTtm || 0);
   if (eps > 0 && rev > 0 && net > 0) {
-    list.push('EPS、营收、净利润保持同步增长，利润质量与成长协调性较优。');
+    list.push('基本每股收益、营收、净利润保持同步增长，利润质量与成长协调性较优。');
   } else if (rev > 0 && net <= 0) {
     list.push('营业收入保持增长但净利润承压，呈现增收不增利或处于费用投入期。');
   } else if (net > 0 && rev <= 0) {
@@ -741,7 +863,7 @@ const loadData = async () => {
       ...searchParams,
       page: pagination.current - 1,
       size: pagination.pageSize,
-      sort: sortParams.value.length ? sortParams.value : undefined,
+      sort: sortParams.value.length ? sortParams.value : ['growthScore,desc'],
     });
     if (res.data?.success && res.data?.data) {
       dataSource.value = res.data.data.content || [];
@@ -785,6 +907,7 @@ const resetSearch = () => {
   searchParams.revenueGrowthTtmMax = undefined;
   searchParams.netProfitGrowthTtmMin = undefined;
   searchParams.netProfitGrowthTtmMax = undefined;
+  sortParams.value = ['growthScore,desc'];
   handleSearch();
 };
 
@@ -859,11 +982,11 @@ const handleTableChange: TableProps['onChange'] = (pag: any, _filters: any, sort
     pagination.current = pag.current;
     pagination.pageSize = pag.pageSize;
   }
-  if (sorter && sorter.field) {
+  if (sorter && sorter.field && sorter.order) {
     const dir = sorter.order === 'ascend' ? 'asc' : 'desc';
     sortParams.value = [`${sorter.field},${dir}`];
   } else {
-    sortParams.value = [];
+    sortParams.value = ['growthScore,desc'];
   }
   loadData();
 };
@@ -995,35 +1118,28 @@ onMounted(() => {
 
 .overview-card {
   background: #ffffff;
-  border-radius: 10px;
-  padding: 14px 16px;
+  border-radius: 12px;
+  padding: 16px 20px;
   border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 2px 8px rgba(0, 0, 0, 0.03);
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.overview-card__header {
-  display: flex;
+  flex-direction: row;
   align-items: center;
-  justify-content: space-between;
-}
-
-.overview-card__title {
-  font-size: 13px;
-  font-weight: 500;
-  color: #64748b;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
 }
 
 .overview-card__icon-wrap {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 20px;
+  flex-shrink: 0;
 }
 
 .overview-card--emerald .overview-card__icon-wrap {
@@ -1046,29 +1162,45 @@ onMounted(() => {
   color: #d97706;
 }
 
+.overview-card__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.overview-card__title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  margin-bottom: 3px;
+}
+
 .overview-card__value-row {
   display: flex;
   align-items: baseline;
   gap: 4px;
+  margin-bottom: 2px;
 }
 
 .overview-card__value {
-  font-size: 24px;
-  font-weight: 800;
+  font-size: 22px;
+  font-weight: 700;
   color: #0f172a;
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
 }
 
 .overview-card__unit {
-  font-size: 13px;
-  color: #64748b;
+  font-size: 12px;
+  color: #94a3b8;
   font-weight: 500;
 }
 
 .overview-card__subtext {
-  font-size: 12px;
+  font-size: 11px;
   color: #94a3b8;
+  white-space: nowrap;
 }
 
 /* 快捷分类标签（胶囊 Tab） */
@@ -1149,12 +1281,20 @@ onMounted(() => {
 }
 
 :deep(.growth-table .ant-table-thead > tr > th) {
-  background: #f8fafc;
-  color: #475569;
+  background: #f1f5f9 !important;
+  color: #334155;
   font-weight: 600;
   border-bottom: 1px solid #e2e8f0;
   padding: 12px 14px;
   white-space: nowrap !important;
+}
+
+:deep(.growth-table .ant-table-thead th.ant-table-column-has-sorters:hover) {
+  background: #e2e8f0 !important;
+}
+
+:deep(.growth-table .ant-table-thead th.ant-table-column-sort) {
+  background: #f1f5f9 !important;
 }
 
 :deep(.growth-table .ant-table-tbody > tr > td) {
@@ -1214,9 +1354,11 @@ onMounted(() => {
 /* 评分徽章 */
 .score-cell {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 3px;
+  line-height: 1.2;
 }
 
 .score-num {
@@ -1235,6 +1377,10 @@ onMounted(() => {
 
 .score-num--low {
   color: #f43f5e;
+}
+
+.score-num--insufficient {
+  color: #94a3b8;
 }
 
 .quality-badge {
@@ -1269,6 +1415,11 @@ onMounted(() => {
 .quality-badge--poor {
   background: #fef2f2;
   color: #dc2626;
+}
+
+.quality-badge--insufficient {
+  background: #f1f5f9;
+  color: #64748b;
 }
 
 .conclusion-text {
@@ -1368,27 +1519,6 @@ onMounted(() => {
   gap: 20px;
 }
 
-/* 评级综合 Banner */
-.quality-summary-banner {
-  padding: 12px 14px;
-  background: #f8fafc;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.banner-top {
-  margin-bottom: 2px;
-}
-
-.banner-desc {
-  font-size: 13px;
-  color: #475569;
-  line-height: 1.5;
-}
-
 /* 详情子区域 */
 .detail-section {
   display: flex;
@@ -1408,6 +1538,156 @@ onMounted(() => {
   color: #0f172a;
 }
 
+.detail-section__title-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.score-rule-trigger {
+  display: inline-flex;
+  align-items: center;
+  color: #94a3b8;
+  font-size: 13px;
+  line-height: 1;
+  cursor: default;
+  transition: color 0.18s ease;
+}
+
+.score-rule-trigger:hover,
+.score-rule-trigger:focus-visible {
+  color: #475569;
+  outline: none;
+}
+
+.score-rule-tip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  line-height: 1.55;
+  font-size: 12px;
+}
+
+.score-rule-tip__title {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.score-rule-tip__intro {
+  color: #e2e8f0;
+}
+
+.score-rule-tip__section {
+  padding-top: 6px;
+  border-top: 1px solid rgb(255 255 255 / 16%);
+}
+
+.score-rule-tip__section-title {
+  margin-bottom: 2px;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.score-rule-tip__levels {
+  padding-top: 6px;
+  border-top: 1px solid rgb(255 255 255 / 16%);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.detail-rank-percentile {
+  font-size: 12px;
+  color: #059669;
+  font-weight: 600;
+}
+
+/* 成长评分位置卡片 */
+.quality-position-card {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.quality-score-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quality-score-num {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.quality-score-tag {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* 4 档刻度指示条 */
+.quality-scale-bar {
+  position: relative;
+  height: 18px;
+  display: flex;
+  border-radius: 4px;
+  overflow: visible;
+  background: #e2e8f0;
+}
+
+.scale-segment {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.scale-segment--poor {
+  background: #fee2e2;
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+}
+.scale-segment--mid {
+  background: #fef3c7;
+}
+.scale-segment--good {
+  background: #dcfce7;
+}
+.scale-segment--excellent {
+  background: #d1fae5;
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+.segment-label {
+  font-size: 9px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.scale-indicator-cursor {
+  position: absolute;
+  top: -4px;
+  width: 4px;
+  height: 26px;
+  background: #0f172a;
+  border-radius: 2px;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+  transform: translateX(-50%);
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 2;
+}
+
 .drawer-section__title-row {
   display: flex;
   align-items: center;
@@ -1425,21 +1705,22 @@ onMounted(() => {
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
-.legend-dot--median {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
+.legend-bar {
+  display: inline-block;
+  width: 14px;
+  height: 5px;
+  border-radius: 2.5px;
+}
+
+.legend-bar--stock {
+  background: #0f172a;
+}
+
+.legend-bar--median {
   background: #94a3b8;
-}
-
-.legend-line--stock {
-  width: 10px;
-  height: 3px;
-  border-radius: 2px;
-  background: #2563eb;
 }
 
 /* 模块 1: 年度成长快照表格 */
@@ -1457,10 +1738,10 @@ onMounted(() => {
 }
 
 .annual-snapshot-table th {
-  background: #f8fafc;
+  background: #f1f5f9;
   padding: 8px 10px;
   font-weight: 600;
-  color: #475569;
+  color: #334155;
   border-bottom: 1px solid #e2e8f0;
 }
 
@@ -1485,28 +1766,87 @@ onMounted(() => {
   color: #334155;
 }
 
-/* 模块 3: 行业对比条形图 (单行紧凑排版) */
-.comparison-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.comp-bar-row {
+/* 模块 3: 行业对比周期切换与图例 */
+.compare-controls-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.year-mini-tabs {
+  display: flex;
+  align-items: center;
+  background: #f1f5f9;
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.year-mini-tab {
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  line-height: 1.2;
+  transition: all 0.15s ease;
+}
+
+.year-mini-tab:hover {
+  color: #0f172a;
+}
+
+.year-mini-tab.is-active {
+  background: #0f172a;
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.drawer-section__legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* 模块 3: 行业对比双线设计 (与杜邦分析完全一致) */
+.comparison-two-bars-list {
+  display: flex;
+  flex-direction: column;
   gap: 10px;
 }
 
-.comp-bar-label {
-  width: 90px;
-  font-size: 12px;
-  font-weight: 500;
-  color: #475569;
+.comp-row-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
 }
 
-.comp-bar-track-wrap {
+.comp-row-label {
+  width: 145px;
+  min-width: 145px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.comp-row-bars {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.comp-bar-line {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1517,51 +1857,39 @@ onMounted(() => {
   height: 6px;
   background: #f1f5f9;
   border-radius: 3px;
-  position: relative;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .comp-bar-fill {
   height: 100%;
   border-radius: 3px;
-  background: linear-gradient(90deg, #93c5fd 0%, #3b82f6 100%);
   transition: width 0.3s ease;
 }
 
-.comp-bar-median-mark {
-  position: absolute;
-  top: -3px;
-  width: 2px;
-  height: 12px;
-  background: #64748b;
-  border-radius: 1px;
-  transform: translateX(-50%);
-  box-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
+.comp-bar-fill--stock {
+  background: #0f172a;
+}
+
+.comp-bar-fill--median {
+  background: #94a3b8;
 }
 
 .comp-bar-val {
+  min-width: 52px;
+  text-align: left;
   font-size: 12px;
-  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.comp-bar-val--stock {
+  font-weight: 700;
   color: #0f172a;
-  width: 44px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
 }
 
-.comp-bar-median-text {
-  font-size: 11px;
-  color: #94a3b8;
-  width: 38px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.comp-bar-diff {
-  font-size: 11px;
-  font-weight: 600;
-  width: 52px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
+.comp-bar-val--median {
+  font-weight: 500;
+  color: #64748b;
 }
 
 /* 模块 4: 解读要点 */

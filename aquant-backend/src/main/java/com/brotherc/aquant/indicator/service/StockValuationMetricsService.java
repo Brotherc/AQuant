@@ -1,5 +1,6 @@
 package com.brotherc.aquant.indicator.service;
 
+import com.brotherc.aquant.common.utils.StockUtils;
 import com.brotherc.aquant.indicator.entity.StockPerformanceReport;
 import com.brotherc.aquant.indicator.entity.StockValuationMetrics;
 import com.brotherc.aquant.indicator.model.vo.CalculatedValuationMetricsPageVO;
@@ -252,7 +253,11 @@ public class StockValuationMetricsService {
         if (groups.isEmpty()) return Collections.emptySet();
         List<Long> groupIds = groups.stream().map(StockWatchlistGroup::getId).toList();
         List<StockWatchlistStock> watchlistStocks = watchlistStockRepository.findByGroupIdIn(groupIds);
-        return watchlistStocks.stream().map(StockWatchlistStock::getStockCode).collect(Collectors.toSet());
+        return watchlistStocks.stream()
+                .map(StockWatchlistStock::getStockCode)
+                .filter(StringUtils::isNotBlank)
+                .flatMap(code -> java.util.stream.Stream.of(code, StockUtils.wrapExchangePrefix(code), StockUtils.getPlainCode(code)))
+                .collect(Collectors.toSet());
     }
 
     public CalculatedValuationMetricsVO detail(String stockCode) {

@@ -249,7 +249,24 @@
             <!-- Section 1: 评分 -->
             <div class="detail-section">
               <div class="detail-section__header">
-                <span class="detail-section__title">评分</span>
+                <div class="detail-section__title-group">
+                  <span class="detail-section__title">评分</span>
+                  <a-tooltip placement="topLeft" :overlayStyle="{ maxWidth: '390px' }">
+                    <template #title>
+                      <div class="score-rule-tip">
+                        <div class="score-rule-tip__title">质量评分规则</div>
+                        <div>连续三年年报数据完整时才进行评分。</div>
+                        <div>ROE 40分；净利率25分；资产周转率20分；杠杆健康度15分。</div>
+                        <div>净利率、资产周转率结合绝对水平和行业中位数；金融行业杠杆按行业中位数评价。</div>
+                        <div>三年平均ROE、净利率或权益乘数非正，评分最高49分；任一年ROE非正，最高64分；杠杆极端时最高49分。</div>
+                        <div>优秀≥80，良好65-79，中等50-64，较差&lt;50。</div>
+                      </div>
+                    </template>
+                    <span class="score-rule-trigger" tabindex="0" aria-label="查看质量评分规则">
+                      <ExclamationCircleOutlined />
+                    </span>
+                  </a-tooltip>
+                </div>
                 <span class="detail-rank-percentile">行业内名次：{{ selectedStock.roe3yAvgRank ? `第 ${Math.round(selectedStock.roe3yAvgRank)} 名` : '-' }}</span>
               </div>
               
@@ -571,7 +588,8 @@ import {
   StarOutlined,
   WarningOutlined,
   SearchOutlined,
-  CloseOutlined
+  CloseOutlined,
+  ExclamationCircleOutlined
 } from '@ant-design/icons-vue';
 
 // 页面状态
@@ -609,7 +627,7 @@ const searchParams = reactive<DupontAnalysisPageReqVO>({
 });
 
 const selectedRoeRange = ref<string | undefined>(undefined);
-const sortState = ref<string[]>(['roe3yAvg,desc']);
+const sortState = ref<string[]>(['qualityScore,desc']);
 
 // 分页配置
 const pagination = reactive({
@@ -625,11 +643,11 @@ const pagination = reactive({
 const columns = computed<TableProps['columns']>(() => [
   { title: '股票', dataIndex: 'stockName', width: 130 },
   { title: '行业', dataIndex: 'industry', width: 125 },
-  { title: 'ROE3年平均(%)', dataIndex: 'roe3yAvg', width: 155, align: 'right', sorter: true, defaultSortOrder: 'descend' },
+  { title: 'ROE3年平均(%)', dataIndex: 'roe3yAvg', width: 155, align: 'right', sorter: true },
   { title: '净利率3年平均(%)', dataIndex: 'netMargin3yAvg', width: 160, align: 'right', sorter: true },
   { title: '资产周转率(次)', dataIndex: 'assetTurnover3yAvg', width: 135, align: 'right', sorter: true },
   { title: '权益乘数(倍)', dataIndex: 'equityMultiplier3yAvg', width: 125, align: 'right', sorter: true },
-  { title: '质量评分', dataIndex: 'qualityScore', width: 110, align: 'center', sorter: true },
+  { title: '质量评分', dataIndex: 'qualityScore', width: 110, align: 'center', sorter: true, defaultSortOrder: 'descend' },
   { title: '结论', dataIndex: 'conclusion', ellipsis: true, minWidth: 150 }
 ]);
 
@@ -892,7 +910,7 @@ const resetSearch = () => {
   searchParams.roe3yAvgMin = undefined;
   searchParams.roe3yAvgMax = undefined;
   selectedRoeRange.value = undefined;
-  sortState.value = ['roe3yAvg,desc'];
+  sortState.value = ['qualityScore,desc'];
   pagination.current = 1;
   fetchData();
 };
@@ -904,7 +922,7 @@ const handleTableChange = (pag: any, _filters: any, sorter: any) => {
     const order = sorter.order === 'ascend' ? 'asc' : 'desc';
     sortState.value = [`${sorter.field},${order}`];
   } else {
-    sortState.value = ['roe3yAvg,desc'];
+    sortState.value = ['qualityScore,desc'];
   }
   fetchData();
 };
@@ -1482,6 +1500,41 @@ onMounted(() => {
   font-size: 13px;
   font-weight: 700;
   color: #0f172a;
+}
+
+.detail-section__title-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.score-rule-trigger {
+  display: inline-flex;
+  align-items: center;
+  color: #94a3b8;
+  font-size: 13px;
+  line-height: 1;
+  cursor: default;
+  transition: color 0.18s ease;
+}
+
+.score-rule-trigger:hover,
+.score-rule-trigger:focus-visible {
+  color: #475569;
+  outline: none;
+}
+
+.score-rule-tip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  line-height: 1.55;
+  font-size: 12px;
+}
+
+.score-rule-tip__title {
+  font-weight: 700;
+  font-size: 13px;
 }
 
 .detail-rank-percentile {

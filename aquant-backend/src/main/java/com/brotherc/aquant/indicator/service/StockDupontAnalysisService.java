@@ -62,9 +62,23 @@ public class StockDupontAnalysisService {
     private final StockWatchlistStockRepository watchlistStockRepository;
 
     public Page<StockDupontAnalysis> pageQuery(DupontAnalysisPageReqVO query, Pageable pageable) {
-        if (pageable.getSort().isUnsorted()) {
-            pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.DESC, "roe3yAvg"));
+        List<Sort.Order> orders = pageable.getSort().stream().collect(Collectors.toCollection(ArrayList::new));
+        if (orders.isEmpty()) {
+            orders.add(Sort.Order.desc("qualityScore"));
         }
+        Set<String> sortedProperties = orders.stream()
+                .map(Sort.Order::getProperty)
+                .collect(Collectors.toSet());
+        if (!sortedProperties.contains("qualityScore")) {
+            orders.add(Sort.Order.desc("qualityScore"));
+        }
+        if (!sortedProperties.contains(ROE_3Y_AVG)) {
+            orders.add(Sort.Order.desc(ROE_3Y_AVG));
+        }
+        if (!sortedProperties.contains("stockCode")) {
+            orders.add(Sort.Order.asc("stockCode"));
+        }
+        pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(orders));
 
         Specification<StockDupontAnalysis> specification = (root, cq, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -268,7 +282,11 @@ public class StockDupontAnalysisService {
         if (groups.isEmpty()) return Collections.emptySet();
         List<Long> groupIds = groups.stream().map(StockWatchlistGroup::getId).toList();
         List<StockWatchlistStock> watchlistStocks = watchlistStockRepository.findByGroupIdIn(groupIds);
-        return watchlistStocks.stream().map(StockWatchlistStock::getStockCode).collect(Collectors.toSet());
+        return watchlistStocks.stream()
+                .map(StockWatchlistStock::getStockCode)
+                .filter(StringUtils::isNotBlank)
+                .flatMap(code -> java.util.stream.Stream.of(code, StockUtils.wrapExchangePrefix(code), StockUtils.getPlainCode(code)))
+                .collect(Collectors.toSet());
     }
 
     /**
