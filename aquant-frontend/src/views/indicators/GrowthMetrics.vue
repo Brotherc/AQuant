@@ -365,33 +365,33 @@
                   <thead>
                     <tr>
                       <th style="width: 32%">指标</th>
+                      <th style="width: 17%">TTM</th>
                       <th style="width: 17%">{{ currentYear - 1 }}</th>
                       <th style="width: 17%">{{ currentYear - 2 }}</th>
                       <th style="width: 17%">{{ currentYear - 3 }}</th>
-                      <th style="width: 17%">TTM</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
                       <td class="metric-name-td font-semibold">基本每股收益增长率 (%)</td>
+                      <td class="font-semibold">{{ formatValue(selectedStock.epsGrowthTtm) }}</td>
                       <td>{{ formatValue(selectedStock.epsGrowthLastYA) }}</td>
                       <td>{{ formatValue(selectedStock.epsGrowthLast2yA) }}</td>
                       <td>{{ formatValue(selectedStock.epsGrowthLast3yA) }}</td>
-                      <td class="font-semibold">{{ formatValue(selectedStock.epsGrowthTtm) }}</td>
                     </tr>
                     <tr>
                       <td class="metric-name-td">营收增长率 (%)</td>
+                      <td class="font-semibold">{{ formatValue(selectedStock.revenueGrowthTtm) }}</td>
                       <td>{{ formatValue(selectedStock.revenueGrowthLastYA) }}</td>
                       <td>{{ formatValue(selectedStock.revenueGrowthLast2yA) }}</td>
                       <td>{{ formatValue(selectedStock.revenueGrowthLast3yA) }}</td>
-                      <td class="font-semibold">{{ formatValue(selectedStock.revenueGrowthTtm) }}</td>
                     </tr>
                     <tr>
                       <td class="metric-name-td">净利润增长率 (%)</td>
+                      <td class="font-semibold">{{ formatValue(selectedStock.netProfitGrowthTtm) }}</td>
                       <td>{{ formatValue(selectedStock.netProfitGrowthLastYA) }}</td>
                       <td>{{ formatValue(selectedStock.netProfitGrowthLast2yA) }}</td>
                       <td>{{ formatValue(selectedStock.netProfitGrowthLast3yA) }}</td>
-                      <td class="font-semibold">{{ formatValue(selectedStock.netProfitGrowthTtm) }}</td>
                     </tr>
                   </tbody>
                 </table>

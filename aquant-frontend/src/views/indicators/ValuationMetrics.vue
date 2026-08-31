@@ -355,15 +355,15 @@
                   <thead>
                     <tr>
                       <th style="width: 40%">指标</th>
-                      <th style="width: 30%">{{ currentYear - 1 }}</th>
                       <th style="width: 30%">TTM</th>
+                      <th style="width: 30%">{{ currentYear - 1 }}</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
                       <td class="metric-name-td">市盈率 PE</td>
-                      <td>{{ formatNumber(selectedStock.peAnnual) }}</td>
                       <td>{{ formatNumber(selectedStock.peTtm) }}</td>
+                      <td>{{ formatNumber(selectedStock.peAnnual) }}</td>
                     </tr>
                     <tr>
                       <td class="metric-name-td">
@@ -374,23 +374,23 @@
                           </a-tooltip>
                         </span>
                       </td>
-                      <td>{{ formatNumber(selectedStock.pbAnnual) }}</td>
                       <td>{{ formatNumber(selectedStock.pbMrq) }}</td>
+                      <td>{{ formatNumber(selectedStock.pbAnnual) }}</td>
                     </tr>
                     <tr>
                       <td class="metric-name-td">市销率 PS</td>
-                      <td>{{ formatNumber(selectedStock.psAnnual) }}</td>
                       <td>{{ formatNumber(selectedStock.psTtm) }}</td>
+                      <td>{{ formatNumber(selectedStock.psAnnual) }}</td>
                     </tr>
                     <tr>
                       <td class="metric-name-td">市现率 PCF</td>
-                      <td>{{ formatNumber(selectedStock.pcfAnnual) }}</td>
                       <td>{{ formatNumber(selectedStock.pcfTtm) }}</td>
+                      <td>{{ formatNumber(selectedStock.pcfAnnual) }}</td>
                     </tr>
-                    <tr v-if="selectedStock.peg !== undefined && selectedStock.peg !== null">
+                    <tr>
                       <td class="metric-name-td">PEG</td>
-                      <td>-</td>
                       <td>{{ formatNumber(selectedStock.peg) }}</td>
+                      <td>-</td>
                     </tr>
                   </tbody>
                 </table>
