@@ -125,7 +125,7 @@ export interface CalculatedValuationMetricsPage {
     pbAnnual?: number;
     pcfTtm?: number;
     pcfAnnual?: number;
-    valuationScore?: number;
+    valuationScore?: number | null;
     valuationLevel?: string;
     conclusion?: string;
     totalMarketCap?: number;
@@ -167,7 +167,7 @@ export interface CalculatedValuationMetrics {
     pcfAnnual?: number;
     pcfAnnualIndustryMedian?: number;
     pcfAnnualIndustryAverage?: number;
-    valuationScore?: number;
+    valuationScore?: number | null;
     valuationLevel?: string;
     conclusion?: string;
     totalMarketCap?: number;

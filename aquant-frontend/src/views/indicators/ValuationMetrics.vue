@@ -285,16 +285,21 @@
                       <div class="score-rule-tip">
                         <div class="score-rule-tip__title">估值评分规则</div>
                         <div class="score-rule-tip__intro">
-                          基于PE、PB、PS等核心估值指标与行业中位数对比综合加权评分（基准50分）。
+                          统一使用覆盖率达到80%的最近报告期，仅以正数行业样本计算中位数，再按有效指标归一化评分。
                         </div>
                         <div class="score-rule-tip__section">
-                          <div class="score-rule-tip__section-title">核心指标加减分</div>
-                          <div>PE(TTM) 相对行业中位：低估加分最高+20分，高估扣分最高-20分</div>
-                          <div>PB(MRQ) 相对行业中位：低估加分最高+12.5分，高估扣分最高-10分</div>
-                          <div>PS(TTM) 相对行业中位：低估加分最高+10分，高估扣分最高-8分</div>
-                          <div>PEG 相对行业中位：低估加分最高+7.5分，高估扣分最高-6分</div>
+                          <div class="score-rule-tip__section-title">指标权重</div>
+                          <div>非金融行业：PE 30%、PB 20%、PS 15%、PCF 20%、PEG 15%</div>
+                          <div>金融行业：PE 20%、PB 40%、PS 10%、PCF 20%、PEG 10%</div>
+                          <div>PE/PB/PS/PCF 等于行业中位数得55分，低于行业中位数得分提高，高于则降低</div>
+                          <div>PEG：≤0.8得100分、1.0得80分、1.5得50分、2.0得25分、≥3得0分</div>
                         </div>
-                        <div class="score-rule-tip__levels">低估≥65｜合理偏低55-64｜合理偏高45-54｜高估&lt;45</div>
+                        <div class="score-rule-tip__section">
+                          <div class="score-rule-tip__section-title">数据约束</div>
+                          <div>亏损企业不适用；少于2项行业相对指标时不评分</div>
+                          <div>仅有2项有效相对指标，或非金融行业缺少有效PE时，最高64分</div>
+                        </div>
+                        <div class="score-rule-tip__levels">低估≥80｜偏低估65-79｜合理45-64｜偏高估30-44｜高估&lt;30</div>
                       </div>
                     </template>
                     <span class="score-rule-trigger" tabindex="0" aria-label="查看估值评分规则">
@@ -312,19 +317,22 @@
                   </span>
                 </div>
 
-                <!-- 4 档刻度指示条 -->
+                <!-- 5 档刻度指示条 -->
                 <div class="quality-scale-bar">
-                  <div class="scale-segment scale-segment--poor" title="高估 <45">
-                    <span class="segment-label">高估 &lt;45</span>
+                  <div class="scale-segment scale-segment--poor" title="高估 <30">
+                    <span class="segment-label">高估 &lt;30</span>
                   </div>
-                  <div class="scale-segment scale-segment--mid" title="合理偏高 45-54">
-                    <span class="segment-label">合理偏高 45-54</span>
+                  <div class="scale-segment scale-segment--high" title="偏高估 30-44">
+                    <span class="segment-label">偏高 30-44</span>
                   </div>
-                  <div class="scale-segment scale-segment--good" title="合理偏低 55-64">
-                    <span class="segment-label">合理偏低 55-64</span>
+                  <div class="scale-segment scale-segment--mid" title="合理 45-64">
+                    <span class="segment-label">合理 45-64</span>
                   </div>
-                  <div class="scale-segment scale-segment--excellent" title="低估 ≥65">
-                    <span class="segment-label">低估 ≥65</span>
+                  <div class="scale-segment scale-segment--good" title="偏低估 65-79">
+                    <span class="segment-label">偏低 65-79</span>
+                  </div>
+                  <div class="scale-segment scale-segment--excellent" title="低估 ≥80">
+                    <span class="segment-label">低估 ≥80</span>
                   </div>
                   <!-- 刻度指示小游标 -->
                   <div
@@ -679,28 +687,28 @@ const formatNumber = (val: any) => {
 
 // 估值等级与样式
 const getValuationLevelText = (score: any) => {
-  const s = Number(score || 0);
+  if (score == null || score === '') return '数据不足';
+  const s = Number(score);
   if (s >= 80) return '低估';
   if (s >= 65) return '偏低估';
-  if (s >= 55) return '合理偏低';
-  if (s >= 45) return '合理偏高';
-  if (s >= 35) return '偏高估';
+  if (s >= 45) return '合理';
+  if (s >= 30) return '偏高估';
   return '高估';
 };
 
 const getValuationBadgeClass = (score: any, level?: string) => {
-  if (score == null || score === '') return 'quality-badge--insufficient';
+  if (score == null || score === '' || level === '数据不足' || level === '不适用') return 'quality-badge--insufficient';
   const s = Number(score || 0);
   if (level === '低估' || level === '偏低估' || s >= 65) return 'quality-badge--excellent';
-  if (level === '合理偏低' || level === '合理' || s >= 55) return 'quality-badge--good';
-  if (level === '合理偏高' || s >= 45) return 'quality-badge--mid';
+  if (level === '合理' || s >= 45) return 'quality-badge--good';
+  if (level === '偏高估' || s >= 30) return 'quality-badge--mid';
   return 'quality-badge--poor';
 };
 
 const getScoreColorClass = (score: any) => {
   if (score == null || score === '') return 'score-num--insufficient';
   const s = Number(score);
-  if (s >= 65) return 'score-num--high';
+  if (s >= 80) return 'score-num--high';
   if (s >= 45) return 'score-num--mid';
   return 'score-num--low';
 };
@@ -771,7 +779,7 @@ const valuationPoints = computed(() => {
   const points: string[] = [];
 
   // 要点 1: PE 估值位置
-  if (s.peTtm != null && s.peTtmIndustryMed != null) {
+  if (Number(s.peTtm) > 0 && Number(s.peTtmIndustryMed) > 0) {
     const diff = ((Number(s.peTtm) - Number(s.peTtmIndustryMed)) / Number(s.peTtmIndustryMed)) * 100;
     if (diff < 0) {
       points.push(`当前 PE(TTM) 为 ${formatNumber(s.peTtm)}，低于行业中位数 ${Math.abs(diff).toFixed(0)}%，处于估值偏低位置。`);
@@ -779,25 +787,27 @@ const valuationPoints = computed(() => {
       points.push(`当前 PE(TTM) 为 ${formatNumber(s.peTtm)}，高于行业中位数 ${diff.toFixed(0)}%，估值溢价相对明显。`);
     }
   } else {
-    points.push(`当前 PE 估值处于行业基准范围内，基本面与估值匹配度良好。`);
+    points.push(`PE(TTM)或行业基准缺失，暂无法判断PE的行业相对位置。`);
   }
 
   // 要点 2: 多维指标安全边际
-  const isPbLow = s.pbMrq != null && s.pbMrqIndustryMed != null && Number(s.pbMrq) <= Number(s.pbMrqIndustryMed);
-  const isPsLow = s.psTtm != null && s.psTtmIndustryMed != null && Number(s.psTtm) <= Number(s.psTtmIndustryMed);
+  const isPbLow = Number(s.pbMrq) > 0 && Number(s.pbMrqIndustryMed) > 0 && Number(s.pbMrq) <= Number(s.pbMrqIndustryMed);
+  const isPsLow = Number(s.psTtm) > 0 && Number(s.psTtmIndustryMed) > 0 && Number(s.psTtm) <= Number(s.psTtmIndustryMed);
   if (isPbLow && isPsLow) {
-    points.push(`PE、PB、PS 均处于行业中位数以下，多维估值共振，具备较好安全边际。`);
+    points.push(`PB、PS均不高于行业中位数，但仍需结合资产质量和收入含金量判断。`);
   } else if (isPbLow) {
-    points.push(`市净率 PB 具备较好资产安全边际，账面资产折价保护明显。`);
+    points.push(`PB不高于行业中位数，但低市净率不等同于资产质量良好。`);
   } else {
-    points.push(`估值各项指标整体平稳，建议结合成长性与盈利质量综合研判。`);
+    points.push(`PB、PS未形成一致的相对低估信号，需结合成长性与盈利质量综合判断。`);
   }
 
   // 要点 3: 成长与综合展望
   if (s.peg != null && Number(s.peg) > 0 && Number(s.peg) < 1.0) {
-    points.push(`PEG 为 ${formatNumber(s.peg)}（小于 1.0），成长性性价比突出，中长期配置价值较高。`);
+    points.push(`PEG为${formatNumber(s.peg)}（小于1.0），当前估值与近一年盈利增速的匹配度相对较好。`);
+  } else if (s.peg != null && Number(s.peg) > 0) {
+    points.push(`PEG为${formatNumber(s.peg)}，需留意盈利增速持续性以及低基数造成的波动。`);
   } else {
-    points.push(`公司基本面稳健，随着盈利持续释放，估值有望进一步修复。`);
+    points.push(`PEG无有效值，暂不评价成长与估值的匹配程度。`);
   }
 
   return points;
@@ -1616,7 +1626,7 @@ onMounted(() => {
   font-weight: 600;
 }
 
-/* 4 档刻度指示条 */
+/* 5 档刻度指示条 */
 .quality-scale-bar {
   position: relative;
   height: 18px;
@@ -1627,7 +1637,7 @@ onMounted(() => {
 }
 
 .scale-segment {
-  flex: 1;
+  flex: none;
   height: 100%;
   display: flex;
   align-items: center;
@@ -1636,20 +1646,29 @@ onMounted(() => {
 }
 
 .scale-segment--poor {
+  width: 30%;
   background: #fee2e2;
   border-top-left-radius: 4px;
   border-bottom-left-radius: 4px;
 }
 
+.scale-segment--high {
+  width: 15%;
+  background: #ffedd5;
+}
+
 .scale-segment--mid {
+  width: 20%;
   background: #fef3c7;
 }
 
 .scale-segment--good {
+  width: 15%;
   background: #dcfce7;
 }
 
 .scale-segment--excellent {
+  width: 20%;
   background: #d1fae5;
   border-top-right-radius: 4px;
   border-bottom-right-radius: 4px;

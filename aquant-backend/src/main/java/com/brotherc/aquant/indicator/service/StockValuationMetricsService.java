@@ -46,7 +46,9 @@ import java.util.stream.Collectors;
 public class StockValuationMetricsService {
 
     private static final BigDecimal TEN_THOUSAND = new BigDecimal("10000");
+    private static final BigDecimal MAX_PEG_GROWTH_RATE = new BigDecimal("100");
     private static final int SCALE = 6;
+    private static final double MIN_REPORT_COVERAGE = 0.8;
 
     private final StockValuationMetricsRepository stockValuationMetricsRepository;
     private final StockQuoteRepository stockQuoteRepository;
@@ -349,107 +351,121 @@ public class StockValuationMetricsService {
 
     public void calculateScoreAndConclusion(StockValuationMetrics item) {
         if (item == null) return;
+        if (item.getNetProfitTtm() == null) {
+            item.setValuationScore(null);
+            item.setValuationLevel("数据不足");
+            item.setConclusion("TTM盈利数据不足，暂不进行综合估值评分。");
+            return;
+        }
+        if (item.getNetProfitTtm().compareTo(BigDecimal.ZERO) <= 0) {
+            item.setValuationScore(null);
+            item.setValuationLevel("不适用");
+            item.setConclusion("TTM净利润为负，PE和PEG不具备可比性，暂不进行综合估值评分。");
+            return;
+        }
+
         BigDecimal pe = item.getPeTtm();
         BigDecimal peMed = item.getPeTtmIndustryMed();
         BigDecimal pb = item.getPbMrq();
         BigDecimal pbMed = item.getPbMrqIndustryMed();
         BigDecimal ps = item.getPsTtm();
         BigDecimal psMed = item.getPsTtmIndustryMed();
+        BigDecimal pcf = item.getPcfTtm();
+        BigDecimal pcfMed = item.getPcfTtmIndustryMed();
         BigDecimal peg = item.getPeg();
 
-        double score = 50.0; // 基础分
+        boolean financialIndustry = StringUtils.containsAny(
+                item.getIndustry(), "银行", "保险", "证券", "多元金融", "金融服务"
+        );
+        double peWeight = financialIndustry ? 20 : 30;
+        double pbWeight = financialIndustry ? 40 : 20;
+        double psWeight = financialIndustry ? 10 : 15;
+        double pcfWeight = 20;
+        double pegWeight = financialIndustry ? 10 : 15;
 
-        // 1. PE(TTM) 相对行业中位 (权重 40分)
-        if (pe != null && peMed != null && pe.compareTo(BigDecimal.ZERO) > 0 && peMed.compareTo(BigDecimal.ZERO) > 0) {
-            double ratio = pe.doubleValue() / peMed.doubleValue();
-            if (ratio <= 0.6) {
-                score += 20.0;
-            } else if (ratio <= 0.8) {
-                score += 15.0;
-            } else if (ratio <= 1.0) {
-                score += 8.0;
-            } else if (ratio <= 1.2) {
-                score -= 5.0;
-            } else if (ratio <= 1.5) {
-                score -= 12.0;
-            } else {
-                score -= 20.0;
-            }
+        double weightedScore = 0;
+        double usedWeight = 0;
+        int validRelativeMetricCount = 0;
+        if (isPositivePair(pe, peMed)) {
+            weightedScore += calculateRelativeValuationScore(pe, peMed) * peWeight;
+            usedWeight += peWeight;
+            validRelativeMetricCount++;
         }
-
-        // 2. PB(MRQ) 相对行业中位 (权重 25分)
-        if (pb != null && pbMed != null && pb.compareTo(BigDecimal.ZERO) > 0 && pbMed.compareTo(BigDecimal.ZERO) > 0) {
-            double ratio = pb.doubleValue() / pbMed.doubleValue();
-            if (ratio <= 0.7) {
-                score += 12.5;
-            } else if (ratio <= 1.0) {
-                score += 6.0;
-            } else if (ratio <= 1.3) {
-                score -= 4.0;
-            } else {
-                score -= 10.0;
-            }
+        if (isPositivePair(pb, pbMed)) {
+            weightedScore += calculateRelativeValuationScore(pb, pbMed) * pbWeight;
+            usedWeight += pbWeight;
+            validRelativeMetricCount++;
         }
-
-        // 3. PS(TTM) 相对行业中位 (权重 20分)
-        if (ps != null && psMed != null && ps.compareTo(BigDecimal.ZERO) > 0 && psMed.compareTo(BigDecimal.ZERO) > 0) {
-            double ratio = ps.doubleValue() / psMed.doubleValue();
-            if (ratio <= 0.7) {
-                score += 10.0;
-            } else if (ratio <= 1.0) {
-                score += 4.0;
-            } else if (ratio <= 1.3) {
-                score -= 3.0;
-            } else {
-                score -= 8.0;
-            }
+        if (isPositivePair(ps, psMed)) {
+            weightedScore += calculateRelativeValuationScore(ps, psMed) * psWeight;
+            usedWeight += psWeight;
+            validRelativeMetricCount++;
         }
-
-        // 4. PEG 水平 (权重 15分)
+        if (isPositivePair(pcf, pcfMed)) {
+            weightedScore += calculateRelativeValuationScore(pcf, pcfMed) * pcfWeight;
+            usedWeight += pcfWeight;
+            validRelativeMetricCount++;
+        }
         if (peg != null && peg.compareTo(BigDecimal.ZERO) > 0) {
-            double p = peg.doubleValue();
-            if (p < 0.8) {
-                score += 7.5;
-            } else if (p <= 1.0) {
-                score += 4.0;
-            } else if (p <= 1.5) {
-                score -= 2.0;
-            } else {
-                score -= 6.0;
-            }
+            weightedScore += calculatePegScore(peg) * pegWeight;
+            usedWeight += pegWeight;
         }
 
-        score = Math.max(10.0, Math.min(98.0, score));
-        BigDecimal finalScore = BigDecimal.valueOf(score).setScale(0, RoundingMode.HALF_UP);
-        item.setValuationScore(finalScore);
+        if (validRelativeMetricCount < 2 || usedWeight == 0) {
+            item.setValuationScore(null);
+            item.setValuationLevel("数据不足");
+            item.setConclusion("有效行业相对估值指标不足，暂不进行综合估值评分。");
+            return;
+        }
 
-        // 等级判定
-        String level;
-        if (score >= 80.0) {
-            level = "偏低估";
-        } else if (score >= 65.0) {
-            level = "偏低估";
-        } else if (score >= 55.0) {
-            level = "合理偏低";
-        } else if (score >= 45.0) {
-            level = "合理偏高";
-        } else if (score >= 35.0) {
-            level = "偏高估";
+        int finalScore = Math.max(0, Math.min(100, (int) Math.round(weightedScore / usedWeight)));
+        if (validRelativeMetricCount == 2 || (!financialIndustry && !isPositivePair(pe, peMed))) {
+            finalScore = Math.min(finalScore, 64);
+        }
+        item.setValuationScore(BigDecimal.valueOf(finalScore));
+
+        if (finalScore >= 80) {
+            item.setValuationLevel("低估");
+            item.setConclusion("多项有效估值指标明显低于行业中位数，当前处于相对低估区间。");
+        } else if (finalScore >= 65) {
+            item.setValuationLevel("偏低估");
+            item.setConclusion("有效估值指标整体低于行业中位数，当前处于相对偏低估区间。");
+        } else if (finalScore >= 45) {
+            item.setValuationLevel("合理");
+            item.setConclusion("有效估值指标整体接近行业中位数，当前处于相对合理区间。");
+        } else if (finalScore >= 30) {
+            item.setValuationLevel("偏高估");
+            item.setConclusion("有效估值指标整体高于行业中位数，当前处于相对偏高估区间。");
         } else {
-            level = "高估";
+            item.setValuationLevel("高估");
+            item.setConclusion("多项有效估值指标明显高于行业中位数，当前处于相对高估区间。");
         }
-        item.setValuationLevel(level);
+    }
 
-        // 简明结论
-        if (score >= 70.0) {
-            item.setConclusion("当前估值偏低，具备较好投资性价比与安全边际");
-        } else if (score >= 55.0) {
-            item.setConclusion("估值处于合理偏低区间，投资吸引力良好");
-        } else if (score >= 45.0) {
-            item.setConclusion("估值处于行业合理中枢水平");
-        } else {
-            item.setConclusion("当前估值处于行业偏高位置，建议关注回调风险");
-        }
+    private boolean isPositivePair(BigDecimal value, BigDecimal industryMedian) {
+        return value != null && value.compareTo(BigDecimal.ZERO) > 0
+                && industryMedian != null && industryMedian.compareTo(BigDecimal.ZERO) > 0;
+    }
+
+    private double calculateRelativeValuationScore(BigDecimal value, BigDecimal industryMedian) {
+        double ratio = value.doubleValue() / industryMedian.doubleValue();
+        if (ratio <= 0.5) return 100;
+        if (ratio <= 0.8) return 100 - (ratio - 0.5) / 0.3 * 30;
+        if (ratio <= 1.0) return 70 - (ratio - 0.8) / 0.2 * 15;
+        if (ratio <= 1.2) return 55 - (ratio - 1.0) / 0.2 * 10;
+        if (ratio <= 1.5) return 45 - (ratio - 1.2) / 0.3 * 20;
+        if (ratio <= 2.0) return 25 - (ratio - 1.5) / 0.5 * 20;
+        return 0;
+    }
+
+    private double calculatePegScore(BigDecimal peg) {
+        double value = peg.doubleValue();
+        if (value <= 0.8) return 100;
+        if (value <= 1.0) return 100 - (value - 0.8) / 0.2 * 20;
+        if (value <= 1.5) return 80 - (value - 1.0) / 0.5 * 30;
+        if (value <= 2.0) return 50 - (value - 1.5) / 0.5 * 25;
+        if (value <= 3.0) return 25 - (value - 2.0) * 25;
+        return 0;
     }
 
     private CalculatedValuationMetricsPageVO toPageVO(StockValuationMetrics entity) {
@@ -538,38 +554,56 @@ public class StockValuationMetricsService {
     }
 
     private List<CalculatedValuationMetricsVO> calculateValuationMetrics() {
-        Map<String, List<StockPerformanceReport>> performanceReportMap = stockPerformanceReportRepository.findAll().stream()
+        List<StockPerformanceReport> performanceReports = stockPerformanceReportRepository.findAll();
+        Map<String, List<StockPerformanceReport>> performanceReportMap = performanceReports.stream()
                 .filter(report -> report != null && StringUtils.isNotBlank(report.getStockCode()) && report.getReportDate() != null)
-                .collect(Collectors.groupingBy(StockPerformanceReport::getStockCode));
+                .collect(Collectors.groupingBy(report -> StockUtils.getPlainCode(report.getStockCode())));
         if (CollectionUtils.isEmpty(performanceReportMap)) {
             return List.of();
         }
+
+        List<StockQuote> stockQuotes = stockQuoteRepository.findAll();
+        Set<String> activeCodes = stockQuotes.stream()
+                .filter(Objects::nonNull)
+                .map(StockQuote::getCode)
+                .filter(StringUtils::isNotBlank)
+                .map(StockUtils::getPlainCode)
+                .collect(Collectors.toSet());
+        LocalDate latestCoveredReportDate = findLatestCoveredReportDate(performanceReports, activeCodes, false);
+        LocalDate latestCoveredAnnualDate = findLatestCoveredReportDate(performanceReports, activeCodes, true);
+        if (latestCoveredReportDate == null || latestCoveredAnnualDate == null) {
+            log.warn("没有找到披露覆盖率达到 {}% 的估值报告期，跳过估值指标计算。", MIN_REPORT_COVERAGE * 100);
+            return List.of();
+        }
+        log.info("估值指标统一计算口径，latestReportDate={}, latestAnnualDate={}",
+                latestCoveredReportDate, latestCoveredAnnualDate);
 
         Map<String, StockShareChange> latestShareChangeMap = stockShareChangeRepository.findAll().stream()
                 .filter(shareChange -> shareChange != null && StringUtils.isNotBlank(shareChange.getStockCode()))
                 .filter(shareChange -> shareChange.getChangeDate() != null && shareChange.getTotalShares10k() != null)
                 .filter(shareChange -> !shareChange.getChangeDate().isAfter(LocalDate.now()))
                 .collect(Collectors.toMap(
-                        StockShareChange::getStockCode,
+                        shareChange -> StockUtils.getPlainCode(shareChange.getStockCode()),
                         Function.identity(),
                         (left, right) -> left.getChangeDate().isBefore(right.getChangeDate()) ? right : left
                 ));
 
         List<CalculatedValuationMetricsVO> result = new ArrayList<>();
-        for (StockQuote stockQuote : stockQuoteRepository.findAll()) {
+        for (StockQuote stockQuote : stockQuotes) {
             if (stockQuote != null && StringUtils.isNotBlank(stockQuote.getCode()) && stockQuote.getLatestPrice() != null) {
-                String plainCode = stockQuote.getCode().length() > 2 ? stockQuote.getCode().substring(2) : stockQuote.getCode();
+                String plainCode = StockUtils.getPlainCode(stockQuote.getCode());
                 List<StockPerformanceReport> reports = performanceReportMap.get(plainCode);
-                StockPerformanceReport latestReport = CollectionUtils.isEmpty(reports) ? null : findLatestReport(reports);
+                StockPerformanceReport latestReport = CollectionUtils.isEmpty(reports)
+                        ? null : findByReportDate(reports, latestCoveredReportDate);
 
                 if (latestReport != null) {
-                    StockPerformanceReport annualReport = findLatestAnnualReport(reports);
+                    StockPerformanceReport annualReport = findByReportDate(reports, latestCoveredAnnualDate);
                     BigDecimal epsTtm = calculateTtmValue(reports, latestReport, StockPerformanceReport::getEarningsPerShare);
                     BigDecimal revenueTtm = calculateTtmValue(reports, latestReport, StockPerformanceReport::getTotalRevenue);
                     BigDecimal netProfitTtm = calculateTtmValue(reports, latestReport, StockPerformanceReport::getNetProfit);
                     BigDecimal previousNetProfitTtm = calculatePreviousTtmValue(reports, latestReport, StockPerformanceReport::getNetProfit);
                     BigDecimal ocfTtm = calculateTtmValue(reports, latestReport, StockPerformanceReport::getOperatingCashFlowPerShare);
-                    StockShareChange latestShareChange = latestShareChangeMap.get(stockQuote.getCode());
+                    StockShareChange latestShareChange = latestShareChangeMap.get(plainCode);
 
                     CalculatedValuationMetricsVO metrics = new CalculatedValuationMetricsVO();
                     metrics.setId(stockQuote.getId());
@@ -595,15 +629,13 @@ public class StockValuationMetricsService {
                     metrics.setTotalMarketCap(marketCap);
                     metrics.setNetProfitTtm(netProfitTtm);
 
-                    List<StockPerformanceReport> annualReports = reports.stream()
-                            .filter(report -> report.getReportDate().getMonth() == Month.DECEMBER)
-                            .sorted(Comparator.comparing(StockPerformanceReport::getReportDate).reversed())
-                            .toList();
-                    if (annualReports.size() > 1 && annualReports.get(1).getEarningsPerShare() != null) {
-                        metrics.setPeLast2yA(divide(stockQuote.getLatestPrice(), annualReports.get(1).getEarningsPerShare()));
+                    StockPerformanceReport previousAnnual = findByReportDate(reports, latestCoveredAnnualDate.minusYears(1));
+                    StockPerformanceReport previous2Annual = findByReportDate(reports, latestCoveredAnnualDate.minusYears(2));
+                    if (previousAnnual != null && previousAnnual.getEarningsPerShare() != null) {
+                        metrics.setPeLast2yA(divide(stockQuote.getLatestPrice(), previousAnnual.getEarningsPerShare()));
                     }
-                    if (annualReports.size() > 2 && annualReports.get(2).getEarningsPerShare() != null) {
-                        metrics.setPeLast3yA(divide(stockQuote.getLatestPrice(), annualReports.get(2).getEarningsPerShare()));
+                    if (previous2Annual != null && previous2Annual.getEarningsPerShare() != null) {
+                        metrics.setPeLast3yA(divide(stockQuote.getLatestPrice(), previous2Annual.getEarningsPerShare()));
                     }
 
                     result.add(metrics);
@@ -613,17 +645,32 @@ public class StockValuationMetricsService {
         return result;
     }
 
-    private StockPerformanceReport findLatestReport(List<StockPerformanceReport> reports) {
-        return reports.stream()
-                .max(Comparator.comparing(StockPerformanceReport::getReportDate))
-                .orElse(null);
-    }
-
-    private StockPerformanceReport findLatestAnnualReport(List<StockPerformanceReport> reports) {
-        return reports.stream()
-                .filter(report -> report.getReportDate().getMonth() == Month.DECEMBER)
-                .max(Comparator.comparing(StockPerformanceReport::getReportDate))
-                .orElse(null);
+    private LocalDate findLatestCoveredReportDate(
+            List<StockPerformanceReport> reports, Set<String> activeCodes, boolean annualOnly
+    ) {
+        if (activeCodes.isEmpty()) {
+            return null;
+        }
+        Map<LocalDate, Set<String>> reportCodesByDate = new HashMap<>();
+        for (StockPerformanceReport report : reports) {
+            if (report == null || report.getReportDate() == null || StringUtils.isBlank(report.getStockCode())
+                    || (annualOnly && !StockUtils.isAnnualReport(report.getReportDate()))) {
+                continue;
+            }
+            String code = StockUtils.getPlainCode(report.getStockCode());
+            if (activeCodes.contains(code)) {
+                reportCodesByDate.computeIfAbsent(report.getReportDate(), key -> new HashSet<>()).add(code);
+            }
+        }
+        for (LocalDate reportDate : reportCodesByDate.keySet().stream().sorted(Comparator.reverseOrder()).toList()) {
+            double coverage = (double) reportCodesByDate.get(reportDate).size() / activeCodes.size();
+            if (coverage >= MIN_REPORT_COVERAGE) {
+                return reportDate;
+            }
+            log.info("估值指标跳过披露覆盖率不足的报告期，reportDate={}, coverage={}",
+                    reportDate, String.format(Locale.ROOT, "%.2f%%", coverage * 100));
+        }
+        return null;
     }
 
     private BigDecimal calculateTtmValue(
@@ -677,10 +724,10 @@ public class StockValuationMetricsService {
         BigDecimal growthRate = netProfitTtm.subtract(previousNetProfitTtm)
                 .divide(previousNetProfitTtm.abs(), SCALE, RoundingMode.HALF_UP)
                 .multiply(new BigDecimal("100"));
-        if (growthRate.compareTo(BigDecimal.ZERO) == 0) {
+        if (growthRate.compareTo(BigDecimal.ZERO) <= 0) {
             return null;
         }
-        return divide(peTtm, growthRate);
+        return divide(peTtm, growthRate.min(MAX_PEG_GROWTH_RATE));
     }
 
     private void fillIndustryMetrics(List<CalculatedValuationMetricsVO> metricsList) {
@@ -688,7 +735,7 @@ public class StockValuationMetricsService {
                 .filter(report -> report != null && StringUtils.isNotBlank(report.getStockCode()))
                 .filter(report -> StringUtils.isNotBlank(report.getIndustry()) && report.getReportDate() != null)
                 .collect(Collectors.toMap(
-                        StockPerformanceReport::getStockCode,
+                        report -> StockUtils.getPlainCode(report.getStockCode()),
                         Function.identity(),
                         (left, right) -> left.getReportDate().isBefore(right.getReportDate()) ? right : left
                 ))
@@ -786,7 +833,7 @@ public class StockValuationMetricsService {
     private List<BigDecimal> values(List<CalculatedValuationMetricsVO> metricsList, Function<CalculatedValuationMetricsVO, BigDecimal> valueGetter) {
         return metricsList.stream()
                 .map(valueGetter)
-                .filter(Objects::nonNull)
+                .filter(value -> value != null && value.compareTo(BigDecimal.ZERO) > 0)
                 .toList();
     }
 
