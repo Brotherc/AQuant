@@ -104,6 +104,44 @@ class StockValuationMetricsScoreTest {
         assertThat(metrics.getValuationLevel()).isEqualTo("合理");
     }
 
+    @Test
+    @DisplayName("综合估值快捷分类应按45分和65分完整划分")
+    void shouldClassifyByComprehensiveValuationScore() {
+        StockValuationMetrics metrics = completeMetrics();
+
+        metrics.setValuationScore(new BigDecimal("65"));
+        assertThat(stockValuationMetricsService.isLowValuation(metrics)).isTrue();
+        assertThat(stockValuationMetricsService.isFairValuation(metrics)).isFalse();
+
+        metrics.setValuationScore(new BigDecimal("64"));
+        assertThat(stockValuationMetricsService.isFairValuation(metrics)).isTrue();
+
+        metrics.setValuationScore(new BigDecimal("45"));
+        assertThat(stockValuationMetricsService.isFairValuation(metrics)).isTrue();
+
+        metrics.setValuationScore(new BigDecimal("44"));
+        assertThat(stockValuationMetricsService.isHighValuation(metrics)).isTrue();
+        assertThat(stockValuationMetricsService.isFairValuation(metrics)).isFalse();
+    }
+
+    @Test
+    @DisplayName("亏损或评分缺失公司不应进入估值快捷分类")
+    void shouldExcludeLossAndMissingScoreFromValuationCategories() {
+        StockValuationMetrics metrics = completeMetrics();
+        metrics.setValuationScore(null);
+
+        assertThat(stockValuationMetricsService.isLowValuation(metrics)).isFalse();
+        assertThat(stockValuationMetricsService.isFairValuation(metrics)).isFalse();
+        assertThat(stockValuationMetricsService.isHighValuation(metrics)).isFalse();
+
+        metrics.setValuationScore(new BigDecimal("80"));
+        metrics.setNetProfitTtm(new BigDecimal("-1"));
+
+        assertThat(stockValuationMetricsService.isLowValuation(metrics)).isFalse();
+        assertThat(stockValuationMetricsService.isFairValuation(metrics)).isFalse();
+        assertThat(stockValuationMetricsService.isHighValuation(metrics)).isFalse();
+    }
+
     private StockValuationMetrics completeMetrics() {
         StockValuationMetrics metrics = new StockValuationMetrics();
         metrics.setIndustry("软件开发");
