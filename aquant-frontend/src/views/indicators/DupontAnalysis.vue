@@ -641,13 +641,13 @@ const pagination = reactive({
 
 // 表格列定义（支持表头原生排序）
 const columns = computed<TableProps['columns']>(() => [
-  { title: '股票', dataIndex: 'stockName', width: 130 },
-  { title: '行业', dataIndex: 'industry', width: 125 },
+  { title: '股票', dataIndex: 'stockName', key: 'stock', width: 130 },
+  { title: '行业', dataIndex: 'industry', key: 'industry', width: 125 },
   { title: 'ROE3年平均(%)', dataIndex: 'roe3yAvg', width: 155, align: 'right', sorter: true },
   { title: '净利率3年平均(%)', dataIndex: 'netMargin3yAvg', width: 160, align: 'right', sorter: true },
   { title: '资产周转率(次)', dataIndex: 'assetTurnover3yAvg', width: 135, align: 'right', sorter: true },
   { title: '权益乘数(倍)', dataIndex: 'equityMultiplier3yAvg', width: 125, align: 'right', sorter: true },
-  { title: '质量评分', dataIndex: 'qualityScore', width: 110, align: 'center', sorter: true, defaultSortOrder: 'descend' },
+  { title: '质量评分', dataIndex: 'qualityScore', key: 'qualityScore', width: 110, align: 'center', sorter: true, defaultSortOrder: 'descend' },
   { title: '结论', dataIndex: 'conclusion', ellipsis: true, minWidth: 150 }
 ]);
 
@@ -1257,7 +1257,8 @@ onMounted(() => {
   font-size: 13px;
 }
 
-:deep(.dupont-main-table .ant-table-thead > tr > th) {
+:deep(.dupont-main-table .ant-table-thead > tr > th),
+:deep(.dupont-main-table .ant-table-thead > tr > th.ant-table-column-sort) {
   background: #f1f5f9 !important;
   color: #334155;
   font-weight: 600;
@@ -1270,22 +1271,27 @@ onMounted(() => {
   background: #e2e8f0 !important;
 }
 
-:deep(.dupont-main-table .ant-table-thead th.ant-table-column-sort) {
-  background: #f1f5f9 !important;
-}
-
 :deep(.dupont-main-table .ant-table-tbody > tr > td) {
   border-bottom: 1px solid #f1f5f9;
   padding: 12px 14px;
   transition: background 0.15s ease;
   cursor: pointer;
+  background: #ffffff;
 }
 
-:deep(.dupont-main-table .ant-table-tbody > tr:hover > td) {
+:deep(.dupont-main-table .ant-table-tbody > tr > td.ant-table-column-sort) {
+  background: inherit;
+}
+
+:deep(.dupont-main-table .ant-table-tbody > tr:hover > td),
+:deep(.dupont-main-table .ant-table-tbody > tr:hover > td.ant-table-column-sort) {
   background: #f8fafc !important;
 }
 
-:deep(.dupont-row--selected td) {
+:deep(.dupont-main-table .dupont-row--selected td),
+:deep(.dupont-main-table .dupont-row--selected td.ant-table-column-sort),
+:deep(.dupont-main-table .ant-table-tbody > tr.dupont-row--selected > td),
+:deep(.dupont-main-table .ant-table-tbody > tr.dupont-row--selected > td.ant-table-column-sort) {
   background-color: #f8fafc !important;
 }
 
