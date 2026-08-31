@@ -216,6 +216,47 @@ class StockDupontAnalysisCalculationTest {
         assertThat(item.getQualityLevel()).isIn("良好", "优秀");
     }
 
+    @Test
+    @DisplayName("Should require high-quality ROE to remain stable without leverage warning")
+    void shouldApplyConservativeHighQualityRoeRule() {
+        StockDupontAnalysis item = createCompleteScoreItem("制造业", "20", "15", "1.2", "2.0");
+        item.setQualityScore(new BigDecimal("85"));
+        item.setEquityMultiplier3yAvgIndustryMed(new BigDecimal("1.8"));
+
+        assertThat(stockDupontAnalysisService.isHighQualityRoe(item)).isTrue();
+
+        item.setRoeLastYA(new BigDecimal("12"));
+        assertThat(stockDupontAnalysisService.isHighQualityRoe(item)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Should combine absolute and industry-relative leverage thresholds")
+    void shouldApplyIndustryAdjustedLeverageWarning() {
+        StockDupontAnalysis item = createCompleteScoreItem("公用事业", "12", "8", "0.5", "2.8");
+        item.setEquityMultiplier3yAvgIndustryMed(new BigDecimal("2.5"));
+        assertThat(stockDupontAnalysisService.isHighLeverage(item)).isFalse();
+
+        item.setEquityMultiplier3yAvgIndustryMed(new BigDecimal("2.0"));
+        assertThat(stockDupontAnalysisService.isHighLeverage(item)).isTrue();
+
+        item.setEquityMultiplier3yAvg(new BigDecimal("-1"));
+        assertThat(stockDupontAnalysisService.isHighLeverage(item)).isTrue();
+    }
+
+    @Test
+    @DisplayName("Should evaluate stable profit by industry benchmark and latest-year trend")
+    void shouldApplyIndustryAdjustedStableProfitRule() {
+        StockDupontAnalysis item = createCompleteScoreItem("零售", "12", "3", "1.8", "1.8");
+        item.setQualityScore(new BigDecimal("70"));
+        item.setNetMargin3yAvgIndustryMed(new BigDecimal("3.5"));
+        item.setEquityMultiplier3yAvgIndustryMed(new BigDecimal("1.7"));
+
+        assertThat(stockDupontAnalysisService.isStableProfit(item)).isTrue();
+
+        item.setNetMarginLastYA(new BigDecimal("2"));
+        assertThat(stockDupontAnalysisService.isStableProfit(item)).isFalse();
+    }
+
     private StockDupontAnalysis createCompleteScoreItem(
             String industry, String roe, String netMargin, String turnover, String equityMultiplier
     ) {

@@ -368,7 +368,7 @@
                       <th style="width: 17%">{{ currentYear - 1 }}</th>
                       <th style="width: 17%">{{ currentYear - 2 }}</th>
                       <th style="width: 17%">{{ currentYear - 3 }}</th>
-                      <th style="width: 17%">最新 (TTM)</th>
+                      <th style="width: 17%">TTM</th>
                     </tr>
                   </thead>
                   <tbody>

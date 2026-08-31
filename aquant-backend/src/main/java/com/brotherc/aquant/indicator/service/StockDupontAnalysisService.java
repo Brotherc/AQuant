@@ -18,9 +18,11 @@ import com.brotherc.aquant.watchlist.repository.StockWatchlistGroupRepository;
 import com.brotherc.aquant.watchlist.repository.StockWatchlistStockRepository;
 import com.brotherc.aquant.common.utils.StockUtils;
 import com.brotherc.aquant.common.utils.UserContext;
+import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -51,6 +53,16 @@ public class StockDupontAnalysisService {
     private static final BigDecimal ONE_HUNDRED = new BigDecimal("100");
     private static final BigDecimal TWO = new BigDecimal("2");
     private static final BigDecimal THREE = new BigDecimal("3");
+    private static final BigDecimal HIGH_QUALITY_ROE_MIN = new BigDecimal("15");
+    private static final BigDecimal HIGH_QUALITY_SCORE_MIN = new BigDecimal("80");
+    private static final BigDecimal STABLE_ROE_MIN = new BigDecimal("10");
+    private static final BigDecimal STABLE_QUALITY_SCORE_MIN = new BigDecimal("65");
+    private static final BigDecimal LATEST_STABILITY_RATIO = new BigDecimal("0.7");
+    private static final BigDecimal INDUSTRY_MARGIN_RATIO = new BigDecimal("0.8");
+    private static final BigDecimal NON_FINANCIAL_LEVERAGE_LIMIT = new BigDecimal("2.5");
+    private static final BigDecimal NON_FINANCIAL_LEVERAGE_INDUSTRY_RATIO = new BigDecimal("1.3");
+    private static final BigDecimal FINANCIAL_LEVERAGE_INDUSTRY_RATIO = new BigDecimal("1.5");
+    private static final BigDecimal FINANCIAL_LEVERAGE_FALLBACK_LIMIT = new BigDecimal("20");
     private static final int SCALE = 4;
     private static final double MIN_ANNUAL_REPORT_COVERAGE = 0.8;
 
@@ -113,44 +125,13 @@ public class StockDupontAnalysisService {
                 if (StringUtils.isNotBlank(query.getTabFilter())) {
                     switch (query.getTabFilter()) {
                         case "HIGH_QUALITY" -> {
-                            predicates.add(cb.ge(root.get(ROE_3Y_AVG), new BigDecimal("15")));
-                            predicates.add(cb.ge(root.get("qualityScore"), new BigDecimal("75")));
+                            predicates.add(buildHighQualityRoePredicate(cb, root));
                         }
                         case "HIGH_LEVERAGE" -> {
-                            Path<String> industry = root.get("industry");
-                            Expression<BigDecimal> equityMultiplier = root.get("equityMultiplier3yAvg");
-                            Expression<BigDecimal> industryMedian = root.get("equityMultiplier3yAvgIndustryMed");
-                            Predicate financial = buildFinancialIndustryPredicate(cb, industry);
-                            Predicate financialHighLeverage = cb.and(financial, cb.or(
-                                    cb.and(cb.isNotNull(industryMedian),
-                                            cb.gt(equityMultiplier, cb.prod(industryMedian, new BigDecimal("1.8")))),
-                                    cb.and(cb.isNull(industryMedian),
-                                            cb.gt(equityMultiplier, new BigDecimal("25")))
-                            ));
-                            Predicate nonFinancialHighLeverage = cb.and(
-                                    cb.or(cb.isNull(industry), cb.not(financial)),
-                                    cb.gt(equityMultiplier, new BigDecimal("2.5"))
-                            );
-                            predicates.add(cb.or(financialHighLeverage, nonFinancialHighLeverage));
+                            predicates.add(buildHighLeveragePredicate(cb, root));
                         }
                         case "STABLE_PROFIT" -> {
-                            predicates.add(cb.ge(root.get(ROE_3Y_AVG), new BigDecimal("10")));
-                            predicates.add(cb.ge(root.get("netMargin3yAvg"), new BigDecimal("5")));
-                            Path<String> industry = root.get("industry");
-                            Expression<BigDecimal> equityMultiplier = root.get("equityMultiplier3yAvg");
-                            Expression<BigDecimal> industryMedian = root.get("equityMultiplier3yAvgIndustryMed");
-                            Predicate financial = buildFinancialIndustryPredicate(cb, industry);
-                            Predicate financialStable = cb.and(financial, cb.or(
-                                    cb.and(cb.isNotNull(industryMedian),
-                                            cb.le(equityMultiplier, cb.prod(industryMedian, new BigDecimal("1.3")))),
-                                    cb.and(cb.isNull(industryMedian),
-                                            cb.le(equityMultiplier, new BigDecimal("18")))
-                            ));
-                            Predicate nonFinancialStable = cb.and(
-                                    cb.or(cb.isNull(industry), cb.not(financial)),
-                                    cb.le(equityMultiplier, new BigDecimal("2.2"))
-                            );
-                            predicates.add(cb.or(financialStable, nonFinancialStable));
+                            predicates.add(buildStableProfitPredicate(cb, root));
                         }
                         case "WATCHLIST" -> {
                             Long userId = UserContext.getCurrentUserId();
@@ -211,18 +192,11 @@ public class StockDupontAnalysisService {
         }
 
         long highQualityCount = list.stream()
-                .filter(item -> item.getRoe3yAvg() != null && item.getRoe3yAvg().compareTo(new BigDecimal("15")) >= 0
-                        && item.getQualityScore() != null && item.getQualityScore().compareTo(new BigDecimal("75")) >= 0)
+                .filter(this::isHighQualityRoe)
                 .count();
 
         long leverageWarningCount = list.stream()
-                .filter(item -> {
-                    BigDecimal em = item.getEquityMultiplier3yAvg() != null ? item.getEquityMultiplier3yAvg() : item.getEquityMultiplierLastYA();
-                    if (em == null) return false;
-                    return isFinancialIndustry(item.getIndustry())
-                            ? isExtremeFinancialLeverage(em, item.getEquityMultiplier3yAvgIndustryMed())
-                            : em.compareTo(new BigDecimal("2.5")) > 0;
-                })
+                .filter(this::isHighLeverage)
                 .count();
 
         // 行业/全市场加权中位数 (取全市场 roe3yAvg 的中位数)
@@ -249,7 +223,7 @@ public class StockDupontAnalysisService {
             if (!userWatchlistCodes.isEmpty()) {
                 watchlistHighQualityCount = list.stream()
                         .filter(item -> userWatchlistCodes.contains(item.getStockCode()) || userWatchlistCodes.contains(StockUtils.getPlainCode(item.getStockCode())))
-                        .filter(item -> item.getQualityScore() != null && item.getQualityScore().compareTo(new BigDecimal("75")) >= 0)
+                        .filter(this::isHighQualityRoe)
                         .count();
             }
         }
@@ -700,15 +674,148 @@ public class StockDupontAnalysisService {
         return StringUtils.containsAny(industry, "银行", "保险", "证券", "多元金融", "金融服务");
     }
 
+    private Predicate buildHighQualityRoePredicate(CriteriaBuilder cb, Root<StockDupontAnalysis> root) {
+        Expression<BigDecimal> roe3yAvg = root.get(ROE_3Y_AVG);
+        return cb.and(
+                cb.ge(roe3yAvg, HIGH_QUALITY_ROE_MIN),
+                cb.ge(root.get("qualityScore"), HIGH_QUALITY_SCORE_MIN),
+                cb.isNotNull(root.get("equityMultiplier3yAvg")),
+                cb.gt(root.get("roeLastYA"), BigDecimal.ZERO),
+                cb.gt(root.get("roeLast2yA"), BigDecimal.ZERO),
+                cb.gt(root.get("roeLast3yA"), BigDecimal.ZERO),
+                cb.ge(root.get("roeLastYA"), cb.prod(roe3yAvg, LATEST_STABILITY_RATIO)),
+                cb.not(buildHighLeveragePredicate(cb, root))
+        );
+    }
+
+    private Predicate buildHighLeveragePredicate(CriteriaBuilder cb, Root<StockDupontAnalysis> root) {
+        Path<String> industry = root.get("industry");
+        Expression<BigDecimal> equityMultiplier = root.get("equityMultiplier3yAvg");
+        Expression<BigDecimal> industryMedian = root.get("equityMultiplier3yAvgIndustryMed");
+        Predicate financial = buildFinancialIndustryPredicate(cb, industry);
+        Predicate missingIndustryMedian = cb.or(cb.isNull(industryMedian), cb.le(industryMedian, BigDecimal.ZERO));
+
+        Predicate financialHighLeverage = cb.and(
+                financial,
+                cb.gt(equityMultiplier, BigDecimal.ZERO),
+                cb.or(
+                        cb.and(cb.isNotNull(industryMedian), cb.gt(industryMedian, BigDecimal.ZERO),
+                                cb.gt(equityMultiplier, cb.prod(industryMedian, FINANCIAL_LEVERAGE_INDUSTRY_RATIO))),
+                        cb.and(missingIndustryMedian,
+                                cb.gt(equityMultiplier, FINANCIAL_LEVERAGE_FALLBACK_LIMIT))
+                )
+        );
+        Predicate nonFinancialHighLeverage = cb.and(
+                cb.or(cb.isNull(industry), cb.not(financial)),
+                cb.gt(equityMultiplier, NON_FINANCIAL_LEVERAGE_LIMIT),
+                cb.or(
+                        missingIndustryMedian,
+                        cb.gt(equityMultiplier, cb.prod(industryMedian, NON_FINANCIAL_LEVERAGE_INDUSTRY_RATIO))
+                )
+        );
+        Predicate nonPositiveEquityMultiplier = cb.and(
+                cb.isNotNull(equityMultiplier),
+                cb.le(equityMultiplier, BigDecimal.ZERO)
+        );
+        return cb.or(nonPositiveEquityMultiplier, financialHighLeverage, nonFinancialHighLeverage);
+    }
+
+    private Predicate buildStableProfitPredicate(CriteriaBuilder cb, Root<StockDupontAnalysis> root) {
+        Expression<BigDecimal> roe3yAvg = root.get(ROE_3Y_AVG);
+        Expression<BigDecimal> netMargin3yAvg = root.get("netMargin3yAvg");
+        Expression<BigDecimal> netMarginIndustryMedian = root.get("netMargin3yAvgIndustryMed");
+        Predicate marginMeetsIndustryBenchmark = cb.or(
+                cb.and(cb.gt(netMarginIndustryMedian, BigDecimal.ZERO),
+                        cb.ge(netMargin3yAvg, cb.prod(netMarginIndustryMedian, INDUSTRY_MARGIN_RATIO))),
+                cb.and(cb.or(cb.isNull(netMarginIndustryMedian), cb.le(netMarginIndustryMedian, BigDecimal.ZERO)),
+                        cb.gt(netMargin3yAvg, BigDecimal.ZERO))
+        );
+
+        return cb.and(
+                cb.ge(roe3yAvg, STABLE_ROE_MIN),
+                cb.ge(root.get("qualityScore"), STABLE_QUALITY_SCORE_MIN),
+                cb.isNotNull(root.get("equityMultiplier3yAvg")),
+                cb.gt(root.get("roeLastYA"), BigDecimal.ZERO),
+                cb.gt(root.get("roeLast2yA"), BigDecimal.ZERO),
+                cb.gt(root.get("roeLast3yA"), BigDecimal.ZERO),
+                cb.gt(root.get("netMarginLastYA"), BigDecimal.ZERO),
+                cb.gt(root.get("netMarginLast2yA"), BigDecimal.ZERO),
+                cb.gt(root.get("netMarginLast3yA"), BigDecimal.ZERO),
+                cb.ge(root.get("roeLastYA"), cb.prod(roe3yAvg, LATEST_STABILITY_RATIO)),
+                cb.ge(root.get("netMarginLastYA"), cb.prod(netMargin3yAvg, LATEST_STABILITY_RATIO)),
+                marginMeetsIndustryBenchmark,
+                cb.not(buildHighLeveragePredicate(cb, root))
+        );
+    }
+
+    boolean isHighQualityRoe(StockDupontAnalysis item) {
+        if (item == null || item.getRoe3yAvg() == null || item.getQualityScore() == null
+                || item.getRoeLastYA() == null || item.getRoeLast2yA() == null || item.getRoeLast3yA() == null) {
+            return false;
+        }
+        return item.getRoe3yAvg().compareTo(HIGH_QUALITY_ROE_MIN) >= 0
+                && item.getQualityScore().compareTo(HIGH_QUALITY_SCORE_MIN) >= 0
+                && item.getRoeLastYA().compareTo(BigDecimal.ZERO) > 0
+                && item.getRoeLast2yA().compareTo(BigDecimal.ZERO) > 0
+                && item.getRoeLast3yA().compareTo(BigDecimal.ZERO) > 0
+                && item.getRoeLastYA().compareTo(item.getRoe3yAvg().multiply(LATEST_STABILITY_RATIO)) >= 0
+                && !isHighLeverage(item);
+    }
+
+    boolean isHighLeverage(StockDupontAnalysis item) {
+        if (item == null || item.getEquityMultiplier3yAvg() == null) {
+            return false;
+        }
+        BigDecimal equityMultiplier = item.getEquityMultiplier3yAvg();
+        if (equityMultiplier.compareTo(BigDecimal.ZERO) <= 0) {
+            return true;
+        }
+        BigDecimal industryMedian = item.getEquityMultiplier3yAvgIndustryMed();
+        boolean hasValidIndustryMedian = industryMedian != null && industryMedian.compareTo(BigDecimal.ZERO) > 0;
+        if (isFinancialIndustry(item.getIndustry())) {
+            return hasValidIndustryMedian
+                    ? equityMultiplier.compareTo(industryMedian.multiply(FINANCIAL_LEVERAGE_INDUSTRY_RATIO)) > 0
+                    : equityMultiplier.compareTo(FINANCIAL_LEVERAGE_FALLBACK_LIMIT) > 0;
+        }
+        return equityMultiplier.compareTo(NON_FINANCIAL_LEVERAGE_LIMIT) > 0
+                && (!hasValidIndustryMedian
+                || equityMultiplier.compareTo(industryMedian.multiply(NON_FINANCIAL_LEVERAGE_INDUSTRY_RATIO)) > 0);
+    }
+
+    boolean isStableProfit(StockDupontAnalysis item) {
+        if (item == null || item.getRoe3yAvg() == null || item.getQualityScore() == null
+                || item.getRoeLastYA() == null || item.getRoeLast2yA() == null || item.getRoeLast3yA() == null
+                || item.getNetMargin3yAvg() == null || item.getNetMarginLastYA() == null
+                || item.getNetMarginLast2yA() == null || item.getNetMarginLast3yA() == null) {
+            return false;
+        }
+        BigDecimal industryMedian = item.getNetMargin3yAvgIndustryMed();
+        boolean marginMeetsIndustryBenchmark = industryMedian == null || industryMedian.compareTo(BigDecimal.ZERO) <= 0
+                ? item.getNetMargin3yAvg().compareTo(BigDecimal.ZERO) > 0
+                : item.getNetMargin3yAvg().compareTo(industryMedian.multiply(INDUSTRY_MARGIN_RATIO)) >= 0;
+        return item.getRoe3yAvg().compareTo(STABLE_ROE_MIN) >= 0
+                && item.getQualityScore().compareTo(STABLE_QUALITY_SCORE_MIN) >= 0
+                && Stream.of(item.getRoeLastYA(), item.getRoeLast2yA(), item.getRoeLast3yA(),
+                        item.getNetMarginLastYA(), item.getNetMarginLast2yA(), item.getNetMarginLast3yA())
+                .allMatch(value -> value.compareTo(BigDecimal.ZERO) > 0)
+                && item.getRoeLastYA().compareTo(item.getRoe3yAvg().multiply(LATEST_STABILITY_RATIO)) >= 0
+                && item.getNetMarginLastYA().compareTo(item.getNetMargin3yAvg().multiply(LATEST_STABILITY_RATIO)) >= 0
+                && marginMeetsIndustryBenchmark
+                && !isHighLeverage(item);
+    }
+
     private Predicate buildFinancialIndustryPredicate(
-            jakarta.persistence.criteria.CriteriaBuilder cb, Path<String> industry
+            CriteriaBuilder cb, Path<String> industry
     ) {
-        return cb.or(
-                cb.like(industry, "%银行%"),
-                cb.like(industry, "%保险%"),
-                cb.like(industry, "%证券%"),
-                cb.like(industry, "%多元金融%"),
-                cb.like(industry, "%金融服务%")
+        return cb.and(
+                cb.isNotNull(industry),
+                cb.or(
+                        cb.like(industry, "%银行%"),
+                        cb.like(industry, "%保险%"),
+                        cb.like(industry, "%证券%"),
+                        cb.like(industry, "%多元金融%"),
+                        cb.like(industry, "%金融服务%")
+                )
         );
     }
 
@@ -726,10 +833,7 @@ public class StockDupontAnalysisService {
         boolean highMargin = netMargin != null && (netMarginMed != null ? netMargin.compareTo(netMarginMed) > 0 : netMargin.compareTo(new BigDecimal("10")) >= 0);
         boolean highTurnover = turnover != null && (turnoverMed != null ? turnover.compareTo(turnoverMed) > 0 : turnover.compareTo(new BigDecimal("1.0")) >= 0);
         boolean financialIndustry = isFinancialIndustry(item.getIndustry());
-        BigDecimal equityMultMed = item.getEquityMultiplier3yAvgIndustryMed();
-        boolean highLeverage = financialIndustry
-                ? equityMult != null && isExtremeFinancialLeverage(equityMult, equityMultMed)
-                : equityMult != null && equityMult.compareTo(new BigDecimal("2.5")) > 0;
+        boolean highLeverage = isHighLeverage(item);
         boolean safeLeverage = financialIndustry
                 ? equityMult != null && !highLeverage
                 : equityMult != null && equityMult.compareTo(new BigDecimal("2.2")) <= 0;
@@ -793,14 +897,14 @@ public class StockDupontAnalysisService {
         metrics.setAssetTurnoverLast3yAAvg(average(group, StockDupontAnalysis::getAssetTurnoverLast3yA));
         metrics.setAssetTurnoverLast3yAMed(median(group, StockDupontAnalysis::getAssetTurnoverLast3yA));
 
-        metrics.setEquityMultiplier3yAvgAvg(average(group, StockDupontAnalysis::getEquityMultiplier3yAvg));
-        metrics.setEquityMultiplier3yAvgMed(median(group, StockDupontAnalysis::getEquityMultiplier3yAvg));
-        metrics.setEquityMultiplierLastYAAvg(average(group, StockDupontAnalysis::getEquityMultiplierLastYA));
-        metrics.setEquityMultiplierLastYAMed(median(group, StockDupontAnalysis::getEquityMultiplierLastYA));
-        metrics.setEquityMultiplierLast2yAAvg(average(group, StockDupontAnalysis::getEquityMultiplierLast2yA));
-        metrics.setEquityMultiplierLast2yAMed(median(group, StockDupontAnalysis::getEquityMultiplierLast2yA));
-        metrics.setEquityMultiplierLast3yAAvg(average(group, StockDupontAnalysis::getEquityMultiplierLast3yA));
-        metrics.setEquityMultiplierLast3yAMed(median(group, StockDupontAnalysis::getEquityMultiplierLast3yA));
+        metrics.setEquityMultiplier3yAvgAvg(positiveAverage(group, StockDupontAnalysis::getEquityMultiplier3yAvg));
+        metrics.setEquityMultiplier3yAvgMed(positiveMedian(group, StockDupontAnalysis::getEquityMultiplier3yAvg));
+        metrics.setEquityMultiplierLastYAAvg(positiveAverage(group, StockDupontAnalysis::getEquityMultiplierLastYA));
+        metrics.setEquityMultiplierLastYAMed(positiveMedian(group, StockDupontAnalysis::getEquityMultiplierLastYA));
+        metrics.setEquityMultiplierLast2yAAvg(positiveAverage(group, StockDupontAnalysis::getEquityMultiplierLast2yA));
+        metrics.setEquityMultiplierLast2yAMed(positiveMedian(group, StockDupontAnalysis::getEquityMultiplierLast2yA));
+        metrics.setEquityMultiplierLast3yAAvg(positiveAverage(group, StockDupontAnalysis::getEquityMultiplierLast3yA));
+        metrics.setEquityMultiplierLast3yAMed(positiveMedian(group, StockDupontAnalysis::getEquityMultiplierLast3yA));
 
         return metrics;
     }
@@ -833,6 +937,34 @@ public class StockDupontAnalysisService {
         BigDecimal mid1 = values.get(size / 2 - 1);
         BigDecimal mid2 = values.get(size / 2);
         return mid1.add(mid2).divide(TWO, SCALE, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal positiveAverage(List<StockDupontAnalysis> list, Function<StockDupontAnalysis, BigDecimal> getter) {
+        List<BigDecimal> values = list.stream()
+                .map(getter)
+                .filter(value -> value != null && value.compareTo(BigDecimal.ZERO) > 0)
+                .toList();
+        if (values.isEmpty()) {
+            return null;
+        }
+        BigDecimal sum = values.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+        return sum.divide(BigDecimal.valueOf(values.size()), SCALE, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal positiveMedian(List<StockDupontAnalysis> list, Function<StockDupontAnalysis, BigDecimal> getter) {
+        List<BigDecimal> values = list.stream()
+                .map(getter)
+                .filter(value -> value != null && value.compareTo(BigDecimal.ZERO) > 0)
+                .sorted()
+                .toList();
+        if (values.isEmpty()) {
+            return null;
+        }
+        int size = values.size();
+        if (size % 2 == 1) {
+            return values.get(size / 2);
+        }
+        return values.get(size / 2 - 1).add(values.get(size / 2)).divide(TWO, SCALE, RoundingMode.HALF_UP);
     }
 
     /**
