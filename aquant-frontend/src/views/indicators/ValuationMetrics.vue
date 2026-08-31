@@ -346,46 +346,41 @@
                 <table class="annual-snapshot-table">
                   <thead>
                     <tr>
-                      <th style="width: 28%">指标</th>
-                      <th style="width: 18%">3年前</th>
-                      <th style="width: 18%">2年前</th>
-                      <th style="width: 18%">去年</th>
-                      <th style="width: 18%">最新</th>
+                      <th style="width: 40%">指标</th>
+                      <th style="width: 30%">{{ currentYear - 1 }}</th>
+                      <th style="width: 30%">TTM</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
                       <td class="metric-name-td">市盈率 PE</td>
-                      <td>{{ formatNumber(selectedStock.peLast3yA) }}</td>
-                      <td>{{ formatNumber(selectedStock.peLast2yA) }}</td>
                       <td>{{ formatNumber(selectedStock.peAnnual) }}</td>
                       <td>{{ formatNumber(selectedStock.peTtm) }}</td>
                     </tr>
                     <tr>
-                      <td class="metric-name-td">市净率 PB</td>
-                      <td>-</td>
-                      <td>-</td>
+                      <td class="metric-name-td">
+                        <span class="metric-name-with-tip">
+                          市净率 PB
+                          <a-tooltip title="市净率最新值采用 MRQ (最新报告期净资产计算)">
+                            <ExclamationCircleOutlined class="metric-tip-icon" />
+                          </a-tooltip>
+                        </span>
+                      </td>
                       <td>{{ formatNumber(selectedStock.pbAnnual) }}</td>
                       <td>{{ formatNumber(selectedStock.pbMrq) }}</td>
                     </tr>
                     <tr>
                       <td class="metric-name-td">市销率 PS</td>
-                      <td>-</td>
-                      <td>-</td>
                       <td>{{ formatNumber(selectedStock.psAnnual) }}</td>
                       <td>{{ formatNumber(selectedStock.psTtm) }}</td>
                     </tr>
                     <tr>
                       <td class="metric-name-td">市现率 PCF</td>
-                      <td>-</td>
-                      <td>-</td>
                       <td>{{ formatNumber(selectedStock.pcfAnnual) }}</td>
                       <td>{{ formatNumber(selectedStock.pcfTtm) }}</td>
                     </tr>
                     <tr v-if="selectedStock.peg !== undefined && selectedStock.peg !== null">
                       <td class="metric-name-td">PEG</td>
-                      <td>-</td>
-                      <td>-</td>
                       <td>-</td>
                       <td>{{ formatNumber(selectedStock.peg) }}</td>
                     </tr>
@@ -509,8 +504,8 @@
                   </div>
                 </div>
 
-                <!-- 4. PEG 对比 -->
-                <div v-if="currentCompareData.peg != null || currentCompareData.pegMed != null" class="comp-row-item">
+                <!-- 4. PEG 对比 (仅 TTM 显示) -->
+                <div v-if="comparePeriod === 'ttm' && (currentCompareData.peg != null || currentCompareData.pegMed != null)" class="comp-row-item">
                   <div class="comp-row-label">PEG</div>
                   <div class="comp-row-bars">
                     <div class="comp-bar-line">
@@ -667,9 +662,9 @@ const pagination = reactive({
 const columns = computed<TableProps['columns']>(() => [
   { title: '股票', dataIndex: 'stockName', key: 'stock', width: 130 },
   { title: '行业', dataIndex: 'industry', key: 'industry', width: 125 },
-  { title: 'PE (TTM)', dataIndex: 'peTtm', width: 110, align: 'right', sorter: true },
-  { title: 'PB (MRQ)', dataIndex: 'pbMrq', width: 110, align: 'right', sorter: true },
-  { title: 'PS (TTM)', dataIndex: 'psTtm', width: 110, align: 'right', sorter: true },
+  { title: '市盈率 PE (TTM)', dataIndex: 'peTtm', width: 135, align: 'right', sorter: true },
+  { title: '市净率 PB (MRQ)', dataIndex: 'pbMrq', width: 135, align: 'right', sorter: true },
+  { title: '市销率 PS (TTM)', dataIndex: 'psTtm', width: 135, align: 'right', sorter: true },
   { title: 'PEG', dataIndex: 'peg', width: 100, align: 'right', sorter: true },
   { title: '估值评分', dataIndex: 'valuationScore', key: 'valuationScore', width: 115, align: 'center', sorter: true, defaultSortOrder: 'descend' },
   { title: '结论', dataIndex: 'conclusion', ellipsis: true, minWidth: 160 }
@@ -738,8 +733,8 @@ const currentCompareData = computed(() => {
       pbMed: s.pbMrqIndustryMed,
       ps: s.psAnnual,
       psMed: s.psTtmIndustryMed,
-      peg: s.peg,
-      pegMed: s.pegIndustryMed,
+      peg: null,
+      pegMed: null,
     };
   } else {
     return {
@@ -1717,6 +1712,23 @@ onMounted(() => {
 .metric-name-td {
   text-align: left;
   color: #334155;
+}
+
+.metric-name-with-tip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.metric-tip-icon {
+  font-size: 12px;
+  color: #94a3b8;
+  cursor: default;
+  transition: color 0.15s ease;
+}
+
+.metric-tip-icon:hover {
+  color: #475569;
 }
 
 .text-blue {
