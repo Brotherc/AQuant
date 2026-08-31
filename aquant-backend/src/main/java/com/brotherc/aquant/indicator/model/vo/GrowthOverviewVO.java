@@ -17,7 +17,7 @@ import java.math.BigDecimal;
 public class GrowthOverviewVO {
 
     /**
-     * 高成长机会个股数 (TTM 净利润或营收增长优于行业中位数20%以上)
+     * 高成长机会个股数（评分、TTM增长和3年复合增长均达到高成长条件）
      */
     private Long highGrowthOpportunityCount;
 
@@ -32,7 +32,7 @@ public class GrowthOverviewVO {
     private BigDecimal marketNetProfitGrowthMedian;
 
     /**
-     * 我的自选高成长个股数
+     * 我的自选中符合完整高成长条件的个股数
      */
     private Long watchlistHighGrowthCount;
 

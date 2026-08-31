@@ -15,7 +15,10 @@ import com.brotherc.aquant.watchlist.entity.StockWatchlistGroup;
 import com.brotherc.aquant.watchlist.entity.StockWatchlistStock;
 import com.brotherc.aquant.watchlist.repository.StockWatchlistGroupRepository;
 import com.brotherc.aquant.watchlist.repository.StockWatchlistStockRepository;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -44,6 +47,14 @@ import java.util.stream.Stream;
 public class StockGrowthMetricsService {
 
     private static final BigDecimal ONE_HUNDRED = new BigDecimal("100");
+    private static final BigDecimal HIGH_GROWTH_SCORE_MIN = new BigDecimal("80");
+    private static final BigDecimal HIGH_GROWTH_REVENUE_TTM_MIN = new BigDecimal("15");
+    private static final BigDecimal HIGH_GROWTH_PROFIT_TTM_MIN = new BigDecimal("20");
+    private static final BigDecimal HIGH_GROWTH_CAGR_MIN = new BigDecimal("10");
+    private static final BigDecimal STABLE_GROWTH_SCORE_MIN = new BigDecimal("65");
+    private static final BigDecimal STABLE_REVENUE_SPREAD_MAX = new BigDecimal("20");
+    private static final BigDecimal STABLE_PROFIT_SPREAD_MAX = new BigDecimal("30");
+    private static final BigDecimal PROFIT_RECOVERY_TTM_MIN = new BigDecimal("10");
     private static final int SCALE = 4;
     private static final double MIN_REPORT_COVERAGE = 0.8;
 
@@ -101,20 +112,13 @@ public class StockGrowthMetricsService {
                 if (StringUtils.isNotBlank(reqVO.getTabFilter()) && !"ALL".equalsIgnoreCase(reqVO.getTabFilter())) {
                     switch (reqVO.getTabFilter().toUpperCase()) {
                         case "HIGH_GROWTH" -> {
-                            // 高成长榜：成长评分 >= 80 (优秀)
-                            predicates.add(cb.ge(root.get("growthScore"), new BigDecimal("80.0")));
+                            predicates.add(buildHighGrowthPredicate(cb, root));
                         }
                         case "STABLE_GROWTH" -> {
-                            // 稳健成长：成长评分 65~80 (良好)
-                            predicates.add(cb.ge(root.get("growthScore"), new BigDecimal("65.0")));
-                            predicates.add(cb.lt(root.get("growthScore"), new BigDecimal("80.0")));
+                            predicates.add(buildStableGrowthPredicate(cb, root));
                         }
                         case "PROFIT_RECOVERY" -> {
-                            // 盈利修复：成长评分 50~65 (中等) 或 TTM净利增速 > 0 且 去年实际增速 < 0
-                            predicates.add(cb.or(
-                                    cb.and(cb.ge(root.get("growthScore"), new BigDecimal("50.0")), cb.lt(root.get("growthScore"), new BigDecimal("65.0"))),
-                                    cb.and(cb.gt(root.get("netProfitGrowthTtm"), BigDecimal.ZERO), cb.lt(root.get("netProfitGrowthLastYA"), BigDecimal.ZERO))
-                            ));
+                            predicates.add(buildProfitRecoveryPredicate(cb, root));
                         }
                         case "WATCHLIST" -> {
                             // 我的自选
@@ -206,9 +210,9 @@ public class StockGrowthMetricsService {
             return new GrowthOverviewVO(0L, BigDecimal.ZERO, BigDecimal.ZERO, 0L);
         }
 
-        // 1. 高成长机会 (评分>=80)
+        // 1. 高成长机会
         long highGrowthCount = list.stream()
-                .filter(item -> item.getGrowthScore() != null && item.getGrowthScore().compareTo(new BigDecimal("80.0")) >= 0)
+                .filter(this::isHighGrowth)
                 .count();
 
         // 2. 市场营收增长中位数 (全市场 TTM 营收增速)
@@ -251,7 +255,7 @@ public class StockGrowthMetricsService {
         if (!watchlistStockCodes.isEmpty()) {
             watchlistHighGrowthCount = list.stream()
                     .filter(item -> watchlistStockCodes.contains(item.getStockCode()) || (item.getStockCode().length() > 2 && watchlistStockCodes.contains(item.getStockCode().substring(2))))
-                    .filter(item -> item.getGrowthScore() != null && item.getGrowthScore().compareTo(new BigDecimal("80.0")) >= 0)
+                    .filter(this::isHighGrowth)
                     .count();
         }
 
@@ -261,6 +265,117 @@ public class StockGrowthMetricsService {
                 .marketNetProfitGrowthMedian(marketNetProfitMedian)
                 .watchlistHighGrowthCount(watchlistHighGrowthCount)
                 .build();
+    }
+
+    private Predicate buildHighGrowthPredicate(CriteriaBuilder cb, Root<StockGrowthMetrics> root) {
+        return cb.and(
+                cb.ge(root.get("growthScore"), HIGH_GROWTH_SCORE_MIN),
+                cb.ge(root.get("revenueGrowthTtm"), HIGH_GROWTH_REVENUE_TTM_MIN),
+                cb.ge(root.get("netProfitGrowthTtm"), HIGH_GROWTH_PROFIT_TTM_MIN),
+                cb.ge(root.get("revenueGrowth3yCagr"), HIGH_GROWTH_CAGR_MIN),
+                cb.ge(root.get("netProfitGrowth3yCagr"), HIGH_GROWTH_CAGR_MIN),
+                cb.gt(root.get("revenueGrowthLastYA"), BigDecimal.ZERO),
+                cb.gt(root.get("netProfitGrowthLastYA"), BigDecimal.ZERO)
+        );
+    }
+
+    private Predicate buildStableGrowthPredicate(CriteriaBuilder cb, Root<StockGrowthMetrics> root) {
+        Expression<BigDecimal> revenueLastYA = root.get("revenueGrowthLastYA");
+        Expression<BigDecimal> revenueLast2yA = root.get("revenueGrowthLast2yA");
+        Expression<BigDecimal> revenueLast3yA = root.get("revenueGrowthLast3yA");
+        Expression<BigDecimal> profitLastYA = root.get("netProfitGrowthLastYA");
+        Expression<BigDecimal> profitLast2yA = root.get("netProfitGrowthLast2yA");
+        Expression<BigDecimal> profitLast3yA = root.get("netProfitGrowthLast3yA");
+        return cb.and(
+                cb.ge(root.get("growthScore"), STABLE_GROWTH_SCORE_MIN),
+                cb.gt(root.get("revenueGrowthTtm"), BigDecimal.ZERO),
+                cb.gt(root.get("netProfitGrowthTtm"), BigDecimal.ZERO),
+                cb.ge(revenueLastYA, BigDecimal.ZERO),
+                cb.ge(revenueLast2yA, BigDecimal.ZERO),
+                cb.ge(revenueLast3yA, BigDecimal.ZERO),
+                cb.ge(profitLastYA, BigDecimal.ZERO),
+                cb.ge(profitLast2yA, BigDecimal.ZERO),
+                cb.ge(profitLast3yA, BigDecimal.ZERO),
+                buildGrowthSpreadPredicate(cb, revenueLastYA, revenueLast2yA, revenueLast3yA,
+                        STABLE_REVENUE_SPREAD_MAX),
+                buildGrowthSpreadPredicate(cb, profitLastYA, profitLast2yA, profitLast3yA,
+                        STABLE_PROFIT_SPREAD_MAX)
+        );
+    }
+
+    private Predicate buildProfitRecoveryPredicate(CriteriaBuilder cb, Root<StockGrowthMetrics> root) {
+        return cb.and(
+                cb.lt(root.get("netProfitGrowthLastYA"), BigDecimal.ZERO),
+                cb.ge(root.get("netProfitGrowthTtm"), PROFIT_RECOVERY_TTM_MIN),
+                cb.ge(root.get("revenueGrowthTtm"), BigDecimal.ZERO),
+                cb.gt(root.get("epsGrowthTtm"), BigDecimal.ZERO)
+        );
+    }
+
+    private Predicate buildGrowthSpreadPredicate(
+            CriteriaBuilder cb, Expression<BigDecimal> first, Expression<BigDecimal> second,
+            Expression<BigDecimal> third, BigDecimal maxSpread
+    ) {
+        return cb.and(
+                cb.le(cb.abs(cb.diff(first, second)), maxSpread),
+                cb.le(cb.abs(cb.diff(first, third)), maxSpread),
+                cb.le(cb.abs(cb.diff(second, third)), maxSpread)
+        );
+    }
+
+    boolean isHighGrowth(StockGrowthMetrics item) {
+        if (item == null || Stream.of(
+                item.getGrowthScore(), item.getRevenueGrowthTtm(), item.getNetProfitGrowthTtm(),
+                item.getRevenueGrowth3yCagr(), item.getNetProfitGrowth3yCagr(),
+                item.getRevenueGrowthLastYA(), item.getNetProfitGrowthLastYA()
+        ).anyMatch(Objects::isNull)) {
+            return false;
+        }
+        return item.getGrowthScore().compareTo(HIGH_GROWTH_SCORE_MIN) >= 0
+                && item.getRevenueGrowthTtm().compareTo(HIGH_GROWTH_REVENUE_TTM_MIN) >= 0
+                && item.getNetProfitGrowthTtm().compareTo(HIGH_GROWTH_PROFIT_TTM_MIN) >= 0
+                && item.getRevenueGrowth3yCagr().compareTo(HIGH_GROWTH_CAGR_MIN) >= 0
+                && item.getNetProfitGrowth3yCagr().compareTo(HIGH_GROWTH_CAGR_MIN) >= 0
+                && item.getRevenueGrowthLastYA().compareTo(BigDecimal.ZERO) > 0
+                && item.getNetProfitGrowthLastYA().compareTo(BigDecimal.ZERO) > 0;
+    }
+
+    boolean isStableGrowth(StockGrowthMetrics item) {
+        if (item == null || Stream.of(
+                item.getGrowthScore(), item.getRevenueGrowthTtm(), item.getNetProfitGrowthTtm(),
+                item.getRevenueGrowthLastYA(), item.getRevenueGrowthLast2yA(), item.getRevenueGrowthLast3yA(),
+                item.getNetProfitGrowthLastYA(), item.getNetProfitGrowthLast2yA(), item.getNetProfitGrowthLast3yA()
+        ).anyMatch(Objects::isNull)) {
+            return false;
+        }
+        return item.getGrowthScore().compareTo(STABLE_GROWTH_SCORE_MIN) >= 0
+                && item.getRevenueGrowthTtm().compareTo(BigDecimal.ZERO) > 0
+                && item.getNetProfitGrowthTtm().compareTo(BigDecimal.ZERO) > 0
+                && Stream.of(item.getRevenueGrowthLastYA(), item.getRevenueGrowthLast2yA(),
+                        item.getRevenueGrowthLast3yA(), item.getNetProfitGrowthLastYA(),
+                        item.getNetProfitGrowthLast2yA(), item.getNetProfitGrowthLast3yA())
+                .allMatch(value -> value.compareTo(BigDecimal.ZERO) >= 0)
+                && isWithinGrowthSpread(STABLE_REVENUE_SPREAD_MAX, item.getRevenueGrowthLastYA(),
+                item.getRevenueGrowthLast2yA(), item.getRevenueGrowthLast3yA())
+                && isWithinGrowthSpread(STABLE_PROFIT_SPREAD_MAX, item.getNetProfitGrowthLastYA(),
+                item.getNetProfitGrowthLast2yA(), item.getNetProfitGrowthLast3yA());
+    }
+
+    boolean isProfitGrowthRecovery(StockGrowthMetrics item) {
+        if (item == null || Stream.of(item.getNetProfitGrowthLastYA(), item.getNetProfitGrowthTtm(),
+                item.getRevenueGrowthTtm(), item.getEpsGrowthTtm()).anyMatch(Objects::isNull)) {
+            return false;
+        }
+        return item.getNetProfitGrowthLastYA().compareTo(BigDecimal.ZERO) < 0
+                && item.getNetProfitGrowthTtm().compareTo(PROFIT_RECOVERY_TTM_MIN) >= 0
+                && item.getRevenueGrowthTtm().compareTo(BigDecimal.ZERO) >= 0
+                && item.getEpsGrowthTtm().compareTo(BigDecimal.ZERO) > 0;
+    }
+
+    private boolean isWithinGrowthSpread(BigDecimal maxSpread, BigDecimal... values) {
+        BigDecimal min = Arrays.stream(values).min(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+        BigDecimal max = Arrays.stream(values).max(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+        return max.subtract(min).compareTo(maxSpread) <= 0;
     }
 
     /**

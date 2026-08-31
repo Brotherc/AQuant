@@ -15,7 +15,7 @@
                 <span class="overview-card__value">{{ overviewData.highGrowthOpportunityCount }}</span>
                 <span class="overview-card__unit">家</span>
               </div>
-              <div class="overview-card__subtext">成长评分 ≥ 80</div>
+              <div class="overview-card__subtext">评分、TTM与3年增长均达标</div>
             </div>
           </div>
 
@@ -58,7 +58,7 @@
                 <span class="overview-card__value">{{ overviewData.watchlistHighGrowthCount }}</span>
                 <span class="overview-card__unit">支</span>
               </div>
-              <div class="overview-card__subtext">自选中成长评分 ≥ 80</div>
+              <div class="overview-card__subtext">符合完整高成长条件</div>
             </div>
           </div>
         </div>
@@ -71,6 +71,7 @@
               :key="tab.key"
               class="quick-tab-btn"
               :class="{ active: currentTab === tab.key }"
+              :title="tab.description"
               @click="handleTabChange(tab.key)"
             >
               {{ tab.label }}
@@ -618,11 +619,11 @@ const overviewData = reactive<GrowthOverviewVO>({
 
 // 快捷 Tab 列表
 const quickTabs = [
-  { key: 'ALL', label: '全部' },
-  { key: 'HIGH_GROWTH', label: '高成长榜' },
-  { key: 'STABLE_GROWTH', label: '稳健成长' },
-  { key: 'PROFIT_RECOVERY', label: '盈利修复' },
-  { key: 'WATCHLIST', label: '我的自选' },
+  { key: 'ALL', label: '全部', description: '查看全部行业成长性指标' },
+  { key: 'HIGH_GROWTH', label: '高成长榜', description: '评分≥80，营收/净利润TTM及3年复合增长均达到高成长门槛' },
+  { key: 'STABLE_GROWTH', label: '稳健成长', description: '评分≥65，营收和净利润连续增长且三年增速波动受控' },
+  { key: 'PROFIT_RECOVERY', label: '盈利增速修复', description: '净利润增速由负转为TTM增长≥10%，且营收和EPS未继续恶化' },
+  { key: 'WATCHLIST', label: '我的自选', description: '仅查看我的自选股票' },
 ];
 const currentTab = ref('ALL');
 
