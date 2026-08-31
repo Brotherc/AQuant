@@ -15,7 +15,7 @@
               <span class="overview-card__value">{{ overviewData.highQualityCount }}</span>
               <span class="overview-card__unit">家</span>
             </div>
-            <div class="overview-card__subtext">ROE ≥ 15% 且 质量评分 ≥ 75</div>
+            <div class="overview-card__subtext">ROE ≥ 15%、评分 ≥ 80且杠杆可控</div>
           </div>
         </div>
 
@@ -25,11 +25,11 @@
             <BarChartOutlined />
           </div>
           <div class="overview-card__content">
-            <div class="overview-card__title">行业ROE中位</div>
+            <div class="overview-card__title">市场ROE中位</div>
             <div class="overview-card__value-row">
               <span class="overview-card__value">{{ formatPercent(overviewData.industryRoeMedian) }}</span>
             </div>
-            <div class="overview-card__subtext">全市场加权中位数</div>
+            <div class="overview-card__subtext">全市场简单中位数</div>
           </div>
         </div>
 
@@ -44,7 +44,7 @@
               <span class="overview-card__value">{{ overviewData.watchlistHighQualityCount }}</span>
               <span class="overview-card__unit">支</span>
             </div>
-            <div class="overview-card__subtext">自选中质量评分 ≥ 75</div>
+            <div class="overview-card__subtext">符合高质量ROE完整条件</div>
           </div>
         </div>
 
@@ -59,7 +59,7 @@
               <span class="overview-card__value">{{ overviewData.leverageWarningCount }}</span>
               <span class="overview-card__unit">家</span>
             </div>
-            <div class="overview-card__subtext">权益乘数超过行业合理区间</div>
+            <div class="overview-card__subtext">权益乘数超过行业合理区间或负权益</div>
           </div>
         </div>
       </div>
@@ -72,6 +72,7 @@
             :key="tab.key"
             class="quick-tab-btn"
             :class="{ active: currentTab === tab.key }"
+            :title="tab.description"
             @click="handleTabChange(tab.key)"
           >
             {{ tab.label }}
@@ -611,11 +612,11 @@ const overviewData = reactive<DupontOverviewVO>({
 // 快捷胶囊标签
 const currentTab = ref('ALL');
 const quickTabs = [
-  { key: 'ALL', label: '全部' },
-  { key: 'HIGH_QUALITY', label: '高质量ROE' },
-  { key: 'HIGH_LEVERAGE', label: '高杠杆预警' },
-  { key: 'STABLE_PROFIT', label: '稳健盈利' },
-  { key: 'WATCHLIST', label: '我的自选' }
+  { key: 'ALL', label: '全部', description: '查看全部杜邦分析结果' },
+  { key: 'HIGH_QUALITY', label: '高质量ROE', description: '三年平均ROE≥15%、评分≥80、近年未明显恶化且杠杆可控' },
+  { key: 'HIGH_LEVERAGE', label: '高杠杆预警', description: '按金融与非金融行业差异化识别异常权益乘数，并包含负权益' },
+  { key: 'STABLE_PROFIT', label: '稳健盈利', description: '三年持续盈利、评分≥65、盈利未明显恶化且杠杆可控' },
+  { key: 'WATCHLIST', label: '我的自选', description: '仅查看我的自选股票' }
 ];
 
 // 筛选表单
@@ -797,6 +798,7 @@ const getInterpretationPoints = (stock: StockDupontAnalysis) => {
   const marginMed = Number(stock.netMargin3yAvgIndustryMed || 0);
   const turnover = Number(stock.assetTurnover3yAvg || 0);
   const turnoverMed = Number(stock.assetTurnover3yAvgIndustryMed || 0);
+  const hasEquityMultiplier = stock.equityMultiplier3yAvg != null;
   const em = Number(stock.equityMultiplier3yAvg || 0);
   const emMed = Number(stock.equityMultiplier3yAvgIndustryMed || 0);
   const financialIndustry = /银行|保险|证券|多元金融|金融服务/.test(stock.industry || '');
@@ -838,9 +840,19 @@ const getInterpretationPoints = (stock: StockDupontAnalysis) => {
   }
 
   // 3. 财务杠杆
-  if (financialIndustry) {
+  if (!hasEquityMultiplier) {
+    points.push({
+      title: '杠杆数据不足',
+      desc: '近三年权益乘数数据不完整，暂不判断财务杠杆水平。'
+    });
+  } else if (em <= 0) {
+    points.push({
+      title: '负权益预警',
+      desc: '权益乘数非正，可能存在净资产为负或资本结构异常，需要优先核查资产负债情况。'
+    });
+  } else if (financialIndustry) {
     const relativeLeverage = emMed > 0 ? em / emMed : null;
-    const isHighLeverage = relativeLeverage != null ? relativeLeverage > 1.8 : em > 25;
+    const isHighLeverage = relativeLeverage != null ? relativeLeverage > 1.5 : em > 20;
     if (isHighLeverage) {
       points.push({
         title: '杠杆高于行业',
@@ -854,20 +866,20 @@ const getInterpretationPoints = (stock: StockDupontAnalysis) => {
           : `权益乘数为 ${em.toFixed(2)} 倍，处于金融行业常见杠杆区间。`
       });
     }
+  } else if (em > 2.5 && (emMed <= 0 || em > emMed * 1.3)) {
+    points.push({
+      title: '财务杠杆偏高',
+      desc: `权益乘数达 ${em.toFixed(2)} 倍，且超过绝对或行业相对阈值，需结合有息负债和偿债能力进一步判断。`
+    });
   } else if (em <= 2.2 && em >= 1.2) {
     points.push({
       title: '财务杠杆稳健',
-      desc: `权益乘数为 ${em.toFixed(2)} 倍，处于健康黄金杠杆区间，资产负债结构安全可控。`
-    });
-  } else if (em > 2.5) {
-    points.push({
-      title: '财务杠杆偏高',
-      desc: `权益乘数达 ${em.toFixed(2)} 倍，ROE 对财务杠杆依赖度较高，需留意债务利息与偿债风险。`
+      desc: `权益乘数为 ${em.toFixed(2)} 倍，当前未触发杠杆预警，仍需结合行业特征和有息负债判断。`
     });
   } else {
     points.push({
-      title: '杠杆率较低',
-      desc: `权益乘数仅为 ${em.toFixed(2)} 倍，财务安全性极高，杠杆利用相对保守。`
+      title: '杠杆未触发预警',
+      desc: `权益乘数为 ${em.toFixed(2)} 倍，当前未超过绝对与行业相对预警阈值。`
     });
   }
 

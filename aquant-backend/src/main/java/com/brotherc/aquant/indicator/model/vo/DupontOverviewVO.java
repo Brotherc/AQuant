@@ -15,16 +15,16 @@ import java.math.BigDecimal;
 @Schema(description = "杜邦分析顶部概览统计数据")
 public class DupontOverviewVO {
 
-    @Schema(description = "高质量ROE标的数量（ROE≥15% 且 质量评分≥75）")
+    @Schema(description = "高质量ROE标的数量（ROE≥15%、质量评分≥80、近年未明显恶化且杠杆可控）")
     private Long highQualityCount;
 
-    @Schema(description = "全市场/行业ROE加权中位数")
+    @Schema(description = "全市场ROE中位数")
     private BigDecimal industryRoeMedian;
 
-    @Schema(description = "我的自选高质量标的数量（自选中评分≥75）")
+    @Schema(description = "我的自选中符合高质量ROE完整条件的标的数量")
     private Long watchlistHighQualityCount;
 
-    @Schema(description = "杠杆预警标的数量（权益乘数>2.5）")
+    @Schema(description = "杠杆预警标的数量（按金融/非金融行业差异化判断，并包含负权益）")
     private Long leverageWarningCount;
 
 }
