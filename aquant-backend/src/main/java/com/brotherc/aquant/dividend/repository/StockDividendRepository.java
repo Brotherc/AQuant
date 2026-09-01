@@ -15,6 +15,8 @@ public interface StockDividendRepository extends JpaRepository<StockDividend, Lo
 
     void deleteByReportDate(String reportDate);
 
+    boolean existsByReportDate(String reportDate);
+
     @Query("select d.stockCode as stockCode, d.stockName as stockName, " +
             "d.latestAnnouncementDate as latestAnnouncementDate, d.cashDividendRatio as cashDividendRatio, " +
             "d.bonusShareRatio as bonusShareRatio, d.transferShareRatio as transferShareRatio " +

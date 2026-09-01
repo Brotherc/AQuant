@@ -26,7 +26,7 @@ public class StockDividendStatVO {
     @Schema(description = "最近N年平均分红(10派X元)")
     private BigDecimal avgDividend;
 
-    @Schema(description = "最近一年分红(10派X元)")
+    @Schema(description = "最近完整年度分红(10派X元)")
     private BigDecimal latestYearDividend;
 
     @Schema(description = "最新股息率(%)")
@@ -47,11 +47,14 @@ public class StockDividendStatVO {
     @Schema(description = "连续分红年数")
     private Integer consecutiveYears;
 
-    @Schema(description = "近3年分红增幅(%)")
+    @Schema(description = "近3年分红复合增长率(%)")
     private BigDecimal dividendGrowth3y;
 
-    @Schema(description = "现金流质量状态(如 现金流充足/现金流稳健/现金流承压)")
-    private String cashFlowStatus;
+    @Schema(description = "最近完整年度股利支付率(%)")
+    private BigDecimal payoutRatio;
+
+    @Schema(description = "盈利稳定性状态")
+    private String profitabilityStatus;
 
     @Schema(description = "市盈率(TTM)")
     private BigDecimal pe;

@@ -15,7 +15,7 @@
               <span class="overview-card__value">{{ overviewData.highDividendOpportunityCount }}</span>
               <span class="overview-card__unit">家</span>
             </div>
-            <div class="overview-card__subtext">近3年平均股息率 ≥ 3%</div>
+            <div class="overview-card__subtext">最近完整年度股息率 ≥ 3%</div>
           </div>
         </div>
 
@@ -49,18 +49,18 @@
           </div>
         </div>
 
-        <!-- 卡片 4: 今日重点观察 -->
+        <!-- 卡片 4: 近期重点观察 -->
         <div class="overview-card overview-card--rose">
           <div class="overview-card__icon-wrap">
             <FireOutlined />
           </div>
           <div class="overview-card__content">
-            <div class="overview-card__title">今日重点观察</div>
+            <div class="overview-card__title">近期重点观察</div>
             <div class="overview-card__value-row">
               <span class="overview-card__value">{{ overviewData.todayFocusCount }}</span>
               <span class="overview-card__unit">支</span>
             </div>
-            <div class="overview-card__subtext">股息率提升或有分红公告</div>
+            <div class="overview-card__subtext">近30天公告且股息率 ≥ 3.5%</div>
           </div>
         </div>
       </div>
@@ -73,6 +73,7 @@
             :key="tab.key"
             class="quick-tab-btn"
             :class="{ active: activeQuickTab === tab.key }"
+            :title="tab.description"
             @click="handleTabChange(tab.key)"
           >
             {{ tab.label }}
@@ -137,7 +138,7 @@
                   style="width: 70px"
                   @change="handleSearch"
                 />
-                <span class="input-label-suffix">%</span>
+                <span class="input-label-suffix">元/10股</span>
               </div>
             </div>
 
@@ -190,17 +191,17 @@
                 </div>
               </template>
 
-              <!-- 最近一年分红 -->
+              <!-- 最近完整年度分红 -->
               <template v-else-if="column.dataIndex === 'latestYearDividend'">
                 <span class="metric-value">
-                  {{ formatPercent(record.latestYearDividend) }}
+                  {{ formatDividendAmount(record.latestYearDividend) }}
                 </span>
               </template>
 
               <!-- 近3年平均分红 -->
               <template v-else-if="column.dataIndex === 'avgDividend'">
                 <span class="metric-value">
-                  {{ formatPercent(record.avgDividend) }}
+                  {{ formatDividendAmount(record.avgDividend) }}
                 </span>
               </template>
 
@@ -221,14 +222,14 @@
               <!-- 分红评分 -->
               <template v-else-if="column.key === 'dividendScore'">
                 <span class="score-num font-bold" :class="getScoreColorClass(record.dividendScore)">
-                  {{ Math.round(Number(record.dividendScore || 0)) }}
+                  {{ formatScore(record.dividendScore) }}
                 </span>
               </template>
 
               <!-- 结论 -->
               <template v-else-if="column.dataIndex === 'dividendLevel'">
                 <span class="conclusion-text">
-                  {{ record.conclusion || record.dividendLevel || '稳定分红' }}
+                  {{ record.conclusion || record.dividendLevel || '数据不足' }}
                 </span>
               </template>
             </template>
@@ -249,7 +250,7 @@
               class="quality-badge"
               :class="getQualityBadgeClass(selectedStock.dividendScore, selectedStock.dividendLevel)"
             >
-              {{ selectedStock.dividendLevel || '稳定分红' }}
+              {{ selectedStock.dividendLevel || '数据不足' }}
             </span>
           </div>
           <button class="detail-drawer__close-btn" @click="selectedStock = null" title="关闭详情">
@@ -261,7 +262,7 @@
         <div class="detail-drawer__body">
           <!-- 综合解读 Banner -->
           <div class="dividend-summary-banner">
-            {{ selectedStock.conclusion || '公司连续多年稳定分红，股息率行业领先，现金流充裕，分红可持续性强。' }}
+            {{ selectedStock.conclusion || '缺少有效年度分红或价格数据，暂不进行分红质量评分。' }}
           </div>
 
           <!-- 分红历史表格 -->
@@ -362,18 +363,18 @@ const router = useRouter();
 
 // 概览看板数据
 const overviewData = reactive<DividendOverviewVO>({
-  highDividendOpportunityCount: 126,
-  consecutiveDividendCount: 1248,
-  watchlistDividendCount: 18,
-  todayFocusCount: 6,
+  highDividendOpportunityCount: 0,
+  consecutiveDividendCount: 0,
+  watchlistDividendCount: 0,
+  todayFocusCount: 0,
 });
 
 // 快捷 Tab
 const quickTabs = [
-  { key: 'HIGH_DIVIDEND', label: '高分红榜' },
-  { key: 'STABLE_DIVIDEND', label: '稳定分红' },
-  { key: 'DIVIDEND_GROWTH', label: '分红增长' },
-  { key: 'MY_WATCHLIST', label: '我的自选' },
+  { key: 'HIGH_DIVIDEND', label: '高分红榜', description: '最近完整年度股息率≥3%，且具备有效评分' },
+  { key: 'STABLE_DIVIDEND', label: '稳定分红', description: '连续分红≥3年，且综合评分≥65' },
+  { key: 'DIVIDEND_GROWTH', label: '分红增长', description: '近3年分红CAGR>0，且综合评分≥50' },
+  { key: 'MY_WATCHLIST', label: '我的自选', description: '查看自选股票的分红表现' },
 ];
 const activeQuickTab = ref('HIGH_DIVIDEND');
 
@@ -413,11 +414,16 @@ const pagination = reactive({
 });
 
 const sortState = ref<string[]>(['dividendScore,desc']);
+const getDefaultSort = (tab = activeQuickTab.value) => {
+  if (tab === 'HIGH_DIVIDEND') return ['dividendYield,desc'];
+  if (tab === 'DIVIDEND_GROWTH') return ['dividendGrowth3y,desc'];
+  return ['dividendScore,desc'];
+};
 
 // 表格列定义
 const columns: TableProps['columns'] = [
   { title: '股票', key: 'stock', width: 120 },
-  { title: '最近一年分红', dataIndex: 'latestYearDividend', sorter: true, width: 130, align: 'right' },
+  { title: '最近完整年度分红', dataIndex: 'latestYearDividend', sorter: true, width: 150, align: 'right' },
   { title: '近3年平均分红', dataIndex: 'avgDividend', sorter: true, width: 130, align: 'right' },
   { title: '股息率', dataIndex: 'dividendYield', sorter: true, width: 110, align: 'right' },
   { title: 'PEG', dataIndex: 'peg', sorter: true, width: 100, align: 'right' },
@@ -437,11 +443,22 @@ const formatPercent = (val: any) => {
   return isNaN(num) ? '-' : `${num.toFixed(2)}%`;
 };
 
+const formatDividendAmount = (val: any) => {
+  if (val == null || val === '') return '-';
+  const num = Number(val);
+  return Number.isFinite(num) ? `${num.toFixed(2)}元` : '-';
+};
+
+const formatScore = (val: any) => {
+  if (val == null || val === '') return '-';
+  const num = Number(val);
+  return Number.isFinite(num) ? Math.round(num) : '-';
+};
+
 const formatPercentNum = (val: any) => {
   if (val == null || val === '') return '-';
   const num = Number(val);
   if (isNaN(num)) return '-';
-  if (num < 1 && num > 0) return `${(num * 100).toFixed(2)}`;
   return `${num.toFixed(2)}`;
 };
 
@@ -462,17 +479,19 @@ const formatDividendText = (cashDividendRatio: any) => {
 };
 
 const getScoreColorClass = (score: any) => {
-  const s = Number(score || 0);
+  if (score == null || score === '') return 'score-num--insufficient';
+  const s = Number(score);
   if (s >= 80) return 'score-num--high';
   if (s >= 65) return 'score-num--mid';
   return 'score-num--low';
 };
 
 const getQualityBadgeClass = (score: any, level?: string) => {
-  const s = Number(score || 0);
-  if (level === '稳定分红' || level === '高股息' || s >= 80) return 'quality-badge--excellent';
-  if (level === '分红良好' || level === '分红增长' || s >= 65) return 'quality-badge--good';
-  if (level === '中等分红' || s >= 50) return 'quality-badge--mid';
+  if (score == null || score === '' || level === '数据不足') return 'quality-badge--insufficient';
+  const s = Number(score);
+  if (level === '优质分红' || s >= 80) return 'quality-badge--excellent';
+  if (level === '稳健分红' || s >= 65) return 'quality-badge--good';
+  if (level === '分红观察' || s >= 50) return 'quality-badge--mid';
   return 'quality-badge--poor';
 };
 
@@ -557,6 +576,7 @@ const fetchWatchlistGroups = async () => {
 const handleTabChange = (key: string) => {
   activeQuickTab.value = key;
   searchParams.quickTab = key;
+  sortState.value = getDefaultSort(key);
   pagination.current = 1;
   fetchData();
 };
@@ -574,6 +594,7 @@ const resetSearch = () => {
   searchParams.watchlistGroupId = undefined;
   searchParams.pegRange = undefined;
   searchParams.quickTab = activeQuickTab.value;
+  sortState.value = getDefaultSort();
   pagination.current = 1;
   fetchData();
 };
@@ -586,7 +607,7 @@ const handleTableChange = (pag: any, _filters: any, sorter: any) => {
     const order = sorter.order === 'ascend' ? 'asc' : 'desc';
     sortState.value = [`${sorter.field},${order}`];
   } else {
-    sortState.value = ['dividendScore,desc'];
+    sortState.value = getDefaultSort();
   }
   fetchData();
 };
@@ -914,6 +935,10 @@ onMounted(() => {
   color: #f43f5e;
 }
 
+.score-num--insufficient {
+  color: #94a3b8;
+}
+
 .quality-badge {
   display: inline-block;
   padding: 2px 6px;
@@ -940,6 +965,11 @@ onMounted(() => {
 .quality-badge--poor {
   background: #fef2f2;
   color: #dc2626;
+}
+
+.quality-badge--insufficient {
+  background: #f1f5f9;
+  color: #64748b;
 }
 
 .conclusion-text {

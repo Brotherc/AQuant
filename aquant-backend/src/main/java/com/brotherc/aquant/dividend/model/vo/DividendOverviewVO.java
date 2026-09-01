@@ -7,7 +7,7 @@ import lombok.Data;
 @Schema(description = "分红概览看板数据")
 public class DividendOverviewVO {
 
-    @Schema(description = "高分红机会数（近3年平均股息率 >= 3%）")
+    @Schema(description = "高分红机会数（最近完整年度股息率 >= 3%）")
     private Integer highDividendOpportunityCount;
 
     @Schema(description = "连续分红公司数（连续分红 >= 3年）")
@@ -16,7 +16,7 @@ public class DividendOverviewVO {
     @Schema(description = "我的自选分红数")
     private Integer watchlistDividendCount;
 
-    @Schema(description = "今日重点观察数（近期分红公告或股息率提升标的）")
+    @Schema(description = "近期重点观察数（近30天有公告且股息率 >= 3.5%）")
     private Integer todayFocusCount;
 
 }
