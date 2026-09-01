@@ -13,6 +13,8 @@ import com.brotherc.aquant.fund.repository.StockFundInfoRepository;
 import com.brotherc.aquant.industry.repository.StockIndustryBoardHistoryRepository;
 import com.brotherc.aquant.industry.repository.StockIndustryBoardRepository;
 import com.brotherc.aquant.industry.service.StockIndustryBoardHistoryService;
+import com.brotherc.aquant.industry.service.StockBoardConstituentSyncService;
+import com.brotherc.aquant.industry.service.StockIndustryBoardEmSyncService;
 import com.brotherc.aquant.stock.repository.StockQuoteHistoryRepository;
 import com.brotherc.aquant.stock.repository.StockQuoteRepository;
 import com.brotherc.aquant.sync.repository.StockSyncRepository;
@@ -83,6 +85,8 @@ public class StockSyncTask {
     private final StockShareChangeService stockShareChangeService;
     private final StockIndexService stockIndexService;
     private final StockIndustryBoardHistoryService stockIndustryBoardHistoryService;
+    private final StockBoardConstituentSyncService stockBoardConstituentSyncService;
+    private final StockIndustryBoardEmSyncService stockIndustryBoardEmSyncService;
 
     private final StockSyncRepository stockSyncRepository;
     private final StockQuoteRepository stockQuoteRepository;
@@ -123,6 +127,8 @@ public class StockSyncTask {
 
         log.info("同步股票板块数据开始");
         syncStockBoard(now);
+        stockBoardConstituentSyncService.synchronizeAllIfRequired(now);
+        stockIndustryBoardEmSyncService.synchronizeIfRequired(now);
         log.info("同步股票板块数据完成");
 
         log.info("同步基金数据开始");
@@ -471,7 +477,9 @@ public class StockSyncTask {
 
         boolean shouldRefreshLatestBoard = shouldRefreshLatestBoard(stockSync, now);
 
-        List<String> localHistoryTargets = stockIndustryBoardRepository.findAll().stream().map(StockIndustryBoard::getSectorName).toList();
+        List<String> localHistoryTargets = stockIndustryBoardRepository.findAll().stream()
+                .map(StockIndustryBoard::getSectorName)
+                .toList();
 
         if (!shouldRefreshLatestBoard) {
             if (CollectionUtils.isEmpty(localHistoryTargets)) {

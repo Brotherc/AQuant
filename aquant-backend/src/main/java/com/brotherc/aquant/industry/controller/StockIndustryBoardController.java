@@ -1,11 +1,14 @@
 package com.brotherc.aquant.industry.controller;
 
 import com.brotherc.aquant.common.model.dto.ResponseDTO;
+import com.brotherc.aquant.common.exception.ExceptionEnum;
 import com.brotherc.aquant.industry.model.vo.StockIndustryBoardKVO;
 import com.brotherc.aquant.industry.model.vo.StockIndustryBoardPageReqVO;
 import com.brotherc.aquant.industry.model.vo.StockIndustryBoardVO;
 import com.brotherc.aquant.industry.model.vo.IndustryRiseAnalysisVO;
+import com.brotherc.aquant.industry.model.vo.StockIndustryConstituentSnapshotVO;
 import com.brotherc.aquant.industry.service.StockIndustryBoardAnalysisService;
+import com.brotherc.aquant.industry.service.StockBoardConstituentService;
 import com.brotherc.aquant.industry.service.StockIndustryBoardHistoryService;
 import com.brotherc.aquant.stock.service.StockClusterService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,6 +23,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.constraints.NotBlank;
 
 import java.util.List;
 import java.time.LocalDate;
@@ -35,6 +39,7 @@ public class StockIndustryBoardController {
     private final StockClusterService stockClusterService;
     private final StockIndustryBoardHistoryService stockIndustryBoardHistoryService;
     private final StockIndustryBoardAnalysisService stockIndustryBoardAnalysisService;
+    private final StockBoardConstituentService stockBoardConstituentService;
 
     @Operation(summary = "分页查询板块数据")
     @GetMapping("/page")
@@ -57,6 +62,18 @@ public class StockIndustryBoardController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false, defaultValue = "20") Integer rankLimit) {
         return ResponseDTO.success(stockIndustryBoardAnalysisService.analysis(startDate, endDate, rankLimit));
+    }
+
+    @Operation(summary = "获取行业成分股行情")
+    @GetMapping("/constituents")
+    public ResponseDTO<StockIndustryConstituentSnapshotVO> constituents(
+            @Parameter(description = "行业名称") @RequestParam @NotBlank String industry,
+            @Parameter(description = "截至交易日，省略时返回最新行情")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate tradeDate) {
+        StockIndustryConstituentSnapshotVO snapshot = stockBoardConstituentService.getSnapshot(industry.trim(), tradeDate);
+        return snapshot.isAvailable()
+                ? ResponseDTO.success(snapshot)
+                : ResponseDTO.fail(ExceptionEnum.API_REQUEST_ERROR.getCode(), snapshot.getMessage(), snapshot);
     }
 
 }

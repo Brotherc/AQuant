@@ -18,4 +18,8 @@ public interface StockPerformanceReportRepository extends JpaRepository<StockPer
     @Query("SELECT DISTINCT s.industry FROM StockPerformanceReport s WHERE s.industry IS NOT NULL AND s.industry != '' ORDER BY s.industry ASC")
     List<String> findDistinctIndustries();
 
+    List<StockPerformanceReport> findByIndustryOrderByReportDateDesc(String industry);
+
+    List<StockPerformanceReport> findByIndustryInOrderByReportDateDesc(List<String> industries);
+
 }

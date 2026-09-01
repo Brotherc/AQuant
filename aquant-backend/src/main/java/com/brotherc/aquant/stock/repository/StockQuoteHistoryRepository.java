@@ -28,6 +28,10 @@ public interface StockQuoteHistoryRepository extends JpaRepository<StockQuoteHis
     @Query(value = "SELECT DISTINCT trade_date FROM stock_quote_history ORDER BY trade_date DESC LIMIT :limit", nativeQuery = true)
     List<String> findRecentTradeDates(@Param("limit") int limit);
 
+    @Query(value = "SELECT DISTINCT trade_date FROM stock_quote_history " +
+            "WHERE trade_date <= :tradeDate ORDER BY trade_date DESC LIMIT :limit", nativeQuery = true)
+    List<String> findRecentTradeDatesBefore(@Param("tradeDate") String tradeDate, @Param("limit") int limit);
+
     List<StockQuoteHistoryProjection> findByTradeDateInAndCodeInOrderByTradeDateAsc(List<String> tradeDates, List<String> codeList);
 
     @Query("select max(s.tradeDate) from StockQuoteHistory s")

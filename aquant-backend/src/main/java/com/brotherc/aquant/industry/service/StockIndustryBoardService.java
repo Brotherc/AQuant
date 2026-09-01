@@ -1,11 +1,11 @@
 package com.brotherc.aquant.industry.service;
 
+import com.brotherc.aquant.common.utils.StockHelper;
 import com.brotherc.aquant.industry.entity.StockIndustryBoard;
-import com.brotherc.aquant.integration.akshare.model.StockBoardIndustrySummaryThs;
 import com.brotherc.aquant.industry.model.vo.StockIndustryBoardPageReqVO;
 import com.brotherc.aquant.industry.model.vo.StockIndustryBoardVO;
 import com.brotherc.aquant.industry.repository.StockIndustryBoardRepository;
-import com.brotherc.aquant.common.utils.StockHelper;
+import com.brotherc.aquant.integration.akshare.model.StockBoardIndustrySummaryThs;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
@@ -32,57 +32,48 @@ public class StockIndustryBoardService {
 
     @Transactional(rollbackFor = Exception.class)
     public void save(List<StockBoardIndustrySummaryThs> stockBoardList, LocalDateTime now) {
-        List<StockIndustryBoard> dbLlist = stockIndustryBoardRepository.findAll();
-        Map<String, StockIndustryBoard> map = dbLlist.stream().collect(Collectors.toMap(StockIndustryBoard::getSectorName, o -> o));
+        List<StockIndustryBoard> databaseList = stockIndustryBoardRepository.findAll();
+        Map<String, StockIndustryBoard> boardByName = databaseList.stream()
+                .collect(Collectors.toMap(StockIndustryBoard::getSectorName, item -> item));
+        List<StockIndustryBoard> saveList = new ArrayList<>();
 
-        List<StockIndustryBoard> list = new ArrayList<>();
-
-        for (StockBoardIndustrySummaryThs stockBoard : stockBoardList) {
-            StockIndustryBoard sq = map.get(stockBoard.getSectorName());
-            if (sq == null) {
-                sq = new StockIndustryBoard();
+        for (StockBoardIndustrySummaryThs board : stockBoardList) {
+            StockIndustryBoard target = boardByName.get(board.getSectorName());
+            if (target == null) {
+                target = new StockIndustryBoard();
             }
-            sq.setSeqNo(stockBoard.getIndex());
-            sq.setSectorName(stockBoard.getSectorName());
-            sq.setChangePercent(stockBoard.getChangePercent());
-            sq.setTotalVolume(stockBoard.getTotalVolume());
-            sq.setTotalAmount(stockBoard.getTotalAmount());
-            sq.setNetInflow(stockBoard.getNetInflow());
-            sq.setRiseCount(stockBoard.getRiseCount());
-            sq.setFallCount(stockBoard.getFallCount());
-            sq.setAveragePrice(stockBoard.getAveragePrice());
-            sq.setLeadingStock(stockBoard.getLeadingStock());
-            sq.setLeadingStockPrice(stockBoard.getLeadingStockPrice());
-            sq.setLeadingStockChangePercent(stockBoard.getLeadingStockChangePercent());
-            LocalDate tradeDate = stockHelper.latestTradeDayFallback(LocalDate.now());
-            sq.setTradeDate(tradeDate);
-            sq.setCreateTime(now);
-
-            list.add(sq);
+            target.setSeqNo(board.getIndex());
+            target.setSectorName(board.getSectorName());
+            target.setChangePercent(board.getChangePercent());
+            target.setTotalVolume(board.getTotalVolume());
+            target.setTotalAmount(board.getTotalAmount());
+            target.setNetInflow(board.getNetInflow());
+            target.setRiseCount(board.getRiseCount());
+            target.setFallCount(board.getFallCount());
+            target.setAveragePrice(board.getAveragePrice());
+            target.setLeadingStock(board.getLeadingStock());
+            target.setLeadingStockPrice(board.getLeadingStockPrice());
+            target.setLeadingStockChangePercent(board.getLeadingStockChangePercent());
+            target.setTradeDate(stockHelper.latestTradeDayFallback(LocalDate.now()));
+            target.setCreateTime(now);
+            saveList.add(target);
         }
-        stockIndustryBoardRepository.saveAll(list);
+        stockIndustryBoardRepository.saveAll(saveList);
     }
 
     public Page<StockIndustryBoardVO> stockIndustryBoardPage(StockIndustryBoardPageReqVO reqVO, Pageable pageable) {
-        Specification<StockIndustryBoard> specification = (root, query, cb) -> {
+        Specification<StockIndustryBoard> specification = (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
-
-
-
             if (StringUtils.isNotBlank(reqVO.getBoardName())) {
-                predicates.add(cb.like(root.get("sectorName"), "%" + reqVO.getBoardName() + "%"));
+                predicates.add(criteriaBuilder.like(root.get("sectorName"), "%" + reqVO.getBoardName() + "%"));
             }
-
-            return cb.and(predicates.toArray(new Predicate[0]));
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
 
-        Page<StockIndustryBoard> page = stockIndustryBoardRepository.findAll(specification, pageable);
-
-        return page.map(o -> {
-            StockIndustryBoardVO vo = new StockIndustryBoardVO();
-            BeanUtils.copyProperties(o, vo);
-            return vo;
+        return stockIndustryBoardRepository.findAll(specification, pageable).map(board -> {
+            StockIndustryBoardVO view = new StockIndustryBoardVO();
+            BeanUtils.copyProperties(board, view);
+            return view;
         });
     }
-
 }
