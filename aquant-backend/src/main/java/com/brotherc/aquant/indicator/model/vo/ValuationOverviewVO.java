@@ -17,7 +17,7 @@ import java.math.BigDecimal;
 public class ValuationOverviewVO {
 
     /**
-     * 低估机会个股数 (低于行业中位数20%以上)
+     * 综合估值评分处于低估或偏低估区间的个股数
      */
     private Long undervaluedCount;
 
@@ -27,7 +27,7 @@ public class ValuationOverviewVO {
     private BigDecimal marketPeMedian;
 
     /**
-     * 我的自选低估个股数
+     * 我的自选中综合估值评分处于低估或偏低估区间的个股数
      */
     private Long watchlistUndervaluedCount;
 

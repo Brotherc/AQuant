@@ -176,6 +176,62 @@ class StockGrowthMetricsCalculationTest {
         assertThat(result.getGrowthLevel()).isEqualTo("较弱");
     }
 
+    @Test
+    @DisplayName("Should require both short-term and long-term growth for high-growth classification")
+    void shouldApplyCompleteHighGrowthRule() {
+        StockGrowthMetrics item = createClassificationItem();
+
+        assertThat(stockGrowthMetricsService.isHighGrowth(item)).isTrue();
+
+        item.setNetProfitGrowth3yCagr(new BigDecimal("9"));
+        assertThat(stockGrowthMetricsService.isHighGrowth(item)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Should classify stable growth by continuity and controlled volatility without an upper score limit")
+    void shouldApplyStableGrowthRule() {
+        StockGrowthMetrics item = createClassificationItem();
+        item.setGrowthScore(new BigDecimal("85"));
+
+        assertThat(stockGrowthMetricsService.isStableGrowth(item)).isTrue();
+
+        item.setNetProfitGrowthLast3yA(new BigDecimal("50"));
+        assertThat(stockGrowthMetricsService.isStableGrowth(item)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Should identify profit growth recovery only when profit trend reverses with supporting indicators")
+    void shouldApplyProfitGrowthRecoveryRule() {
+        StockGrowthMetrics item = createClassificationItem();
+        item.setGrowthScore(new BigDecimal("40"));
+        item.setNetProfitGrowthLastYA(new BigDecimal("-5"));
+        item.setNetProfitGrowthTtm(new BigDecimal("10"));
+        item.setRevenueGrowthTtm(BigDecimal.ZERO);
+        item.setEpsGrowthTtm(BigDecimal.ONE);
+
+        assertThat(stockGrowthMetricsService.isProfitGrowthRecovery(item)).isTrue();
+
+        item.setNetProfitGrowthTtm(new BigDecimal("9"));
+        assertThat(stockGrowthMetricsService.isProfitGrowthRecovery(item)).isFalse();
+    }
+
+    private StockGrowthMetrics createClassificationItem() {
+        StockGrowthMetrics item = new StockGrowthMetrics();
+        item.setGrowthScore(new BigDecimal("85"));
+        item.setRevenueGrowthTtm(new BigDecimal("20"));
+        item.setNetProfitGrowthTtm(new BigDecimal("30"));
+        item.setEpsGrowthTtm(new BigDecimal("25"));
+        item.setRevenueGrowth3yCagr(new BigDecimal("12"));
+        item.setNetProfitGrowth3yCagr(new BigDecimal("15"));
+        item.setRevenueGrowthLastYA(new BigDecimal("10"));
+        item.setRevenueGrowthLast2yA(new BigDecimal("20"));
+        item.setRevenueGrowthLast3yA(new BigDecimal("25"));
+        item.setNetProfitGrowthLastYA(new BigDecimal("15"));
+        item.setNetProfitGrowthLast2yA(new BigDecimal("30"));
+        item.setNetProfitGrowthLast3yA(new BigDecimal("40"));
+        return item;
+    }
+
     private StockQuote createQuote(String code, String name) {
         StockQuote quote = new StockQuote();
         quote.setCode(code);

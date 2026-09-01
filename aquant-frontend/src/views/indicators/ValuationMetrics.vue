@@ -15,7 +15,7 @@
               <span class="overview-card__value">{{ overviewData.undervaluedCount }}</span>
               <span class="overview-card__unit">家</span>
             </div>
-            <div class="overview-card__subtext">低于行业中位数20%以上</div>
+            <div class="overview-card__subtext">综合估值评分 ≥ 65</div>
           </div>
         </div>
 
@@ -44,7 +44,7 @@
               <span class="overview-card__value">{{ overviewData.watchlistUndervaluedCount }}</span>
               <span class="overview-card__unit">支</span>
             </div>
-            <div class="overview-card__subtext">低于行业中位数20%以上</div>
+            <div class="overview-card__subtext">综合估值评分 ≥ 65</div>
           </div>
         </div>
 
@@ -72,6 +72,7 @@
             :key="tab.key"
             class="quick-tab-btn"
             :class="{ active: currentTab === tab.key }"
+            :title="tab.description"
             @click="handleTabChange(tab.key)"
           >
             {{ tab.label }}
@@ -355,15 +356,15 @@
                   <thead>
                     <tr>
                       <th style="width: 40%">指标</th>
-                      <th style="width: 30%">{{ currentYear - 1 }}</th>
                       <th style="width: 30%">TTM</th>
+                      <th style="width: 30%">{{ currentYear - 1 }}</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
                       <td class="metric-name-td">市盈率 PE</td>
-                      <td>{{ formatNumber(selectedStock.peAnnual) }}</td>
                       <td>{{ formatNumber(selectedStock.peTtm) }}</td>
+                      <td>{{ formatNumber(selectedStock.peAnnual) }}</td>
                     </tr>
                     <tr>
                       <td class="metric-name-td">
@@ -374,23 +375,23 @@
                           </a-tooltip>
                         </span>
                       </td>
-                      <td>{{ formatNumber(selectedStock.pbAnnual) }}</td>
                       <td>{{ formatNumber(selectedStock.pbMrq) }}</td>
+                      <td>{{ formatNumber(selectedStock.pbAnnual) }}</td>
                     </tr>
                     <tr>
                       <td class="metric-name-td">市销率 PS</td>
-                      <td>{{ formatNumber(selectedStock.psAnnual) }}</td>
                       <td>{{ formatNumber(selectedStock.psTtm) }}</td>
+                      <td>{{ formatNumber(selectedStock.psAnnual) }}</td>
                     </tr>
                     <tr>
                       <td class="metric-name-td">市现率 PCF</td>
-                      <td>{{ formatNumber(selectedStock.pcfAnnual) }}</td>
                       <td>{{ formatNumber(selectedStock.pcfTtm) }}</td>
+                      <td>{{ formatNumber(selectedStock.pcfAnnual) }}</td>
                     </tr>
-                    <tr v-if="selectedStock.peg !== undefined && selectedStock.peg !== null">
+                    <tr>
                       <td class="metric-name-td">PEG</td>
-                      <td>-</td>
                       <td>{{ formatNumber(selectedStock.peg) }}</td>
+                      <td>-</td>
                     </tr>
                   </tbody>
                 </table>
@@ -636,11 +637,11 @@ const overviewData = reactive<ValuationOverviewVO>({
 // 快捷胶囊标签
 const currentTab = ref('ALL');
 const quickTabs = [
-  { key: 'ALL', label: '全部' },
-  { key: 'LOW_VALUATION', label: '低估榜' },
-  { key: 'HIGH_VALUATION', label: '高估榜' },
-  { key: 'FAIR_VALUATION', label: '合理估值' },
-  { key: 'WATCHLIST', label: '我的自选' }
+  { key: 'ALL', label: '全部', description: '查看全部有效及数据不足的估值记录' },
+  { key: 'LOW_VALUATION', label: '低估榜', description: '综合估值评分≥65，对应低估和偏低估区间' },
+  { key: 'HIGH_VALUATION', label: '高估榜', description: '综合估值评分<45，对应偏高估和高估区间' },
+  { key: 'FAIR_VALUATION', label: '合理估值', description: '综合估值评分45–64，对应合理区间' },
+  { key: 'WATCHLIST', label: '我的自选', description: '仅查看我的自选股票' }
 ];
 
 // 筛选表单
@@ -655,6 +656,15 @@ const selectedPbRange = ref<string | undefined>(undefined);
 const selectedPsRange = ref<string | undefined>(undefined);
 const selectedPegRange = ref<string | undefined>(undefined);
 const sortState = ref<string[]>(['valuationScore,desc']);
+const getDefaultValuationSort = (tab = currentTab.value) => [
+  tab === 'HIGH_VALUATION' ? 'valuationScore,asc' : 'valuationScore,desc'
+];
+const valuationScoreSortOrder = computed(() => {
+  const sort = sortState.value[0];
+  if (sort === 'valuationScore,asc') return 'ascend';
+  if (sort === 'valuationScore,desc') return 'descend';
+  return undefined;
+});
 
 // 分页配置
 const pagination = reactive({
@@ -674,7 +684,7 @@ const columns = computed<TableProps['columns']>(() => [
   { title: '市净率 PB (MRQ)', dataIndex: 'pbMrq', width: 135, align: 'right', sorter: true },
   { title: '市销率 PS (TTM)', dataIndex: 'psTtm', width: 135, align: 'right', sorter: true },
   { title: 'PEG', dataIndex: 'peg', width: 100, align: 'right', sorter: true },
-  { title: '估值评分', dataIndex: 'valuationScore', key: 'valuationScore', width: 115, align: 'center', sorter: true, defaultSortOrder: 'descend' },
+  { title: '估值评分', dataIndex: 'valuationScore', key: 'valuationScore', width: 115, align: 'center', sorter: true, sortOrder: valuationScoreSortOrder.value },
   { title: '结论', dataIndex: 'conclusion', ellipsis: true, minWidth: 160 }
 ]);
 
@@ -832,7 +842,7 @@ const handleTableChange = (pag: any, _filters: any, sorter: any) => {
     const direction = sorter.order === 'ascend' ? 'asc' : 'desc';
     sortState.value = [`${sorter.field},${direction}`];
   } else {
-    sortState.value = ['valuationScore,desc'];
+    sortState.value = getDefaultValuationSort();
   }
 
   fetchData();
@@ -846,6 +856,7 @@ const closeDrawer = () => {
 const handleTabChange = (key: string) => {
   currentTab.value = key;
   searchParams.tabFilter = key;
+  sortState.value = getDefaultValuationSort(key);
   pagination.current = 1;
   fetchData();
 };
@@ -931,6 +942,7 @@ const resetSearch = () => {
   searchParams.psTtmMax = undefined;
   searchParams.pegMin = undefined;
   searchParams.pegMax = undefined;
+  sortState.value = getDefaultValuationSort('ALL');
   pagination.current = 1;
   fetchData();
 };

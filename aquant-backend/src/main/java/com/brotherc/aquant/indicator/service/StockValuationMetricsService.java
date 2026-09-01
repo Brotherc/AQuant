@@ -47,6 +47,8 @@ public class StockValuationMetricsService {
 
     private static final BigDecimal TEN_THOUSAND = new BigDecimal("10000");
     private static final BigDecimal MAX_PEG_GROWTH_RATE = new BigDecimal("100");
+    private static final BigDecimal LOW_VALUATION_SCORE_MIN = new BigDecimal("65");
+    private static final BigDecimal FAIR_VALUATION_SCORE_MIN = new BigDecimal("45");
     private static final int SCALE = 6;
     private static final double MIN_REPORT_COVERAGE = 0.8;
 
@@ -90,23 +92,20 @@ public class StockValuationMetricsService {
                 if (StringUtils.isNotBlank(reqVO.getTabFilter()) && !"ALL".equalsIgnoreCase(reqVO.getTabFilter())) {
                     switch (reqVO.getTabFilter().toUpperCase()) {
                         case "LOW_VALUATION" -> {
-                            // 低估榜：PE(TTM) > 0 且 PE(TTM) < 行业中位 * 0.8
-                            predicates.add(cb.gt(root.get("peTtm"), BigDecimal.ZERO));
-                            predicates.add(cb.isNotNull(root.get("peTtmIndustryMed")));
-                            predicates.add(cb.lt(root.get("peTtm"), cb.prod(root.get("peTtmIndustryMed"), new BigDecimal("0.8"))));
+                            predicates.add(cb.isNotNull(root.get("valuationScore")));
+                            predicates.add(cb.gt(root.get("netProfitTtm"), BigDecimal.ZERO));
+                            predicates.add(cb.ge(root.get("valuationScore"), LOW_VALUATION_SCORE_MIN));
                         }
                         case "HIGH_VALUATION" -> {
-                            // 高估榜：PE(TTM) > 行业中位 * 1.2
-                            predicates.add(cb.gt(root.get("peTtm"), BigDecimal.ZERO));
-                            predicates.add(cb.isNotNull(root.get("peTtmIndustryMed")));
-                            predicates.add(cb.gt(root.get("peTtm"), cb.prod(root.get("peTtmIndustryMed"), new BigDecimal("1.2"))));
+                            predicates.add(cb.isNotNull(root.get("valuationScore")));
+                            predicates.add(cb.gt(root.get("netProfitTtm"), BigDecimal.ZERO));
+                            predicates.add(cb.lt(root.get("valuationScore"), FAIR_VALUATION_SCORE_MIN));
                         }
                         case "FAIR_VALUATION" -> {
-                            // 合理估值：0.8 * 行业中位 <= PE(TTM) <= 1.2 * 行业中位
-                            predicates.add(cb.gt(root.get("peTtm"), BigDecimal.ZERO));
-                            predicates.add(cb.isNotNull(root.get("peTtmIndustryMed")));
-                            predicates.add(cb.ge(root.get("peTtm"), cb.prod(root.get("peTtmIndustryMed"), new BigDecimal("0.8"))));
-                            predicates.add(cb.le(root.get("peTtm"), cb.prod(root.get("peTtmIndustryMed"), new BigDecimal("1.2"))));
+                            predicates.add(cb.isNotNull(root.get("valuationScore")));
+                            predicates.add(cb.gt(root.get("netProfitTtm"), BigDecimal.ZERO));
+                            predicates.add(cb.ge(root.get("valuationScore"), FAIR_VALUATION_SCORE_MIN));
+                            predicates.add(cb.lt(root.get("valuationScore"), LOW_VALUATION_SCORE_MIN));
                         }
                         case "WATCHLIST" -> {
                             // 我的自选
@@ -183,12 +182,9 @@ public class StockValuationMetricsService {
             return new ValuationOverviewVO(0L, BigDecimal.ZERO, 0L, 0L);
         }
 
-        // 1. 低估机会 (低于行业中位数20%以上)
+        // 1. 综合估值评分处于低估或偏低估区间的机会
         long undervaluedCount = list.stream()
-                .filter(item -> item.getPeTtm() != null && item.getPeTtmIndustryMed() != null
-                        && item.getPeTtm().compareTo(BigDecimal.ZERO) > 0
-                        && item.getPeTtmIndustryMed().compareTo(BigDecimal.ZERO) > 0
-                        && item.getPeTtm().compareTo(item.getPeTtmIndustryMed().multiply(new BigDecimal("0.8"))) < 0)
+                .filter(this::isLowValuation)
                 .count();
 
         // 2. 市场 PE 中位数 (全市场剔除负值)
@@ -214,10 +210,7 @@ public class StockValuationMetricsService {
         if (!watchlistStockCodes.isEmpty()) {
             watchlistUndervaluedCount = list.stream()
                     .filter(item -> watchlistStockCodes.contains(item.getStockCode()) || (item.getStockCode().length() > 2 && watchlistStockCodes.contains(item.getStockCode().substring(2))))
-                    .filter(item -> item.getPeTtm() != null && item.getPeTtmIndustryMed() != null
-                            && item.getPeTtm().compareTo(BigDecimal.ZERO) > 0
-                            && item.getPeTtmIndustryMed().compareTo(BigDecimal.ZERO) > 0
-                            && item.getPeTtm().compareTo(item.getPeTtmIndustryMed().multiply(new BigDecimal("0.8"))) < 0)
+                    .filter(this::isLowValuation)
                     .count();
         }
 
@@ -233,6 +226,27 @@ public class StockValuationMetricsService {
                 .watchlistUndervaluedCount(watchlistUndervaluedCount)
                 .dailyChangeCount(dailyChangeCount)
                 .build();
+    }
+
+    boolean isLowValuation(StockValuationMetrics item) {
+        return hasValidValuationScore(item)
+                && item.getValuationScore().compareTo(LOW_VALUATION_SCORE_MIN) >= 0;
+    }
+
+    boolean isFairValuation(StockValuationMetrics item) {
+        return hasValidValuationScore(item)
+                && item.getValuationScore().compareTo(FAIR_VALUATION_SCORE_MIN) >= 0
+                && item.getValuationScore().compareTo(LOW_VALUATION_SCORE_MIN) < 0;
+    }
+
+    boolean isHighValuation(StockValuationMetrics item) {
+        return hasValidValuationScore(item)
+                && item.getValuationScore().compareTo(FAIR_VALUATION_SCORE_MIN) < 0;
+    }
+
+    private boolean hasValidValuationScore(StockValuationMetrics item) {
+        return item != null && item.getValuationScore() != null && item.getNetProfitTtm() != null
+                && item.getNetProfitTtm().compareTo(BigDecimal.ZERO) > 0;
     }
 
     /**
