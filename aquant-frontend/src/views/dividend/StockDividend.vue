@@ -220,7 +220,7 @@
               </template>
 
               <!-- 分红评分 -->
-              <template v-else-if="column.key === 'dividendScore'">
+              <template v-else-if="column.dataIndex === 'dividendScore' || column.key === 'dividendScore'">
                 <span class="score-num font-bold" :class="getScoreColorClass(record.dividendScore)">
                   {{ formatScore(record.dividendScore) }}
                 </span>
@@ -336,7 +336,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { computed, ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   SearchOutlined,
@@ -414,22 +414,18 @@ const pagination = reactive({
 });
 
 const sortState = ref<string[]>(['dividendScore,desc']);
-const getDefaultSort = (tab = activeQuickTab.value) => {
-  if (tab === 'HIGH_DIVIDEND') return ['dividendYield,desc'];
-  if (tab === 'DIVIDEND_GROWTH') return ['dividendGrowth3y,desc'];
-  return ['dividendScore,desc'];
-};
+const getDefaultSort = () => ['dividendScore,desc'];
 
 // 表格列定义
-const columns: TableProps['columns'] = [
+const columns = computed<TableProps['columns']>(() => [
   { title: '股票', key: 'stock', width: 120 },
-  { title: '最近完整年度分红', dataIndex: 'latestYearDividend', sorter: true, width: 150, align: 'right' },
+  { title: '最近一年分红', dataIndex: 'latestYearDividend', sorter: true, width: 130, align: 'right' },
   { title: '近3年平均分红', dataIndex: 'avgDividend', sorter: true, width: 130, align: 'right' },
   { title: '股息率', dataIndex: 'dividendYield', sorter: true, width: 110, align: 'right' },
   { title: 'PEG', dataIndex: 'peg', sorter: true, width: 100, align: 'right' },
-  { title: '分红评分', key: 'dividendScore', sorter: true, width: 100, align: 'center' },
+  { title: '分红评分', dataIndex: 'dividendScore', key: 'dividendScore', sorter: true, width: 100, align: 'center', defaultSortOrder: 'descend' },
   { title: '结论', dataIndex: 'dividendLevel', minWidth: 150, align: 'left' },
-];
+]);
 
 // 自选 Modal
 const watchlistModalVisible = ref(false);
@@ -576,7 +572,7 @@ const fetchWatchlistGroups = async () => {
 const handleTabChange = (key: string) => {
   activeQuickTab.value = key;
   searchParams.quickTab = key;
-  sortState.value = getDefaultSort(key);
+  sortState.value = getDefaultSort();
   pagination.current = 1;
   fetchData();
 };
@@ -603,9 +599,10 @@ const handleTableChange = (pag: any, _filters: any, sorter: any) => {
   pagination.current = pag.current;
   pagination.pageSize = pag.pageSize;
 
-  if (sorter && sorter.field) {
+  if (sorter && (sorter.field || sorter.columnKey) && sorter.order) {
+    const field = sorter.field || sorter.columnKey;
     const order = sorter.order === 'ascend' ? 'asc' : 'desc';
-    sortState.value = [`${sorter.field},${order}`];
+    sortState.value = [`${field},${order}`];
   } else {
     sortState.value = getDefaultSort();
   }
