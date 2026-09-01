@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 @Schema(description = "股票分红数据分页查询入参")
 public class StockDividendStatPageReqVO {
 
-    @Schema(description = "快捷榜单Tab: HIGH_DIVIDEND(高分红榜), STABLE_DIVIDEND(稳定分红), DIVIDEND_GROWTH(分红增长), MY_WATCHLIST(我的自选)")
+    @Schema(description = "快捷榜单Tab: HIGH_DIVIDEND(股息率不低于3%), STABLE_DIVIDEND(连续分红不低于3年且评分不低于65), DIVIDEND_GROWTH(三年CAGR为正且评分不低于50), MY_WATCHLIST(我的自选)")
     private String quickTab;
 
     @Schema(description = "最近N年")
@@ -21,7 +21,7 @@ public class StockDividendStatPageReqVO {
     @Schema(description = "股票名称")
     private String stockName;
 
-    @Schema(description = "最近N年平均分红")
+    @Schema(description = "最近N年平均分红，单位为每10股派现金额")
     private BigDecimal minAvgDividend;
 
     @Schema(description = "自选分组ID")

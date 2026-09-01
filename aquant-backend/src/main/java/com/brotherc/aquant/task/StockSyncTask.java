@@ -19,6 +19,7 @@ import com.brotherc.aquant.stock.repository.StockQuoteHistoryRepository;
 import com.brotherc.aquant.stock.repository.StockQuoteRepository;
 import com.brotherc.aquant.sync.repository.StockSyncRepository;
 import com.brotherc.aquant.integration.akshare.service.*;
+import com.brotherc.aquant.dividend.repository.StockDividendRepository;
 import com.brotherc.aquant.dividend.service.StockDividendDedupService;
 import com.brotherc.aquant.fund.service.StockFundNetValueService;
 import com.brotherc.aquant.fund.service.StockFundPortfolioHoldingService;
@@ -89,6 +90,7 @@ public class StockSyncTask {
     private final StockIndustryBoardEmSyncService stockIndustryBoardEmSyncService;
 
     private final StockSyncRepository stockSyncRepository;
+    private final StockDividendRepository stockDividendRepository;
     private final StockQuoteRepository stockQuoteRepository;
     private final StockQuoteHistoryRepository stockQuoteHistoryRepository;
     private final StockIndustryBoardRepository stockIndustryBoardRepository;
@@ -685,14 +687,37 @@ public class StockSyncTask {
         Long lastTimestamp = StockUtils.parseSyncTimestamp(stockDividendSync);
         if (lastTimestamp == null || StockUtils.isAfterDate(lastTimestamp)) {
             boolean hasFailed = false;
-            List<String> quarterEndDates = StockUtils.getQuarterEndDatesFromNowToLastYearStart();
-            for (String date : quarterEndDates) {
+            List<String> reportDates = StockUtils.getDividendReportDates(10);
+            List<String> syncReportDates = new ArrayList<>();
+            for (int i = 0; i < reportDates.size(); i++) {
+                String reportDate = reportDates.get(i);
+                // 最近两个报告期每天刷新，较早报告期只补齐本地尚未同步的数据。
+                if (i < 2 || !stockDividendRepository.existsByReportDate(reportDate)) {
+                    syncReportDates.add(reportDate);
+                }
+            }
+
+            log.info("股票分红待同步报告期，count={}, reportDates={}", syncReportDates.size(), syncReportDates);
+            for (int i = 0; i < syncReportDates.size(); i++) {
+                String date = syncReportDates.get(i);
                 try {
                     List<StockFhpsEm> list = akShareDividendService.stockFhpsEm(date);
                     stockSyncService.stockDividend(list, date);
+                    log.info("同步股票分红报告期完成，reportDate={}, count={}", date, list == null ? 0 : list.size());
                 } catch (Exception e) {
                     hasFailed = true;
                     log.error("同步股票分红数据失败: {}", date, e);
+                }
+
+                if (i < syncReportDates.size() - 1) {
+                    try {
+                        TimeUnit.MILLISECONDS.sleep(ThreadLocalRandom.current().nextLong(500, 1001));
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        hasFailed = true;
+                        log.warn("线程被中断，提前结束股票分红历史同步");
+                        break;
+                    }
                 }
             }
 

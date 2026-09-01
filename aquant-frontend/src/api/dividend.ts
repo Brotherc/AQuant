@@ -30,7 +30,8 @@ export interface StockDividendStatVO {
     conclusion?: string;
     consecutiveYears?: number;
     dividendGrowth3y?: number;
-    cashFlowStatus?: string;
+    payoutRatio?: number;
+    profitabilityStatus?: string;
     pe?: number;
     peIndustryAvg?: number;
     roeActual?: number;

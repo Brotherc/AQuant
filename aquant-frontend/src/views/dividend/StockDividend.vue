@@ -6,76 +6,79 @@
       <div class="overview-cards-grid">
         <!-- 卡片 1: 高分红机会 -->
         <div class="overview-card overview-card--emerald">
-          <div class="overview-card__header">
-            <span class="overview-card__title">高分红机会</span>
-            <div class="overview-card__icon-wrap">
-              <TrophyOutlined />
+          <div class="overview-card__icon-wrap">
+            <TrophyOutlined />
+          </div>
+          <div class="overview-card__content">
+            <div class="overview-card__title">高分红机会</div>
+            <div class="overview-card__value-row">
+              <span class="overview-card__value">{{ overviewData.highDividendOpportunityCount }}</span>
+              <span class="overview-card__unit">家</span>
             </div>
+            <div class="overview-card__subtext">最近完整年度股息率 ≥ 3%</div>
           </div>
-          <div class="overview-card__value-row">
-            <span class="overview-card__value">{{ overviewData.highDividendOpportunityCount }}</span>
-            <span class="overview-card__unit">家</span>
-          </div>
-          <div class="overview-card__subtext">近3年平均股息率 ≥ 3%</div>
         </div>
 
         <!-- 卡片 2: 连续分红公司 -->
         <div class="overview-card overview-card--indigo">
-          <div class="overview-card__header">
-            <span class="overview-card__title">连续分红公司</span>
-            <div class="overview-card__icon-wrap">
-              <CalendarOutlined />
+          <div class="overview-card__icon-wrap">
+            <CalendarOutlined />
+          </div>
+          <div class="overview-card__content">
+            <div class="overview-card__title">连续分红公司</div>
+            <div class="overview-card__value-row">
+              <span class="overview-card__value">{{ formatCount(overviewData.consecutiveDividendCount) }}</span>
+              <span class="overview-card__unit">家</span>
             </div>
+            <div class="overview-card__subtext">连续分红 ≥ 3年</div>
           </div>
-          <div class="overview-card__value-row">
-            <span class="overview-card__value">{{ formatCount(overviewData.consecutiveDividendCount) }}</span>
-            <span class="overview-card__unit">家</span>
-          </div>
-          <div class="overview-card__subtext">连续分红 ≥ 3年</div>
         </div>
 
         <!-- 卡片 3: 我的自选分红 -->
         <div class="overview-card overview-card--amber">
-          <div class="overview-card__header">
-            <span class="overview-card__title">我的自选分红</span>
-            <div class="overview-card__icon-wrap">
-              <StarFilled />
+          <div class="overview-card__icon-wrap">
+            <StarFilled />
+          </div>
+          <div class="overview-card__content">
+            <div class="overview-card__title">我的自选分红</div>
+            <div class="overview-card__value-row">
+              <span class="overview-card__value">{{ overviewData.watchlistDividendCount }}</span>
+              <span class="overview-card__unit">支</span>
             </div>
+            <div class="overview-card__subtext">自选股中符合条件</div>
           </div>
-          <div class="overview-card__value-row">
-            <span class="overview-card__value">{{ overviewData.watchlistDividendCount }}</span>
-            <span class="overview-card__unit">支</span>
-          </div>
-          <div class="overview-card__subtext">自选股中符合条件</div>
         </div>
 
-        <!-- 卡片 4: 今日重点观察 -->
+        <!-- 卡片 4: 近期重点观察 -->
         <div class="overview-card overview-card--rose">
-          <div class="overview-card__header">
-            <span class="overview-card__title">今日重点观察</span>
-            <div class="overview-card__icon-wrap">
-              <FireOutlined />
+          <div class="overview-card__icon-wrap">
+            <FireOutlined />
+          </div>
+          <div class="overview-card__content">
+            <div class="overview-card__title">近期重点观察</div>
+            <div class="overview-card__value-row">
+              <span class="overview-card__value">{{ overviewData.todayFocusCount }}</span>
+              <span class="overview-card__unit">支</span>
             </div>
+            <div class="overview-card__subtext">近30天公告且股息率 ≥ 3.5%</div>
           </div>
-          <div class="overview-card__value-row">
-            <span class="overview-card__value">{{ overviewData.todayFocusCount }}</span>
-            <span class="overview-card__unit">支</span>
-          </div>
-          <div class="overview-card__subtext">股息率提升或有分红公告</div>
         </div>
       </div>
 
-      <!-- 快捷 Tab 榜单切换（深色胶囊样式） -->
-      <div class="quick-filter-tabs">
-        <button
-          v-for="tab in quickTabs"
-          :key="tab.key"
-          class="quick-tab-btn"
-          :class="{ 'is-active': activeQuickTab === tab.key }"
-          @click="handleTabChange(tab.key)"
-        >
-          {{ tab.label }}
-        </button>
+      <!-- 快捷胶囊标签（卡片外独立通栏） -->
+      <div class="quick-tabs-bar">
+        <div class="quick-tabs">
+          <button
+            v-for="tab in quickTabs"
+            :key="tab.key"
+            class="quick-tab-btn"
+            :class="{ active: activeQuickTab === tab.key }"
+            :title="tab.description"
+            @click="handleTabChange(tab.key)"
+          >
+            {{ tab.label }}
+          </button>
+        </div>
       </div>
 
       <!-- 主数据表格卡片 -->
@@ -135,7 +138,7 @@
                   style="width: 70px"
                   @change="handleSearch"
                 />
-                <span class="input-label-suffix">%</span>
+                <span class="input-label-suffix">元/10股</span>
               </div>
             </div>
 
@@ -176,6 +179,7 @@
             :row-class-name="rowClassName"
             size="middle"
             class="dividend-main-table"
+            :scroll="{ x: 'max-content' }"
           >
             <!-- 自定义单元格渲染 -->
             <template #bodyCell="{ column, record }">
@@ -187,23 +191,23 @@
                 </div>
               </template>
 
-              <!-- 近3年平均分红 -->
-              <template v-else-if="column.dataIndex === 'avgDividend'">
-                <span class="metric-value font-semibold">
-                  {{ formatPercent(record.avgDividend) }}
+              <!-- 最近完整年度分红 -->
+              <template v-else-if="column.dataIndex === 'latestYearDividend'">
+                <span class="metric-value">
+                  {{ formatDividendAmount(record.latestYearDividend) }}
                 </span>
               </template>
 
-              <!-- 最近一年分红 -->
-              <template v-else-if="column.dataIndex === 'latestYearDividend'">
-                <span class="metric-value font-semibold">
-                  {{ formatPercent(record.latestYearDividend) }}
+              <!-- 近3年平均分红 -->
+              <template v-else-if="column.dataIndex === 'avgDividend'">
+                <span class="metric-value">
+                  {{ formatDividendAmount(record.avgDividend) }}
                 </span>
               </template>
 
               <!-- 股息率 -->
               <template v-else-if="column.dataIndex === 'dividendYield'">
-                <span class="metric-value font-semibold text-emerald">
+                <span class="metric-value">
                   {{ formatPercent(record.dividendYield) }}
                 </span>
               </template>
@@ -216,16 +220,16 @@
               </template>
 
               <!-- 分红评分 -->
-              <template v-else-if="column.key === 'dividendScore'">
+              <template v-else-if="column.dataIndex === 'dividendScore' || column.key === 'dividendScore'">
                 <span class="score-num font-bold" :class="getScoreColorClass(record.dividendScore)">
-                  {{ Math.round(Number(record.dividendScore || 0)) }}
+                  {{ formatScore(record.dividendScore) }}
                 </span>
               </template>
 
-              <!-- 分红结论 -->
+              <!-- 结论 -->
               <template v-else-if="column.dataIndex === 'dividendLevel'">
-                <span class="quality-badge" :class="getQualityBadgeClass(record.dividendScore, record.dividendLevel)">
-                  {{ record.dividendLevel || '稳定分红' }}
+                <span class="conclusion-text">
+                  {{ record.conclusion || record.dividendLevel || '数据不足' }}
                 </span>
               </template>
             </template>
@@ -246,7 +250,7 @@
               class="quality-badge"
               :class="getQualityBadgeClass(selectedStock.dividendScore, selectedStock.dividendLevel)"
             >
-              {{ selectedStock.dividendLevel || '稳定分红' }}
+              {{ selectedStock.dividendLevel || '数据不足' }}
             </span>
           </div>
           <button class="detail-drawer__close-btn" @click="selectedStock = null" title="关闭详情">
@@ -254,186 +258,14 @@
           </button>
         </div>
 
-        <!-- 子标题行业与更新时间 -->
-        <div class="detail-drawer__submeta">
-          <span class="submeta-industry">{{ selectedStock.industry || '食品饮料' }}</span>
-          <span class="submeta-divider">|</span>
-          <span class="submeta-date">更新时间: {{ selectedStock.latestAnnouncementDate || '2025-06-22' }}</span>
-        </div>
-
         <!-- 抽屉滚动主体 -->
         <div class="detail-drawer__body">
           <!-- 综合解读 Banner -->
           <div class="dividend-summary-banner">
-            {{ selectedStock.conclusion || '公司连续多年稳定分红，股息率行业领先，现金流充裕，分红可持续性强。' }}
+            {{ selectedStock.conclusion || '缺少有效年度分红或价格数据，暂不进行分红质量评分。' }}
           </div>
 
-          <!-- Section 1: 年度分红快照 (最近4年) -->
-          <div class="detail-section">
-            <div class="detail-section__header">
-              <span class="detail-section__title">年度分红快照 (最近4年)</span>
-            </div>
-
-            <div class="annual-table-wrap">
-              <table class="annual-snapshot-table">
-                <thead>
-                  <tr>
-                    <th style="width: 28%">指标</th>
-                    <th v-for="snap in getDisplaySnapshots(selectedStock)" :key="snap.year" style="width: 18%">
-                      {{ snap.yearLabel }}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td class="metric-name-td font-semibold">每股股利 (元)</td>
-                    <td v-for="snap in getDisplaySnapshots(selectedStock)" :key="'dps-' + snap.year">
-                      {{ formatAmountNum(snap.dividendPerShare) }}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td class="metric-name-td">股息率 (%)</td>
-                    <td v-for="snap in getDisplaySnapshots(selectedStock)" :key="'yield-' + snap.year">
-                      {{ formatAmountNum(snap.dividendYield) }}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td class="metric-name-td">分红比例 (%)</td>
-                    <td v-for="snap in getDisplaySnapshots(selectedStock)" :key="'payout-' + snap.year">
-                      {{ formatAmountNum(snap.payoutRatio) }}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Section 2: 分红质量评分模型 (公式卡片) -->
-          <div class="detail-section">
-            <div class="detail-section__header">
-              <span class="detail-section__title">分红质量评分模型</span>
-            </div>
-
-            <div class="dividend-formula-card">
-              <!-- 1. 股息率质量 -->
-              <div class="formula-box">
-                <span class="formula-box__val">{{ formatPercent(selectedStock.dividendYield) }}</span>
-                <span class="formula-box__lbl">股息率质量 (40%)</span>
-              </div>
-              <div class="formula-operator">+</div>
-
-              <!-- 2. 连续分红年数 -->
-              <div class="formula-box">
-                <span class="formula-box__val">{{ selectedStock.consecutiveYears || 3 }}年</span>
-                <span class="formula-box__lbl">连续分红年数 (30%)</span>
-              </div>
-              <div class="formula-operator">+</div>
-
-              <!-- 3. 分红增幅 -->
-              <div class="formula-box">
-                <span class="formula-box__val">{{ selectedStock.dividendGrowth3y != null ? selectedStock.dividendGrowth3y + '%' : '12.3%' }}</span>
-                <span class="formula-box__lbl">分红增幅(3年) (20%)</span>
-              </div>
-              <div class="formula-operator">+</div>
-
-              <!-- 4. 现金流质量 -->
-              <div class="formula-box">
-                <span class="formula-box__val formula-box__val--text">{{ selectedStock.cashFlowStatus || '现金流充足' }}</span>
-                <span class="formula-box__lbl">现金流质量 (10%)</span>
-              </div>
-              <div class="formula-operator">=</div>
-
-              <!-- 5. 分红评分 -->
-              <div class="formula-box formula-box--result">
-                <span class="formula-box__val formula-box__val--score">{{ Math.round(Number(selectedStock.dividendScore || 95)) }}分</span>
-                <span class="formula-box__lbl">分红评分</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Section 3: 与行业均值对比 (当前) -->
-          <div class="detail-section">
-            <div class="drawer-section__title-row">
-              <span class="detail-section__title">与行业均值对比 (当前)</span>
-              <div class="drawer-section__legend">
-                <span class="legend-item">
-                  <span class="legend-dot legend-dot--stock"></span>
-                  {{ selectedStock.stockName }}
-                </span>
-                <span class="legend-item">
-                  <span class="legend-dot legend-dot--median"></span>
-                  行业均值
-                </span>
-              </div>
-              <span class="industry-link" v-if="selectedStock.industry">
-                查看行业: {{ selectedStock.industry }} &gt;
-              </span>
-            </div>
-
-            <div class="comparison-bars">
-              <!-- PE (TTM) 对比 -->
-              <div class="comp-bar-row">
-                <div class="comp-bar-label">PE (TTM)</div>
-                <div class="comp-bar-track-wrap">
-                  <div class="comp-bar-track">
-                    <div
-                      class="comp-bar-fill comp-bar-fill--stock"
-                      :style="{ width: `${getBarWidth(selectedStock.pe, 60)}%` }"
-                    ></div>
-                    <div
-                      class="comp-bar-median-mark"
-                      :style="{ left: `${getBarWidth(selectedStock.peIndustryAvg, 60)}%` }"
-                      :title="`行业均值: ${formatNumber(selectedStock.peIndustryAvg)}`"
-                    ></div>
-                  </div>
-                  <span class="comp-bar-val">{{ formatNumber(selectedStock.pe) }}</span>
-                  <span class="comp-bar-median-text">{{ formatNumber(selectedStock.peIndustryAvg) }}</span>
-                </div>
-              </div>
-
-              <!-- ROE (TTM) 对比 -->
-              <div class="comp-bar-row">
-                <div class="comp-bar-label">ROE (TTM)</div>
-                <div class="comp-bar-track-wrap">
-                  <div class="comp-bar-track">
-                    <div
-                      class="comp-bar-fill comp-bar-fill--stock"
-                      :style="{ width: `${getBarWidth(selectedStock.roeActual || selectedStock.roe3yAvg, 40)}%` }"
-                    ></div>
-                    <div
-                      class="comp-bar-median-mark"
-                      :style="{ left: `${getBarWidth(selectedStock.roeIndustryAvg, 40)}%` }"
-                      :title="`行业均值: ${formatPercent(selectedStock.roeIndustryAvg)}`"
-                    ></div>
-                  </div>
-                  <span class="comp-bar-val">{{ formatPercent(selectedStock.roeActual || selectedStock.roe3yAvg) }}</span>
-                  <span class="comp-bar-median-text">{{ formatPercent(selectedStock.roeIndustryAvg) }}</span>
-                </div>
-              </div>
-
-              <!-- 股息率 对比 -->
-              <div class="comp-bar-row">
-                <div class="comp-bar-label">股息率</div>
-                <div class="comp-bar-track-wrap">
-                  <div class="comp-bar-track">
-                    <div
-                      class="comp-bar-fill comp-bar-fill--stock"
-                      :style="{ width: `${getBarWidth(selectedStock.dividendYield, 6)}%` }"
-                    ></div>
-                    <div
-                      class="comp-bar-median-mark"
-                      :style="{ left: `${getBarWidth(selectedStock.industryDividendYieldAvg, 6)}%` }"
-                      :title="`行业均值: ${formatPercent(selectedStock.industryDividendYieldAvg)}`"
-                    ></div>
-                  </div>
-                  <span class="comp-bar-val">{{ formatPercent(selectedStock.dividendYield) }}</span>
-                  <span class="comp-bar-median-text">{{ formatPercent(selectedStock.industryDividendYieldAvg) }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Section 4: 分红历史表格 -->
+          <!-- 分红历史表格 -->
           <div class="detail-section">
             <div class="detail-section__header">
               <span class="detail-section__title">分红历史</span>
@@ -504,7 +336,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { computed, ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   SearchOutlined,
@@ -522,7 +354,6 @@ import {
   type StockDividendStatVO,
   type StockDividendStatPageReqVO,
   type StockDividendDetailVO,
-  type AnnualDividendSnapshotVO,
 } from '@/api/dividend';
 import { getWatchlistGroups, addStockToWatchlist, type WatchlistGroupVO } from '@/api/watchlist';
 import { message } from 'ant-design-vue';
@@ -532,18 +363,18 @@ const router = useRouter();
 
 // 概览看板数据
 const overviewData = reactive<DividendOverviewVO>({
-  highDividendOpportunityCount: 126,
-  consecutiveDividendCount: 1248,
-  watchlistDividendCount: 18,
-  todayFocusCount: 6,
+  highDividendOpportunityCount: 0,
+  consecutiveDividendCount: 0,
+  watchlistDividendCount: 0,
+  todayFocusCount: 0,
 });
 
 // 快捷 Tab
 const quickTabs = [
-  { key: 'HIGH_DIVIDEND', label: '高分红榜' },
-  { key: 'STABLE_DIVIDEND', label: '稳定分红' },
-  { key: 'DIVIDEND_GROWTH', label: '分红增长' },
-  { key: 'MY_WATCHLIST', label: '我的自选' },
+  { key: 'HIGH_DIVIDEND', label: '高分红榜', description: '最近完整年度股息率≥3%，且具备有效评分' },
+  { key: 'STABLE_DIVIDEND', label: '稳定分红', description: '连续分红≥3年，且综合评分≥65' },
+  { key: 'DIVIDEND_GROWTH', label: '分红增长', description: '近3年分红CAGR>0，且综合评分≥50' },
+  { key: 'MY_WATCHLIST', label: '我的自选', description: '查看自选股票的分红表现' },
 ];
 const activeQuickTab = ref('HIGH_DIVIDEND');
 
@@ -583,17 +414,18 @@ const pagination = reactive({
 });
 
 const sortState = ref<string[]>(['dividendScore,desc']);
+const getDefaultSort = () => ['dividendScore,desc'];
 
 // 表格列定义
-const columns: TableProps['columns'] = [
-  { title: '股票', key: 'stock', width: 60 },
-  { title: '近3年平均分红', dataIndex: 'avgDividend', sorter: true, width: 130, align: 'right' },
+const columns = computed<TableProps['columns']>(() => [
+  { title: '股票', key: 'stock', width: 120 },
   { title: '最近一年分红', dataIndex: 'latestYearDividend', sorter: true, width: 130, align: 'right' },
+  { title: '近3年平均分红', dataIndex: 'avgDividend', sorter: true, width: 130, align: 'right' },
   { title: '股息率', dataIndex: 'dividendYield', sorter: true, width: 110, align: 'right' },
   { title: 'PEG', dataIndex: 'peg', sorter: true, width: 100, align: 'right' },
-  { title: '分红评分', key: 'dividendScore', sorter: true, width: 100, align: 'center' },
-  { title: '分红结论', dataIndex: 'dividendLevel', width: 120, align: 'center' },
-];
+  { title: '分红评分', dataIndex: 'dividendScore', key: 'dividendScore', sorter: true, width: 100, align: 'center', defaultSortOrder: 'descend' },
+  { title: '结论', dataIndex: 'dividendLevel', minWidth: 150, align: 'left' },
+]);
 
 // 自选 Modal
 const watchlistModalVisible = ref(false);
@@ -607,21 +439,26 @@ const formatPercent = (val: any) => {
   return isNaN(num) ? '-' : `${num.toFixed(2)}%`;
 };
 
+const formatDividendAmount = (val: any) => {
+  if (val == null || val === '') return '-';
+  const num = Number(val);
+  return Number.isFinite(num) ? `${num.toFixed(2)}元` : '-';
+};
+
+const formatScore = (val: any) => {
+  if (val == null || val === '') return '-';
+  const num = Number(val);
+  return Number.isFinite(num) ? Math.round(num) : '-';
+};
+
 const formatPercentNum = (val: any) => {
   if (val == null || val === '') return '-';
   const num = Number(val);
   if (isNaN(num)) return '-';
-  if (num < 1 && num > 0) return `${(num * 100).toFixed(2)}`;
   return `${num.toFixed(2)}`;
 };
 
 const formatNumber = (val: any) => {
-  if (val == null || val === '') return '-';
-  const num = Number(val);
-  return isNaN(num) ? '-' : num.toFixed(2);
-};
-
-const formatAmountNum = (val: any) => {
   if (val == null || val === '') return '-';
   const num = Number(val);
   return isNaN(num) ? '-' : num.toFixed(2);
@@ -638,37 +475,20 @@ const formatDividendText = (cashDividendRatio: any) => {
 };
 
 const getScoreColorClass = (score: any) => {
-  const s = Number(score || 0);
+  if (score == null || score === '') return 'score-num--insufficient';
+  const s = Number(score);
   if (s >= 80) return 'score-num--high';
   if (s >= 65) return 'score-num--mid';
   return 'score-num--low';
 };
 
 const getQualityBadgeClass = (score: any, level?: string) => {
-  const s = Number(score || 0);
-  if (level === '稳定分红' || level === '高股息' || s >= 80) return 'quality-badge--excellent';
-  if (level === '分红良好' || level === '分红增长' || s >= 65) return 'quality-badge--good';
-  if (level === '中等分红' || s >= 50) return 'quality-badge--mid';
+  if (score == null || score === '' || level === '数据不足') return 'quality-badge--insufficient';
+  const s = Number(score);
+  if (level === '优质分红' || s >= 80) return 'quality-badge--excellent';
+  if (level === '稳健分红' || s >= 65) return 'quality-badge--good';
+  if (level === '分红观察' || s >= 50) return 'quality-badge--mid';
   return 'quality-badge--poor';
-};
-
-const getBarWidth = (val: any, maxScale: number) => {
-  if (val == null) return 0;
-  const num = Math.max(0, Number(val));
-  return Math.min(100, Math.round((num / maxScale) * 100));
-};
-
-const getDisplaySnapshots = (stock: StockDividendStatVO) => {
-  if (stock.annualSnapshots && stock.annualSnapshots.length > 0) {
-    return stock.annualSnapshots;
-  }
-  const curY = new Date().getFullYear();
-  return [
-    { year: curY - 3, yearLabel: String(curY - 3), dividendPerShare: 17.45, dividendYield: 1.07, payoutRatio: 52.1 },
-    { year: curY - 2, yearLabel: String(curY - 2), dividendPerShare: 18.56, dividendYield: 1.51, payoutRatio: 51.8 },
-    { year: curY - 1, yearLabel: String(curY - 1), dividendPerShare: 19.11, dividendYield: 2.03, payoutRatio: 53.2 },
-    { year: curY, yearLabel: `${curY} (最新)`, dividendPerShare: 20.00, dividendYield: 2.31, payoutRatio: 54.6 },
-  ] as AnnualDividendSnapshotVO[];
 };
 
 // 交互与数据请求
@@ -752,6 +572,7 @@ const fetchWatchlistGroups = async () => {
 const handleTabChange = (key: string) => {
   activeQuickTab.value = key;
   searchParams.quickTab = key;
+  sortState.value = getDefaultSort();
   pagination.current = 1;
   fetchData();
 };
@@ -769,6 +590,7 @@ const resetSearch = () => {
   searchParams.watchlistGroupId = undefined;
   searchParams.pegRange = undefined;
   searchParams.quickTab = activeQuickTab.value;
+  sortState.value = getDefaultSort();
   pagination.current = 1;
   fetchData();
 };
@@ -777,11 +599,12 @@ const handleTableChange = (pag: any, _filters: any, sorter: any) => {
   pagination.current = pag.current;
   pagination.pageSize = pag.pageSize;
 
-  if (sorter && sorter.field) {
+  if (sorter && (sorter.field || sorter.columnKey) && sorter.order) {
+    const field = sorter.field || sorter.columnKey;
     const order = sorter.order === 'ascend' ? 'asc' : 'desc';
-    sortState.value = [`${sorter.field},${order}`];
+    sortState.value = [`${field},${order}`];
   } else {
-    sortState.value = ['dividendScore,desc'];
+    sortState.value = getDefaultSort();
   }
   fetchData();
 };
@@ -856,40 +679,74 @@ onMounted(() => {
 .overview-cards-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
+  gap: 12px;
 }
 
 .overview-card {
   background: #ffffff;
-  border-radius: 10px;
-  padding: 14px 16px;
+  border-radius: 12px;
+  padding: 16px 20px;
   border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 2px 8px rgba(0, 0, 0, 0.03);
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
 }
 
-.overview-card__header {
+.overview-card__icon-wrap {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.overview-card__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .overview-card__title {
   font-size: 13px;
-  font-weight: 600;
-  color: #475569;
+  font-weight: 500;
+  color: #64748b;
+  margin-bottom: 3px;
 }
 
-.overview-card__icon-wrap {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+.overview-card__value-row {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.overview-card__value {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: #0f172a;
+}
+
+.overview-card__unit {
+  font-size: 12px;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.overview-card__subtext {
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
 }
 
 .overview-card--emerald .overview-card__icon-wrap {
@@ -912,59 +769,39 @@ onMounted(() => {
   color: #e11d48;
 }
 
-.overview-card__value-row {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-}
-
-.overview-card__value {
-  font-size: 24px;
-  font-weight: 800;
-  color: #0f172a;
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums;
-}
-
-.overview-card__unit {
-  font-size: 12px;
-  color: #64748b;
-  font-weight: 500;
-}
-
-.overview-card__subtext {
-  font-size: 11px;
-  color: #94a3b8;
-}
-
-/* 快捷 Tab 榜单切换（深邃黑胶囊） */
-.quick-filter-tabs {
+/* 快捷胶囊标签（独立通栏） */
+.quick-tabs-bar {
   display: flex;
   align-items: center;
+}
+
+.quick-tabs {
+  display: flex;
   gap: 8px;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 10px;
 }
 
 .quick-tab-btn {
+  border: none;
+  background: transparent;
   padding: 6px 16px;
   border-radius: 8px;
   font-size: 13px;
-  font-weight: 600;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-  color: #475569;
+  font-weight: 500;
+  color: #64748b;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .quick-tab-btn:hover {
-  background: #f1f5f9;
   color: #0f172a;
 }
 
-.quick-tab-btn.is-active {
+.quick-tab-btn.active {
   background: #0f172a;
   color: #ffffff;
-  border-color: #0f172a;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -1017,13 +854,18 @@ onMounted(() => {
   font-size: 13px;
 }
 
-:deep(.dividend-main-table .ant-table-thead > tr > th) {
-  background: #f8fafc;
-  color: #475569;
+:deep(.dividend-main-table .ant-table-thead > tr > th),
+:deep(.dividend-main-table .ant-table-thead > tr > th.ant-table-column-sort) {
+  background: #f1f5f9 !important;
+  color: #334155;
   font-weight: 600;
   border-bottom: 1px solid #e2e8f0;
   padding: 12px 14px;
   white-space: nowrap !important;
+}
+
+:deep(.dividend-main-table .ant-table-thead th.ant-table-column-has-sorters:hover) {
+  background: #e2e8f0 !important;
 }
 
 :deep(.dividend-main-table .ant-table-tbody > tr > td) {
@@ -1031,6 +873,7 @@ onMounted(() => {
   padding: 12px 14px;
   transition: background 0.15s ease;
   cursor: pointer;
+  white-space: nowrap !important;
 }
 
 :deep(.dividend-main-table .ant-table-tbody > tr:hover > td) {
@@ -1089,6 +932,10 @@ onMounted(() => {
   color: #f43f5e;
 }
 
+.score-num--insufficient {
+  color: #94a3b8;
+}
+
 .quality-badge {
   display: inline-block;
   padding: 2px 6px;
@@ -1117,12 +964,15 @@ onMounted(() => {
   color: #dc2626;
 }
 
-.text-emerald {
-  color: #059669 !important;
+.quality-badge--insufficient {
+  background: #f1f5f9;
+  color: #64748b;
 }
 
-.text-slate {
-  color: #475569 !important;
+.conclusion-text {
+  color: #64748b;
+  font-size: 12px;
+  white-space: nowrap !important;
 }
 
 /* ==========================================================================
@@ -1144,7 +994,8 @@ onMounted(() => {
 }
 
 .detail-drawer__header {
-  padding: 14px 18px 6px 18px;
+  padding: 16px 18px;
+  border-bottom: 1px solid #f1f5f9;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1166,20 +1017,6 @@ onMounted(() => {
   font-size: 13px;
   color: #94a3b8;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-}
-
-.detail-drawer__submeta {
-  padding: 0 18px 12px 18px;
-  border-bottom: 1px solid #f1f5f9;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: #64748b;
-}
-
-.submeta-divider {
-  color: #cbd5e1;
 }
 
 .detail-drawer__close-btn {
@@ -1240,235 +1077,17 @@ onMounted(() => {
   color: #0f172a;
 }
 
-/* 模块 1: 年度分红快照表格 */
-.annual-table-wrap {
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.annual-snapshot-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-  text-align: right;
-}
-
-.annual-snapshot-table th {
-  background: #f8fafc;
-  padding: 8px 10px;
-  font-weight: 600;
-  color: #475569;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.annual-snapshot-table td {
-  padding: 8px 10px;
-  border-bottom: 1px solid #f1f5f9;
-  font-variant-numeric: tabular-nums;
-  color: #0f172a;
-}
-
-.annual-snapshot-table tr:last-child td {
-  border-bottom: none;
-}
-
-.annual-snapshot-table th:first-child,
-.annual-snapshot-table td:first-child {
-  text-align: left;
-}
-
-.metric-name-td {
-  text-align: left;
-  color: #334155;
-}
-
-/* 模块 2: 分红质量评分模型公式卡片 */
-.dividend-formula-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 2px;
-}
-
-.formula-box {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  padding: 6px 4px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  min-width: 0;
-}
-
-.formula-box__val {
-  font-size: 12px;
-  font-weight: 700;
-  color: #0f172a;
-  line-height: 1.2;
-}
-
-.formula-box__val--text {
-  font-size: 11px;
-}
-
-.formula-box__lbl {
-  font-size: 9px;
-  color: #64748b;
-  transform: scale(0.9);
-  white-space: nowrap;
-  margin-top: 2px;
-}
-
-.formula-operator {
-  font-size: 12px;
-  font-weight: 700;
-  color: #94a3b8;
-  padding: 0 1px;
-}
-
-.formula-box--result {
-  background: #0f172a;
-  border-color: #0f172a;
-}
-
-.formula-box--result .formula-box__val--score {
-  color: #ffffff;
-  font-size: 14px;
-}
-
-.formula-box--result .formula-box__lbl {
-  color: #94a3b8;
-}
-
-/* 模块 3: 行业均值对比 */
-.drawer-section__title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.drawer-section__legend {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 11px;
-  color: #64748b;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.legend-dot--stock {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #0f172a;
-}
-
-.legend-dot--median {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #94a3b8;
-}
-
-.industry-link {
-  font-size: 11px;
-  color: #64748b;
-  margin-left: auto;
-}
-
-.comparison-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.comp-bar-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.comp-bar-label {
-  width: 70px;
-  font-size: 12px;
-  color: #475569;
-  font-weight: 500;
-}
-
-.comp-bar-track-wrap {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.comp-bar-track {
-  flex: 1;
-  height: 6px;
-  background: #e2e8f0;
-  border-radius: 3px;
-  position: relative;
-}
-
-.comp-bar-fill--stock {
-  height: 100%;
-  border-radius: 3px;
-  background: #0f172a;
-  transition: width 0.3s ease;
-}
-
-.comp-bar-median-mark {
-  position: absolute;
-  top: -3px;
-  width: 2px;
-  height: 12px;
-  background: #94a3b8;
-  transform: translateX(-50%);
-  border-radius: 1px;
-}
-
-.comp-bar-val {
-  font-size: 12px;
-  color: #0f172a;
-  font-weight: 600;
-  min-width: 44px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.comp-bar-median-text {
-  font-size: 11px;
-  color: #94a3b8;
-  min-width: 40px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-/* 模块 4: 分红历史表格 */
+/* 分红历史表格 */
 .dividend-history-table-wrap {
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  overflow: hidden;
-  max-height: 240px;
-  overflow-y: auto;
+  max-height: 260px;
+  overflow: auto;
 }
 
 .dividend-history-table {
   width: 100%;
+  min-width: 480px;
   border-collapse: collapse;
   font-size: 11px;
   text-align: right;

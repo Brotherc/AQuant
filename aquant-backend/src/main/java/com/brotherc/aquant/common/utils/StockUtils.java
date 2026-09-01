@@ -16,48 +16,37 @@ public class StockUtils {
     private StockUtils() {
     }
 
-    public static List<String> getQuarterEndDatesFromNowToLastYearStart() {
+    /**
+     * 获取分红同步所需的半年报和年报报告期。
+     *
+     * @param years 向前覆盖的年数
+     */
+    public static List<String> getDividendReportDates(int years) {
         List<String> result = new ArrayList<>();
+        if (years <= 0) {
+            return result;
+        }
 
-        LocalDate now = LocalDate.now();
+        LocalDate today = LocalDate.now();
+        LocalDate currentYearMid = LocalDate.of(today.getYear(), Month.JUNE, 30);
+        LocalDate currentYearEnd = LocalDate.of(today.getYear(), Month.DECEMBER, 31);
+        LocalDate cursor;
+        if (!today.isBefore(currentYearEnd)) {
+            cursor = currentYearEnd;
+        } else if (!today.isBefore(currentYearMid)) {
+            cursor = currentYearMid;
+        } else {
+            cursor = LocalDate.of(today.getYear() - 1, Month.DECEMBER, 31);
+        }
 
-        // 1. 当前季度结束日
-        LocalDate currentQuarterEnd = getQuarterEnd(now);
-
-        // 2. 去年年初（1 月 1 日）
-        LocalDate lastYearStart = LocalDate.of(now.getYear() - 1, 1, 1);
-
-        // 3. 去年年初所在季度的结束日（一定是 3 月 31）
-        LocalDate lastYearQuarterEnd = getQuarterEnd(lastYearStart);
-
-        // 4. 从当前季度向前遍历
-        LocalDate cursor = currentQuarterEnd;
-        while (!cursor.isBefore(lastYearQuarterEnd)) {
+        for (int i = 0; i < years * 2; i++) {
             result.add(cursor.format(FORMATTER));
-            cursor = getQuarterEnd(cursor.minusMonths(3));
+            cursor = cursor.getMonth() == Month.JUNE
+                    ? LocalDate.of(cursor.getYear() - 1, Month.DECEMBER, 31)
+                    : LocalDate.of(cursor.getYear(), Month.JUNE, 30);
         }
 
         return result;
-    }
-
-    /**
-     * 获取某个日期所在季度的最后一天
-     */
-    private static LocalDate getQuarterEnd(LocalDate date) {
-        int month = date.getMonthValue();
-        Month endMonth;
-
-        if (month <= 3) {
-            endMonth = Month.MARCH;
-        } else if (month <= 6) {
-            endMonth = Month.JUNE;
-        } else if (month <= 9) {
-            endMonth = Month.SEPTEMBER;
-        } else {
-            endMonth = Month.DECEMBER;
-        }
-
-        return LocalDate.of(date.getYear(), endMonth, endMonth.length(date.isLeapYear()));
     }
 
     /**

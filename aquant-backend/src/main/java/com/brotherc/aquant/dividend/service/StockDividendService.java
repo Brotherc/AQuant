@@ -70,7 +70,7 @@ public class StockDividendService {
         int watchlistDividendCount = 0;
         int todayFocusCount = 0;
 
-        int currentYear = LocalDate.now().getYear();
+        LocalDate today = LocalDate.now();
 
         for (StockDividendStatVO item : all) {
             BigDecimal dy = item.getDividendYield();
@@ -87,8 +87,8 @@ public class StockDividendService {
                 }
             }
             if (item.getLatestAnnouncementDate() != null
-                    && item.getLatestAnnouncementDate().getYear() >= currentYear - 1
-                    && (dy != null && dy.compareTo(new BigDecimal("3.5")) >= 0)) {
+                    && !item.getLatestAnnouncementDate().isBefore(today.minusDays(30))
+                    && dy != null && dy.compareTo(new BigDecimal("3.5")) >= 0) {
                 todayFocusCount++;
             }
         }
@@ -127,11 +127,22 @@ public class StockDividendService {
         // 快捷 Tab 过滤
         if (StringUtils.isNotBlank(reqVO.getQuickTab())) {
             String tab = reqVO.getQuickTab().toUpperCase();
-            if ("STABLE_DIVIDEND".equals(tab)) {
-                all = all.stream().filter(item -> item.getConsecutiveYears() != null && item.getConsecutiveYears() >= 3)
+            if ("HIGH_DIVIDEND".equals(tab)) {
+                all = all.stream()
+                        .filter(item -> item.getDividendScore() != null
+                                && item.getDividendYield() != null
+                                && item.getDividendYield().compareTo(new BigDecimal("3")) >= 0)
+                        .collect(Collectors.toList());
+            } else if ("STABLE_DIVIDEND".equals(tab)) {
+                all = all.stream().filter(item -> item.getDividendScore() != null
+                                && item.getDividendScore().compareTo(new BigDecimal("65")) >= 0
+                                && item.getConsecutiveYears() != null && item.getConsecutiveYears() >= 3)
                         .collect(Collectors.toList());
             } else if ("DIVIDEND_GROWTH".equals(tab)) {
-                all = all.stream().filter(item -> item.getDividendGrowth3y() != null && item.getDividendGrowth3y().compareTo(BigDecimal.ZERO) > 0)
+                all = all.stream().filter(item -> item.getDividendScore() != null
+                                && item.getDividendScore().compareTo(new BigDecimal("50")) >= 0
+                                && item.getDividendGrowth3y() != null
+                                && item.getDividendGrowth3y().compareTo(BigDecimal.ZERO) > 0)
                         .collect(Collectors.toList());
             } else if ("MY_WATCHLIST".equals(tab)) {
                 Set<String> watchlistCodes = stockWatchlistStockRepository.findAll()
@@ -235,10 +246,16 @@ public class StockDividendService {
             Map<Integer, BigDecimal> annualTransferMap = new HashMap<>();
 
             for (StockDividend d : dividends) {
+                String reportDate = d.getReportDate();
+                if (StringUtils.isNotBlank(reportDate)
+                        && !reportDate.endsWith("0630") && !reportDate.endsWith("1231")) {
+                    continue;
+                }
+
                 Integer year = null;
-                if (StringUtils.isNotBlank(d.getReportDate()) && d.getReportDate().length() >= 4) {
+                if (StringUtils.isNotBlank(reportDate) && reportDate.length() >= 4) {
                     try {
-                        year = Integer.parseInt(d.getReportDate().substring(0, 4));
+                        year = Integer.parseInt(reportDate.substring(0, 4));
                     } catch (Exception ignored) {}
                 }
                 if (year == null && d.getLatestAnnouncementDate() != null) {
@@ -261,10 +278,13 @@ public class StockDividendService {
                 annualTransferMap.merge(year, bonus.add(transfer), BigDecimal::add);
             }
 
-            // 确定最新有分红的年份
-            int maxYear = annualCashDivMap.keySet().stream().max(Integer::compareTo).orElse(currentYear);
+            // 评分统一使用最近完整年度，避免将尚未披露完整的当年分红与历史全年数据比较。
+            int maxYear = annualCashDivMap.keySet().stream()
+                    .filter(year -> year < currentYear)
+                    .max(Integer::compareTo)
+                    .orElseGet(() -> annualCashDivMap.keySet().stream().max(Integer::compareTo).orElse(currentYear));
 
-            // 最近一年分红与转股
+            // 最近完整年度分红与转股
             BigDecimal latestYearDividend = annualCashDivMap.getOrDefault(maxYear, BigDecimal.ZERO);
             BigDecimal latestYearTransfer = annualTransferMap.getOrDefault(maxYear, BigDecimal.ZERO);
 
@@ -283,20 +303,16 @@ public class StockDividendService {
                 continue;
             }
 
-            // 最新股息率 (优先取分红表最新股息率，或用 每股股利/最新股价 计算)
-            BigDecimal latestDividendYield = annualYieldMap.get(maxYear);
-            if (latestDividendYield == null) {
-                StockDividend latestDiv = dividends.get(0);
-                latestDividendYield = latestDiv.getDividendYield();
-            }
-            if (latestDividendYield == null && latestPrice != null && latestPrice.compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal dps = latestYearDividend.divide(new BigDecimal("10"), 4, RoundingMode.HALF_UP);
+            // 股息率优先使用年度每股分红和最新价计算，避免根据数值大小猜测第三方接口的百分比单位。
+            BigDecimal latestDps = latestYearDividend.divide(BigDecimal.TEN, 6, RoundingMode.HALF_UP);
+            BigDecimal latestDividendYield = null;
+            if (latestPrice != null && latestPrice.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal dps = latestDps;
                 latestDividendYield = dps.divide(latestPrice, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100"));
+            } else if (annualYieldMap.get(maxYear) != null) {
+                latestDividendYield = annualYieldMap.get(maxYear);
             }
-            if (latestDividendYield != null && latestDividendYield.compareTo(BigDecimal.ONE) < 0 && latestDividendYield.compareTo(BigDecimal.ZERO) > 0) {
-                // 如果数据库存的是 0.0231 这种小数形式，转为 2.31%
-                latestDividendYield = latestDividendYield.multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP);
-            } else if (latestDividendYield != null) {
+            if (latestDividendYield != null) {
                 latestDividendYield = latestDividendYield.setScale(2, RoundingMode.HALF_UP);
             }
 
@@ -311,80 +327,96 @@ public class StockDividendService {
                 }
             }
 
-            // 近 3 年分红增幅 (%)
+            // 近 3 年分红复合增长率；缺少基期数据时保持为空，不再虚构正增长。
             BigDecimal div3yAgo = annualCashDivMap.get(maxYear - 3);
             BigDecimal dividendGrowth3y = null;
-            if (div3yAgo != null && div3yAgo.compareTo(BigDecimal.ZERO) > 0 && latestYearDividend != null) {
-                dividendGrowth3y = latestYearDividend.subtract(div3yAgo)
-                        .divide(div3yAgo, 4, RoundingMode.HALF_UP)
-                        .multiply(new BigDecimal("100"))
-                        .setScale(1, RoundingMode.HALF_UP);
-            } else if (latestYearDividend != null && latestYearDividend.compareTo(BigDecimal.ZERO) > 0) {
-                dividendGrowth3y = new BigDecimal("10.0");
+            if (div3yAgo != null && div3yAgo.compareTo(BigDecimal.ZERO) > 0
+                    && latestYearDividend.compareTo(BigDecimal.ZERO) > 0) {
+                double growth = (Math.pow(latestYearDividend.divide(div3yAgo, 8, RoundingMode.HALF_UP).doubleValue(), 1.0 / 3.0) - 1) * 100;
+                dividendGrowth3y = BigDecimal.valueOf(growth).setScale(1, RoundingMode.HALF_UP);
             }
 
-            // 现金流质量状态
-            String cashFlowStatus = "现金流充足";
-            if (roeActual != null && roeActual.compareTo(new BigDecimal("15")) >= 0) {
-                cashFlowStatus = "现金流充足";
-            } else if (roeActual != null && roeActual.compareTo(new BigDecimal("8")) >= 0) {
-                cashFlowStatus = "现金流充裕";
-            } else if (roeActual != null && roeActual.compareTo(BigDecimal.ZERO) > 0) {
-                cashFlowStatus = "现金流稳健";
+            BigDecimal annualEps = annualEpsMap.get(maxYear);
+            BigDecimal payoutRatio = annualEps != null && annualEps.compareTo(BigDecimal.ZERO) > 0
+                    ? latestDps.divide(annualEps, 4, RoundingMode.HALF_UP)
+                    .multiply(new BigDecimal("100")).setScale(1, RoundingMode.HALF_UP)
+                    : null;
+
+            BigDecimal profitabilityRoe = roe3yAvg != null ? roe3yAvg : roeActual;
+            String profitabilityStatus;
+            if (profitabilityRoe == null) {
+                profitabilityStatus = "数据不足";
+            } else if (profitabilityRoe.compareTo(new BigDecimal("15")) >= 0) {
+                profitabilityStatus = "盈利优秀";
+            } else if (profitabilityRoe.compareTo(new BigDecimal("8")) >= 0) {
+                profitabilityStatus = "盈利良好";
+            } else if (profitabilityRoe.compareTo(BigDecimal.ZERO) > 0) {
+                profitabilityStatus = "盈利偏弱";
             } else {
-                cashFlowStatus = "现金流一般";
+                profitabilityStatus = "盈利承压";
             }
 
-            // 分红质量评分模型 (总分 100)
-            // 1. 股息率质量 (40% 权重)
+            // 分红质量评分：股息率30 + 连续性25 + 三年增长20 + 派息安全15 + 盈利稳定10。
             double yieldScore = 0;
             double dyVal = latestDividendYield != null ? latestDividendYield.doubleValue() : 0;
-            if (dyVal >= 5.0) yieldScore = 40;
-            else if (dyVal >= 3.0) yieldScore = 30 + (dyVal - 3.0) / 2.0 * 10;
-            else if (dyVal >= 1.5) yieldScore = 20 + (dyVal - 1.5) / 1.5 * 10;
-            else if (dyVal > 0) yieldScore = 10 + (dyVal / 1.5) * 10;
+            if (dyVal >= 5.0) yieldScore = 30;
+            else if (dyVal >= 3.0) yieldScore = 20 + (dyVal - 3.0) / 2.0 * 10;
+            else if (dyVal >= 1.5) yieldScore = 10 + (dyVal - 1.5) / 1.5 * 10;
+            else if (dyVal > 0) yieldScore = dyVal / 1.5 * 10;
 
-            // 2. 连续分红年数 (30% 权重)
             double consScore = 0;
-            if (consecutiveYears >= 10) consScore = 30;
-            else if (consecutiveYears >= 5) consScore = 25 + (consecutiveYears - 5) / 5.0 * 5;
-            else if (consecutiveYears >= 3) consScore = 20 + (consecutiveYears - 3) / 2.0 * 5;
-            else if (consecutiveYears >= 1) consScore = 10 + consecutiveYears * 5;
+            if (consecutiveYears >= 10) consScore = 25;
+            else if (consecutiveYears >= 5) consScore = 18 + (consecutiveYears - 5) / 5.0 * 7;
+            else if (consecutiveYears >= 3) consScore = 12 + (consecutiveYears - 3) / 2.0 * 6;
+            else if (consecutiveYears >= 1) consScore = 4 + (consecutiveYears - 1) * 4;
 
-            // 3. 分红增幅 (20% 权重)
-            double growthScore = 10;
+            double growthScore = 0;
             if (dividendGrowth3y != null) {
                 double gVal = dividendGrowth3y.doubleValue();
-                if (gVal >= 20.0) growthScore = 20;
-                else if (gVal >= 10.0) growthScore = 15 + (gVal - 10.0) / 10.0 * 5;
-                else if (gVal >= 0.0) growthScore = 10 + (gVal / 10.0) * 5;
-                else growthScore = Math.max(2, 10 + gVal / 10.0);
+                if (gVal >= 10.0) growthScore = 20;
+                else if (gVal >= 5.0) growthScore = 15 + (gVal - 5.0);
+                else if (gVal >= 0.0) growthScore = 10 + gVal;
+                else if (gVal > -10.0) growthScore = 10 + gVal;
             }
 
-            // 4. 现金流质量 (10% 权重)
-            double cashScore = 6;
-            if ("现金流充足".equals(cashFlowStatus)) cashScore = 10;
-            else if ("现金流充裕".equals(cashFlowStatus)) cashScore = 8;
-            else if ("现金流稳健".equals(cashFlowStatus)) cashScore = 6;
+            double payoutScore = 0;
+            if (payoutRatio != null) {
+                double payout = payoutRatio.doubleValue();
+                if (payout >= 20 && payout <= 60) payoutScore = 15;
+                else if (payout > 0 && payout <= 80) payoutScore = 12;
+                else if (payout > 0 && payout <= 100) payoutScore = 7;
+                else if (payout > 100 && payout <= 150) payoutScore = 3;
+            }
 
-            int totalScore = (int) Math.round(yieldScore + consScore + growthScore + cashScore);
-            totalScore = Math.min(100, Math.max(20, totalScore));
+            double profitScore = 0;
+            if (profitabilityRoe != null) {
+                double roe = profitabilityRoe.doubleValue();
+                if (roe >= 15) profitScore = 10;
+                else if (roe >= 8) profitScore = 5 + (roe - 8) / 7 * 5;
+                else if (roe > 0) profitScore = roe / 8 * 5;
+            }
 
-            // 分红结论 / 评级标签
-            String dividendLevel = "稳定分红";
-            String conclusion = "连续多年稳定分红，分红可持续性较强。";
-            if (totalScore >= 80) {
-                dividendLevel = "稳定分红";
-                conclusion = "公司连续多年稳定分红，股息率行业领先，现金流充裕，分红可持续性强。";
+            Integer totalScore = latestYearDividend.compareTo(BigDecimal.ZERO) > 0 && latestDividendYield != null
+                    ? Math.min(100, Math.max(0, (int) Math.round(yieldScore + consScore + growthScore + payoutScore + profitScore)))
+                    : null;
+
+            String dividendLevel;
+            String conclusion;
+            if (totalScore == null) {
+                dividendLevel = "数据不足";
+                conclusion = "缺少有效年度分红或价格数据，暂不进行分红质量评分。";
+            } else if (totalScore >= 80) {
+                dividendLevel = "优质分红";
+                conclusion = "股息回报、分红连续性和可持续性表现较好。";
             } else if (totalScore >= 65) {
-                dividendLevel = "高股息";
-                conclusion = "股息收益率具备吸引力，分红政策平稳，具备较好的防御属性。";
+                dividendLevel = "稳健分红";
+                conclusion = "分红记录较稳定，股息回报和派息能力处于较好水平。";
             } else if (totalScore >= 50) {
-                dividendLevel = "分红成长";
-                conclusion = "近年分红逐步提升，盈利能力改善中，持续关注分红政策稳定性。";
+                dividendLevel = "分红观察";
+                conclusion = "具备一定分红能力，但连续性、增长或派息安全性仍需观察。";
             } else {
                 dividendLevel = "较弱分红";
-                conclusion = "分红力度或持续性偏弱，股息回报有限。";
+                conclusion = "当前分红回报或可持续性偏弱，不宜仅依据股息率判断。";
             }
 
             // 最近 4 年快照列表
@@ -397,9 +429,6 @@ public class StockDividendService {
                 if (yYield == null && latestPrice != null && latestPrice.compareTo(BigDecimal.ZERO) > 0 && dps.compareTo(BigDecimal.ZERO) > 0) {
                     yYield = dps.divide(latestPrice, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100"));
                 }
-                if (yYield != null && yYield.compareTo(BigDecimal.ONE) < 0 && yYield.compareTo(BigDecimal.ZERO) > 0) {
-                    yYield = yYield.multiply(new BigDecimal("100"));
-                }
                 if (yYield != null) {
                     yYield = yYield.setScale(2, RoundingMode.HALF_UP);
                 }
@@ -408,8 +437,6 @@ public class StockDividendService {
                 BigDecimal payout = null;
                 if (eps != null && eps.compareTo(BigDecimal.ZERO) > 0 && dps.compareTo(BigDecimal.ZERO) > 0) {
                     payout = dps.divide(eps, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")).setScale(1, RoundingMode.HALF_UP);
-                } else if (dps.compareTo(BigDecimal.ZERO) > 0) {
-                    payout = new BigDecimal("50.0");
                 }
 
                 String label = String.valueOf(y);
@@ -437,12 +464,13 @@ public class StockDividendService {
             vo.setLatestYearDividend(latestYearDividend);
             vo.setDividendYield(latestDividendYield);
             vo.setPeg(peg);
-            vo.setDividendScore(BigDecimal.valueOf(totalScore));
+            vo.setDividendScore(totalScore == null ? null : BigDecimal.valueOf(totalScore));
             vo.setDividendLevel(dividendLevel);
             vo.setConclusion(conclusion);
             vo.setConsecutiveYears(consecutiveYears);
             vo.setDividendGrowth3y(dividendGrowth3y);
-            vo.setCashFlowStatus(cashFlowStatus);
+            vo.setPayoutRatio(payoutRatio);
+            vo.setProfitabilityStatus(profitabilityStatus);
             vo.setPe(pe);
             vo.setPeIndustryAvg(peIndustryAvg);
             vo.setRoeActual(roeActual);
@@ -488,72 +516,85 @@ public class StockDividendService {
 
             for (Sort.Order order : sort) {
                 Comparator<StockDividendStatVO> comparator;
+                Comparator<BigDecimal> valueComparator = order.getDirection() == Sort.Direction.DESC
+                        ? Comparator.nullsLast(Comparator.reverseOrder())
+                        : Comparator.nullsLast(Comparator.naturalOrder());
 
                 switch (order.getProperty()) {
                     case "dividendScore":
                         comparator = Comparator.comparing(
                                 StockDividendStatVO::getDividendScore,
-                                Comparator.nullsLast(BigDecimal::compareTo));
+                                valueComparator);
                         break;
 
                     case "dividendYield":
                         comparator = Comparator.comparing(
                                 StockDividendStatVO::getDividendYield,
-                                Comparator.nullsLast(BigDecimal::compareTo));
+                                valueComparator);
                         break;
 
                     case "latestYearDividend":
                         comparator = Comparator.comparing(
                                 StockDividendStatVO::getLatestYearDividend,
-                                Comparator.nullsLast(BigDecimal::compareTo));
+                                valueComparator);
                         break;
 
                     case "avgDividend":
                         comparator = Comparator.comparing(
                                 StockDividendStatVO::getAvgDividend,
-                                Comparator.nullsLast(BigDecimal::compareTo));
+                                valueComparator);
                         break;
 
                     case "peg":
                         comparator = Comparator.comparing(
                                 StockDividendStatVO::getPeg,
-                                Comparator.nullsLast(BigDecimal::compareTo));
+                                valueComparator);
                         break;
 
                     case "latestPrice":
                         comparator = Comparator.comparing(
                                 StockDividendStatVO::getLatestPrice,
-                                Comparator.nullsLast(BigDecimal::compareTo));
+                                valueComparator);
+                        break;
+
+                    case "dividendGrowth3y":
+                        comparator = Comparator.comparing(
+                                StockDividendStatVO::getDividendGrowth3y,
+                                valueComparator);
                         break;
 
                     default:
                         continue;
                 }
 
-                if (order.getDirection() == Sort.Direction.DESC) {
-                    comparator = comparator.reversed();
-                }
-
                 result = (result == null) ? comparator : result.thenComparing(comparator);
             }
 
             if (result != null) {
-                return result;
+                return result.thenComparing(StockDividendStatVO::getStockCode,
+                        Comparator.nullsLast(Comparator.naturalOrder()));
             }
         }
 
         // 默认按快捷 Tab 排序
         if ("STABLE_DIVIDEND".equalsIgnoreCase(quickTab)) {
             return Comparator.comparing(StockDividendStatVO::getDividendScore,
-                    Comparator.nullsLast(BigDecimal::compareTo)).reversed();
+                    Comparator.nullsLast(Comparator.reverseOrder()))
+                    .thenComparing(StockDividendStatVO::getStockCode, Comparator.nullsLast(Comparator.naturalOrder()));
         } else if ("DIVIDEND_GROWTH".equalsIgnoreCase(quickTab)) {
             return Comparator.comparing(StockDividendStatVO::getDividendGrowth3y,
-                    Comparator.nullsLast(BigDecimal::compareTo)).reversed();
+                    Comparator.nullsLast(Comparator.reverseOrder()))
+                    .thenComparing(StockDividendStatVO::getStockCode, Comparator.nullsLast(Comparator.naturalOrder()));
+        } else if ("HIGH_DIVIDEND".equalsIgnoreCase(quickTab)) {
+            return Comparator.comparing(StockDividendStatVO::getDividendYield,
+                    Comparator.nullsLast(Comparator.reverseOrder()))
+                    .thenComparing(StockDividendStatVO::getStockCode, Comparator.nullsLast(Comparator.naturalOrder()));
         }
 
         // 默认按分红评分或股息率倒序
         return Comparator.comparing(StockDividendStatVO::getDividendScore,
-                Comparator.nullsLast(BigDecimal::compareTo)).reversed();
+                Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(StockDividendStatVO::getStockCode, Comparator.nullsLast(Comparator.naturalOrder()));
     }
 
     public List<StockDividendDetailVO> getDetailByCode(StockDividendDetailReqVO reqVO) {
