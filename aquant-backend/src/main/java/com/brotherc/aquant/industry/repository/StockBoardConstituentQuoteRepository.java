@@ -13,8 +13,12 @@ public interface StockBoardConstituentQuoteRepository extends JpaRepository<Stoc
 
     Page<StockBoardConstituentQuote> findByBoardCode(String boardCode, Pageable pageable);
 
+    List<StockBoardConstituentQuote> findByBoardCodeOrderByChangePercentDesc(String boardCode);
+
     StockBoardConstituentQuote findFirstByBoardCode(String boardCode);
 
     List<StockBoardConstituentQuote> findByBoardCodeAndStockCodeIn(String boardCode, List<String> stockCodeList);
+
+    long deleteByBoardCodeAndStockCodeNotIn(String boardCode, List<String> stockCodeList);
 
 }

@@ -73,6 +73,17 @@ const router = createRouter({
                     ]
                 },
                 {
+                    path: 'industry-detail',
+                    name: 'IndustryDetailRoot',
+                    children: [
+                        {
+                            path: 'index',
+                            name: 'IndustryDetail',
+                            component: () => import('@/views/industry-detail/IndustryDetail.vue')
+                        }
+                    ]
+                },
+                {
                     path: 'fund',
                     name: 'FundRoot',
                     children: [

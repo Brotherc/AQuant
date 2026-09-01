@@ -12,6 +12,13 @@
           @change="handleDateChange"
         />
         <a-select
+          v-model:value="source"
+          class="source-select"
+          :options="sourceOptions"
+          title="选择行业数据源"
+          @change="handleSourceChange"
+        />
+        <a-select
           v-model:value="rankLimit"
           class="rank-limit-select"
           :options="rankLimitOptions"
@@ -49,6 +56,7 @@
           <span>-6%</span>
         </div>
       </div>
+      <a-alert v-if="sourceNotice" :message="sourceNotice" type="warning" show-icon class="source-notice" />
 
       <div ref="chartShellRef" class="chart-shell" :class="{ 'is-loading': loading }">
         <div ref="chartRef" class="analysis-chart" :style="chartStyle"></div>
@@ -68,7 +76,7 @@ import { message } from 'ant-design-vue';
 import { SyncOutlined } from '@ant-design/icons-vue';
 import dayjs from 'dayjs';
 import * as echarts from 'echarts';
-import { getIndustryRiseAnalysis } from '@/api/board';
+import { getIndustrySourceAnalysis, type IndustryDataSource } from '@/api/board';
 import {
   buildIndustryAnalysisMatrix,
   buildIndustryAnalysisStateQuery,
@@ -90,6 +98,15 @@ const chartShellRef = ref<HTMLDivElement | null>(null);
 const isMounted = ref(false);
 const loading = ref(false);
 const lastUpdated = ref('');
+const validSource = (value: unknown): value is IndustryDataSource => value === 'THS' || value === 'EM';
+const initialSource = validSource(route.query.source) ? route.query.source
+  : (localStorage.getItem('industry-analysis-source') === 'EM' ? 'EM' : 'THS');
+const source = ref<IndustryDataSource>(initialSource);
+const sourceNotice = ref('');
+const sourceOptions = [
+  { value: 'THS', label: '同花顺' },
+  { value: 'EM', label: '东方财富' }
+];
 const dateRange = ref<[string, string]>(restoredViewState
   ? [restoredViewState.startDate, restoredViewState.endDate]
   : [dayjs().subtract(29, 'day').format('YYYY-MM-DD'), dayjs().format('YYYY-MM-DD')]);
@@ -125,6 +142,18 @@ const handleRankLimitChange = () => {
   loadAnalysis();
 };
 
+const setEffectiveSource = async (nextSource: IndustryDataSource, notice = '') => {
+  source.value = nextSource;
+  localStorage.setItem('industry-analysis-source', nextSource);
+  sourceNotice.value = notice;
+  await router.replace({ query: { ...route.query, source: nextSource } });
+};
+
+const handleSourceChange = async () => {
+  await setEffectiveSource(source.value);
+  loadAnalysis();
+};
+
 const loadAnalysis = async () => {
   const [startDate, endDate] = dateRange.value;
   if (!startDate || !endDate) {
@@ -132,14 +161,21 @@ const loadAnalysis = async () => {
   }
   loading.value = true;
   try {
-    const response = await getIndustryRiseAnalysis({
+    const response = await getIndustrySourceAnalysis({
+      source: source.value,
       startDate,
       endDate,
       rankLimit: rankLimit.value
     });
     if (response.data.success || response.data.code === 0) {
+      const snapshot = response.data.data;
+      if (snapshot.effectiveSource !== source.value || snapshot.fallback) {
+        await setEffectiveSource(snapshot.effectiveSource, snapshot.message || `已切换至${snapshot.effectiveSource === 'EM' ? '东方财富' : '同花顺'}数据源`);
+      } else {
+        sourceNotice.value = snapshot.stale ? '当前展示的是过期缓存，后台将在后续同步时更新。' : '';
+      }
       const nextMatrix = buildIndustryAnalysisMatrix(
-        response.data.data as IndustryRiseAnalysisPoint[],
+        snapshot.content as IndustryRiseAnalysisPoint[],
         defaultTradingDayLimit.value ? 10 : 120,
         rankLimit.value
       );
@@ -173,9 +209,10 @@ const renderChart = () => {
         const [startDate, endDate] = dateRange.value;
         const shell = chartShellRef.value;
         router.push({
-          path: '/board/index',
+          path: '/industry-detail/index',
           query: {
             industry: sectorName,
+            source: source.value,
             from: 'industry-analysis',
             ...buildIndustryAnalysisStateQuery({
               startDate,
@@ -341,6 +378,14 @@ onBeforeUnmount(() => {
 
 .rank-limit-select {
   width: 104px;
+}
+
+.source-select {
+  width: 106px;
+}
+
+.source-notice {
+  margin: 0 20px 12px;
 }
 
 .refresh-button {

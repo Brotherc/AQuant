@@ -48,6 +48,36 @@ export interface IndustryRiseAnalysisPoint {
     changeAmount: number | null;
 }
 
+export interface StockIndustryConstituentVO {
+    code: string;
+    name: string;
+    latestPrice: number | null;
+    changeAmount: number | null;
+    changePercent: number | null;
+    historyPrices: number[];
+}
+
+export interface StockIndustryConstituentSnapshotVO {
+    industry: string;
+    sourceUpdatedAt: string | null;
+    stale: boolean;
+    available: boolean;
+    message: string | null;
+    content: StockIndustryConstituentVO[];
+}
+
+export type IndustryDataSource = 'THS' | 'EM';
+
+export interface IndustrySourceSnapshot<T> {
+    requestedSource: IndustryDataSource;
+    effectiveSource: IndustryDataSource;
+    fallback: boolean;
+    stale: boolean;
+    available: boolean;
+    message: string | null;
+    content: T;
+}
+
 import api from '@/utils/request';
 
 export const getBoardPage = (params: StockIndustryBoardPageReqVO & { page: number; size: number; sort?: string[] }) => {
@@ -70,7 +100,25 @@ export const getIndustryRiseAnalysis = (params: { startDate: string; endDate: st
     });
 };
 
+export const getIndustryConstituents = (params: { industry: string; tradeDate?: string }) => {
+    return api.get<ResponseDTO<StockIndustryConstituentSnapshotVO>>('/stockIndustryBoard/constituents', { params });
+};
+
 export const getStockBoardIndustryLatest = () => {
     return api.get<ResponseDTO<string>>('/stockSync/stockBoardIndustryLatest');
 };
+
+export const getIndustrySourceAnalysis = (params: {
+    source: IndustryDataSource; startDate: string; endDate: string; rankLimit?: number
+}) => api.get<ResponseDTO<IndustrySourceSnapshot<IndustryRiseAnalysisPoint[]>>>('/industrySource/analysis', { params, timeout: 60000 });
+
+export const getIndustrySourceOverview = (params: { source: IndustryDataSource; industry: string }) =>
+    api.get<ResponseDTO<IndustrySourceSnapshot<StockIndustryBoardVO>>>('/industrySource/overview', { params });
+
+export const getIndustrySourceHistory = (params: { source: IndustryDataSource; industry: string; frequency?: string }) =>
+    api.get<ResponseDTO<IndustrySourceSnapshot<StockIndustryBoardHistory[]>>>('/industrySource/history/kline', { params });
+
+export const getIndustrySourceConstituents = (params: {
+    source: IndustryDataSource; industry: string; tradeDate?: string
+}) => api.get<ResponseDTO<IndustrySourceSnapshot<StockIndustryConstituentSnapshotVO>>>('/industrySource/constituents', { params });
 

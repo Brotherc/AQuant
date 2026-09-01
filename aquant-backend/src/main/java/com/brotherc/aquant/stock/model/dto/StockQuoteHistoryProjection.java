@@ -6,6 +6,8 @@ public interface StockQuoteHistoryProjection {
 
     String getCode();
 
+    String getTradeDate();
+
     BigDecimal getClosePrice();
 
 }

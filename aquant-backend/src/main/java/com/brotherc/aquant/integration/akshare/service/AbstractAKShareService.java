@@ -48,7 +48,8 @@ public abstract class AbstractAKShareService {
         String apiName = extractApiName(request);
         try (Response response = okHttpClient.newCall(request).execute()) {
             if (!response.isSuccessful() || response.body() == null) {
-                log.info("{} 失败响应: {}", apiName, response);
+                String errorBody = response.body() == null ? null : response.body().string();
+                log.warn("{} 失败响应: status={}, body={}", apiName, response.code(), errorBody);
                 throw new BusinessException(ExceptionEnum.API_REQUEST_ERROR);
             }
             return objectMapper.readValue(response.body().string(), typeReference);

@@ -11,7 +11,13 @@ import java.time.LocalDateTime;
  */
 @Data
 @Entity
-@Table(name = "stock_board_constituent_quote")
+@Table(
+        name = "stock_board_constituent_quote",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_board_constituent_stock",
+                columnNames = {"board_code", "stock_code"}
+        )
+)
 public class StockBoardConstituentQuote {
 
     @Id

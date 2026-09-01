@@ -37,6 +37,7 @@
           placeholder="搜索板块名称"
           allow-clear
           class="sidebar-search-input"
+          @update:value="handleSearchInput"
           @pressEnter="handleSearch"
         >
           <template #prefix>
@@ -46,9 +47,9 @@
       </div>
 
       <!-- 板块列表 -->
-      <div class="sidebar-stock-list" v-if="filteredBoardList.length > 0">
+      <div class="sidebar-stock-list" v-if="dataSource.length > 0">
         <div
-          v-for="(board, index) in filteredBoardList"
+          v-for="(board, index) in dataSource"
           :key="board.sectorName"
           class="sidebar-stock-item"
           :class="{ 'sidebar-stock-item--active': selectedBoard?.sectorName === board.sectorName }"
@@ -243,17 +244,8 @@ const selectedBoard = ref<StockIndustryBoardVO | null>(null);
 const currentBoardCode = computed(() => selectedBoard.value?.sectorName || '');
 const currentBoardName = computed(() => selectedBoard.value?.sectorName || '');
 
-// 本地即时模糊过滤或后端搜索
-const filteredBoardList = computed(() => {
-  if (!searchKeyword.value.trim()) {
-    return dataSource.value;
-  }
-  const q = searchKeyword.value.trim().toLowerCase();
-  return dataSource.value.filter(b =>
-    (b.sectorName && b.sectorName.toLowerCase().includes(q)) ||
-    (b.leadingStock && b.leadingStock.toLowerCase().includes(q))
-  );
-});
+let searchTimer: ReturnType<typeof setTimeout> | undefined;
+let boardRequestSequence = 0;
 
 // 价格颜色类
 const getPriceColorClass = (val: number | undefined | null) => {
@@ -275,6 +267,7 @@ const fetchRefreshTime = async () => {
 
 // 加载全板块数据
 const fetchData = async (refresh: boolean = false) => {
+  const requestSequence = ++boardRequestSequence;
   loading.value = true;
   try {
     const res = await getBoardPage({
@@ -284,6 +277,9 @@ const fetchData = async (refresh: boolean = false) => {
       sort: ['changePercent,desc'],
       refresh,
     });
+    if (requestSequence !== boardRequestSequence) {
+      return;
+    }
     const { data } = res;
     if (data.success || data.code === 0) {
       const pageResult = data.data;
@@ -305,9 +301,14 @@ const fetchData = async (refresh: boolean = false) => {
       }
     }
   } catch (error) {
+    if (requestSequence !== boardRequestSequence) {
+      return;
+    }
     console.error('Failed to fetch board data:', error);
   } finally {
-    loading.value = false;
+    if (requestSequence === boardRequestSequence) {
+      loading.value = false;
+    }
   }
 };
 
@@ -318,8 +319,23 @@ const selectBoard = (board: StockIndustryBoardVO) => {
 
 // 搜索操作
 const handleSearch = () => {
+  if (searchTimer) {
+    clearTimeout(searchTimer);
+    searchTimer = undefined;
+  }
   pagination.current = 1;
   fetchData();
+};
+
+const handleSearchInput = (value: string) => {
+  searchKeyword.value = value;
+  if (searchTimer) {
+    clearTimeout(searchTimer);
+  }
+  searchTimer = setTimeout(() => {
+    pagination.current = 1;
+    fetchData();
+  }, 300);
 };
 
 // 分页变化

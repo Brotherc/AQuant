@@ -71,6 +71,10 @@ const props = withDefaults(defineProps<{
   resetFrequencyOnCodeChange: false
 });
 
+const emit = defineEmits<{
+  'date-select': [tradeDate: string];
+}>();
+
 const periods: Array<{ value: Frequency; label: string }> = [
   { value: '1d', label: '日K' },
   { value: '1w', label: '周K' },
@@ -97,6 +101,12 @@ const initChart = () => {
   if (!chartContainer.value || chartInstance) return;
 
   chartInstance = echarts.init(chartContainer.value);
+  chartInstance.on('click', params => {
+    const point = historyData.value[params.dataIndex];
+    if (point?.tradeDate) {
+      emit('date-select', point.tradeDate);
+    }
+  });
   resizeObserver?.disconnect();
   resizeObserver = new ResizeObserver(() => {
     chartInstance?.resize();

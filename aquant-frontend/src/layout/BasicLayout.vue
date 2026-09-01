@@ -272,6 +272,9 @@ const currentRouteMeta = computed(() => {
   if (route.path === '/watchlist/index' || route.path === '/watchlist') {
     return { parent: '', child: '' };
   }
+  if (route.path === '/industry-detail/index') {
+    return { parent: '市场数据', child: '行业详情' };
+  }
   for (const group of navigationGroups) {
     if (group.path && group.path === route.path) {
       return { parent: group.title, child: group.title };
