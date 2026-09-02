@@ -1,50 +1,61 @@
 <template>
   <div class="dual-ma-container">
-    <a-card :bordered="false" class="strategy-section-card strategy-section-card--context">
-      <div class="strategy-page-header">
-        <div class="strategy-page-header-left">
-          <a-radio-group
-            v-model:value="analysisMode"
-            button-style="solid"
-            class="strategy-mode-switch"
-            @change="handleModeChange"
+    <!-- 顶部独立模式切换与操作栏 -->
+    <div class="strategy-mode-bar">
+      <div class="strategy-mode-bar__left">
+        <div class="strategy-mode-tabs">
+          <button
+            class="strategy-mode-tab-btn"
+            :class="{ active: analysisMode === 'signal' }"
+            @click="setAnalysisMode('signal')"
           >
-            <a-radio-button value="signal">实时信号</a-radio-button>
-            <a-radio-button value="backtest">历史回测</a-radio-button>
-          </a-radio-group>
-          <div v-if="analysisMode === 'backtest' && backtestLastTime" class="page-sync-meta">
-            <span class="page-sync-meta__label">最后时间</span>
-            <span class="page-sync-meta__value">{{ formatDateTime(backtestLastTime) }}</span>
-          </div>
-        </div>
-        <div class="strategy-page-header-actions">
-          <a-button type="link" class="strategy-help-link" @click="infoVisible = true">
-            <info-circle-outlined /> 了解双均线策略
-          </a-button>
+            实时信号
+          </button>
+          <button
+            class="strategy-mode-tab-btn"
+            :class="{ active: analysisMode === 'backtest' }"
+            @click="setAnalysisMode('backtest')"
+          >
+            历史回测
+          </button>
         </div>
       </div>
 
-      <div class="strategy-workbench">
-        <!-- Search Form -->
+      <div class="strategy-mode-bar__right">
+        <span v-if="analysisMode === 'backtest' && backtestLastTime" class="refresh-time-text">
+          更新于 {{ formatDateTime(backtestLastTime) }}
+        </span>
+
+        <span v-if="analysisMode === 'backtest' && backtestLastTime" class="strategy-meta-divider" />
+
+        <a-button type="link" class="strategy-help-link" @click="infoVisible = true">
+          <info-circle-outlined /> 了解双均线策略
+        </a-button>
+      </div>
+    </div>
+
+    <!-- 主表格卡片（整合搜索工具栏与数据表格） -->
+    <div class="table-card">
+      <!-- 搜索过滤工具栏 -->
+      <div class="table-toolbar">
         <a-form
-          v-if="analysisMode === 'signal'"
-          class="strategy-search-form strategy-search-form--signal"
+          class="strategy-search-form"
           layout="inline"
           :model="queryParams"
           @finish="handleSearch"
         >
           <a-form-item label="所属市场">
-            <a-select v-model:value="queryParams.market" style="width: 110px">
+            <a-select v-model:value="queryParams.market" style="width: 120px">
               <a-select-option value="sh">沪市 (SH)</a-select-option>
               <a-select-option value="sz">深市 (SZ)</a-select-option>
               <a-select-option value="bj">北交所 (BJ)</a-select-option>
             </a-select>
           </a-form-item>
           <a-form-item label="股票代码">
-            <a-input v-model:value="queryParams.code" placeholder="输入代码" allow-clear style="width: 110px" />
+            <a-input v-model:value="queryParams.code" placeholder="输入代码" allow-clear style="width: 120px" />
           </a-form-item>
           <a-form-item label="短期均线">
-            <a-select v-model:value="queryParams.maShort" style="width: 80px">
+            <a-select v-model:value="queryParams.maShort" style="width: 85px">
               <a-select-option :value="5">5天</a-select-option>
               <a-select-option :value="10">10天</a-select-option>
               <a-select-option :value="20">20天</a-select-option>
@@ -54,7 +65,7 @@
             </a-select>
           </a-form-item>
           <a-form-item label="长期均线">
-            <a-select v-model:value="queryParams.maLong" style="width: 80px">
+            <a-select v-model:value="queryParams.maLong" style="width: 85px">
               <a-select-option :value="5">5天</a-select-option>
               <a-select-option :value="10">10天</a-select-option>
               <a-select-option :value="20">20天</a-select-option>
@@ -63,11 +74,26 @@
               <a-select-option :value="120">120天</a-select-option>
             </a-select>
           </a-form-item>
-          <a-form-item label="交易信号">
-            <a-select v-model:value="queryParams.signal" placeholder="请选择" allow-clear style="width: 100px">
+          <a-form-item label="交易信号" v-if="analysisMode === 'signal'">
+            <a-select v-model:value="queryParams.signal" placeholder="请选择" allow-clear style="width: 95px">
               <a-select-option value="BUY">买入</a-select-option>
               <a-select-option value="SELL">卖出</a-select-option>
               <a-select-option value="HOLD">无</a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item label="回测年数" v-if="analysisMode === 'backtest'">
+            <a-select v-model:value="queryParams.recentYears" style="width: 95px">
+              <a-select-option :value="1">近 1 年</a-select-option>
+              <a-select-option :value="2">近 2 年</a-select-option>
+              <a-select-option :value="3">近 3 年</a-select-option>
+              <a-select-option :value="5">近 5 年</a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item label="可靠度" v-if="analysisMode === 'backtest'">
+            <a-select v-model:value="queryParams.reliability" placeholder="全部" allow-clear style="width: 110px">
+              <a-select-option v-for="option in reliabilityOptions" :key="option" :value="option">
+                {{ option }}
+              </a-select-option>
             </a-select>
           </a-form-item>
           <a-form-item label="自选分组">
@@ -75,7 +101,7 @@
               v-model:value="queryParams.watchlistGroupId"
               placeholder="全部"
               allow-clear
-              style="width: 135px"
+              style="width: 125px"
               :disabled="!isLoggedIn"
               :loading="watchlistGroupsLoading"
             >
@@ -84,91 +110,14 @@
               </a-select-option>
             </a-select>
           </a-form-item>
-          <a-form-item class="strategy-search-form-submit strategy-search-form-submit--signal">
+          <a-form-item class="strategy-search-form-submit">
             <a-button type="primary" html-type="submit">查询</a-button>
           </a-form-item>
         </a-form>
-
-        <a-form
-          v-else
-          class="strategy-search-form strategy-search-form--backtest"
-          layout="inline"
-          :model="queryParams"
-          @finish="handleSearch"
-        >
-          <div class="strategy-search-form-row">
-            <a-form-item label="所属市场">
-              <a-select v-model:value="queryParams.market" style="width: 130px">
-                <a-select-option value="sh">沪市 (SH)</a-select-option>
-                <a-select-option value="sz">深市 (SZ)</a-select-option>
-                <a-select-option value="bj">北交所 (BJ)</a-select-option>
-              </a-select>
-            </a-form-item>
-            <a-form-item label="股票代码">
-              <a-input v-model:value="queryParams.code" placeholder="输入代码" allow-clear style="width: 130px" />
-            </a-form-item>
-            <a-form-item label="自选分组">
-              <a-select
-                v-model:value="queryParams.watchlistGroupId"
-                placeholder="全部"
-                allow-clear
-                style="width: 130px"
-                :disabled="!isLoggedIn"
-                :loading="watchlistGroupsLoading"
-              >
-                <a-select-option v-for="group in watchlistGroups" :key="group.id" :value="group.id">
-                  {{ group.name }}
-                </a-select-option>
-              </a-select>
-            </a-form-item>
-          </div>
-          <div class="strategy-search-form-row strategy-search-form-row--second">
-            <a-form-item label="短期均线">
-              <a-select v-model:value="queryParams.maShort" style="width: 130px">
-                <a-select-option :value="5">5天</a-select-option>
-                <a-select-option :value="10">10天</a-select-option>
-                <a-select-option :value="20">20天</a-select-option>
-                <a-select-option :value="30">30天</a-select-option>
-                <a-select-option :value="60">60天</a-select-option>
-                <a-select-option :value="120">120天</a-select-option>
-              </a-select>
-            </a-form-item>
-            <a-form-item label="长期均线">
-              <a-select v-model:value="queryParams.maLong" style="width: 130px">
-                <a-select-option :value="5">5天</a-select-option>
-                <a-select-option :value="10">10天</a-select-option>
-                <a-select-option :value="20">20天</a-select-option>
-                <a-select-option :value="30">30天</a-select-option>
-                <a-select-option :value="60">60天</a-select-option>
-                <a-select-option :value="120">120天</a-select-option>
-              </a-select>
-            </a-form-item>
-            <a-form-item label="回测年数">
-              <a-select v-model:value="queryParams.recentYears" style="width: 130px">
-                <a-select-option :value="1">近 1 年</a-select-option>
-                <a-select-option :value="2">近 2 年</a-select-option>
-                <a-select-option :value="3">近 3 年</a-select-option>
-                <a-select-option :value="5">近 5 年</a-select-option>
-              </a-select>
-            </a-form-item>
-            <a-form-item label="可靠度">
-              <a-select v-model:value="queryParams.reliability" placeholder="全部" allow-clear style="width: 130px">
-                <a-select-option v-for="option in reliabilityOptions" :key="option" :value="option">
-                  {{ option }}
-                </a-select-option>
-              </a-select>
-            </a-form-item>
-            <a-form-item class="strategy-search-form-submit">
-              <a-button type="primary" html-type="submit">查询</a-button>
-            </a-form-item>
-          </div>
-        </a-form>
       </div>
-    </a-card>
 
-    <a-card :bordered="false" class="strategy-section-card strategy-section-card--results">
-      <div class="strategy-result-shell">
-        <!-- Data Table -->
+      <!-- 数据表格 -->
+      <div class="table-body-wrap">
         <a-table
           :columns="columns"
           :data-source="dataSource"
@@ -177,13 +126,14 @@
           :scroll="{ x: tableScrollX }"
           @change="handleTableChange"
           row-key="id"
+          class="strategy-main-table"
         >
           <template #bodyCell="{ column, text, record }">
             <template v-if="column.key === 'code'">
-              <a-tag class="stock-code-tag">{{ text }}</a-tag>
+              <a-tag :bordered="false" class="stock-code-tag">{{ text }}</a-tag>
             </template>
             <template v-if="column.key === 'signal'">
-              <a-tag :class="getSignalLabel(text).class">
+              <a-tag :bordered="false" :class="['signal-tag', getSignalLabel(text).class]">
                 {{ getSignalLabel(text).text }}
               </a-tag>
             </template>
@@ -201,17 +151,23 @@
               </span>
             </template>
             <template v-if="column.key === 'reliability'">
-              <a-tag :color="text === '高' ? 'error' : (text === '中' ? 'warning' : 'default')">
+              <a-tag
+                v-if="text"
+                :bordered="false"
+                class="reliability-tag"
+                :class="`reliability-tag--${getReliabilityClass(text)}`"
+              >
                 {{ text }}
               </a-tag>
+              <span v-else>-</span>
             </template>
             <template v-if="column.key === 'operation'">
-              <a @click="handleChart(record)">行情</a>
+              <a class="table-text-link" @click="handleChart(record)">行情</a>
             </template>
           </template>
         </a-table>
       </div>
-    </a-card>
+    </div>
     
     <!-- 策略说明抽屉 -->
     <a-drawer
@@ -358,7 +314,7 @@ const columns = computed(() => {
     );
   }
 
-  baseColumns.push({ title: '操作', key: 'operation', width: 100 } as any);
+  baseColumns.push({ title: '操作', key: 'operation', width: 95 } as any);
   return baseColumns;
 });
 
@@ -372,6 +328,13 @@ const getSignalLabel = (signal: string) => {
     'HOLD': { text: '无', class: 'signal-tag-hold' },
   };
   return map[signal] || { text: signal, class: 'signal-tag-default' };
+};
+
+const getReliabilityClass = (val: string) => {
+  if (val === '高') return 'high';
+  if (val === '中') return 'mid';
+  if (val?.startsWith('低')) return 'low';
+  return 'default';
 };
 
 const formatDateTime = (value?: string) => {
@@ -429,6 +392,12 @@ const fetchData = async () => {
   }
 };
 
+const setAnalysisMode = (mode: 'signal' | 'backtest') => {
+  if (analysisMode.value === mode) return;
+  analysisMode.value = mode;
+  handleModeChange();
+};
+
 const handleModeChange = () => {
   pagination.current = 1;
   sortState.value = [];
@@ -445,7 +414,6 @@ const handleSearch = () => {
 
 const handleTableChange = (pag: any, _filters: any, sorter: any) => {
   pagination.pageSize = pag.pageSize;
-  
   if (sorter.field && sorter.order) {
     pagination.current = 1;
     const order = sorter.order === 'ascend' ? 'asc' : 'desc';
@@ -454,18 +422,16 @@ const handleTableChange = (pag: any, _filters: any, sorter: any) => {
     pagination.current = pag.current;
     sortState.value = [];
   }
-
   fetchData();
 };
 
-const handleChart = (record: StockTradeSignalVO) => {
+const handleChart = (record: StockTradeSignalVO | StockTradeBacktestVO) => {
   currentStockCode.value = record.code;
   currentStockName.value = record.name;
   chartVisible.value = true;
 };
 
 onMounted(async () => {
-  isLoggedIn.value = !!localStorage.getItem('token');
   fetchData();
   if (isLoggedIn.value) {
     await loadWatchlistGroups();
@@ -476,145 +442,120 @@ onMounted(async () => {
 <style scoped>
 .dual-ma-container {
   padding: 0;
+  width: 100%;
+}
+
+.strategy-mode-bar {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.strategy-section-card {
-  overflow: hidden;
-}
-
-.strategy-section-card--context {
-  background:
-    radial-gradient(circle at top right, rgba(229, 231, 235, 0.07), transparent 28%),
-    var(--color-bg-secondary);
-}
-
-.strategy-section-card--results :deep(.ant-card-body) {
-  padding-top: 18px;
-}
-
-.strategy-page-header {
-  display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  gap: 20px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
+  gap: 16px;
   flex-wrap: wrap;
 }
 
-.strategy-page-header-left {
+.strategy-mode-bar__left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.strategy-mode-tabs {
+  display: flex;
+  gap: 6px;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.strategy-mode-tab-btn {
+  border: none;
+  background: transparent;
+  padding: 5px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.strategy-mode-tab-btn:hover {
+  color: #0f172a;
+}
+
+.strategy-mode-tab-btn.active {
+  background: #0f172a;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.refresh-time-text {
+  font-size: 12px;
+  color: #64748b;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.strategy-mode-bar__right {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.strategy-page-header-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.strategy-page-header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
-  margin-left: auto;
-}
-
-.strategy-mode-switch {
-  flex-shrink: 0;
-}
-
-.strategy-mode-switch :deep(.ant-radio-button-wrapper) {
-  min-width: 92px;
-  text-align: center;
+.strategy-meta-divider {
+  width: 1px;
+  height: 14px;
+  background-color: #cbd5e1;
 }
 
 .strategy-help-link {
-  padding-inline: 0;
-}
-
-.strategy-workbench {
-  margin-top: 0;
+  font-size: 13px;
+  color: #64748b;
   padding: 0;
-  border: none;
-  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.strategy-workbench-title {
-  color: var(--color-text-primary);
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
+.strategy-help-link:hover {
+  color: #0f172a;
 }
 
-.strategy-workbench-hint {
-  margin-top: 4px;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-normal);
+/* 主数据表格卡片 */
+.table-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+}
+
+.table-toolbar {
+  padding: 16px 16px 14px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.table-body-wrap {
+  padding: 0 16px 16px 16px;
+}
+
+:deep(.strategy-main-table .ant-table) {
+  font-size: 13px;
 }
 
 .strategy-search-form {
-  justify-content: flex-start;
-}
-
-.strategy-search-form--signal {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   width: 100%;
-  row-gap: 16px;
+  row-gap: 14px;
 }
 
-.strategy-search-form--signal :deep(.ant-form-item) {
+.strategy-search-form :deep(.ant-form-item) {
   margin-inline-end: 18px;
   margin-bottom: 0;
-}
-
-.strategy-search-form-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  flex: 0 0 100%;
-  width: 100%;
-  column-gap: 24px;
-  row-gap: 12px;
-}
-
-.strategy-search-form--backtest :deep(.ant-form-item) {
-  margin-inline-end: 0;
-  margin-bottom: 0;
-}
-
-.strategy-search-form--backtest :deep(.ant-form-item-row) {
-  display: flex;
-  align-items: center;
-  flex-wrap: nowrap;
-}
-
-.strategy-search-form--backtest :deep(.ant-form-item-label) {
-  flex: 0 0 84px;
-  padding-right: 8px;
-  text-align: right;
-}
-
-.strategy-search-form--backtest :deep(.ant-form-item-label > label) {
-  display: inline-flex;
-  justify-content: flex-end;
-  width: 100%;
-}
-
-.strategy-search-form--backtest :deep(.ant-form-item-control) {
-  flex: none;
-}
-
-.strategy-search-form-row + .strategy-search-form-row {
-  margin-top: 12px;
 }
 
 .strategy-search-form-submit {
@@ -627,65 +568,115 @@ onMounted(async () => {
   justify-content: flex-end;
 }
 
-.strategy-result-shell {
-  padding-top: 0;
+:deep(.strategy-main-table .ant-table-thead > tr > th) {
+  background: #f1f5f9 !important;
+  color: #334155;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 12px 14px;
+  white-space: nowrap !important;
 }
 
-.strategy-result-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 14px;
+:deep(.strategy-main-table .ant-table-thead th.ant-table-column-has-sorters:hover) {
+  background: #e2e8f0 !important;
 }
 
-.strategy-result-title {
-  color: var(--color-text-primary);
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
+:deep(.strategy-main-table .ant-table-tbody > tr > td) {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 12px 14px;
+  transition: background 0.15s ease;
 }
 
-.strategy-result-hint {
-  margin-top: 4px;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-normal);
+:deep(.strategy-main-table .ant-table-tbody > tr:hover > td) {
+  background: #f8fafc !important;
 }
 
-.strategy-result-meta {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
+.stock-code-tag {
+  background: #f1f5f9 !important;
+  border: none !important;
+  color: #475569;
+  font-weight: 500;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
 }
 
-.strategy-result-chip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-xs);
-  white-space: nowrap;
+.table-text-link {
+  color: #2563eb;
+  font-size: 13px;
+  cursor: pointer;
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  transition: color 0.15s ease;
 }
 
-.strategy-result-chip--strong {
-  color: var(--color-text-primary);
-  font-family: var(--font-family-mono);
+.table-text-link:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
 }
 
-.strategy-result-shell :deep(.ant-table-wrapper) {
-  border-top: 1px solid var(--color-divider);
-  padding-top: 2px;
+.signal-tag {
+  border: none !important;
+  font-weight: 500;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.signal-tag-buy {
+  background-color: #fee2e2 !important;
+  color: #dc2626 !important;
+}
+
+.signal-tag-sell {
+  background-color: #dcfce7 !important;
+  color: #16a34a !important;
+}
+
+.signal-tag-hold {
+  background-color: #f1f5f9 !important;
+  color: #64748b !important;
+}
+
+.signal-tag-default {
+  background-color: #f1f5f9 !important;
+  color: #64748b !important;
+}
+
+.reliability-tag {
+  border: none !important;
+  font-weight: 500;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.reliability-tag--high {
+  background-color: #fee2e2 !important;
+  color: #dc2626 !important;
+}
+
+.reliability-tag--mid {
+  background-color: #fef3c7 !important;
+  color: #d97706 !important;
+}
+
+.reliability-tag--low {
+  background-color: #f1f5f9 !important;
+  color: #64748b !important;
+}
+
+.reliability-tag--default {
+  background-color: #f1f5f9 !important;
+  color: #94a3b8 !important;
 }
 
 .strategy-info h3 {
   margin-top: 16px;
   margin-bottom: 8px;
-  color: var(--color-text-primary);
+  color: #0f172a;
   font-weight: 600;
 }
 
@@ -712,48 +703,7 @@ onMounted(async () => {
   margin-bottom: 6px;
 }
 
-@media (max-width: 1080px) {
-  .strategy-page-header {
-    flex-direction: column;
-  }
-
-  .strategy-page-header-main {
-    width: 100%;
-  }
-
-  .strategy-page-header-actions {
-    justify-content: flex-start;
-  }
-
-  .strategy-result-header {
-    flex-direction: column;
-  }
-
-  .strategy-result-meta {
-    justify-content: flex-start;
-  }
-}
-
 @media (max-width: 768px) {
-  .strategy-workbench {
-    padding: 0;
-  }
-
-  .strategy-search-form--backtest :deep(.ant-form-item-row) {
-    flex-wrap: wrap;
-  }
-
-  .strategy-search-form--backtest :deep(.ant-form-item-label) {
-    flex: 0 0 100%;
-    padding-right: 0;
-    margin-bottom: 4px;
-    text-align: left;
-  }
-
-  .strategy-search-form--backtest :deep(.ant-form-item-label > label) {
-    justify-content: flex-start;
-  }
-
   .strategy-search-form-submit {
     margin-inline-start: 0;
   }

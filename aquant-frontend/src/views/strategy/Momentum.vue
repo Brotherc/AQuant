@@ -1,152 +1,180 @@
 <template>
   <div class="momentum-container">
-    <a-card :bordered="false" class="strategy-section-card strategy-section-card--context">
-      <div class="strategy-page-header">
-        <div class="strategy-page-header-left">
-          <a-radio-group v-model:value="analysisMode" button-style="solid" class="strategy-mode-switch" @change="handleModeChange">
-            <a-radio-button value="signal">实时信号</a-radio-button>
-            <a-radio-button value="backtest">历史回测</a-radio-button>
-          </a-radio-group>
-          <div v-if="analysisMode === 'backtest' && backtestLastTime" class="page-sync-meta">
-            <span class="page-sync-meta__label">最后时间</span>
-            <span class="page-sync-meta__value">{{ formatDateTime(backtestLastTime) }}</span>
-          </div>
-        </div>
-        <div class="strategy-page-header-actions">
-          <a-button type="link" class="strategy-help-link" @click="infoVisible = true">
-            <info-circle-outlined /> 了解动量策略
-          </a-button>
+    <!-- 顶部独立模式切换与操作栏 -->
+    <div class="strategy-mode-bar">
+      <div class="strategy-mode-bar__left">
+        <div class="strategy-mode-tabs">
+          <button
+            class="strategy-mode-tab-btn"
+            :class="{ active: analysisMode === 'signal' }"
+            @click="setAnalysisMode('signal')"
+          >
+            实时信号
+          </button>
+          <button
+            class="strategy-mode-tab-btn"
+            :class="{ active: analysisMode === 'backtest' }"
+            @click="setAnalysisMode('backtest')"
+          >
+            历史回测
+          </button>
         </div>
       </div>
 
-      <div class="strategy-workbench">
-        <!-- Search Form -->
+      <div class="strategy-mode-bar__right">
+        <span v-if="analysisMode === 'backtest' && backtestLastTime" class="refresh-time-text">
+          更新于 {{ formatDateTime(backtestLastTime) }}
+        </span>
+
+        <span v-if="analysisMode === 'backtest' && backtestLastTime" class="strategy-meta-divider" />
+
+        <a-button type="link" class="strategy-help-link" @click="infoVisible = true">
+          <info-circle-outlined /> 了解动量策略
+        </a-button>
+      </div>
+    </div>
+
+    <!-- 主表格卡片（整合搜索过滤工具栏与数据表格） -->
+    <div class="table-card">
+      <!-- 搜索过滤工具栏 -->
+      <div class="table-toolbar">
         <div ref="searchFormWrapperRef">
-        <a-form
-          class="strategy-search-form strategy-search-form--signal"
-          layout="inline"
-          :model="queryParams"
-          @finish="handleSearch"
-        >
-          <a-form-item label="所属市场">
-            <a-select v-model:value="queryParams.market" style="width: 130px">
-              <a-select-option value="sh">沪市 (SH)</a-select-option>
-              <a-select-option value="sz">深市 (SZ)</a-select-option>
-              <a-select-option value="bj">北交所 (BJ)</a-select-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item label="股票代码">
-            <a-input v-model:value="queryParams.code" placeholder="输入代码" allow-clear style="width: 130px" />
-          </a-form-item>
-          <a-form-item label="回望天数">
-            <a-select v-model:value="queryParams.lookbackDays" style="width: 130px">
-              <a-select-option :value="10">10天</a-select-option>
-              <a-select-option :value="20">20天</a-select-option>
-              <a-select-option :value="60">60天</a-select-option>
-              <a-select-option :value="120">120天</a-select-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item label="信号阈值(%)" v-if="analysisMode === 'signal'">
-            <a-select v-model:value="queryParams.threshold" style="width: 130px">
-              <a-select-option :value="3">3%</a-select-option>
-              <a-select-option :value="5">5%</a-select-option>
-              <a-select-option :value="10">10%</a-select-option>
-              <a-select-option :value="15">15%</a-select-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item label="交易信号" v-if="analysisMode === 'signal'">
-            <a-select v-model:value="queryParams.signal" placeholder="请选择" allow-clear style="width: 130px">
-              <a-select-option value="BUY">强势</a-select-option>
-              <a-select-option value="SELL">弱势</a-select-option>
-              <a-select-option value="HOLD">中性</a-select-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item label="回测年数" v-if="analysisMode === 'backtest'">
-            <a-select v-model:value="queryParams.recentYears" style="width: 130px">
-              <a-select-option :value="1">近 1 年</a-select-option>
-              <a-select-option :value="2">近 2 年</a-select-option>
-              <a-select-option :value="3">近 3 年</a-select-option>
-              <a-select-option :value="5">近 5 年</a-select-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item label="可靠度" v-if="analysisMode === 'backtest'">
-            <a-select v-model:value="queryParams.reliability" placeholder="全部" allow-clear style="width: 130px">
-              <a-select-option v-for="option in reliabilityOptions" :key="option" :value="option">
-                {{ option }}
-              </a-select-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item label="自选分组">
-            <a-select
-              v-model:value="queryParams.watchlistGroupId"
-              placeholder="全部"
-              allow-clear
-              style="width: 130px"
-              :disabled="!isLoggedIn"
-              :loading="watchlistGroupsLoading"
+          <a-form
+            class="strategy-search-form strategy-search-form--signal"
+            layout="inline"
+            :model="queryParams"
+            @finish="handleSearch"
+          >
+            <a-form-item label="所属市场">
+              <a-select v-model:value="queryParams.market" style="width: 120px">
+                <a-select-option value="sh">沪市 (SH)</a-select-option>
+                <a-select-option value="sz">深市 (SZ)</a-select-option>
+                <a-select-option value="bj">北交所 (BJ)</a-select-option>
+              </a-select>
+            </a-form-item>
+            <a-form-item label="股票代码">
+              <a-input v-model:value="queryParams.code" placeholder="输入代码" allow-clear style="width: 120px" />
+            </a-form-item>
+            <a-form-item label="回望天数">
+              <a-select v-model:value="queryParams.lookbackDays" style="width: 85px">
+                <a-select-option :value="10">10天</a-select-option>
+                <a-select-option :value="20">20天</a-select-option>
+                <a-select-option :value="60">60天</a-select-option>
+                <a-select-option :value="120">120天</a-select-option>
+              </a-select>
+            </a-form-item>
+            <a-form-item label="信号阈值(%)" v-if="analysisMode === 'signal'">
+              <a-select v-model:value="queryParams.threshold" style="width: 85px">
+                <a-select-option :value="3">3%</a-select-option>
+                <a-select-option :value="5">5%</a-select-option>
+                <a-select-option :value="10">10%</a-select-option>
+                <a-select-option :value="15">15%</a-select-option>
+              </a-select>
+            </a-form-item>
+            <a-form-item label="交易信号" v-if="analysisMode === 'signal'">
+              <a-select v-model:value="queryParams.signal" placeholder="请选择" allow-clear style="width: 95px">
+                <a-select-option value="BUY">强势</a-select-option>
+                <a-select-option value="SELL">弱势</a-select-option>
+                <a-select-option value="HOLD">中性</a-select-option>
+              </a-select>
+            </a-form-item>
+            <a-form-item label="回测年数" v-if="analysisMode === 'backtest'">
+              <a-select v-model:value="queryParams.recentYears" style="width: 95px">
+                <a-select-option :value="1">近 1 年</a-select-option>
+                <a-select-option :value="2">近 2 年</a-select-option>
+                <a-select-option :value="3">近 3 年</a-select-option>
+                <a-select-option :value="5">近 5 年</a-select-option>
+              </a-select>
+            </a-form-item>
+            <a-form-item label="可靠度" v-if="analysisMode === 'backtest'">
+              <a-select v-model:value="queryParams.reliability" placeholder="全部" allow-clear style="width: 110px">
+                <a-select-option v-for="option in reliabilityOptions" :key="option" :value="option">
+                  {{ option }}
+                </a-select-option>
+              </a-select>
+            </a-form-item>
+            <a-form-item label="自选分组">
+              <a-select
+                v-model:value="queryParams.watchlistGroupId"
+                placeholder="全部"
+                allow-clear
+                style="width: 125px"
+                :disabled="!isLoggedIn"
+                :loading="watchlistGroupsLoading"
+              >
+                <a-select-option v-for="group in watchlistGroups" :key="group.id" :value="group.id">
+                  {{ group.name }}
+                </a-select-option>
+              </a-select>
+            </a-form-item>
+            <a-form-item
+              class="strategy-search-form-submit"
+              :class="{ 'strategy-search-form-submit--wrapped': analysisMode === 'backtest' && backtestSubmitWrapped }"
             >
-              <a-select-option v-for="group in watchlistGroups" :key="group.id" :value="group.id">
-                {{ group.name }}
-              </a-select-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item class="strategy-search-form-submit">
-            <a-button type="primary" html-type="submit">查询</a-button>
-          </a-form-item>
-        </a-form>
+              <a-button type="primary" html-type="submit">查询</a-button>
+            </a-form-item>
+          </a-form>
         </div>
       </div>
-    </a-card>
 
-    <a-card :bordered="false" class="strategy-section-card strategy-section-card--results">
-      <!-- Data Table -->
-      <a-table
-        :key="analysisMode"
-        :columns="columns"
-        :data-source="dataSource"
-        :loading="loading"
-        :pagination="pagination"
-        @change="handleTableChange"
-        row-key="id"
-      >
-        <template #bodyCell="{ column, text, record }">
-          <template v-if="column.key === 'code'">
-            <a-tag class="stock-code-tag">{{ text }}</a-tag>
+      <!-- 数据表格 -->
+      <div class="table-body-wrap">
+        <a-table
+          :key="analysisMode"
+          :columns="columns"
+          :data-source="dataSource"
+          :loading="loading"
+          :pagination="pagination"
+          :scroll="{ x: tableScrollX }"
+          @change="handleTableChange"
+          row-key="id"
+          class="strategy-main-table"
+        >
+          <template #bodyCell="{ column, text, record }">
+            <template v-if="column.key === 'code'">
+              <a-tag :bordered="false" class="stock-code-tag">{{ text }}</a-tag>
+            </template>
+            <template v-if="column.key === 'signal'">
+              <a-tag :bordered="false" :class="['signal-tag', getSignalLabel(text).class]">
+                {{ getSignalLabel(text).text }}
+              </a-tag>
+            </template>
+            <template v-if="column.key === 'momentumValue'">
+              <span :style="{ color: text > 0 ? '#EF4444' : (text < 0 ? '#10B981' : 'inherit') }">
+                {{ text != null ? (text > 0 ? '+' : '') + text.toFixed(2) + '%' : '-' }}
+              </span>
+            </template>
+            <template v-if="column.key === 'totalReturn'">
+              <span :style="{ color: text > 0 ? '#EF4444' : (text < 0 ? '#10B981' : 'inherit') }">
+                {{ text > 0 ? '+' : '' }}{{ text != null ? (text * 100).toFixed(2) + '%' : '-' }}
+              </span>
+            </template>
+            <template v-if="column.key === 'winRate'">
+              <span>{{ text != null ? (text * 100).toFixed(1) + '%' : '-' }}</span>
+            </template>
+            <template v-if="column.key === 'pValue'">
+              <span :style="{ color: text != null && text < 0.05 ? '#EF4444' : 'inherit' }">
+                {{ text != null ? text.toFixed(4) : '-' }}
+              </span>
+            </template>
+            <template v-if="column.key === 'reliability'">
+              <a-tag
+                v-if="text"
+                :bordered="false"
+                class="reliability-tag"
+                :class="`reliability-tag--${getReliabilityClass(text)}`"
+              >
+                {{ text }}
+              </a-tag>
+              <span v-else>-</span>
+            </template>
+            <template v-if="column.key === 'operation'">
+              <a class="table-text-link" @click="handleChart(record)">行情</a>
+            </template>
           </template>
-          <template v-if="column.key === 'signal'">
-            <a-tag :class="getSignalLabel(text).class">
-              {{ getSignalLabel(text).text }}
-            </a-tag>
-          </template>
-          <template v-if="column.key === 'momentumValue'">
-            <span :style="{ color: text > 0 ? 'red' : (text < 0 ? 'green' : 'inherit') }">
-              {{ text != null ? (text > 0 ? '+' : '') + text.toFixed(2) + '%' : '-' }}
-            </span>
-          </template>
-          <template v-if="column.key === 'totalReturn'">
-            <span :style="{ color: text > 0 ? '#EF4444' : (text < 0 ? '#10B981' : 'inherit') }">
-              {{ text > 0 ? '+' : '' }}{{ text != null ? (text * 100).toFixed(2) + '%' : '-' }}
-            </span>
-          </template>
-          <template v-if="column.key === 'winRate'">
-            <span>{{ text != null ? (text * 100).toFixed(1) + '%' : '-' }}</span>
-          </template>
-          <template v-if="column.key === 'pValue'">
-            <span :style="{ color: text != null && text < 0.05 ? 'red' : 'inherit' }">
-              {{ text != null ? text.toFixed(4) : '-' }}
-            </span>
-          </template>
-          <template v-if="column.key === 'reliability'">
-            <a-tag :color="text === '高' ? 'error' : (text === '中' ? 'warning' : 'default')">
-              {{ text }}
-            </a-tag>
-          </template>
-          <template v-if="column.key === 'operation'">
-            <a @click="handleChart(record)">行情</a>
-          </template>
-        </template>
-      </a-table>
-    </a-card>
+        </a-table>
+      </div>
+    </div>
     
     <!-- 策略说明抽屉 -->
     <a-drawer
@@ -205,7 +233,7 @@
 
 <script lang="ts" setup>
 import { ref, reactive, onMounted, onBeforeUnmount, computed, nextTick } from 'vue';
-import { getMomentumPage, getMomentumBacktestPage, type StockTradeSignalVO } from '@/api/stock';
+import { getMomentumPage, getMomentumBacktestPage, type StockTradeSignalVO, type StockTradeBacktestVO } from '@/api/stock';
 import { getWatchlistGroups, type WatchlistGroupVO } from '@/api/watchlist';
 import StockHistoryChart from '@/views/stock-data/components/StockHistoryChart.vue';
 import { InfoCircleOutlined } from '@ant-design/icons-vue';
@@ -311,9 +339,11 @@ const columns = computed(() => {
     );
   }
 
-  baseColumns.push({ title: '操作', key: 'operation', width: 100 } as any);
+  baseColumns.push({ title: '操作', key: 'operation', width: 95 } as any);
   return baseColumns;
 });
+
+const tableScrollX = computed(() => analysisMode.value === 'backtest' ? 1150 : 740);
 
 // 信号类型映射
 const getSignalLabel = (signal: string) => {
@@ -323,6 +353,13 @@ const getSignalLabel = (signal: string) => {
     'HOLD': { text: '中性', class: 'signal-tag-hold' },
   };
   return map[signal] || { text: signal, class: 'signal-tag-default' };
+};
+
+const getReliabilityClass = (val: string) => {
+  if (val === '高') return 'high';
+  if (val === '中') return 'mid';
+  if (val?.startsWith('低')) return 'low';
+  return 'default';
 };
 
 const formatDateTime = (value?: string) => {
@@ -431,6 +468,12 @@ const fetchData = async () => {
   }
 };
 
+const setAnalysisMode = (mode: 'signal' | 'backtest') => {
+  if (analysisMode.value === mode) return;
+  analysisMode.value = mode;
+  handleModeChange();
+};
+
 const handleModeChange = () => {
   pagination.current = 1;
   sortState.value = analysisMode.value === 'backtest' ? ['totalReturn,desc'] : [];
@@ -468,7 +511,7 @@ const handleTableChange = (pag: any, _filters: any, sorter: any) => {
   fetchData();
 };
 
-const handleChart = (record: StockTradeSignalVO) => {
+const handleChart = (record: StockTradeSignalVO | StockTradeBacktestVO) => {
   currentStockCode.value = record.code;
   currentStockName.value = record.name;
   chartVisible.value = true;
@@ -497,49 +540,108 @@ onBeforeUnmount(() => {
 <style scoped>
 .momentum-container {
   padding: 0;
+  width: 100%;
 }
 
-.strategy-section-card--context {
-  margin-bottom: 16px;
-}
-
-.strategy-page-header {
+/* 顶部独立模式切换与操作栏 */
+.strategy-mode-bar {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  gap: 20px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
+  gap: 16px;
   flex-wrap: wrap;
 }
 
-.strategy-page-header-left {
+.strategy-mode-bar__left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.strategy-mode-tabs {
+  display: flex;
+  gap: 6px;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.strategy-mode-tab-btn {
+  border: none;
+  background: transparent;
+  padding: 5px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.strategy-mode-tab-btn:hover {
+  color: #0f172a;
+}
+
+.strategy-mode-tab-btn.active {
+  background: #0f172a;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.refresh-time-text {
+  font-size: 12px;
+  color: #64748b;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.strategy-mode-bar__right {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.strategy-page-header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
-  margin-left: auto;
-}
-
-.strategy-mode-switch {
-  flex-shrink: 0;
-}
-
-.strategy-mode-switch :deep(.ant-radio-button-wrapper) {
-  min-width: 92px;
-  text-align: center;
+.strategy-meta-divider {
+  width: 1px;
+  height: 14px;
+  background-color: #cbd5e1;
 }
 
 .strategy-help-link {
-  padding-inline: 0;
+  font-size: 13px;
+  color: #64748b;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.strategy-help-link:hover {
+  color: #0f172a;
+}
+
+/* 主数据表格卡片 */
+.table-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+}
+
+.table-toolbar {
+  padding: 16px 16px 14px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.table-body-wrap {
+  padding: 0 16px 16px 16px;
+}
+
+:deep(.strategy-main-table .ant-table) {
+  font-size: 13px;
 }
 
 .strategy-search-form--signal {
@@ -547,7 +649,7 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
   align-items: center;
   width: 100%;
-  row-gap: 16px;
+  row-gap: 14px;
 }
 
 .strategy-search-form--signal :deep(.ant-form-item) {
@@ -575,29 +677,135 @@ onBeforeUnmount(() => {
   justify-content: flex-end;
 }
 
+/* 表格表头统一样式 */
+:deep(.strategy-main-table .ant-table-thead > tr > th) {
+  background: #f1f5f9 !important;
+  color: #334155;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 12px 14px;
+  white-space: nowrap !important;
+}
+
+:deep(.strategy-main-table .ant-table-thead th.ant-table-column-has-sorters:hover) {
+  background: #e2e8f0 !important;
+}
+
+:deep(.strategy-main-table .ant-table-tbody > tr > td) {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 12px 14px;
+  transition: background 0.15s ease;
+}
+
+:deep(.strategy-main-table .ant-table-tbody > tr:hover > td) {
+  background: #f8fafc !important;
+}
+
+.stock-code-tag {
+  background: #f1f5f9 !important;
+  border: none !important;
+  color: #475569;
+  font-weight: 500;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.table-text-link {
+  color: #2563eb;
+  font-size: 13px;
+  cursor: pointer;
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  transition: color 0.15s ease;
+}
+
+.table-text-link:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.signal-tag {
+  border: none !important;
+  font-weight: 500;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.signal-tag-buy {
+  background-color: #fee2e2 !important;
+  color: #dc2626 !important;
+}
+
+.signal-tag-sell {
+  background-color: #dcfce7 !important;
+  color: #16a34a !important;
+}
+
+.signal-tag-hold {
+  background-color: #f1f5f9 !important;
+  color: #64748b !important;
+}
+
+.signal-tag-default {
+  background-color: #f1f5f9 !important;
+  color: #64748b !important;
+}
+
+.reliability-tag {
+  border: none !important;
+  font-weight: 500;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.reliability-tag--high {
+  background-color: #fee2e2 !important;
+  color: #dc2626 !important;
+}
+
+.reliability-tag--mid {
+  background-color: #fef3c7 !important;
+  color: #d97706 !important;
+}
+
+.reliability-tag--low {
+  background-color: #f1f5f9 !important;
+  color: #64748b !important;
+}
+
+.reliability-tag--default {
+  background-color: #f1f5f9 !important;
+  color: #94a3b8 !important;
+}
+
 .strategy-info h3 {
   margin-top: 16px;
   margin-bottom: 8px;
-  color: var(--color-text-primary);
+  color: #0f172a;
   font-weight: 600;
 }
 
 .strategy-info h4 {
   margin-top: 12px;
   margin-bottom: 6px;
-  color: var(--color-text-primary);
+  color: #0f172a;
   font-weight: 600;
 }
 
 .strategy-info p {
-  color: var(--color-text-secondary);
+  color: #475569;
   line-height: 1.6;
   margin-bottom: 12px;
 }
 
 .strategy-info ul {
   padding-left: 20px;
-  color: var(--color-text-secondary);
+  color: #475569;
   line-height: 1.6;
 }
 
@@ -606,11 +814,11 @@ onBeforeUnmount(() => {
 }
 
 .strategy-info code {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: #f1f5f9;
   padding: 2px 6px;
   border-radius: 4px;
-  color: var(--color-text-primary);
+  color: #0f172a;
   font-size: 0.9em;
-  border: 1px solid var(--color-border);
+  border: 1px solid #e2e8f0;
 }
 </style>
