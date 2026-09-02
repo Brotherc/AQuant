@@ -415,6 +415,12 @@ const pagination = reactive({
 
 const sortState = ref<string[]>(['dividendScore,desc']);
 const getDefaultSort = () => ['dividendScore,desc'];
+const dividendScoreSortOrder = computed(() => {
+  const sort = sortState.value[0];
+  if (sort === 'dividendScore,asc') return 'ascend';
+  if (sort === 'dividendScore,desc') return 'descend';
+  return undefined;
+});
 
 // 表格列定义
 const columns = computed<TableProps['columns']>(() => [
@@ -423,7 +429,7 @@ const columns = computed<TableProps['columns']>(() => [
   { title: '近3年平均分红', dataIndex: 'avgDividend', sorter: true, width: 130, align: 'right' },
   { title: '股息率', dataIndex: 'dividendYield', sorter: true, width: 110, align: 'right' },
   { title: 'PEG', dataIndex: 'peg', sorter: true, width: 100, align: 'right' },
-  { title: '分红评分', dataIndex: 'dividendScore', key: 'dividendScore', sorter: true, width: 100, align: 'center', defaultSortOrder: 'descend' },
+  { title: '分红评分', dataIndex: 'dividendScore', key: 'dividendScore', sorter: true, width: 100, align: 'center', sortOrder: dividendScoreSortOrder.value },
   { title: '结论', dataIndex: 'dividendLevel', minWidth: 150, align: 'left' },
 ]);
 
