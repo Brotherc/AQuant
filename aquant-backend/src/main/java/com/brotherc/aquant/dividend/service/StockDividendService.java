@@ -511,6 +511,16 @@ public class StockDividendService {
     }
 
     private Comparator<StockDividendStatVO> buildComparator(Sort sort, String quickTab) {
+        Comparator<StockDividendStatVO> tieBreaker = Comparator
+                .comparing(StockDividendStatVO::getDividendScore,
+                        Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(StockDividendStatVO::getDividendYield,
+                        Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(StockDividendStatVO::getConsecutiveYears,
+                        Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(StockDividendStatVO::getStockCode,
+                        Comparator.nullsLast(Comparator.naturalOrder()));
+
         if (sort != null && sort.isSorted()) {
             Comparator<StockDividendStatVO> result = null;
 
@@ -571,8 +581,7 @@ public class StockDividendService {
             }
 
             if (result != null) {
-                return result.thenComparing(StockDividendStatVO::getStockCode,
-                        Comparator.nullsLast(Comparator.naturalOrder()));
+                return result.thenComparing(tieBreaker);
             }
         }
 
@@ -580,21 +589,21 @@ public class StockDividendService {
         if ("STABLE_DIVIDEND".equalsIgnoreCase(quickTab)) {
             return Comparator.comparing(StockDividendStatVO::getDividendScore,
                     Comparator.nullsLast(Comparator.reverseOrder()))
-                    .thenComparing(StockDividendStatVO::getStockCode, Comparator.nullsLast(Comparator.naturalOrder()));
+                    .thenComparing(tieBreaker);
         } else if ("DIVIDEND_GROWTH".equalsIgnoreCase(quickTab)) {
             return Comparator.comparing(StockDividendStatVO::getDividendGrowth3y,
                     Comparator.nullsLast(Comparator.reverseOrder()))
-                    .thenComparing(StockDividendStatVO::getStockCode, Comparator.nullsLast(Comparator.naturalOrder()));
+                    .thenComparing(tieBreaker);
         } else if ("HIGH_DIVIDEND".equalsIgnoreCase(quickTab)) {
             return Comparator.comparing(StockDividendStatVO::getDividendYield,
                     Comparator.nullsLast(Comparator.reverseOrder()))
-                    .thenComparing(StockDividendStatVO::getStockCode, Comparator.nullsLast(Comparator.naturalOrder()));
+                    .thenComparing(tieBreaker);
         }
 
         // 默认按分红评分或股息率倒序
         return Comparator.comparing(StockDividendStatVO::getDividendScore,
                 Comparator.nullsLast(Comparator.reverseOrder()))
-                .thenComparing(StockDividendStatVO::getStockCode, Comparator.nullsLast(Comparator.naturalOrder()));
+                .thenComparing(tieBreaker);
     }
 
     public List<StockDividendDetailVO> getDetailByCode(StockDividendDetailReqVO reqVO) {
