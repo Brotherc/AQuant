@@ -130,16 +130,22 @@ const router = createRouter({
                 {
                     path: 'strategy',
                     name: 'StrategyRoot',
+                    redirect: '/strategy/index',
                     children: [
+                        {
+                            path: 'index',
+                            name: 'StrategyIndex',
+                            component: () => import('@/views/strategy/StrategyIndex.vue')
+                        },
                         {
                             path: 'dual-ma',
                             name: 'DualMA',
-                            component: () => import('@/views/strategy/DualMA.vue')
+                            redirect: '/strategy/index?type=dual-ma'
                         },
                         {
                             path: 'momentum',
                             name: 'Momentum',
-                            component: () => import('@/views/strategy/Momentum.vue')
+                            redirect: '/strategy/index?type=momentum'
                         }
                     ]
                 },

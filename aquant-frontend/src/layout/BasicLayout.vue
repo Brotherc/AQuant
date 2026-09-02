@@ -244,12 +244,11 @@ const navigationGroups: NavigationGroup[] = [
   },
   {
     key: '/strategy',
-    title: '量化策略',
+    title: '量化',
     icon: RadarChartOutlined,
     popupClassName: 'top-nav-popup top-nav-popup-compact',
     children: [
-      { key: '/strategy/dual-ma', label: '双均线策略' },
-      { key: '/strategy/momentum', label: '动量策略' }
+      { key: '/strategy/index', label: '策略' }
     ]
   },
   {
