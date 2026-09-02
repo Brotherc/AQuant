@@ -56,10 +56,12 @@ public class IndustrySourceController {
 
     @GetMapping("/overview")
     public ResponseDTO<IndustrySourceSnapshotVO<StockIndustryBoardVO>> overview(
-            @RequestParam(defaultValue = "THS") IndustryDataSource source, @RequestParam String industry
+            @RequestParam(defaultValue = "THS") IndustryDataSource source,
+            @RequestParam String industry,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate tradeDate
     ) {
         return ResponseDTO.success(resolve(source, current -> current == IndustryDataSource.THS
-                ? thsOverview(industry) : emQueryService.overview(industry)));
+                ? thsOverview(industry, tradeDate) : emQueryService.overview(industry, tradeDate)));
     }
 
     @GetMapping("/history/kline")
@@ -114,11 +116,27 @@ public class IndustrySourceController {
         return content == null || (content instanceof List<?> list && list.isEmpty());
     }
 
-    private StockIndustryBoardVO thsOverview(String industry) {
+    private StockIndustryBoardVO thsOverview(String industry, LocalDate tradeDate) {
         StockIndustryBoard board = boardRepository.findBySectorName(industry);
         if (board == null) return null;
         StockIndustryBoardVO view = new StockIndustryBoardVO();
         BeanUtils.copyProperties(board, view);
+        if (tradeDate != null) {
+            var history = historyService.findBySectorNameAndTradeDate(industry, tradeDate);
+            if (history == null) return null;
+            view.setTradeDate(tradeDate);
+            view.setChangePercent(history.getChangePercent());
+            view.setChangeAmount(history.getChangeAmount());
+            view.setAveragePrice(history.getClosePrice());
+            view.setTotalVolume(history.getVolume());
+            view.setTotalAmount(history.getAmount());
+            view.setNetInflow(null);
+            view.setRiseCount(null);
+            view.setFallCount(null);
+            view.setLeadingStock(null);
+            view.setLeadingStockPrice(null);
+            view.setLeadingStockChangePercent(null);
+        }
         return view;
     }
 

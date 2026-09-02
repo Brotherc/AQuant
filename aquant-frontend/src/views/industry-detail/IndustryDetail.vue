@@ -73,6 +73,12 @@
                 </span>
               </div>
               <div class="quotes-item">
+                <span class="quote-label">涨跌额</span>
+                <span class="quote-value" :class="getPriceColorClass(selectedBoard.changeAmount)">
+                  {{ formatSignedNumber(selectedBoard.changeAmount) }}
+                </span>
+              </div>
+              <div class="quotes-item">
                 <span class="quote-label">板块均价</span>
                 <span class="quote-value">{{ selectedBoard.averagePrice != null ? selectedBoard.averagePrice : '-' }}</span>
               </div>
@@ -130,7 +136,15 @@
 
             <div v-if="constituentLoading" class="constituent-loading"><a-spin size="small" /></div>
             <div v-else-if="constituents.length" class="constituent-list">
-              <div v-for="stock in constituents" :key="stock.code" class="constituent-row">
+              <div
+                v-for="stock in constituents"
+                :key="stock.code"
+                class="constituent-row"
+                role="button"
+                tabindex="0"
+                @click="openStockDetail(stock)"
+                @keydown.enter="openStockDetail(stock)"
+              >
                 <div class="constituent-name" :title="`${stock.name} (${stock.code})`">{{ stock.name }}</div>
                 <div class="constituent-trend" :class="getPriceColorClass(stock.changePercent)">
                   <svg v-if="stock.historyPrices.length > 1" viewBox="0 0 112 30" preserveAspectRatio="none">
@@ -158,6 +172,18 @@
       <div v-else-if="loading" class="detail-loading"><a-spin /></div>
       <a-empty v-else :description="emptyDescription" class="detail-empty" />
     </div>
+
+    <a-modal
+      v-model:visible="stockDetailVisible"
+      title="股票详情"
+      width="1400px"
+      :footer="null"
+      centered
+      destroyOnClose
+      class="stock-detail-modal"
+    >
+      <StockDetailView v-if="selectedStock" :stock="selectedStock" />
+    </a-modal>
   </section>
 </template>
 
@@ -175,7 +201,9 @@ import {
   type StockIndustryConstituentVO,
   type StockIndustryConstituentSnapshotVO
 } from '@/api/board';
+import type { WatchlistStockVO } from '@/api/watchlist';
 import BoardHistoryChart from '@/views/board/components/BoardHistoryChart.vue';
+import StockDetailView from '@/views/watchlist/components/StockDetailView.vue';
 import {
   buildIndustryAnalysisStateQuery,
   parseIndustryAnalysisViewState
@@ -197,6 +225,9 @@ const constituentStale = ref(false);
 const constituentMessage = ref('');
 const selectedTradeDate = ref<string>();
 let constituentRequestSequence = 0;
+let boardRequestSequence = 0;
+const stockDetailVisible = ref(false);
+const selectedStock = ref<WatchlistStockVO | null>(null);
 const industryName = computed(() => typeof route.query.industry === 'string' ? route.query.industry : '');
 const currentBoardCode = computed(() => selectedBoard.value?.sectorName || '');
 const currentBoardName = computed(() => selectedBoard.value?.sectorName || '');
@@ -234,6 +265,17 @@ const getSparklinePath = (prices: number[]) => {
   return `M ${points.join(' L ')}`;
 };
 
+const openStockDetail = (stock: StockIndustryConstituentVO) => {
+  selectedStock.value = {
+    stockCode: stock.code,
+    stockName: stock.name,
+    latestPrice: stock.latestPrice ?? 0,
+    changePercent: stock.changePercent ?? 0,
+    sortNo: 0
+  };
+  stockDetailVisible.value = true;
+};
+
 const fetchRefreshTime = async () => {
   if (source.value === 'EM') {
     lastRefreshTime.value = '';
@@ -249,7 +291,8 @@ const fetchRefreshTime = async () => {
   }
 };
 
-const fetchBoard = async () => {
+const fetchBoard = async (tradeDate = selectedTradeDate.value) => {
+  const requestSequence = ++boardRequestSequence;
   if (!industryName.value) {
     selectedBoard.value = null;
     return;
@@ -257,7 +300,12 @@ const fetchBoard = async () => {
 
   loading.value = true;
   try {
-    const response = await getIndustrySourceOverview({ source: source.value, industry: industryName.value });
+    const response = await getIndustrySourceOverview({
+      source: source.value,
+      industry: industryName.value,
+      tradeDate
+    });
+    if (requestSequence !== boardRequestSequence) return;
     const { data } = response;
     if (data.success || data.code === 0) {
       const snapshot = data.data;
@@ -270,9 +318,13 @@ const fetchBoard = async () => {
     }
   } catch (error) {
     console.error('Failed to fetch industry detail:', error);
-    selectedBoard.value = null;
+    if (requestSequence === boardRequestSequence) {
+      selectedBoard.value = null;
+    }
   } finally {
-    loading.value = false;
+    if (requestSequence === boardRequestSequence) {
+      loading.value = false;
+    }
   }
 };
 
@@ -331,12 +383,13 @@ const handleRefresh = async () => {
   }
 };
 
-const handleBoardTradeDateSelect = (tradeDate: string) => {
+const handleBoardTradeDateSelect = async (tradeDate: string) => {
   if (selectedTradeDate.value === tradeDate) {
     return;
   }
   selectedTradeDate.value = tradeDate;
-  fetchConstituents();
+  await fetchBoard(tradeDate);
+  await fetchConstituents();
 };
 
 const handleReturnToIndustryAnalysis = () => {
@@ -606,11 +659,17 @@ watch(industryName, async () => {
   min-height: 46px;
   gap: 8px;
   padding: 0 6px 0 18px;
+  cursor: pointer;
   border-bottom: 1px solid #f1f5f9;
 }
 
 .constituent-row:hover {
   background: #f8fafc;
+}
+
+.constituent-row:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
 }
 
 .constituent-name {

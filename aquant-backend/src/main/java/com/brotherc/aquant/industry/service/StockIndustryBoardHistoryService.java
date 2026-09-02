@@ -26,6 +26,11 @@ public class StockIndustryBoardHistoryService {
 
     private final StockIndustryBoardHistoryRepository stockIndustryBoardHistoryRepository;
 
+    @Transactional(readOnly = true)
+    public StockIndustryBoardHistory findBySectorNameAndTradeDate(String sectorName, LocalDate tradeDate) {
+        return stockIndustryBoardHistoryRepository.findFirstBySectorNameAndTradeDateOrderByIdDesc(sectorName, tradeDate.toString());
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public void save(String boardName, List<StockBoardIndustryIndexThs> list, LocalDateTime now) {
         if (CollectionUtils.isEmpty(list)) {
