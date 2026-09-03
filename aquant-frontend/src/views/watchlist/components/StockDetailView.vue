@@ -950,6 +950,7 @@ onUnmounted(() => {
   flex-wrap: wrap;
   gap: 10px 18px;
   min-width: 0;
+  margin-left: auto;
 }
 
 .detail-freq-selector {
@@ -993,10 +994,10 @@ onUnmounted(() => {
 .indicator-switches {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 12px;
   flex-basis: 100%;
-  justify-content: flex-end;
 }
 
 .indicator-switch {
@@ -1011,6 +1012,7 @@ onUnmounted(() => {
 .ma-legend-bar {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 10px;
   font-size: 11px;
@@ -1045,18 +1047,6 @@ onUnmounted(() => {
   min-height: 320px;
   background: var(--color-bg-elevated);
   border-radius: 8px;
-}
-
-@media (max-width: 1100px) {
-  .chart-controls,
-  .chart-toolbar-right {
-    align-items: flex-start;
-  }
-
-  .chart-toolbar-right,
-  .indicator-switches {
-    justify-content: flex-start;
-  }
 }
 
 .info-sidebar {

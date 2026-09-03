@@ -724,19 +724,4 @@ onUnmounted(() => {
 .chart-empty {
   margin-top: 120px;
 }
-
-@media (max-width: 1100px) {
-  .chart-toolbar,
-  .toolbar-right {
-    align-items: flex-start;
-  }
-
-  .toolbar-right {
-    justify-content: flex-start;
-  }
-
-  .indicator-switches {
-    justify-content: flex-start;
-  }
-}
 </style>
