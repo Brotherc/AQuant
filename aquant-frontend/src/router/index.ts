@@ -146,6 +146,11 @@ const router = createRouter({
                             path: 'momentum',
                             name: 'Momentum',
                             redirect: '/strategy/index?type=momentum'
+                        },
+                        {
+                            path: 'macd',
+                            name: 'MACD',
+                            redirect: '/strategy/index?type=macd'
                         }
                     ]
                 },

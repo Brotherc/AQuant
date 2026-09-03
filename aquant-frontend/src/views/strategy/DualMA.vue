@@ -534,11 +534,10 @@ onMounted(async () => {
 
 .table-toolbar {
   padding: 16px 16px 14px 16px;
-  border-bottom: 1px solid #f1f5f9;
 }
 
 .table-body-wrap {
-  padding: 0 16px 16px 16px;
+  padding: 0 16px;
 }
 
 :deep(.strategy-main-table .ant-table) {
@@ -584,11 +583,14 @@ onMounted(async () => {
 :deep(.strategy-main-table .ant-table-tbody > tr > td) {
   border-bottom: 1px solid #f1f5f9;
   padding: 12px 14px;
-  transition: background 0.15s ease;
+  background: #ffffff;
+  transition: none !important;
 }
 
-:deep(.strategy-main-table .ant-table-tbody > tr:hover > td) {
+:deep(.strategy-main-table .ant-table-tbody > tr.ant-table-row:hover > td),
+:deep(.strategy-main-table .ant-table-tbody > tr > td.ant-table-cell-row-hover) {
   background: #f8fafc !important;
+  transition: none !important;
 }
 
 .stock-code-tag {
@@ -602,19 +604,7 @@ onMounted(async () => {
 }
 
 .table-text-link {
-  color: #2563eb;
-  font-size: 13px;
-  cursor: pointer;
-  border: none !important;
-  background: transparent !important;
-  padding: 0 !important;
-  box-shadow: none !important;
-  transition: color 0.15s ease;
-}
-
-.table-text-link:hover {
-  color: #1d4ed8;
-  text-decoration: underline;
+  color: #3b6ea8;
 }
 
 .signal-tag {

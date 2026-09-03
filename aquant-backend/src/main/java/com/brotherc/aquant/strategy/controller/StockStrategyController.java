@@ -44,4 +44,16 @@ public class StockStrategyController {
         return ResponseDTO.success(stockStrategyService.momentumBacktest(reqVO, pageable));
     }
 
+    @Operation(summary = "MACD策略")
+    @GetMapping("/macd")
+    public ResponseDTO<Page<StockTradeSignalVO>> macd(MacdReqVO reqVO, Pageable pageable) {
+        return ResponseDTO.success(stockStrategyService.macd(reqVO, pageable));
+    }
+
+    @Operation(summary = "MACD策略回测")
+    @GetMapping("/macdBacktest")
+    public ResponseDTO<Page<StockTradeBacktestVO>> macdBacktest(MacdBacktestReqVO reqVO, Pageable pageable) {
+        return ResponseDTO.success(stockStrategyService.macdBacktest(reqVO, pageable));
+    }
+
 }

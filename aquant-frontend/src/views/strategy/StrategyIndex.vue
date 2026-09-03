@@ -34,9 +34,7 @@
 
       <!-- 右侧对应策略的数据与工作台 -->
       <main class="strategy-content-wrap">
-        <keep-alive>
-          <component :is="activeComponent" />
-        </keep-alive>
+        <component :is="activeComponent" :key="activeStrategyKey" />
       </main>
     </div>
   </div>
@@ -48,9 +46,11 @@ import { useRoute, useRouter } from 'vue-router';
 import {
   LineChartOutlined,
   ThunderboltOutlined,
+  StockOutlined,
 } from '@ant-design/icons-vue';
 import DualMA from './DualMA.vue';
 import Momentum from './Momentum.vue';
+import MACD from './MACD.vue';
 
 interface StrategyItem {
   key: string;
@@ -80,6 +80,14 @@ const strategyList: StrategyItem[] = [
     desc: '基于回望期多空动量收益率筛选与胜率回测',
     icon: markRaw(ThunderboltOutlined),
     component: markRaw(Momentum),
+  },
+  {
+    key: 'macd',
+    name: 'MACD策略',
+    tag: '趋势动能',
+    desc: '基于DIF与DEA金叉死叉识别趋势拐点并进行回测',
+    icon: markRaw(StockOutlined),
+    component: markRaw(MACD),
   },
 ];
 

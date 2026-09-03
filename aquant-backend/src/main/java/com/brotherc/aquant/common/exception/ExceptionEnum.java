@@ -12,6 +12,7 @@ public enum ExceptionEnum {
     API_REQUEST_ERROR(1000003, "外部API访问异常"),
 
     STOCK_STRATEGY_DUAL_MA_ILLEGAL(1000101, "短期均线必须小于长期均线"),
+    STOCK_STRATEGY_MACD_PARAMS_ILLEGAL(1000111, "MACD参数非法，快线周期必须小于慢线周期且各周期必须大于0"),
     STOCK_SYNC_NOT_START(1000102, "非交易日时间无需同步"),
     STOCK_REFRESH_FREQUENT(1000103, "1分钟内请勿重复刷新"),
     STOCK_INDUSTRY_BOARD_UN_EXIST(1000104, "行业板块不存在"),
