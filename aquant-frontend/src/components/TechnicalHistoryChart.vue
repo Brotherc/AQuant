@@ -278,15 +278,19 @@ const renderChart = (data: TechnicalHistoryPoint[]) => {
         type: 'slider',
         xAxisIndex: [0, 1, 2, 3, 4],
         show: true,
-        height: 6,
+        height: 8,
         bottom: 4,
         borderColor: 'transparent',
         backgroundColor: '#f1f5f9',
-        fillerColor: 'rgba(148, 163, 184, 0.4)',
+        fillerColor: 'rgba(148, 163, 184, 0.45)',
         showDetail: false,
         zoomLock: false,
         showDataShadow: false,
-        handleSize: 0,
+        handleSize: '100%',
+        handleStyle: {
+          color: '#94a3b8',
+          borderColor: '#cbd5e1'
+        },
         moveHandleSize: 0,
         startValue,
         endValue
