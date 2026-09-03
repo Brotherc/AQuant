@@ -364,7 +364,9 @@ const renderChart = (data: StockQuoteHistory[]) => {
     : subIndicatorCount === 1 ? '59%'
       : subIndicatorCount === 2 ? '50%'
         : '43%';
-  const volumeGridHeight = subIndicatorCount === 3 ? '9%' : '11%';
+  const volumeGridHeight = subIndicatorCount === 0 ? '17%'
+    : subIndicatorCount === 3 ? '9%'
+      : '11%';
   const subGridTops = subIndicatorCount === 1 ? ['74%']
     : subIndicatorCount === 2 ? ['64%', '81%']
       : ['55%', '69%', '83%'];
@@ -482,7 +484,7 @@ const renderChart = (data: StockQuoteHistory[]) => {
         type: 'slider',
         xAxisIndex: [0, 1, 2, 3, 4],
         height: 6,
-        bottom: 8,
+        bottom: 0,
         start: 70,
         end: 100,
         borderColor: 'transparent',
@@ -498,35 +500,35 @@ const renderChart = (data: StockQuoteHistory[]) => {
     grid: [
       {
         left: '3%',
-        right: '6%',
+        right: '0%',
         top: '3%',
         height: mainGridHeight,
         containLabel: true
       },
       {
         left: '3%',
-        right: '6%',
+        right: '0%',
         top: volumeGridTop,
         height: volumeGridHeight,
         containLabel: true
       },
       {
         left: '3%',
-        right: '6%',
+        right: '0%',
         top: macdGrid.top,
         height: macdGrid.height,
         containLabel: true
       },
       {
         left: '3%',
-        right: '6%',
+        right: '0%',
         top: kdjGrid.top,
         height: kdjGrid.height,
         containLabel: true
       },
       {
         left: '3%',
-        right: '6%',
+        right: '0%',
         top: bollGrid.top,
         height: bollGrid.height,
         containLabel: true
