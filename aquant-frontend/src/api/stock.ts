@@ -59,6 +59,9 @@ export interface StockTradeSignalVO {
     latestPrice?: number;
     pir?: number;
     momentumValue?: number;
+    dif?: number;
+    dea?: number;
+    macdHistogram?: number;
 }
 
 export interface DualMABacktestReqVO {
@@ -160,6 +163,40 @@ export const getMomentumPage = (params: MomentumReqVO & { page: number; size: nu
 
 export const getMomentumBacktestPage = (params: MomentumBacktestReqVO & { page: number; size: number; sort?: string[] }) => {
     return api.get<ResponseDTO<PageResult<StockTradeBacktestVO>>>('/stockStrategy/momentumBacktest', {
+        params,
+        timeout: 60000
+    });
+};
+
+// ==================== MACD策略 ====================
+
+export interface MacdReqVO {
+    code?: string;
+    fastPeriod?: number;
+    slowPeriod?: number;
+    signalPeriod?: number;
+    signal?: string;
+    watchlistGroupId?: number;
+    market?: string;
+}
+
+export interface MacdBacktestReqVO {
+    code?: string;
+    fastPeriod?: number;
+    slowPeriod?: number;
+    signalPeriod?: number;
+    watchlistGroupId?: number;
+    recentYears?: number;
+    market?: string;
+    reliability?: string;
+}
+
+export const getMacdPage = (params: MacdReqVO & { page: number; size: number; sort?: string[] }) => {
+    return api.get<ResponseDTO<PageResult<StockTradeSignalVO>>>('/stockStrategy/macd', { params });
+};
+
+export const getMacdBacktestPage = (params: MacdBacktestReqVO & { page: number; size: number; sort?: string[] }) => {
+    return api.get<ResponseDTO<PageResult<StockTradeBacktestVO>>>('/stockStrategy/macdBacktest', {
         params,
         timeout: 60000
     });

@@ -7,6 +7,8 @@ import com.brotherc.aquant.strategy.model.vo.DualMAReqVO;
 import com.brotherc.aquant.strategy.model.vo.DualMABacktestReqVO;
 import com.brotherc.aquant.strategy.model.vo.MomentumReqVO;
 import com.brotherc.aquant.strategy.model.vo.MomentumBacktestReqVO;
+import com.brotherc.aquant.strategy.model.vo.MacdReqVO;
+import com.brotherc.aquant.strategy.model.vo.MacdBacktestReqVO;
 import com.brotherc.aquant.strategy.model.vo.StockTradeSignalVO;
 import com.brotherc.aquant.strategy.model.vo.StockTradeBacktestVO;
 import com.brotherc.aquant.stock.repository.StockQuoteRepository;
@@ -41,6 +43,7 @@ public class StockStrategyService {
 
     private final DualMovingAverageStrategy dualMovingAverageStrategy;
     private final MomentumStrategy momentumStrategy;
+    private final MacdStrategy macdStrategy;
     private final StockWatchlistStockRepository stockWatchlistStockRepository;
     private final StockQuoteRepository stockQuoteRepository;
     private final StockWatchlistGroupRepository stockWatchlistGroupRepository;
@@ -470,11 +473,155 @@ public class StockStrategyService {
         return new PageImpl<>(result.subList(fromIndex, toIndex), pageable, total);
     }
 
+    // ==================== MACD策略 ====================
+
+    public Page<StockTradeSignalVO> macd(MacdReqVO reqVO, Pageable pageable) {
+        Set<String> watchlistCodes = loadWatchlistCodes(reqVO.getWatchlistGroupId());
+        if (watchlistCodes != null && watchlistCodes.isEmpty()) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
+
+        boolean earlyPaginate = StringUtils.isBlank(reqVO.getSignal()) && !hasStrategySortFields(pageable.getSort());
+        if (earlyPaginate) {
+            Page<StockQuote> pagedStocks = stockQuoteRepository.findAll(
+                    buildStockQuoteSpec(reqVO.getCode(), watchlistCodes, reqVO.getMarket()), pageable
+            );
+            if (pagedStocks.isEmpty()) {
+                return new PageImpl<>(Collections.emptyList(), pageable, 0);
+            }
+            List<StockTradeSignalVO> pagedList = macdStrategy.calculate(
+                    reqVO.getFastPeriod(), reqVO.getSlowPeriod(), reqVO.getSignalPeriod(), pagedStocks.getContent()
+            );
+            return new PageImpl<>(pagedList, pageable, pagedStocks.getTotalElements());
+        }
+
+        List<StockQuote> targetStocks = stockQuoteRepository.findAll(
+                buildStockQuoteSpec(reqVO.getCode(), watchlistCodes, reqVO.getMarket())
+        );
+        if (targetStocks.isEmpty()) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
+
+        List<StockTradeSignalVO> result = macdStrategy.calculate(
+                reqVO.getFastPeriod(), reqVO.getSlowPeriod(), reqVO.getSignalPeriod(), targetStocks
+        );
+        if (StringUtils.isNotBlank(reqVO.getSignal())) {
+            result = result.stream()
+                    .filter(item -> reqVO.getSignal().equalsIgnoreCase(item.getSignal()))
+                    .toList();
+        }
+        if (pageable.getSort().isSorted()) {
+            result = new ArrayList<>(result);
+            result.sort(buildMacdSignalComparator(pageable.getSort()));
+        }
+        return toPage(result, pageable);
+    }
+
+    public Page<StockTradeBacktestVO> macdBacktest(MacdBacktestReqVO reqVO, Pageable pageable) {
+        Set<String> watchlistCodes = loadWatchlistCodes(reqVO.getWatchlistGroupId());
+        if (watchlistCodes != null && watchlistCodes.isEmpty()) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
+
+        Page<StockTradeBacktestVO> snapshotPage = stockStrategySnapshotService
+                .queryMacdBacktestSnapshot(reqVO, pageable, watchlistCodes);
+        if (snapshotPage != null) {
+            return snapshotPage;
+        }
+
+        boolean earlyPaginate = StringUtils.isBlank(reqVO.getReliability()) && !hasStrategySortFields(pageable.getSort());
+        if (earlyPaginate) {
+            Page<StockQuote> pagedStocks = stockQuoteRepository.findAll(
+                    buildStockQuoteSpec(reqVO.getCode(), watchlistCodes, reqVO.getMarket()), pageable
+            );
+            if (pagedStocks.isEmpty()) {
+                return new PageImpl<>(Collections.emptyList(), pageable, 0);
+            }
+            List<StockTradeBacktestVO> pagedList = macdStrategy.backtest(
+                    reqVO.getFastPeriod(), reqVO.getSlowPeriod(), reqVO.getSignalPeriod(),
+                    reqVO.getRecentYears(), pagedStocks.getContent()
+            );
+            return new PageImpl<>(pagedList, pageable, pagedStocks.getTotalElements());
+        }
+
+        List<StockQuote> targetStocks = stockQuoteRepository.findAll(
+                buildStockQuoteSpec(reqVO.getCode(), watchlistCodes, reqVO.getMarket())
+        );
+        if (targetStocks.isEmpty()) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
+        List<StockTradeBacktestVO> result = macdStrategy.backtest(
+                reqVO.getFastPeriod(), reqVO.getSlowPeriod(), reqVO.getSignalPeriod(),
+                reqVO.getRecentYears(), targetStocks
+        );
+        if (StringUtils.isNotBlank(reqVO.getReliability())) {
+            result = result.stream()
+                    .filter(item -> reqVO.getReliability().equals(item.getReliability()))
+                    .toList();
+        }
+        if (pageable.getSort().isSorted()) {
+            result = new ArrayList<>(result);
+            result.sort(buildBacktestComparator(pageable.getSort()));
+        }
+        return toPage(result, pageable);
+    }
+
+    private Set<String> loadWatchlistCodes(Long watchlistGroupId) {
+        if (watchlistGroupId == null) {
+            return null;
+        }
+        Long userId = UserContext.requireCurrentUserId();
+        stockWatchlistGroupRepository.findByIdAndUserId(watchlistGroupId, userId)
+                .orElseThrow(() -> new BusinessException(ExceptionEnum.WATCHLIST_GROUP_NOT_FOUND));
+        return stockWatchlistStockRepository.findByGroupIdOrderBySortNoDesc(watchlistGroupId)
+                .stream().map(StockWatchlistStock::getStockCode).collect(Collectors.toSet());
+    }
+
+    private Comparator<StockTradeSignalVO> buildMacdSignalComparator(Sort sort) {
+        Comparator<StockTradeSignalVO> result = null;
+        for (Sort.Order order : sort) {
+            Comparator<StockTradeSignalVO> comparator = switch (order.getProperty()) {
+                case "code" -> Comparator.comparing(StockTradeSignalVO::getCode);
+                case "name" -> Comparator.comparing(StockTradeSignalVO::getName);
+                case SIGNAL -> Comparator.comparing(StockTradeSignalVO::getSignal);
+                case "latestPrice" -> Comparator.comparing(
+                        StockTradeSignalVO::getLatestPrice, Comparator.nullsLast(BigDecimal::compareTo));
+                case "pir" -> Comparator.comparing(
+                        StockTradeSignalVO::getPir, Comparator.nullsLast(BigDecimal::compareTo));
+                case "dif" -> Comparator.comparing(
+                        StockTradeSignalVO::getDif, Comparator.nullsLast(BigDecimal::compareTo));
+                case "dea" -> Comparator.comparing(
+                        StockTradeSignalVO::getDea, Comparator.nullsLast(BigDecimal::compareTo));
+                case "macdHistogram" -> Comparator.comparing(
+                        StockTradeSignalVO::getMacdHistogram, Comparator.nullsLast(BigDecimal::compareTo));
+                default -> null;
+            };
+            if (comparator != null) {
+                if (order.getDirection() == Sort.Direction.DESC) {
+                    comparator = comparator.reversed();
+                }
+                result = result == null ? comparator : result.thenComparing(comparator);
+            }
+        }
+        return result != null ? result : Comparator.comparing(StockTradeSignalVO::getCode);
+    }
+
+    private <T> Page<T> toPage(List<T> result, Pageable pageable) {
+        int total = result.size();
+        int fromIndex = pageable.getPageNumber() * pageable.getPageSize();
+        if (fromIndex >= total) {
+            return new PageImpl<>(Collections.emptyList(), pageable, total);
+        }
+        int toIndex = Math.min(fromIndex + pageable.getPageSize(), total);
+        return new PageImpl<>(result.subList(fromIndex, toIndex), pageable, total);
+    }
+
     private boolean hasStrategySortFields(Sort sort) {
         if (!sort.isSorted()) return false;
         for (Sort.Order order : sort) {
             String prop = order.getProperty();
-            if (SIGNAL.equals(prop) || "momentumValue".equals(prop) || "totalReturn".equals(prop) ||
+            if (SIGNAL.equals(prop) || "momentumValue".equals(prop) || "dif".equals(prop)
+                    || "dea".equals(prop) || "macdHistogram".equals(prop) || "totalReturn".equals(prop) ||
                 "tradeCount".equals(prop) || "winRate".equals(prop) || "pValue".equals(prop)) {
                 return true;
             }

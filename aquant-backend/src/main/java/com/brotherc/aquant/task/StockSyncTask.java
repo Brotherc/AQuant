@@ -110,6 +110,7 @@ public class StockSyncTask {
         stockGrowthMetricsService.refreshGrowthMetrics();
         stockStrategySnapshotService.refreshDualMaBacktestSnapshots();
         stockStrategySnapshotService.refreshMomentumBacktestSnapshots();
+        stockStrategySnapshotService.refreshMacdBacktestSnapshots();
     }
 
     private void syncStackDtaLatest() {

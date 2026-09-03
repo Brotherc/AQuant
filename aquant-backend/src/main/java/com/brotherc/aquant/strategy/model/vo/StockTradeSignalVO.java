@@ -29,6 +29,15 @@ public class StockTradeSignalVO {
     @Schema(description = "动量值(%)")
     private BigDecimal momentumValue;
 
+    @Schema(description = "MACD快慢线差值(DIF)")
+    private BigDecimal dif;
+
+    @Schema(description = "MACD信号线(DEA)")
+    private BigDecimal dea;
+
+    @Schema(description = "MACD柱值，按2*(DIF-DEA)计算")
+    private BigDecimal macdHistogram;
+
     public StockTradeSignalVO(String code, String name, String signal, BigDecimal latestPrice, BigDecimal pir) {
         this.code = code;
         this.name = name;
@@ -40,6 +49,22 @@ public class StockTradeSignalVO {
     public StockTradeSignalVO(String code, String name, String signal, BigDecimal latestPrice, BigDecimal pir, BigDecimal momentumValue) {
         this(code, name, signal, latestPrice, pir);
         this.momentumValue = momentumValue;
+    }
+
+    public StockTradeSignalVO(
+            String code,
+            String name,
+            String signal,
+            BigDecimal latestPrice,
+            BigDecimal pir,
+            BigDecimal dif,
+            BigDecimal dea,
+            BigDecimal macdHistogram
+    ) {
+        this(code, name, signal, latestPrice, pir);
+        this.dif = dif;
+        this.dea = dea;
+        this.macdHistogram = macdHistogram;
     }
 
 }
