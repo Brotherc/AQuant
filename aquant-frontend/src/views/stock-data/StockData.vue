@@ -268,10 +268,19 @@ const addLoading = ref(false);
 const watchlistGroupsLoading = ref(false);
 const targetGroupId = ref<number | undefined>(undefined);
 
+// 辅助函数：标准化股票代码（提取纯6位数字代码）
+const normalizeCode = (code: string | undefined | null) => {
+  if (!code) return '';
+  const c = code.trim().toLowerCase();
+  return c.length > 6 ? c.substring(c.length - 6) : c;
+};
+
 // 判断当前股票是否在自选股中
 const isInWatchlist = computed(() => {
   if (!selectedStock.value?.code) return false;
-  return watchlistStockCodes.value.has(selectedStock.value.code);
+  const raw = selectedStock.value.code.trim().toLowerCase();
+  const clean = normalizeCode(raw);
+  return watchlistStockCodes.value.has(raw) || watchlistStockCodes.value.has(clean);
 });
 
 // 全局分页数据源
@@ -316,7 +325,17 @@ const fetchWatchlistStockCodes = async () => {
           try {
             const stockRes = await getWatchlistStocks(g.id);
             if (stockRes.data.success && stockRes.data.data) {
-              stockRes.data.data.forEach(s => codes.add(s.stockCode));
+              stockRes.data.data.forEach(s => {
+                if (s.stockCode) {
+                  const raw = s.stockCode.trim().toLowerCase();
+                  const clean = normalizeCode(raw);
+                  codes.add(raw);
+                  codes.add(clean);
+                  codes.add('sh' + clean);
+                  codes.add('sz' + clean);
+                  codes.add('bj' + clean);
+                }
+              });
             }
           } catch (e) {
             // ignore
@@ -435,7 +454,13 @@ const handleConfirmAdd = async () => {
     });
     if (res.data.success) {
       message.success('已成功加入自选');
-      watchlistStockCodes.value.add(selectedStock.value.code);
+      const raw = selectedStock.value.code.trim().toLowerCase();
+      const clean = normalizeCode(raw);
+      watchlistStockCodes.value.add(raw);
+      watchlistStockCodes.value.add(clean);
+      watchlistStockCodes.value.add('sh' + clean);
+      watchlistStockCodes.value.add('sz' + clean);
+      watchlistStockCodes.value.add('bj' + clean);
       watchlistVisible.value = false;
     }
   } catch (error) {
