@@ -310,12 +310,16 @@ const renderChart = (allData: StockFundNetValue[]) => {
       {
         type: 'slider',
         show: true,
-        height: 6,
+        height: 8,
         bottom: 4,
         borderColor: 'transparent',
         backgroundColor: '#f1f5f9',
-        fillerColor: 'rgba(148, 163, 184, 0.4)',
-        handleSize: 0,
+        fillerColor: 'rgba(148, 163, 184, 0.45)',
+        handleSize: '100%',
+        handleStyle: {
+          color: '#94a3b8',
+          borderColor: '#cbd5e1'
+        },
         moveHandleSize: 0,
         showDetail: false,
         zoomLock: false,

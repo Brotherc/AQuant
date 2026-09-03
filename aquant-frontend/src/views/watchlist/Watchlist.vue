@@ -2577,11 +2577,29 @@ watch(() => groups.value.length, async () => {
   justify-content: center;
 }
 
-/* 详情弹窗标题下方间距 */
+/* 详情弹窗防溢出与自适应布局 */
+.detail-modal {
+  max-width: calc(100vw - 40px);
+}
+
+.detail-modal .ant-modal-content {
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .detail-modal .ant-modal-header {
-  padding-bottom: 8px;
+  padding-bottom: 12px;
   margin-bottom: 0;
   border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+}
+
+.detail-modal .ant-modal-body {
+  overflow-y: auto;
+  max-height: calc(100vh - 100px);
+  padding: 20px 24px 24px 24px;
 }
 
 /* 顶部资产类型切换 (股票自选 / 基金自选) 分段药丸样式 - 统一对齐大盘全景 */

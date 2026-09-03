@@ -29,7 +29,7 @@
       </div>
     </div>
 
-    <a-divider style="margin: 24px 0" />
+    <a-divider style="margin: 16px 0 20px 0" />
 
     <div class="detail-body">
       <!-- Left: Expanded Chart -->
@@ -356,21 +356,23 @@ const renderChart = (data: StockQuoteHistory[]) => {
   const subIndicatorCount = Number(indicatorVisibility.macd)
     + Number(indicatorVisibility.kdj)
     + Number(indicatorVisibility.boll);
-  const mainGridHeight = subIndicatorCount === 0 ? '65%'
-    : subIndicatorCount === 1 ? '47%'
+  const mainGridHeight = subIndicatorCount === 0 ? '70%'
+    : subIndicatorCount === 1 ? '49%'
       : subIndicatorCount === 2 ? '39%'
         : '31%';
-  const volumeGridTop = subIndicatorCount === 0 ? '78%'
-    : subIndicatorCount === 1 ? '59%'
-      : subIndicatorCount === 2 ? '50%'
-        : '43%';
-  const volumeGridHeight = subIndicatorCount === 3 ? '9%' : '11%';
-  const subGridTops = subIndicatorCount === 1 ? ['74%']
-    : subIndicatorCount === 2 ? ['64%', '81%']
-      : ['55%', '69%', '83%'];
-  const subGridHeight = subIndicatorCount === 1 ? '16%'
-    : subIndicatorCount === 2 ? '14%'
+  const volumeGridTop = subIndicatorCount === 0 ? '76%'
+    : subIndicatorCount === 1 ? '56%'
+      : subIndicatorCount === 2 ? '46%'
+        : '38%';
+  const volumeGridHeight = subIndicatorCount === 0 ? '18%'
+    : subIndicatorCount === 3 ? '9%'
       : '11%';
+  const subGridTops = subIndicatorCount === 1 ? ['72%']
+    : subIndicatorCount === 2 ? ['60%', '78%']
+      : ['50%', '65%', '80%'];
+  const subGridHeight = subIndicatorCount === 1 ? '22%'
+    : subIndicatorCount === 2 ? '16%'
+      : '14%';
   let visibleSubGridIndex = 0;
   const getSubGridLayout = (visible: boolean) => {
     if (!visible) {
@@ -481,52 +483,56 @@ const renderChart = (data: StockQuoteHistory[]) => {
         show: true,
         type: 'slider',
         xAxisIndex: [0, 1, 2, 3, 4],
-        height: 6,
-        bottom: 8,
+        height: 8,
+        bottom: 2,
         start: 70,
         end: 100,
         borderColor: 'transparent',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        fillerColor: 'rgba(255, 255, 255, 0.15)',
-        handleSize: 0,
+        backgroundColor: '#f1f5f9',
+        fillerColor: 'rgba(148, 163, 184, 0.45)',
+        handleSize: '100%',
+        handleStyle: {
+          color: '#94a3b8',
+          borderColor: '#cbd5e1'
+        },
         moveHandleSize: 0,
         showDetail: false,
         showDataShadow: false,
-        zoomLock: true
+        zoomLock: false
       }
     ],
     grid: [
       {
         left: '3%',
-        right: '6%',
+        right: '0%',
         top: '3%',
         height: mainGridHeight,
         containLabel: true
       },
       {
         left: '3%',
-        right: '6%',
+        right: '0%',
         top: volumeGridTop,
         height: volumeGridHeight,
         containLabel: true
       },
       {
         left: '3%',
-        right: '6%',
+        right: '0%',
         top: macdGrid.top,
         height: macdGrid.height,
         containLabel: true
       },
       {
         left: '3%',
-        right: '6%',
+        right: '0%',
         top: kdjGrid.top,
         height: kdjGrid.height,
         containLabel: true
       },
       {
         left: '3%',
-        right: '6%',
+        right: '0%',
         top: bollGrid.top,
         height: bollGrid.height,
         containLabel: true
@@ -915,13 +921,16 @@ onUnmounted(() => {
 .detail-body {
   display: flex;
   gap: 24px;
-  height: 540px;
+  height: 500px;
+  min-height: 400px;
 }
 
 .chart-section {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  min-width: 0;
 }
 
 .chart-controls {
@@ -947,6 +956,7 @@ onUnmounted(() => {
   flex-wrap: wrap;
   gap: 10px 18px;
   min-width: 0;
+  margin-left: auto;
 }
 
 .detail-freq-selector {
@@ -990,10 +1000,10 @@ onUnmounted(() => {
 .indicator-switches {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 12px;
   flex-basis: 100%;
-  justify-content: flex-end;
 }
 
 .indicator-switch {
@@ -1008,6 +1018,7 @@ onUnmounted(() => {
 .ma-legend-bar {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 10px;
   font-size: 11px;
@@ -1039,20 +1050,9 @@ onUnmounted(() => {
 .chart-container {
   flex: 1;
   width: 100%;
+  min-height: 320px;
   background: var(--color-bg-elevated);
   border-radius: 8px;
-}
-
-@media (max-width: 1100px) {
-  .chart-controls,
-  .chart-toolbar-right {
-    align-items: flex-start;
-  }
-
-  .chart-toolbar-right,
-  .indicator-switches {
-    justify-content: flex-start;
-  }
 }
 
 .info-sidebar {

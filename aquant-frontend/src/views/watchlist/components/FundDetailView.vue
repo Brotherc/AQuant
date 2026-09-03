@@ -30,7 +30,7 @@
       </div>
     </div>
 
-    <a-divider style="margin: 24px 0" />
+    <a-divider style="margin: 16px 0 20px 0" />
 
     <div class="detail-body">
       <!-- Left: Expanded Fund Net Value Chart -->
@@ -38,7 +38,7 @@
         <div class="chart-controls-left">
           <span class="section-title">历史净值走势</span>
         </div>
-        <FundNetValueChart :fundCode="stock.stockCode" :showMA="true" style="height: 380px;" />
+        <FundNetValueChart :fundCode="stock.stockCode" :showMA="true" class="fund-chart-item" />
       </div>
 
       <!-- Right: Latest Holdings Table -->
@@ -59,7 +59,7 @@
             size="small"
             bordered
             class="holding-table"
-            :scroll="{ y: 320 }"
+            :scroll="{ y: 390 }"
           >
           </a-table>
         </div>
@@ -175,14 +175,14 @@ onMounted(() => {
 .price-row.neutral { color: var(--color-text-secondary); }
 
 .latest-price {
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 700;
   font-family: var(--font-family-mono);
 }
 
 .price-change {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 500;
 }
 
 .metrics-grid {
@@ -207,28 +207,39 @@ onMounted(() => {
 }
 
 .metric-item .value {
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 600;
+  color: var(--color-text-primary);
   font-family: var(--font-family-mono);
 }
 
 .detail-body {
-  display: grid;
-  grid-template-columns: 1fr 580px;
-  gap: 24px;
+  display: flex;
+  gap: 16px;
+  height: 480px;
+  min-height: 400px;
 }
 
 .chart-section {
+  flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.fund-chart-item {
+  flex: 1;
+  width: 100%;
+  min-height: 320px;
 }
 
 .chart-controls-left {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .section-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
 }
 
@@ -240,17 +251,23 @@ onMounted(() => {
 }
 
 .info-sidebar {
+  width: 540px;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .sidebar-section {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .holding-table {
+  flex: 1;
   width: 100%;
 }
 </style>
