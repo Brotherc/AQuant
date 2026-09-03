@@ -29,7 +29,7 @@
       </div>
     </div>
 
-    <a-divider style="margin: 24px 0" />
+    <a-divider style="margin: 16px 0 20px 0" />
 
     <div class="detail-body">
       <!-- Left: Expanded Chart -->
@@ -915,13 +915,16 @@ onUnmounted(() => {
 .detail-body {
   display: flex;
   gap: 24px;
-  height: 540px;
+  height: 500px;
+  min-height: 400px;
 }
 
 .chart-section {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  min-width: 0;
 }
 
 .chart-controls {
@@ -1039,6 +1042,7 @@ onUnmounted(() => {
 .chart-container {
   flex: 1;
   width: 100%;
+  min-height: 320px;
   background: var(--color-bg-elevated);
   border-radius: 8px;
 }
