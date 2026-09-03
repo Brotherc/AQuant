@@ -356,23 +356,23 @@ const renderChart = (data: StockQuoteHistory[]) => {
   const subIndicatorCount = Number(indicatorVisibility.macd)
     + Number(indicatorVisibility.kdj)
     + Number(indicatorVisibility.boll);
-  const mainGridHeight = subIndicatorCount === 0 ? '65%'
-    : subIndicatorCount === 1 ? '47%'
+  const mainGridHeight = subIndicatorCount === 0 ? '70%'
+    : subIndicatorCount === 1 ? '49%'
       : subIndicatorCount === 2 ? '39%'
         : '31%';
-  const volumeGridTop = subIndicatorCount === 0 ? '78%'
-    : subIndicatorCount === 1 ? '59%'
-      : subIndicatorCount === 2 ? '50%'
-        : '43%';
-  const volumeGridHeight = subIndicatorCount === 0 ? '17%'
+  const volumeGridTop = subIndicatorCount === 0 ? '76%'
+    : subIndicatorCount === 1 ? '56%'
+      : subIndicatorCount === 2 ? '46%'
+        : '38%';
+  const volumeGridHeight = subIndicatorCount === 0 ? '18%'
     : subIndicatorCount === 3 ? '9%'
       : '11%';
-  const subGridTops = subIndicatorCount === 1 ? ['74%']
-    : subIndicatorCount === 2 ? ['64%', '81%']
-      : ['55%', '69%', '83%'];
-  const subGridHeight = subIndicatorCount === 1 ? '16%'
-    : subIndicatorCount === 2 ? '14%'
-      : '11%';
+  const subGridTops = subIndicatorCount === 1 ? ['72%']
+    : subIndicatorCount === 2 ? ['60%', '78%']
+      : ['50%', '65%', '80%'];
+  const subGridHeight = subIndicatorCount === 1 ? '22%'
+    : subIndicatorCount === 2 ? '16%'
+      : '14%';
   let visibleSubGridIndex = 0;
   const getSubGridLayout = (visible: boolean) => {
     if (!visible) {
@@ -483,18 +483,22 @@ const renderChart = (data: StockQuoteHistory[]) => {
         show: true,
         type: 'slider',
         xAxisIndex: [0, 1, 2, 3, 4],
-        height: 6,
-        bottom: 0,
+        height: 8,
+        bottom: 2,
         start: 70,
         end: 100,
         borderColor: 'transparent',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        fillerColor: 'rgba(255, 255, 255, 0.15)',
-        handleSize: 0,
+        backgroundColor: '#f1f5f9',
+        fillerColor: 'rgba(148, 163, 184, 0.45)',
+        handleSize: '100%',
+        handleStyle: {
+          color: '#94a3b8',
+          borderColor: '#cbd5e1'
+        },
         moveHandleSize: 0,
         showDetail: false,
         showDataShadow: false,
-        zoomLock: true
+        zoomLock: false
       }
     ],
     grid: [
