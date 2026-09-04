@@ -1,15 +1,23 @@
 package com.brotherc.aquant.integration.tencent.service;
 
+import com.brotherc.aquant.common.exception.BusinessException;
+import com.brotherc.aquant.common.exception.ExceptionEnum;
+import com.brotherc.aquant.integration.tencent.model.TencentMinuteQuote;
+import com.brotherc.aquant.integration.tencent.model.TencentOrderBook;
 import com.brotherc.aquant.integration.tencent.model.TencentStockQuote;
 import com.brotherc.aquant.common.utils.StockUtils;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
@@ -26,6 +34,140 @@ import java.util.stream.Collectors;
 public class TencentFinanceService {
 
     private final OkHttpClient okHttpClient;
+    private final ObjectMapper objectMapper;
+
+    /**
+     * 获取个股当日分时数据 (腾讯 ifzq 接口)
+     *
+     * @param code 股票代码，带交易所前缀，如 sh600519
+     * @return 分时数据（含日期、名称、昨收与逐分钟价格/累计量/累计额）
+     */
+    public TencentMinuteQuote fetchMinute(String code) {
+        HttpUrl httpUrl = HttpUrl.get("http://web.ifzq.gtimg.cn/appstock/app/minute/query")
+                .newBuilder()
+                .addQueryParameter("code", code)
+                .build();
+        Request request = new Request.Builder()
+                .url(httpUrl)
+                .header("Referer", "http://gu.qq.com")
+                .build();
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                log.warn("腾讯分时接口响应异常: status={}, symbol={}", response.code(), code);
+                throw ExceptionEnum.API_REQUEST_ERROR.toException();
+            }
+
+            JsonNode root = objectMapper.readTree(response.body().string());
+            JsonNode minuteNode = root.path("data").path(code).path("data");
+            JsonNode rows = minuteNode.path("data");
+            JsonNode qt = root.path("data").path(code).path("qt").path(code);
+            if (!rows.isArray() || rows.isEmpty() || qt.path(4).isMissingNode()) {
+                log.warn("腾讯分时接口数据缺失: symbol={}, bodySize={}", code, rows.size());
+                throw ExceptionEnum.API_REQUEST_ERROR.toException();
+            }
+
+            TencentMinuteQuote quote = new TencentMinuteQuote();
+            quote.setCode(code);
+            quote.setDate(formatTradeDate(minuteNode.path("date").asText()));
+            quote.setName(qt.path(1).asText());
+            quote.setPrevClose(new BigDecimal(qt.path(4).asText()));
+
+            for (JsonNode rowNode : rows) {
+                String[] parts = rowNode.asText().trim().split("\\s+");
+                if (parts.length < 4) {
+                    continue;
+                }
+                TencentMinuteQuote.Point point = new TencentMinuteQuote.Point();
+                String rawTime = parts[0];
+                point.setTime(rawTime.substring(0, 2) + ":" + rawTime.substring(2));
+                point.setPrice(new BigDecimal(parts[1]));
+                point.setCumVolume(new BigDecimal(parts[2]));
+                point.setCumAmount(new BigDecimal(parts[3]));
+                quote.getPoints().add(point);
+            }
+            return quote;
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("腾讯分时接口请求/解析失败, symbol={}", code, e);
+            throw ExceptionEnum.API_REQUEST_ERROR.toException(e);
+        }
+    }
+
+    /**
+     * "yyyyMMdd" 转 "yyyy-MM-dd"
+     */
+    private String formatTradeDate(String raw) {
+        if (raw == null || raw.length() != 8) {
+            return raw;
+        }
+        return raw.substring(0, 4) + "-" + raw.substring(4, 6) + "-" + raw.substring(6, 8);
+    }
+
+    /**
+     * 获取个股实时盘口 (腾讯 qt.gtimg.cn 行情接口，含五档买卖盘与成交信息)
+     *
+     * @param code 股票代码，带交易所前缀，如 sh600519
+     * @return 实时盘口
+     */
+    public TencentOrderBook fetchOrderBook(String code) {
+        HttpUrl httpUrl = HttpUrl.get("http://qt.gtimg.cn/q=" + code).newBuilder().build();
+        Request request = new Request.Builder()
+                .url(httpUrl)
+                .header("Referer", "http://gu.qq.com")
+                .build();
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                log.warn("腾讯盘口接口响应异常: status={}, symbol={}", response.code(), code);
+                throw ExceptionEnum.API_REQUEST_ERROR.toException();
+            }
+
+            String body = response.body().string();
+            int firstQuote = body.indexOf("\"");
+            int lastQuote = body.lastIndexOf("\"");
+            if (firstQuote < 0 || lastQuote <= firstQuote) {
+                log.warn("腾讯盘口接口响应格式异常: symbol={}", code);
+                throw ExceptionEnum.API_REQUEST_ERROR.toException();
+            }
+            String[] parts = body.substring(firstQuote + 1, lastQuote).split("~");
+            if (parts.length < 30 || parts[3].isBlank()) {
+                log.warn("腾讯盘口接口数据缺失: symbol={}, parts={}", code, parts.length);
+                throw ExceptionEnum.API_REQUEST_ERROR.toException();
+            }
+
+            TencentOrderBook book = new TencentOrderBook();
+            book.setCode(code);
+            book.setName(parts[1]);
+            book.setLatestPrice(new BigDecimal(parts[3]));
+            book.setPrevClose(new BigDecimal(parts[4]));
+            book.setOpen(new BigDecimal(parts[5]));
+            book.setVolume(new BigDecimal(parts[6]));
+            for (int i = 0; i < 5; i++) {
+                book.getBids().add(new TencentOrderBook.Level(
+                        new BigDecimal(parts[9 + i * 2]), new BigDecimal(parts[10 + i * 2])));
+                book.getAsks().add(new TencentOrderBook.Level(
+                        new BigDecimal(parts[19 + i * 2]), new BigDecimal(parts[20 + i * 2])));
+            }
+            book.setQuoteTime(parts[30]);
+            book.setChange(new BigDecimal(parts[31]));
+            book.setChangePercent(new BigDecimal(parts[32]));
+            book.setHigh(new BigDecimal(parts[33]));
+            book.setLow(new BigDecimal(parts[34]));
+            book.setTurnover(new BigDecimal(parts[37]));
+            book.setTurnoverRate(new BigDecimal(parts[38]));
+            if (parts.length > 49 && !parts[49].isBlank()) {
+                book.setQuantityRatio(new BigDecimal(parts[49]));
+            }
+            return book;
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("腾讯盘口接口请求/解析失败, symbol={}", code, e);
+            throw ExceptionEnum.API_REQUEST_ERROR.toException(e);
+        }
+    }
 
     /**
      * 批量获取实时股票行情 (腾讯接口)

@@ -135,6 +135,78 @@ export const getStockHistory = (params: { code: string; frequency?: string }) =>
     return api.get<ResponseDTO<StockQuoteHistory[]>>('/stockQuote/history/kline', { params });
 };
 
+// ==================== 分时 / 分钟K线 ====================
+
+export interface StockMinuteBar {
+    id: number;
+    code: string;
+    barTime: string;      // "yyyy-MM-dd HH:mm:ss"
+    period: number;
+    openPrice: number;
+    highPrice: number;
+    lowPrice: number;
+    closePrice: number;
+    volume: number;       // 股
+    turnover: number;     // 元
+    createdAt?: string;
+}
+
+export interface StockMinutePoint {
+    time: string;              // "HH:mm"
+    price: number;
+    avgPrice: number | null;   // 停牌分钟为 null
+    volume: number;            // 手
+}
+
+export interface StockMinuteRealtimeVO {
+    code: string;
+    name: string;
+    tradeDate: string;
+    prevClose: number;
+    open: number;
+    latestPrice: number;
+    points: StockMinutePoint[];
+}
+
+export const getStockMinuteRealtime = (params: { code: string }) => {
+    return api.get<ResponseDTO<StockMinuteRealtimeVO>>('/stockQuote/minute/realtime', { params });
+};
+
+// ==================== 实时盘口（五档买卖盘） ====================
+
+export interface OrderBookLevel {
+    price: number;
+    volume: number; // 手
+}
+
+export interface StockOrderBookVO {
+    code: string;
+    name: string;
+    latestPrice: number;
+    change: number;
+    changePercent: number;
+    prevClose: number;
+    open: number;
+    high: number;
+    low: number;
+    volume: number;       // 成交量(手)
+    turnover: number;     // 成交额(万)
+    turnoverRate: number; // 换手率%
+    quantityRatio?: number; // 量比
+    quoteTime: string;    // HH:mm:ss
+    bids: OrderBookLevel[]; // 买一~买五
+    asks: OrderBookLevel[]; // 卖一~卖五
+}
+
+export const getStockOrderBook = (params: { code: string }) => {
+    return api.get<ResponseDTO<StockOrderBookVO>>('/stockQuote/minute/orderbook', { params });
+};
+
+// '1分'K线与'五日分时'共用；首次调用可能触发上游同步(14~22s)，单独放宽超时
+export const getStockMinuteKline = (params: { code: string; days?: number }) => {
+    return api.get<ResponseDTO<StockMinuteBar[]>>('/stockQuote/minute/kline', { params, timeout: 60000 });
+};
+
 // ==================== 动量策略 ====================
 
 export interface MomentumReqVO {
