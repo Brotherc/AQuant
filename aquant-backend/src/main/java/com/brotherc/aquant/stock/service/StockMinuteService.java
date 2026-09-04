@@ -4,6 +4,8 @@ import com.brotherc.aquant.common.utils.StockHelper;
 import com.brotherc.aquant.common.utils.StockUtils;
 import com.brotherc.aquant.integration.akshare.model.StockZhAMinute;
 import com.brotherc.aquant.integration.akshare.service.AKShareService;
+import com.brotherc.aquant.integration.eastmoney.model.EastmoneyTickDetail;
+import com.brotherc.aquant.integration.eastmoney.service.EastmoneyFinanceService;
 import com.brotherc.aquant.integration.tencent.model.TencentMinuteQuote;
 import com.brotherc.aquant.integration.tencent.model.TencentOrderBook;
 import com.brotherc.aquant.integration.tencent.service.TencentFinanceService;
@@ -11,6 +13,7 @@ import com.brotherc.aquant.stock.entity.StockMinuteBar;
 import com.brotherc.aquant.stock.model.vo.StockMinutePointVO;
 import com.brotherc.aquant.stock.model.vo.StockMinuteRealtimeVO;
 import com.brotherc.aquant.stock.model.vo.StockOrderBookVO;
+import com.brotherc.aquant.stock.model.vo.StockTickTradeVO;
 import com.brotherc.aquant.sync.entity.StockSync;
 import com.brotherc.aquant.sync.repository.StockSyncRepository;
 import lombok.RequiredArgsConstructor;
@@ -43,11 +46,13 @@ public class StockMinuteService {
     private final StockSyncRepository stockSyncRepository;
     private final AKShareService akShareService;
     private final TencentFinanceService tencentFinanceService;
+    private final EastmoneyFinanceService eastmoneyFinanceService;
     private final StockHelper stockHelper;
 
     private final ConcurrentHashMap<String, ReentrantLock> syncLocks = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, CacheEntry<StockMinuteRealtimeVO>> realtimeCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, CacheEntry<StockOrderBookVO>> orderBookCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, CacheEntry<StockTickTradeVO>> tickTradeCache = new ConcurrentHashMap<>();
 
     /**
      * 近 N 个已收盘交易日的 1 分钟 K 线（"1分"K线与"五日分时"共用数据源）。上游同步失败时降级返回已有 DB 数据。
@@ -121,6 +126,46 @@ public class StockMinuteService {
         StockOrderBookVO vo = buildVO(symbol, tencentFinanceService.fetchOrderBook(symbol));
         orderBookCache.put(symbol, new CacheEntry<>(vo, System.currentTimeMillis() + ORDER_BOOK_TTL_MILLIS));
         return vo;
+    }
+
+    /**
+     * 当日分笔成交明细（10 秒 TTL 缓存，对齐分时轮询节奏）
+     */
+    public StockTickTradeVO getTickTrades(String code) {
+        String symbol = StockUtils.wrapExchangePrefix(code);
+        CacheEntry<StockTickTradeVO> cached = tickTradeCache.get(symbol);
+        if (cached != null && cached.expireAt > System.currentTimeMillis()) {
+            return cached.value;
+        }
+        StockTickTradeVO vo = buildVO(symbol, eastmoneyFinanceService.fetchTickDetails(symbol));
+        tickTradeCache.put(symbol, new CacheEntry<>(vo, System.currentTimeMillis() + REALTIME_TTL_MILLIS));
+        return vo;
+    }
+
+    private StockTickTradeVO buildVO(String code, EastmoneyTickDetail detail) {
+        StockTickTradeVO vo = new StockTickTradeVO();
+        vo.setCode(code);
+        vo.setTotal(detail.getTrades().size());
+        for (EastmoneyTickDetail.Trade trade : detail.getTrades()) {
+            StockTickTradeVO.Trade voTrade = new StockTickTradeVO.Trade();
+            voTrade.setTime(trade.getTime());
+            voTrade.setPrice(trade.getPrice());
+            voTrade.setVolume(trade.getVolume());
+            voTrade.setDirection(toDirection(trade.getDirection()));
+            vo.getTrades().add(voTrade);
+        }
+        return vo;
+    }
+
+    private String toDirection(Integer directionCode) {
+        if (directionCode == null) {
+            return "M";
+        }
+        return switch (directionCode) {
+            case 1 -> "B";
+            case 2 -> "S";
+            default -> "M";
+        };
     }
 
     private StockOrderBookVO buildVO(String code, TencentOrderBook book) {

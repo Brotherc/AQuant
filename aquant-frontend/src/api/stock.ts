@@ -202,6 +202,23 @@ export const getStockOrderBook = (params: { code: string }) => {
     return api.get<ResponseDTO<StockOrderBookVO>>('/stockQuote/minute/orderbook', { params });
 };
 
+export interface TickTrade {
+    time: string;     // HH:mm:ss
+    price: number;
+    volume: number;   // 手
+    direction: 'B' | 'S' | 'M'; // 买盘/卖盘/中性盘
+}
+
+export interface StockTickTradeVO {
+    code: string;
+    total: number;
+    trades: TickTrade[]; // 时间升序
+}
+
+export const getStockTickTrades = (params: { code: string }) => {
+    return api.get<ResponseDTO<StockTickTradeVO>>('/stockQuote/minute/trades', { params });
+};
+
 // '1分'K线与'五日分时'共用；首次调用可能触发上游同步(14~22s)，单独放宽超时
 export const getStockMinuteKline = (params: { code: string; days?: number }) => {
     return api.get<ResponseDTO<StockMinuteBar[]>>('/stockQuote/minute/kline', { params, timeout: 60000 });

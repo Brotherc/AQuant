@@ -137,7 +137,19 @@
           </div>
         </div>
 
-        <div v-else class="sidebar-section">
+        <div v-if="frequency === 'minute' && displayTrades.length > 0" class="sidebar-section">
+          <div class="section-title">分时成交<span class="tick-total">共 {{ tickTrades?.total ?? 0 }} 笔</span></div>
+          <div class="tick-list">
+            <div v-for="(trade, i) in displayTrades" :key="trade.time + '-' + i" class="tick-row">
+              <span class="tick-time">{{ trade.time }}</span>
+              <span class="tick-price" :class="tickDirectionClass(trade.direction)">{{ trade.price.toFixed(2) }}</span>
+              <span class="tick-vol" :class="tickDirectionClass(trade.direction)">{{ trade.volume }}</span>
+              <span class="tick-dir" :class="tickDirectionClass(trade.direction)">{{ tickDirectionText(trade.direction) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="frequency !== 'minute'" class="sidebar-section">
         <div class="section-title">分红历史</div>
           <div class="dividend-list">
             <template v-if="allDividends.length > 0">
@@ -171,10 +183,12 @@ import {
   getStockMinuteKline,
   getStockMinuteRealtime,
   getStockOrderBook,
+  getStockTickTrades,
   type StockMinuteBar,
   type StockMinuteRealtimeVO,
   type StockQuoteHistory,
-  type StockOrderBookVO
+  type StockOrderBookVO,
+  type StockTickTradeVO
 } from '@/api/stock';
 import type { WatchlistStockVO } from '@/api/watchlist';
 import { getDividendDetailByCode, type StockDividendDetail } from '@/api/indicator';
@@ -341,6 +355,29 @@ const fetchOrderBook = async () => {
   }
 };
 
+// ==================== 分时成交（分时页签侧栏） ====================
+
+const tickTrades = ref<StockTickTradeVO | null>(null);
+// 侧栏只渲染最近 200 笔，最新在前，避免整日几千笔全量重绘
+const TICK_TRADE_DISPLAY_LIMIT = 200;
+const displayTrades = computed(() => {
+  const trades = tickTrades.value?.trades ?? [];
+  return trades.slice(-TICK_TRADE_DISPLAY_LIMIT).reverse();
+});
+
+const tickDirectionText = (direction: string) => (direction === 'B' ? '买' : direction === 'S' ? '卖' : '中');
+const tickDirectionClass = (direction: string) => (direction === 'B' ? 'text-up' : direction === 'S' ? 'text-down' : 'tick-neutral');
+
+const fetchTickTrades = async () => {
+  if (!props.stock.stockCode) return;
+  try {
+    const res = await getStockTickTrades({ code: props.stock.stockCode });
+    tickTrades.value = res.data.data ?? null;
+  } catch (error) {
+    console.error('Failed to fetch tick trades:', error);
+  }
+};
+
 const isTradingTime = () => {
   const now = new Date();
   const day = now.getDay();
@@ -367,6 +404,7 @@ const fetchMinuteData = async () => {
   if (!props.stock.stockCode) return;
 
   fetchOrderBook();
+  fetchTickTrades();
 
   try {
     const res = await getStockMinuteRealtime({ code: props.stock.stockCode });
@@ -1931,6 +1969,7 @@ watch([() => props.stock.stockCode, frequency], () => {
 // 头部"今开/昨收"指标卡依赖盘口数据：弹窗打开即拉取，切换股票时清空旧值并重新拉取
 watch(() => props.stock.stockCode, () => {
     orderBook.value = null;
+    tickTrades.value = null;
     fetchOrderBook();
 });
 
@@ -2425,6 +2464,50 @@ onUnmounted(() => {
   font-size: 11px;
   color: var(--color-text-tertiary);
   text-align: right;
+}
+
+/* 分时成交列表：最新在前，方向着色（买红/卖绿/中性灰） */
+.tick-total {
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-text-tertiary);
+}
+
+.tick-list {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.tick-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 24px;
+  align-items: center;
+  padding: 3px 4px;
+  font-size: 12px;
+  font-family: 'DIN Alternate', sans-serif;
+}
+
+.tick-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tick-time {
+  color: var(--color-text-tertiary);
+}
+
+.tick-price,
+.tick-vol {
+  text-align: right;
+}
+
+.tick-dir {
+  text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+.tick-neutral {
+  color: var(--color-text-tertiary);
 }
 </style>
 

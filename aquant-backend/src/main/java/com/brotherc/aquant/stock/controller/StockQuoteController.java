@@ -7,6 +7,7 @@ import com.brotherc.aquant.stock.model.vo.StockMinuteRealtimeVO;
 import com.brotherc.aquant.stock.model.vo.StockOrderBookVO;
 import com.brotherc.aquant.stock.model.vo.StockQuotePageReqVO;
 import com.brotherc.aquant.stock.model.vo.StockQuoteVO;
+import com.brotherc.aquant.stock.model.vo.StockTickTradeVO;
 import com.brotherc.aquant.stock.service.StockClusterService;
 import com.brotherc.aquant.stock.service.StockMinuteService;
 import com.brotherc.aquant.stock.service.StockQuoteHistoryService;
@@ -63,6 +64,13 @@ public class StockQuoteController {
     public ResponseDTO<StockOrderBookVO> orderBook(
             @Parameter(description = "股票代码") @RequestParam String code) {
         return ResponseDTO.success(stockMinuteService.getOrderBook(code));
+    }
+
+    @Operation(summary = "获取个股当日分笔成交明细(时间升序,已过滤集合竞价虚拟撮合)")
+    @GetMapping("/minute/trades")
+    public ResponseDTO<StockTickTradeVO> tickTrades(
+            @Parameter(description = "股票代码") @RequestParam String code) {
+        return ResponseDTO.success(stockMinuteService.getTickTrades(code));
     }
 
     @Operation(summary = "获取个股1分钟K线(近N个已收盘交易日,默认5;'1分'K线与'五日分时'共用)")
