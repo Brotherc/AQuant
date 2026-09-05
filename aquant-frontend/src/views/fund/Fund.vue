@@ -1268,6 +1268,28 @@ onMounted(() => {
   background: transparent !important;
 }
 
+.tab-table-container :deep(.ant-table-thead > tr > th),
+.tab-table-container :deep(.ant-table-thead > tr > th.ant-table-column-sort) {
+  background: #f1f5f9 !important;
+  color: #334155;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap !important;
+}
+
+.tab-table-container :deep(.ant-table-thead th.ant-table-column-has-sorters:hover) {
+  background: #e2e8f0 !important;
+}
+
+.tab-table-container :deep(.ant-table-tbody > tr > td) {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s ease;
+}
+
+.tab-table-container :deep(.ant-table-tbody > tr:hover > td) {
+  background: #f8fafc !important;
+}
+
 /* 右侧基金档案看板 */
 .market-quotes-panel {
   width: 210px;

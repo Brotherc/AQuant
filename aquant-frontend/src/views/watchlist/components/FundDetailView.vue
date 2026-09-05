@@ -270,4 +270,22 @@ onMounted(() => {
   flex: 1;
   width: 100%;
 }
+
+.holding-table :deep(.ant-table-thead > tr > th),
+.holding-table :deep(.ant-table-thead > tr > th.ant-table-column-sort) {
+  background: #f1f5f9 !important;
+  color: #334155;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap !important;
+}
+
+.holding-table :deep(.ant-table-tbody > tr > td) {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s ease;
+}
+
+.holding-table :deep(.ant-table-tbody > tr:hover > td) {
+  background: #f8fafc !important;
+}
 </style>

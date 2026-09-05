@@ -2410,24 +2410,27 @@ watch(() => groups.value.length, async () => {
   align-items: center;
   flex: 0 0 auto;
   min-width: fit-content;
-  margin-left: var(--spacing-md);
+  margin-left: var(--spacing-sm);
   cursor: pointer;
-  transition: color var(--transition-fast);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  font-weight: var(--font-weight-medium);
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: var(--font-size-sm);
+  color: #64748b;
+  font-weight: 500;
+  background: transparent;
 }
 
 .sort-options .ctrl-item:hover {
-  color: var(--color-text-primary);
-  background: rgba(255, 255, 255, 0.05);
+  color: #0f172a;
+  background: #f8fafc;
 }
 
 .sort-options .ctrl-item.active {
-  color: var(--color-accent);
-  font-weight: var(--font-weight-semibold);
-  background: var(--color-accent-light);
+  background: #f1f5f9;
+  color: #0f172a;
+  font-weight: 700;
 }
 
 .sort-options .ctrl-item .anticon {
