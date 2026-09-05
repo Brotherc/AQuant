@@ -56,4 +56,16 @@ public class StockStrategyController {
         return ResponseDTO.success(stockStrategyService.macdBacktest(reqVO, pageable));
     }
 
+    @Operation(summary = "网格交易策略")
+    @GetMapping("/grid")
+    public ResponseDTO<Page<StockTradeSignalVO>> grid(GridReqVO reqVO, Pageable pageable) {
+        return ResponseDTO.success(stockStrategyService.grid(reqVO, pageable));
+    }
+
+    @Operation(summary = "网格交易策略回测")
+    @GetMapping("/gridBacktest")
+    public ResponseDTO<Page<StockTradeBacktestVO>> gridBacktest(GridBacktestReqVO reqVO, Pageable pageable) {
+        return ResponseDTO.success(stockStrategyService.gridBacktest(reqVO, pageable));
+    }
+
 }

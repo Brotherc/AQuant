@@ -47,10 +47,12 @@ import {
   LineChartOutlined,
   ThunderboltOutlined,
   StockOutlined,
+  AppstoreOutlined,
 } from '@ant-design/icons-vue';
 import DualMA from './DualMA.vue';
 import Momentum from './Momentum.vue';
 import MACD from './MACD.vue';
+import Grid from './Grid.vue';
 
 interface StrategyItem {
   key: string;
@@ -88,6 +90,14 @@ const strategyList: StrategyItem[] = [
     desc: '基于DIF与DEA金叉死叉识别趋势拐点并进行回测',
     icon: markRaw(StockOutlined),
     component: markRaw(MACD),
+  },
+  {
+    key: 'grid',
+    name: '网格交易策略',
+    tag: '震荡交易',
+    desc: '按固定涨跌幅分层低买高卖，控制仓位并进行收益回测',
+    icon: markRaw(AppstoreOutlined),
+    component: markRaw(Grid),
   },
 ];
 

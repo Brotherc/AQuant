@@ -62,6 +62,10 @@ export interface StockTradeSignalVO {
     dif?: number;
     dea?: number;
     macdHistogram?: number;
+    gridReferencePrice?: number;
+    lowerGridPrice?: number;
+    upperGridPrice?: number;
+    gridPosition?: number;
 }
 
 export interface DualMABacktestReqVO {
@@ -286,6 +290,38 @@ export const getMacdPage = (params: MacdReqVO & { page: number; size: number; so
 
 export const getMacdBacktestPage = (params: MacdBacktestReqVO & { page: number; size: number; sort?: string[] }) => {
     return api.get<ResponseDTO<PageResult<StockTradeBacktestVO>>>('/stockStrategy/macdBacktest', {
+        params,
+        timeout: 60000
+    });
+};
+
+// ==================== 网格交易策略 ====================
+
+export interface GridReqVO {
+    code?: string;
+    gridRate?: number;
+    gridCount?: number;
+    signal?: string;
+    watchlistGroupId?: number;
+    market?: string;
+}
+
+export interface GridBacktestReqVO {
+    code?: string;
+    gridRate?: number;
+    gridCount?: number;
+    watchlistGroupId?: number;
+    recentYears?: number;
+    market?: string;
+    reliability?: string;
+}
+
+export const getGridPage = (params: GridReqVO & { page: number; size: number; sort?: string[] }) => {
+    return api.get<ResponseDTO<PageResult<StockTradeSignalVO>>>('/stockStrategy/grid', { params });
+};
+
+export const getGridBacktestPage = (params: GridBacktestReqVO & { page: number; size: number; sort?: string[] }) => {
+    return api.get<ResponseDTO<PageResult<StockTradeBacktestVO>>>('/stockStrategy/gridBacktest', {
         params,
         timeout: 60000
     });

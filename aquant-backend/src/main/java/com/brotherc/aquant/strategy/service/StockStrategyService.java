@@ -9,6 +9,8 @@ import com.brotherc.aquant.strategy.model.vo.MomentumReqVO;
 import com.brotherc.aquant.strategy.model.vo.MomentumBacktestReqVO;
 import com.brotherc.aquant.strategy.model.vo.MacdReqVO;
 import com.brotherc.aquant.strategy.model.vo.MacdBacktestReqVO;
+import com.brotherc.aquant.strategy.model.vo.GridReqVO;
+import com.brotherc.aquant.strategy.model.vo.GridBacktestReqVO;
 import com.brotherc.aquant.strategy.model.vo.StockTradeSignalVO;
 import com.brotherc.aquant.strategy.model.vo.StockTradeBacktestVO;
 import com.brotherc.aquant.stock.repository.StockQuoteRepository;
@@ -44,6 +46,7 @@ public class StockStrategyService {
     private final DualMovingAverageStrategy dualMovingAverageStrategy;
     private final MomentumStrategy momentumStrategy;
     private final MacdStrategy macdStrategy;
+    private final GridTradingStrategy gridTradingStrategy;
     private final StockWatchlistStockRepository stockWatchlistStockRepository;
     private final StockQuoteRepository stockQuoteRepository;
     private final StockWatchlistGroupRepository stockWatchlistGroupRepository;
@@ -566,6 +569,128 @@ public class StockStrategyService {
         return toPage(result, pageable);
     }
 
+    // ==================== 网格交易策略 ====================
+
+    public Page<StockTradeSignalVO> grid(GridReqVO reqVO, Pageable pageable) {
+        Set<String> watchlistCodes = loadWatchlistCodes(reqVO.getWatchlistGroupId());
+        if (watchlistCodes != null && watchlistCodes.isEmpty()) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
+
+        boolean earlyPaginate = StringUtils.isBlank(reqVO.getSignal()) && !hasStrategySortFields(pageable.getSort());
+        if (earlyPaginate) {
+            Page<StockQuote> pagedStocks = stockQuoteRepository.findAll(
+                    buildStockQuoteSpec(reqVO.getCode(), watchlistCodes, reqVO.getMarket()), pageable
+            );
+            if (pagedStocks.isEmpty()) {
+                return new PageImpl<>(Collections.emptyList(), pageable, 0);
+            }
+            List<StockTradeSignalVO> pagedList = gridTradingStrategy.calculate(
+                    reqVO.getGridRate(), reqVO.getGridCount(), pagedStocks.getContent()
+            );
+            return new PageImpl<>(pagedList, pageable, pagedStocks.getTotalElements());
+        }
+
+        List<StockQuote> targetStocks = stockQuoteRepository.findAll(
+                buildStockQuoteSpec(reqVO.getCode(), watchlistCodes, reqVO.getMarket())
+        );
+        if (targetStocks.isEmpty()) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
+        List<StockTradeSignalVO> result = gridTradingStrategy.calculate(
+                reqVO.getGridRate(), reqVO.getGridCount(), targetStocks
+        );
+        if (StringUtils.isNotBlank(reqVO.getSignal())) {
+            result = result.stream()
+                    .filter(item -> reqVO.getSignal().equalsIgnoreCase(item.getSignal()))
+                    .toList();
+        }
+        if (pageable.getSort().isSorted()) {
+            result = new ArrayList<>(result);
+            result.sort(buildGridSignalComparator(pageable.getSort()));
+        }
+        return toPage(result, pageable);
+    }
+
+    public Page<StockTradeBacktestVO> gridBacktest(GridBacktestReqVO reqVO, Pageable pageable) {
+        Set<String> watchlistCodes = loadWatchlistCodes(reqVO.getWatchlistGroupId());
+        if (watchlistCodes != null && watchlistCodes.isEmpty()) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
+
+        Page<StockTradeBacktestVO> snapshotPage = stockStrategySnapshotService
+                .queryGridBacktestSnapshot(reqVO, pageable, watchlistCodes);
+        if (snapshotPage != null) {
+            return snapshotPage;
+        }
+
+        boolean earlyPaginate = StringUtils.isBlank(reqVO.getReliability())
+                && !hasStrategySortFields(pageable.getSort());
+        if (earlyPaginate) {
+            Page<StockQuote> pagedStocks = stockQuoteRepository.findAll(
+                    buildStockQuoteSpec(reqVO.getCode(), watchlistCodes, reqVO.getMarket()), pageable
+            );
+            if (pagedStocks.isEmpty()) {
+                return new PageImpl<>(Collections.emptyList(), pageable, 0);
+            }
+            List<StockTradeBacktestVO> pagedList = gridTradingStrategy.backtest(
+                    reqVO.getGridRate(), reqVO.getGridCount(), reqVO.getRecentYears(), pagedStocks.getContent()
+            );
+            return new PageImpl<>(pagedList, pageable, pagedStocks.getTotalElements());
+        }
+
+        List<StockQuote> targetStocks = stockQuoteRepository.findAll(
+                buildStockQuoteSpec(reqVO.getCode(), watchlistCodes, reqVO.getMarket())
+        );
+        if (targetStocks.isEmpty()) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
+        List<StockTradeBacktestVO> result = gridTradingStrategy.backtest(
+                reqVO.getGridRate(), reqVO.getGridCount(), reqVO.getRecentYears(), targetStocks
+        );
+        if (StringUtils.isNotBlank(reqVO.getReliability())) {
+            result = result.stream()
+                    .filter(item -> reqVO.getReliability().equals(item.getReliability()))
+                    .toList();
+        }
+        if (pageable.getSort().isSorted()) {
+            result = new ArrayList<>(result);
+            result.sort(buildBacktestComparator(pageable.getSort()));
+        }
+        return toPage(result, pageable);
+    }
+
+    private Comparator<StockTradeSignalVO> buildGridSignalComparator(Sort sort) {
+        Comparator<StockTradeSignalVO> result = null;
+        for (Sort.Order order : sort) {
+            Comparator<StockTradeSignalVO> comparator = switch (order.getProperty()) {
+                case "code" -> Comparator.comparing(StockTradeSignalVO::getCode);
+                case "name" -> Comparator.comparing(StockTradeSignalVO::getName);
+                case SIGNAL -> Comparator.comparing(StockTradeSignalVO::getSignal);
+                case LATEST_PRICE -> Comparator.comparing(
+                        StockTradeSignalVO::getLatestPrice, Comparator.nullsLast(BigDecimal::compareTo));
+                case "pir" -> Comparator.comparing(
+                        StockTradeSignalVO::getPir, Comparator.nullsLast(BigDecimal::compareTo));
+                case "gridReferencePrice" -> Comparator.comparing(
+                        StockTradeSignalVO::getGridReferencePrice, Comparator.nullsLast(BigDecimal::compareTo));
+                case "lowerGridPrice" -> Comparator.comparing(
+                        StockTradeSignalVO::getLowerGridPrice, Comparator.nullsLast(BigDecimal::compareTo));
+                case "upperGridPrice" -> Comparator.comparing(
+                        StockTradeSignalVO::getUpperGridPrice, Comparator.nullsLast(BigDecimal::compareTo));
+                case "gridPosition" -> Comparator.comparing(
+                        StockTradeSignalVO::getGridPosition, Comparator.nullsLast(Integer::compareTo));
+                default -> null;
+            };
+            if (comparator != null) {
+                if (order.getDirection() == Sort.Direction.DESC) {
+                    comparator = comparator.reversed();
+                }
+                result = result == null ? comparator : result.thenComparing(comparator);
+            }
+        }
+        return result != null ? result : Comparator.comparing(StockTradeSignalVO::getCode);
+    }
+
     private Set<String> loadWatchlistCodes(Long watchlistGroupId) {
         if (watchlistGroupId == null) {
             return null;
@@ -621,7 +746,10 @@ public class StockStrategyService {
         for (Sort.Order order : sort) {
             String prop = order.getProperty();
             if (SIGNAL.equals(prop) || "momentumValue".equals(prop) || "dif".equals(prop)
-                    || "dea".equals(prop) || "macdHistogram".equals(prop) || "totalReturn".equals(prop) ||
+                    || "dea".equals(prop) || "macdHistogram".equals(prop)
+                    || "gridReferencePrice".equals(prop) || "lowerGridPrice".equals(prop)
+                    || "upperGridPrice".equals(prop) || "gridPosition".equals(prop)
+                    || "totalReturn".equals(prop) ||
                 "tradeCount".equals(prop) || "winRate".equals(prop) || "pValue".equals(prop)) {
                 return true;
             }

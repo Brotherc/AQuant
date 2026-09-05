@@ -111,6 +111,7 @@ public class StockSyncTask {
         stockStrategySnapshotService.refreshDualMaBacktestSnapshots();
         stockStrategySnapshotService.refreshMomentumBacktestSnapshots();
         stockStrategySnapshotService.refreshMacdBacktestSnapshots();
+        stockStrategySnapshotService.refreshGridBacktestSnapshots();
     }
 
     private void syncStackDtaLatest() {

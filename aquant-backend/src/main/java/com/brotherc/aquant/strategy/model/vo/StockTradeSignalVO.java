@@ -38,6 +38,18 @@ public class StockTradeSignalVO {
     @Schema(description = "MACD柱值，按2*(DIF-DEA)计算")
     private BigDecimal macdHistogram;
 
+    @Schema(description = "网格参考价")
+    private BigDecimal gridReferencePrice;
+
+    @Schema(description = "下一买入网格价")
+    private BigDecimal lowerGridPrice;
+
+    @Schema(description = "下一卖出网格价")
+    private BigDecimal upperGridPrice;
+
+    @Schema(description = "当前网格仓位层级，正数表示加仓，负数表示减仓")
+    private Integer gridPosition;
+
     public StockTradeSignalVO(String code, String name, String signal, BigDecimal latestPrice, BigDecimal pir) {
         this.code = code;
         this.name = name;
@@ -65,6 +77,24 @@ public class StockTradeSignalVO {
         this.dif = dif;
         this.dea = dea;
         this.macdHistogram = macdHistogram;
+    }
+
+    public StockTradeSignalVO(
+            String code,
+            String name,
+            String signal,
+            BigDecimal latestPrice,
+            BigDecimal pir,
+            BigDecimal gridReferencePrice,
+            BigDecimal lowerGridPrice,
+            BigDecimal upperGridPrice,
+            Integer gridPosition
+    ) {
+        this(code, name, signal, latestPrice, pir);
+        this.gridReferencePrice = gridReferencePrice;
+        this.lowerGridPrice = lowerGridPrice;
+        this.upperGridPrice = upperGridPrice;
+        this.gridPosition = gridPosition;
     }
 
 }

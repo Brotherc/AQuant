@@ -28,6 +28,9 @@ public class StockSyncConstant {
     public static final String STOCK_STRATEGY_MACD_BACKTEST_SNAPSHOT_LATEST =
             "stock_strategy_macd_backtest_snapshot_latest";
 
+    public static final String STOCK_STRATEGY_GRID_BACKTEST_SNAPSHOT_LATEST =
+            "stock_strategy_grid_backtest_snapshot_latest";
+
     public static final String STOCK_FUND_INFO_LATEST = "stock_fund_info_latest";
 
     public static final String STOCK_FUND_PORTFOLIO_HOLDING_LATEST = "stock_fund_portfolio_holding_latest";
