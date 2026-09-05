@@ -63,7 +63,7 @@
               <div class="qs-value" :class="ohlcPctClass">{{ currentOhlc.changePct }}</div>
             </div>
             <div class="qs-item">
-              <div class="qs-label">量</div>
+              <div class="qs-label">成交量(手)</div>
               <div class="qs-value">{{ formatOhlcVolume(currentOhlc.volume) }}</div>
             </div>
           </div>
@@ -520,11 +520,13 @@ const formatWan = (value: number) => {
   return value.toLocaleString('zh-CN', { maximumFractionDigits: 2 });
 };
 
-// OHLC 卡量值：万/亿缩写，避免原始长数字撑宽卡片
+// 历史行情与 K 线数据的成交量单位为股，按 100 股一手转换后展示。
 const formatOhlcVolume = (val: string | number) => {
   if (val === '-' || val == null || val === '') return '-';
   const num = Number(val);
-  return Number.isFinite(num) ? formatWan(num) : '-';
+  return Number.isFinite(num)
+    ? (num / 100).toLocaleString('zh-CN', { maximumFractionDigits: 2 })
+    : '-';
 };
 
 const fetchOrderBook = async () => {
