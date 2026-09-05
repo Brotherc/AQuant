@@ -60,10 +60,31 @@ public class StockIndustryBoardEmQueryService {
 
     @Transactional(readOnly = true)
     public StockIndustryBoardVO overview(String industry) {
+        return overview(industry, null);
+    }
+
+    @Transactional(readOnly = true)
+    public StockIndustryBoardVO overview(String industry, LocalDate tradeDate) {
         StockIndustryBoardEm board = boardRepository.findBySectorName(industry);
         if (board == null) return null;
         StockIndustryBoardVO view = new StockIndustryBoardVO();
         BeanUtils.copyProperties(board, view);
+        if (tradeDate != null) {
+            StockIndustryBoardHistoryEm history = historyRepository.findBySectorNameAndTradeDate(industry, tradeDate.toString());
+            if (history == null) return null;
+            view.setTradeDate(tradeDate);
+            view.setChangePercent(history.getChangePercent());
+            view.setChangeAmount(history.getChangeAmount());
+            view.setAveragePrice(history.getClosePrice());
+            view.setTotalVolume(history.getVolume());
+            view.setTotalAmount(history.getAmount());
+            view.setNetInflow(null);
+            view.setRiseCount(null);
+            view.setFallCount(null);
+            view.setLeadingStock(null);
+            view.setLeadingStockPrice(null);
+            view.setLeadingStockChangePercent(null);
+        }
         return view;
     }
 

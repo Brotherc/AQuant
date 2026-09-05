@@ -6,6 +6,7 @@ export interface StockIndustryBoardVO {
     seqNo: number;
     sectorName: string;
     changePercent: number;
+    changeAmount: number | null;
     totalVolume: number;
     totalAmount: number;
     netInflow: number;
@@ -112,7 +113,7 @@ export const getIndustrySourceAnalysis = (params: {
     source: IndustryDataSource; startDate: string; endDate: string; rankLimit?: number
 }) => api.get<ResponseDTO<IndustrySourceSnapshot<IndustryRiseAnalysisPoint[]>>>('/industrySource/analysis', { params, timeout: 60000 });
 
-export const getIndustrySourceOverview = (params: { source: IndustryDataSource; industry: string }) =>
+export const getIndustrySourceOverview = (params: { source: IndustryDataSource; industry: string; tradeDate?: string }) =>
     api.get<ResponseDTO<IndustrySourceSnapshot<StockIndustryBoardVO>>>('/industrySource/overview', { params });
 
 export const getIndustrySourceHistory = (params: { source: IndustryDataSource; industry: string; frequency?: string }) =>

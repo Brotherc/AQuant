@@ -62,6 +62,26 @@ public class AKShareService extends AbstractAKShareService {
     }
 
     /**
+     * <a href="https://akshare.akfamily.xyz/data/stock/stock.html">分钟行情数据-新浪</a>
+     * 返回最近若干交易日（实测约 8 个）的分钟 K，完整日 238 根。
+     *
+     * @param symbol 股票代码，带交易所前缀，如 sh600519
+     * @param period 周期，1/5/15/30/60
+     * @param adjust 复权口径，固定传 ""（不复权），避免口径混库
+     *
+     * @return 分钟K线数据
+     */
+    public List<StockZhAMinute> stockZhAMinute(String symbol, String period, String adjust) {
+        HttpUrl httpUrl = HttpUrl.get(akshareAddress + "/api/public/stock_zh_a_minute")
+                .newBuilder()
+                .addQueryParameter(SYMBOL, symbol)
+                .addQueryParameter("period", period)
+                .addQueryParameter("adjust", adjust)
+                .build();
+        return executeGet(httpUrl, new TypeReference<>() {});
+    }
+
+    /**
      * <a href="https://akshare.akfamily.xyz/data/stock/stock.html#id258">终止/暂停上市-深证</a>
      *
      * @param symbol choice of {"暂停上市公司", "终止上市公司"}

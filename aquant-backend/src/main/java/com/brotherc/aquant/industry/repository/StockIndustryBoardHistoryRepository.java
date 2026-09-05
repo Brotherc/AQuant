@@ -16,6 +16,8 @@ public interface StockIndustryBoardHistoryRepository extends JpaRepository<Stock
 
     List<StockIndustryBoardHistory> findBySectorName(String sectorName);
 
+    StockIndustryBoardHistory findFirstBySectorNameAndTradeDateOrderByIdDesc(String sectorName, String tradeDate);
+
     List<StockIndustryBoardHistory> findBySectorNameOrderByTradeDateAsc(String sectorName);
 
     List<StockIndustryBoardHistory> findBySectorNameAndTradeDateBetweenOrderByTradeDateAsc(String sectorName, String startDate, String endDate);

@@ -21,6 +21,9 @@ public class StockIndustryBoardVO {
     @Schema(description = "涨跌幅(%)")
     private BigDecimal changePercent;
 
+    @Schema(description = "涨跌额")
+    private BigDecimal changeAmount;
+
     @Schema(description = "总成交量(万手)")
     private BigDecimal totalVolume;
 
