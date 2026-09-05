@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="stock-detail-view">
     <!-- Header: Stats Summary -->
     <div class="detail-header">
@@ -43,6 +43,32 @@
           </div>
         </div>
 
+        <!-- K线模式悬停 OHLC 卡：与 PE 指标卡同高并列，数值随十字光标联动 -->
+        <div class="quote-stats" v-if="currentOhlc && isCandleMode">
+          <div class="qs-grid">
+            <div class="qs-item">
+              <div class="qs-label">{{ frequency === '1m' ? '时间' : '日期' }}</div>
+              <div class="qs-value qs-date">{{ currentOhlc.date }}</div>
+            </div>
+            <div class="qs-item">
+              <div class="qs-label">开/收</div>
+              <div class="qs-value"><span>{{ formatIndicator(currentOhlc.open) }}</span> / <span :class="ohlcCloseClass">{{ formatIndicator(currentOhlc.close) }}</span></div>
+            </div>
+            <div class="qs-item">
+              <div class="qs-label">高/低</div>
+              <div class="qs-value"><span class="text-up">{{ formatIndicator(currentOhlc.high) }}</span> / <span class="text-down">{{ formatIndicator(currentOhlc.low) }}</span></div>
+            </div>
+            <div class="qs-item">
+              <div class="qs-label">涨跌幅</div>
+              <div class="qs-value" :class="ohlcPctClass">{{ currentOhlc.changePct }}</div>
+            </div>
+            <div class="qs-item">
+              <div class="qs-label">量</div>
+              <div class="qs-value">{{ formatOhlcVolume(currentOhlc.volume) }}</div>
+            </div>
+          </div>
+        </div>
+
         <div class="metrics-grid">
           <div class="metric-item">
             <div class="label">PE(TTM)</div>
@@ -80,14 +106,6 @@
             </a-radio-group>
           </div>
           <div class="chart-toolbar-right">
-            <div v-if="currentMA && isDailyMode" class="ma-legend-bar">
-              <span class="ma-label">均线:</span>
-              <span class="ma-item ma5">MA5: {{ currentMA.ma5 }}</span>
-              <span class="ma-item ma10">MA10: {{ currentMA.ma10 }}</span>
-              <span class="ma-item ma20">MA20: {{ currentMA.ma20 }}</span>
-              <span class="ma-item ma60">MA60: {{ currentMA.ma60 }}</span>
-              <span class="ma-item ma120">MA120: {{ currentMA.ma120 }}</span>
-            </div>
             <div v-if="isDailyMode || isMinuteMode" class="indicator-switches">
               <span class="indicator-switch">
                 <span>MACD</span>
@@ -101,6 +119,35 @@
                 <span>BOLL</span>
                 <a-switch v-model:checked="indicatorVisibility.boll" size="small" />
               </span>
+            </div>
+            <!-- 指标图例：技术指标在左依次排列，均线固定最右；数值用固定宽度槽位，滑动时仅数字变化不跳动 -->
+            <div v-if="legendVisible" class="ma-legend-bar">
+              <template v-if="currentIndicators && indicatorVisibility.macd">
+                <span class="ma-label">MACD:</span>
+                <span class="ma-item macd">MACD <span class="ma-num">{{ formatIndicator(currentIndicators.macd) }}</span></span>
+                <span class="ma-item dif">DIF<span class="ma-num">{{ formatIndicator(currentIndicators.dif) }}</span></span>
+                <span class="ma-item dea">DEA<span class="ma-num">{{ formatIndicator(currentIndicators.dea) }}</span></span>
+              </template>
+              <template v-if="currentIndicators && indicatorVisibility.kdj">
+                <span class="ma-label">KDJ:</span>
+                <span class="ma-item k">K <span class="ma-num">{{ formatIndicator(currentIndicators.k) }}</span></span>
+                <span class="ma-item d">D <span class="ma-num">{{ formatIndicator(currentIndicators.d) }}</span></span>
+                <span class="ma-item j">J <span class="ma-num">{{ formatIndicator(currentIndicators.j) }}</span></span>
+              </template>
+              <template v-if="currentIndicators && isDailyMode && indicatorVisibility.boll">
+                <span class="ma-label">BOLL:</span>
+                <span class="ma-item boll-upper">上 <span class="ma-num">{{ formatIndicator(currentIndicators.bollUpper) }}</span></span>
+                <span class="ma-item boll-mid">中 <span class="ma-num">{{ formatIndicator(currentIndicators.bollMiddle) }}</span></span>
+                <span class="ma-item boll-lower">下 <span class="ma-num">{{ formatIndicator(currentIndicators.bollLower) }}</span></span>
+              </template>
+              <template v-if="currentMA && isDailyMode">
+                <span class="ma-label">均线:</span>
+                <span class="ma-item ma5">MA5: <span class="ma-num">{{ formatIndicator(currentMA.ma5) }}</span></span>
+                <span class="ma-item ma10">MA10: <span class="ma-num">{{ formatIndicator(currentMA.ma10) }}</span></span>
+                <span class="ma-item ma20">MA20: <span class="ma-num">{{ formatIndicator(currentMA.ma20) }}</span></span>
+                <span class="ma-item ma60">MA60: <span class="ma-num">{{ formatIndicator(currentMA.ma60) }}</span></span>
+                <span class="ma-item ma120">MA120: <span class="ma-num">{{ formatIndicator(currentMA.ma120) }}</span></span>
+              </template>
             </div>
           </div>
         </div>
@@ -213,11 +260,135 @@ const currentMA = ref<{
   ma60: string | number;
   ma120: string | number;
 } | null>(null);
+// 悬停十字光标所在K线的副图指标值（图例区展示，tooltip 中不再重复）
+const currentIndicators = ref<{
+  macd: string | number;
+  dif: string | number;
+  dea: string | number;
+  k: string | number;
+  d: string | number;
+  j: string | number;
+  bollUpper: string | number;
+  bollMiddle: string | number;
+  bollLower: string | number;
+} | null>(null);
+// K线模式悬停光标所在K线的 OHLC（图表上方固定指标行展示）
+const currentOhlc = ref<{
+  date: string;
+  open: string | number;
+  close: string | number;
+  high: string | number;
+  low: string | number;
+  changePct: string;
+  volume: string | number;
+} | null>(null);
 const indicatorVisibility = reactive({
   macd: false,
   kdj: false,
   boll: false
 });
+// 图例区整体可见：日K模式显示均线行；任一指标开关打开时显示对应指标行
+const legendVisible = computed(() =>
+  (currentMA.value != null && isDailyMode.value)
+  || (currentIndicators.value != null
+    && (indicatorVisibility.macd || indicatorVisibility.kdj || (isDailyMode.value && indicatorVisibility.boll)))
+);
+// 蜡烛K线模式（日/周/月/季/年 + 1分K线），悬停 OHLC 行只在蜡烛图下显示
+const isCandleMode = computed(() => frequency.value !== 'minute' && frequency.value !== '5d');
+// 涨跌色：+红 -绿 平/无值灰
+const ohlcPctClass = computed(() => {
+  const pct = currentOhlc.value?.changePct;
+  if (!pct || pct === '-') return '';
+  if (pct.startsWith('+')) return 'text-up';
+  if (pct.startsWith('-')) return 'text-down';
+  return '';
+});
+// 收盘色沿用原 tooltip 逻辑：收≥开红、收<开绿（开盘中性色）
+const ohlcCloseClass = computed(() => {
+  const o = currentOhlc.value;
+  if (!o || o.close === '-' || o.open === '-') return '';
+  return Number(o.close) >= Number(o.open) ? 'text-up' : 'text-down';
+});
+const formatIndicator = (val: string | number) => {
+  if (val === '-' || val == null || val === '') return '-';
+  const num = Number(val);
+  return Number.isFinite(num) ? num.toFixed(2) : '-';
+};
+// 蜡烛模式固定 OHLC 行：values[i] = [open, close, low, high]，涨跌幅相对前一根收盘；1分K线日期截断到分钟
+const buildOhlc = (dates: string[], values: any[][], volumes: any[], idx: number) => {
+  const v = values[idx];
+  if (!v) return null;
+  const open = v[0];
+  const close = v[1];
+  const low = v[2];
+  const high = v[3];
+  const prevClose = idx > 0 ? values[idx - 1]?.[1] : null;
+  const base = prevClose ?? open;
+  const pct = base ? ((close - base) / base) * 100 : null;
+  const rawDate = dates[idx] ?? '-';
+  return {
+    date: rawDate.length > 10 ? rawDate.substring(0, 16) : rawDate,
+    open: open ?? '-',
+    close: close ?? '-',
+    high: high ?? '-',
+    low: low ?? '-',
+    changePct: pct == null || !Number.isFinite(pct) ? '-' : `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`,
+    volume: volumes[idx] ?? '-'
+  };
+};
+// 蜡烛图悬停联动：zr mousemove + 像素转数据索引驱动固定 OHLC 卡与图例数值
+// （ECharts 6 的 updateAxisPointer 事件载荷不含 axesInfo，seriesDataIndices/value 方案均取不到索引）
+let candleMouseMoveHandler: ((e: any) => void) | null = null;
+let candleGlobalOutHandler: (() => void) | null = null;
+
+const unbindCandlePointerEvents = () => {
+  if (!chartInstance) return;
+  const zr = chartInstance.getZr();
+  if (candleMouseMoveHandler) {
+    zr.off('mousemove', candleMouseMoveHandler);
+    candleMouseMoveHandler = null;
+  }
+  if (candleGlobalOutHandler) {
+    zr.off('globalout', candleGlobalOutHandler);
+    candleGlobalOutHandler = null;
+  }
+};
+
+const bindCandlePointerEvents = (ctx: {
+  dates: string[];
+  values: any[][];
+  volumes: any[];
+  lastIdx: number;
+  applyIdx?: (idx: number) => void;
+}) => {
+  if (!chartInstance) return;
+  unbindCandlePointerEvents();
+  const { dates, values, volumes, lastIdx, applyIdx } = ctx;
+  let lastAppliedIdx = -1;
+  const apply = (idx: number) => {
+    if (idx === lastAppliedIdx) return;
+    lastAppliedIdx = idx;
+    const ohlc = buildOhlc(dates, values, volumes, idx);
+    if (ohlc) currentOhlc.value = ohlc;
+    applyIdx?.(idx);
+  };
+  candleMouseMoveHandler = (e: any) => {
+    if (!chartInstance || values.length === 0) return;
+    const point = [e.offsetX, e.offsetY];
+    if (!chartInstance.containPixel('grid', point)) return;
+    const converted = chartInstance.convertFromPixel({ seriesIndex: 0 }, point);
+    if (!converted || converted.length < 1) return;
+    let idx = Math.round(Number(converted[0]));
+    if (!Number.isFinite(idx)) return;
+    idx = Math.max(0, Math.min(values.length - 1, idx));
+    apply(idx);
+  };
+  candleGlobalOutHandler = () => {
+    if (lastIdx >= 0) apply(lastIdx);
+  };
+  chartInstance.getZr().on('mousemove', candleMouseMoveHandler);
+  chartInstance.getZr().on('globalout', candleGlobalOutHandler);
+};
 let chartInstance: echarts.ECharts | null = null;
 let resizeObserver: ResizeObserver | null = null;
 
@@ -309,11 +480,15 @@ const fetchHistory = async () => {
     } else {
       historyData.value = [];
       currentMA.value = null;
+      currentIndicators.value = null;
+      currentOhlc.value = null;
       chartInstance?.clear();
     }
   } catch (error) {
     historyData.value = [];
     currentMA.value = null;
+      currentIndicators.value = null;
+      currentOhlc.value = null;
     chartInstance?.clear();
     console.error('Failed to fetch stock history details:', error);
   }
@@ -343,6 +518,13 @@ const formatSigned = (value: number) => (value > 0 ? '+' : '') + value.toFixed(2
 const formatWan = (value: number) => {
   if (value >= 10000) return (value / 10000).toFixed(2) + '亿';
   return value.toLocaleString('zh-CN', { maximumFractionDigits: 2 });
+};
+
+// OHLC 卡量值：万/亿缩写，避免原始长数字撑宽卡片
+const formatOhlcVolume = (val: string | number) => {
+  if (val === '-' || val == null || val === '') return '-';
+  const num = Number(val);
+  return Number.isFinite(num) ? formatWan(num) : '-';
 };
 
 const fetchOrderBook = async () => {
@@ -414,10 +596,14 @@ const fetchMinuteData = async () => {
       renderMinuteChart(vo);
     } else {
       currentMA.value = null;
+      currentIndicators.value = null;
+      currentOhlc.value = null;
       chartInstance?.clear();
     }
   } catch (error) {
     currentMA.value = null;
+      currentIndicators.value = null;
+      currentOhlc.value = null;
     chartInstance?.clear();
     console.error('Failed to fetch minute realtime data:', error);
   }
@@ -439,6 +625,21 @@ const renderMinuteChart = (vo: StockMinuteRealtimeVO) => {
   // 分时指标：MACD 用分钟收盘价序列，KDJ 9 周期高低取分钟价
   const macd = calcMACDValues(prices);
   const kdj = calcKDJValues(prices.map(price => ({ close: price, high: price, low: price })));
+  // 未悬停时图例显示最后一分钟的指标值
+  if (prices.length > 0) {
+    const last = prices.length - 1;
+    currentIndicators.value = {
+      macd: macd.macd[last] ?? '-',
+      dif: macd.dif[last] ?? '-',
+      dea: macd.dea[last] ?? '-',
+      k: kdj.k[last] ?? '-',
+      d: kdj.d[last] ?? '-',
+      j: kdj.j[last] ?? '-',
+      bollUpper: '-',
+      bollMiddle: '-',
+      bollLower: '-'
+    };
+  }
 
   const showMacd = indicatorVisibility.macd;
   const showKdj = indicatorVisibility.kdj;
@@ -512,15 +713,24 @@ const renderMinuteChart = (vo: StockMinuteRealtimeVO) => {
         if (pct != null) {
           res += `<div style="display:flex;justify-content:space-between;gap:20px;color:${chartTooltipTheme.secondaryTextColor};"><span>涨跌幅:</span> <span style="color:${pctColor};font-weight:600;">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</span></div>`;
         }
+        // 副图指标值不在 tooltip 中展示，收集后在图例区显示
+        const indicatorValues: Record<string, string | number> = {};
         list.forEach((param: any) => {
           if (['MACD', 'DIF', 'DEA', 'K', 'D', 'J'].includes(param.seriesName)) {
-            const val = param.value === '-' || param.value === undefined ? '-' : param.value;
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;font-size:11px;color:${chartTooltipTheme.mutedTextColor};margin-bottom:2px;">
-                      <span>${param.seriesName}:</span>
-                      <span style="color:${param.color};font-weight:500;">${val}</span>
-                    </div>`;
+            indicatorValues[param.seriesName] = param.value === '-' || param.value === undefined ? '-' : param.value;
           }
         });
+        currentIndicators.value = {
+          macd: indicatorValues.MACD ?? '-',
+          dif: indicatorValues.DIF ?? '-',
+          dea: indicatorValues.DEA ?? '-',
+          k: indicatorValues.K ?? '-',
+          d: indicatorValues.D ?? '-',
+          j: indicatorValues.J ?? '-',
+          bollUpper: '-',
+          bollMiddle: '-',
+          bollLower: '-'
+        };
         return `<div style="min-width:150px;padding:4px;">${res}</div>`;
       }
     },
@@ -536,7 +746,8 @@ const renderMinuteChart = (vo: StockMinuteRealtimeVO) => {
         data: times,
         axisLine: { lineStyle: { color: '#e2e8f0' } },
         axisLabel: { show: false },
-        axisTick: { show: false }
+        axisTick: { show: false },
+        axisPointer: { label: { show: false } }
       },
       {
         type: 'category',
@@ -544,7 +755,8 @@ const renderMinuteChart = (vo: StockMinuteRealtimeVO) => {
         data: times,
         axisLine: { show: false },
         axisLabel: { show: showVolumeDates, color: '#999', fontSize: 10 },
-        axisTick: { show: false }
+        axisTick: { show: false },
+        axisPointer: { label: { show: showVolumeDates } }
       },
       {
         type: 'category',
@@ -553,7 +765,8 @@ const renderMinuteChart = (vo: StockMinuteRealtimeVO) => {
         show: showMacd,
         axisLine: { show: showMacdDates, lineStyle: { color: '#e2e8f0' } },
         axisLabel: { show: showMacdDates, color: '#999', fontSize: 10 },
-        axisTick: { show: false }
+        axisTick: { show: false },
+        axisPointer: { label: { show: showMacdDates } }
       },
       {
         type: 'category',
@@ -562,7 +775,8 @@ const renderMinuteChart = (vo: StockMinuteRealtimeVO) => {
         show: showKdj,
         axisLine: { show: showKdj, lineStyle: { color: '#e2e8f0' } },
         axisLabel: { show: showKdj, color: '#999', fontSize: 10 },
-        axisTick: { show: false }
+        axisTick: { show: false },
+        axisPointer: { label: { show: showKdj } }
       }
     ],
     yAxis: [
@@ -698,6 +912,7 @@ const renderMinuteChart = (vo: StockMinuteRealtimeVO) => {
 
   chartInstance?.clear();
   chartInstance?.setOption(option);
+  unbindCandlePointerEvents();
 };
 
 // ==================== 分钟K线数据（'1分'K线与'五日分时'共用） ====================
@@ -747,9 +962,13 @@ const fetchFiveDayIntradayData = async () => {
     fiveDayBars.value = await loadMinuteKline();
     await updateFiveDayRealtime();
     currentMA.value = null;
+      currentIndicators.value = null;
+      currentOhlc.value = null;
     renderFiveDayIntraday();
   } catch (error) {
     currentMA.value = null;
+      currentIndicators.value = null;
+      currentOhlc.value = null;
     chartInstance?.clear();
     console.error('Failed to fetch five-day intraday data:', error);
   } finally {
@@ -866,6 +1085,21 @@ const renderFiveDayIntraday = () => {
   // 五日分时指标：MACD/KDJ 连续跨日计算（分钟价格序列）
   const macd = calcMACDValues(prices);
   const kdj = calcKDJValues(prices.map(price => ({ close: price, high: price, low: price })));
+  // 未悬停时图例显示最后一分钟的指标值
+  if (prices.length > 0) {
+    const last = prices.length - 1;
+    currentIndicators.value = {
+      macd: macd.macd[last] ?? '-',
+      dif: macd.dif[last] ?? '-',
+      dea: macd.dea[last] ?? '-',
+      k: kdj.k[last] ?? '-',
+      d: kdj.d[last] ?? '-',
+      j: kdj.j[last] ?? '-',
+      bollUpper: '-',
+      bollMiddle: '-',
+      bollLower: '-'
+    };
+  }
 
   const showMacd = indicatorVisibility.macd;
   const showKdj = indicatorVisibility.kdj;
@@ -946,15 +1180,24 @@ const renderFiveDayIntraday = () => {
         if (pct != null) {
           res += `<div style="display:flex;justify-content:space-between;gap:20px;color:${chartTooltipTheme.secondaryTextColor};"><span>涨跌幅:</span> <span style="color:${pctColor};font-weight:600;">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</span></div>`;
         }
+        // 副图指标值不在 tooltip 中展示，收集后在图例区显示
+        const indicatorValues: Record<string, string | number> = {};
         list.forEach((param: any) => {
           if (['MACD', 'DIF', 'DEA', 'K', 'D', 'J'].includes(param.seriesName)) {
-            const val = param.value === '-' || param.value === undefined ? '-' : param.value;
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;font-size:11px;color:${chartTooltipTheme.mutedTextColor};margin-bottom:2px;">
-                      <span>${param.seriesName}:</span>
-                      <span style="color:${param.color};font-weight:500;">${val}</span>
-                    </div>`;
+            indicatorValues[param.seriesName] = param.value === '-' || param.value === undefined ? '-' : param.value;
           }
         });
+        currentIndicators.value = {
+          macd: indicatorValues.MACD ?? '-',
+          dif: indicatorValues.DIF ?? '-',
+          dea: indicatorValues.DEA ?? '-',
+          k: indicatorValues.K ?? '-',
+          d: indicatorValues.D ?? '-',
+          j: indicatorValues.J ?? '-',
+          bollUpper: '-',
+          bollMiddle: '-',
+          bollLower: '-'
+        };
         return `<div style="min-width:150px;padding:4px;">${res}</div>`;
       }
     },
@@ -970,7 +1213,8 @@ const renderFiveDayIntraday = () => {
         data: times,
         axisLine: { lineStyle: { color: '#e2e8f0' } },
         axisLabel: { show: false },
-        axisTick: { show: false }
+        axisTick: { show: false },
+        axisPointer: { label: { show: false } }
       },
       {
         type: 'category',
@@ -981,7 +1225,8 @@ const renderFiveDayIntraday = () => {
           show: showVolumeDates,
           ...subAxisLabel
         },
-        axisTick: { show: false }
+        axisTick: { show: false },
+        axisPointer: { label: { show: showVolumeDates } }
       },
       {
         type: 'category',
@@ -993,7 +1238,8 @@ const renderFiveDayIntraday = () => {
           show: showMacdDates,
           ...subAxisLabel
         },
-        axisTick: { show: false }
+        axisTick: { show: false },
+        axisPointer: { label: { show: showMacdDates } }
       },
       {
         type: 'category',
@@ -1005,7 +1251,8 @@ const renderFiveDayIntraday = () => {
           show: showKdj,
           ...subAxisLabel
         },
-        axisTick: { show: false }
+        axisTick: { show: false },
+        axisPointer: { label: { show: showKdj } }
       }
     ],
     yAxis: [
@@ -1141,6 +1388,7 @@ const renderFiveDayIntraday = () => {
 
   chartInstance?.clear();
   chartInstance?.setOption(option);
+  unbindCandlePointerEvents();
 };
 
 // ==================== 1分K线（近5个已收盘交易日1分钟蜡烛图） ====================
@@ -1152,6 +1400,8 @@ const fetchMinuteKlineData = async () => {
   try {
     const bars = await loadMinuteKline();
     currentMA.value = null;
+      currentIndicators.value = null;
+      currentOhlc.value = null;
     if (bars.length > 0) {
       renderMinuteKlineChart(bars);
     } else {
@@ -1159,6 +1409,8 @@ const fetchMinuteKlineData = async () => {
     }
   } catch (error) {
     currentMA.value = null;
+      currentIndicators.value = null;
+      currentOhlc.value = null;
     chartInstance?.clear();
     console.error('Failed to fetch minute kline:', error);
   } finally {
@@ -1187,8 +1439,10 @@ const renderMinuteKlineChart = (bars: StockMinuteBar[]) => {
 
   const option = {
     animation: false,
+    axisPointer: { link: [{ xAxisIndex: 'all' }] },
     tooltip: {
       show: true,
+      showContent: false,
       trigger: 'axis',
       axisPointer: {
         type: 'cross',
@@ -1204,41 +1458,6 @@ const renderMinuteKlineChart = (bars: StockMinuteBar[]) => {
           shadowColor: chartTooltipTheme.shadowColor,
           borderRadius: chartTooltipTheme.axisPointerLabelRadius
         }
-      },
-      backgroundColor: chartTooltipTheme.backgroundColor,
-      borderColor: chartTooltipTheme.borderColor,
-      borderWidth: 1,
-      padding: 12,
-      textStyle: { color: chartTooltipTheme.primaryTextColor },
-      shadowBlur: 12,
-      shadowColor: chartTooltipTheme.shadowColor,
-      extraCssText: `border-radius: ${chartTooltipTheme.tooltipBorderRadius}px;`,
-      formatter: function (params: any) {
-        let res = '';
-        let volume: number | undefined;
-        params.forEach((param: any) => {
-          if (param.seriesType === 'candlestick' && param.seriesName === 'K线') {
-            const open = param.value[1];
-            const close = param.value[2];
-            const low = param.value[3];
-            const high = param.value[4];
-            const color = close >= open ? '#EF4444' : '#10B981';
-            res += `<div style="font-weight:bold;margin-bottom:8px;font-size:13px;color:${chartTooltipTheme.primaryTextColor};">${param.name}</div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;color:${chartTooltipTheme.secondaryTextColor};"><span>收盘:</span> <span style="color:${color};font-weight:bold;">${close}</span></div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;color:${chartTooltipTheme.secondaryTextColor};"><span>开盘:</span> <span style="color:${chartTooltipTheme.primaryTextColor};">${open}</span></div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;color:${chartTooltipTheme.secondaryTextColor};"><span>最高:</span> <span style="color:#EF4444;">${high}</span></div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:10px;color:${chartTooltipTheme.secondaryTextColor};"><span>最低:</span> <span style="color:#10B981;">${low}</span></div>`;
-          } else if (param.seriesName === '成交量') {
-            volume = param.value;
-          }
-        });
-        if (volume !== undefined) {
-          res += `<div style="display:flex;justify-content:space-between;gap:20px;font-size:11px;color:${chartTooltipTheme.mutedTextColor};margin-bottom:4px;">
-                    <span>成交量:</span>
-                    <span style="font-weight:500;color:${chartTooltipTheme.primaryTextColor};">${volume}</span>
-                  </div>`;
-        }
-        return `<div style="min-width:150px;padding:4px;">${res}</div>`;
       }
     },
     dataZoom: [
@@ -1278,7 +1497,8 @@ const renderMinuteKlineChart = (bars: StockMinuteBar[]) => {
         data: dates,
         axisLine: { lineStyle: { color: '#e2e8f0' } },
         axisLabel: { show: false },
-        axisTick: { show: false }
+        axisTick: { show: false },
+        axisPointer: { label: { show: false } }
       },
       {
         type: 'category',
@@ -1340,6 +1560,9 @@ const renderMinuteKlineChart = (bars: StockMinuteBar[]) => {
 
   chartInstance?.clear();
   chartInstance?.setOption(option);
+  const lastIdx = bars.length - 1;
+  currentOhlc.value = lastIdx >= 0 ? buildOhlc(dates, values, volumes, lastIdx) : null;
+  bindCandlePointerEvents({ dates, values, volumes, lastIdx });
 };
 
 const calculateMA = (dayCount: number, data: StockQuoteHistory[]) => {
@@ -1490,6 +1713,21 @@ const renderChart = (data: StockQuoteHistory[]) => {
   const bollMiddle = boll.middle.slice(displayStart);
   const bollLower = boll.lower.slice(displayStart);
   const volumes = displayData.map(item => item.volume);
+  // 未悬停时图例显示最后一根K线的指标值
+  if (lastIndex >= 0) {
+    currentIndicators.value = {
+      macd: macdValues[lastIndex] ?? '-',
+      dif: dif[lastIndex] ?? '-',
+      dea: dea[lastIndex] ?? '-',
+      k: k[lastIndex] ?? '-',
+      d: d[lastIndex] ?? '-',
+      j: j[lastIndex] ?? '-',
+      bollUpper: bollUpper[lastIndex] ?? '-',
+      bollMiddle: bollMiddle[lastIndex] ?? '-',
+      bollLower: bollLower[lastIndex] ?? '-'
+    };
+    currentOhlc.value = buildOhlc(dates, values, volumes, lastIndex);
+  }
   const subIndicatorCount = Number(indicatorVisibility.macd)
     + Number(indicatorVisibility.kdj)
     + Number(indicatorVisibility.boll);
@@ -1501,7 +1739,7 @@ const renderChart = (data: StockQuoteHistory[]) => {
     : subIndicatorCount === 1 ? '56%'
       : subIndicatorCount === 2 ? '46%'
         : '38%';
-  const volumeGridHeight = subIndicatorCount === 0 ? '18%'
+  const volumeGridHeight = subIndicatorCount === 0 ? '15%'
     : subIndicatorCount === 3 ? '9%'
       : '11%';
   // X 轴标签不再由 containLabel 包含在 grid 内而是悬挂于副图下方，最后一个副图顶部上移为标签与滑块留出空间
@@ -1527,11 +1765,13 @@ const renderChart = (data: StockQuoteHistory[]) => {
   const showKdjDates = indicatorVisibility.kdj && !indicatorVisibility.boll;
   const option = {
     animation: false,
-    tooltip: { 
+    axisPointer: { link: [{ xAxisIndex: 'all' }] },
+    tooltip: {
       show: true,
+      showContent: false,
       trigger: 'axis',
-      axisPointer: { 
-        type: 'cross', 
+      axisPointer: {
+        type: 'cross',
         lineStyle: { type: 'dashed', color: chartTooltipTheme.axisPointerColor },
         label: {
             backgroundColor: chartTooltipTheme.backgroundColor,
@@ -1544,70 +1784,6 @@ const renderChart = (data: StockQuoteHistory[]) => {
             shadowColor: chartTooltipTheme.shadowColor,
             borderRadius: chartTooltipTheme.axisPointerLabelRadius
         }
-      },
-      backgroundColor: chartTooltipTheme.backgroundColor,
-      borderColor: chartTooltipTheme.borderColor,
-      borderWidth: 1,
-      padding: 12,
-      textStyle: { color: chartTooltipTheme.primaryTextColor },
-      shadowBlur: 12,
-      shadowColor: chartTooltipTheme.shadowColor,
-      extraCssText: `border-radius: ${chartTooltipTheme.tooltipBorderRadius}px;`,
-      formatter: function (params: any) {
-        let res = '';
-        let date = '';
-        let ma5Value: string | number = '-';
-        let ma10Value: string | number = '-';
-        let ma20Value: string | number = '-';
-        let ma60Value: string | number = '-';
-        let ma120Value: string | number = '-';
-        params.forEach((param: any) => {
-          if (param.seriesType === 'candlestick' && param.seriesName === 'K线') {
-            date = param.name;
-            const open = param.value[1];
-            const close = param.value[2];
-            const low = param.value[3];
-            const high = param.value[4];
-            const color = close >= open ? '#EF4444' : '#10B981';
-            res += `<div style="font-weight:bold;margin-bottom:8px;font-size:14px;color:${chartTooltipTheme.primaryTextColor};">${date}</div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;color:${chartTooltipTheme.secondaryTextColor};"><span>收盘:</span> <span style="color:${color};font-weight:bold;">${close}</span></div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;color:${chartTooltipTheme.secondaryTextColor};"><span>开盘:</span> <span style="color:${chartTooltipTheme.primaryTextColor};">${open}</span></div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;color:${chartTooltipTheme.secondaryTextColor};"><span>最高:</span> <span style="color:#EF4444;">${high}</span></div>`;
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:10px;color:${chartTooltipTheme.secondaryTextColor};"><span>最低:</span> <span style="color:#10B981;">${low}</span></div>`;
-          } else if (param.seriesName === '成交量') {
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;font-size:11px;color:${chartTooltipTheme.mutedTextColor};margin-bottom:4px;">
-                      <span>成交量:</span> 
-                      <span style="font-weight:500;color:${chartTooltipTheme.primaryTextColor};">${param.value}</span>
-                    </div>`;
-          } else if (param.seriesName === 'MACD') {
-            const val = param.value === '-' || param.value === undefined ? '-' : param.value;
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;font-size:11px;color:${chartTooltipTheme.mutedTextColor};margin-bottom:2px;">
-                      <span>MACD:</span>
-                      <span style="color:${param.color};font-weight:500;">${val}</span>
-                    </div>`;
-          } else if (param.seriesType === 'line') {
-            const val = param.value === '-' || param.value === undefined ? '-' : param.value;
-            if (param.seriesName === 'MA5') ma5Value = val;
-            if (param.seriesName === 'MA10') ma10Value = val;
-            if (param.seriesName === 'MA20') ma20Value = val;
-            if (param.seriesName === 'MA60') ma60Value = val;
-            if (param.seriesName === 'MA120') ma120Value = val;
-            res += `<div style="display:flex;justify-content:space-between;gap:20px;font-size:11px;color:${chartTooltipTheme.mutedTextColor};margin-bottom:2px;">
-                      <span>${param.seriesName}:</span> 
-                      <span style="color:${param.color};font-weight:500;">${val}</span>
-                    </div>`;
-          }
-        });
-        if (ma5Value !== '-') {
-          currentMA.value = {
-            ma5: ma5Value,
-            ma10: ma10Value,
-            ma20: ma20Value,
-            ma60: ma60Value,
-            ma120: ma120Value
-          };
-        }
-        return `<div style="min-width:140px;padding:4px;">${res}</div>`;
       }
     },
     dataZoom: [
@@ -1678,15 +1854,17 @@ const renderChart = (data: StockQuoteHistory[]) => {
         type: 'category',
         data: dates,
         axisLine: { lineStyle: { color: '#e2e8f0' } },
-        axisLabel: { show: subIndicatorCount === 0, color: '#999', fontSize: 11 }
+        axisLabel: { show: false },
+        axisPointer: { label: { show: false } }
       },
       {
         type: 'category',
         gridIndex: 1,
         data: dates,
         axisLine: { show: false },
-        axisLabel: { show: false },
-        axisTick: { show: false }
+        axisLabel: { show: subIndicatorCount === 0, color: '#999', fontSize: 10 },
+        axisTick: { show: false },
+        axisPointer: { label: { show: subIndicatorCount === 0 } }
       },
       {
         type: 'category',
@@ -1695,7 +1873,8 @@ const renderChart = (data: StockQuoteHistory[]) => {
         show: indicatorVisibility.macd,
         axisLine: { show: showMacdDates, lineStyle: { color: '#e2e8f0' } },
         axisLabel: { show: showMacdDates, color: '#999', fontSize: 10 },
-        axisTick: { show: false }
+        axisTick: { show: false },
+        axisPointer: { label: { show: showMacdDates } }
       },
       {
         type: 'category',
@@ -1704,7 +1883,8 @@ const renderChart = (data: StockQuoteHistory[]) => {
         show: indicatorVisibility.kdj,
         axisLine: { show: showKdjDates, lineStyle: { color: '#e2e8f0' } },
         axisLabel: { show: showKdjDates, color: '#999', fontSize: 10 },
-        axisTick: { show: false }
+        axisTick: { show: false },
+        axisPointer: { label: { show: showKdjDates } }
       },
       {
         type: 'category',
@@ -1713,7 +1893,8 @@ const renderChart = (data: StockQuoteHistory[]) => {
         show: indicatorVisibility.boll,
         axisLine: { lineStyle: { color: '#e2e8f0' } },
         axisLabel: { color: '#999', fontSize: 10 },
-        axisTick: { show: false }
+        axisTick: { show: false },
+        axisPointer: { label: { show: indicatorVisibility.boll } }
       }
     ],
     yAxis: [
@@ -1944,6 +2125,33 @@ const renderChart = (data: StockQuoteHistory[]) => {
   };
   
   chartInstance?.setOption(option);
+  // 悬停联动：固定 OHLC 行 + 均线/副图指标图例随十字光标更新
+  bindCandlePointerEvents({
+    dates,
+    values,
+    volumes,
+    lastIdx: lastIndex,
+    applyIdx: (idx) => {
+      currentMA.value = {
+        ma5: ma5[idx] ?? '-',
+        ma10: ma10[idx] ?? '-',
+        ma20: ma20[idx] ?? '-',
+        ma60: ma60[idx] ?? '-',
+        ma120: ma120[idx] ?? '-'
+      };
+      currentIndicators.value = {
+        macd: macdValues[idx] ?? '-',
+        dif: dif[idx] ?? '-',
+        dea: dea[idx] ?? '-',
+        k: k[idx] ?? '-',
+        d: d[idx] ?? '-',
+        j: j[idx] ?? '-',
+        bollUpper: bollUpper[idx] ?? '-',
+        bollMiddle: bollMiddle[idx] ?? '-',
+        bollLower: bollLower[idx] ?? '-'
+      };
+    }
+  });
 };
 
 watch(indicatorVisibility, () => {
@@ -1970,6 +2178,9 @@ watch([() => props.stock.stockCode, frequency], () => {
 watch(() => props.stock.stockCode, () => {
     orderBook.value = null;
     tickTrades.value = null;
+    currentMA.value = null;
+    currentIndicators.value = null;
+    currentOhlc.value = null;
     fetchOrderBook();
 });
 
@@ -2103,10 +2314,9 @@ onUnmounted(() => {
 
 .chart-toolbar-right {
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 10px 18px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
   min-width: 0;
   margin-left: auto;
 }
@@ -2152,10 +2362,8 @@ onUnmounted(() => {
 .indicator-switches {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 12px;
-  flex-basis: 100%;
 }
 
 .indicator-switch {
@@ -2167,24 +2375,44 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
+/* 指标图例：均线与各副图指标同行展示 */
 .ma-legend-bar {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 4px;
   font-size: 11px;
   color: #64748b;
+}
+
+/* K线模式悬停 OHLC 卡：与图例行同款紧凑节奏，数字槽位等宽防跳动 */
+.qs-date {
+  font-size: 16px;
+  letter-spacing: 0;
 }
 
 .ma-label {
   font-weight: 500;
   color: #94a3b8;
+  margin-left: 8px;
+}
+
+.ma-label:first-child {
+  margin-left: 0;
 }
 
 .ma-item {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
   font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* 数值固定宽度槽位：滑动 K 线时名称与槽位不动，仅数字变化 */
+.ma-num {
+  display: inline-block;
+  min-width: 6ch;
 }
 
 .ma-item.ma5 { color: #3B82F6; }
@@ -2192,6 +2420,17 @@ onUnmounted(() => {
 .ma-item.ma20 { color: #EC4899; }
 .ma-item.ma60 { color: #10B981; }
 .ma-item.ma120 { color: #8C8C8C; }
+
+/* 副图指标图例：颜色与图中线条一致 */
+.ma-item.macd { color: #94a3b8; }
+.ma-item.dif { color: #e8b004; }
+.ma-item.dea { color: #1890ff; }
+.ma-item.k { color: #e8b004; }
+.ma-item.d { color: #1890ff; }
+.ma-item.j { color: #e677fd; }
+.ma-item.boll-upper { color: #e677fd; }
+.ma-item.boll-mid { color: #e8b004; }
+.ma-item.boll-lower { color: #1890ff; }
 
 .section-title {
   font-size: 16px;
@@ -2457,6 +2696,25 @@ onUnmounted(() => {
   font-weight: 600;
   color: var(--color-text-primary);
   font-family: 'DIN Alternate', sans-serif;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* 悬停联动时数值位数变化不改变布局：等宽数字 + 固定最小宽度 + 右对齐 */
+.qs-item:nth-child(2) .qs-value,
+.qs-item:nth-child(3) .qs-value {
+  min-width: 16ch;
+  text-align: right;
+}
+
+.qs-item:nth-child(4) .qs-value {
+  min-width: 7ch;
+  text-align: right;
+}
+
+.qs-item:nth-child(5) .qs-value {
+  min-width: 8ch;
+  text-align: right;
 }
 
 .ob-quote-time {
