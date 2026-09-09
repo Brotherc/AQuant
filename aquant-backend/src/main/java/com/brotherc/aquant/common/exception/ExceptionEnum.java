@@ -56,7 +56,15 @@ public enum ExceptionEnum {
     ARTICLE_INVALID_VISIBILITY(1000307, "无效的可见性设置，只能是public或private"),
     ARTICLE_UPDATE_DENIED(1000308, "只有作者可以修改文章"),
     ARTICLE_DELETE_DENIED(1000309, "只有作者可以删除文章"),
-    ARTICLE_AUTH_REQUIRED(1000310, "该操作需要登录");
+    ARTICLE_AUTH_REQUIRED(1000310, "该操作需要登录"),
+
+    PORTFOLIO_NOT_FOUND(1000401, "投资组合不存在"),
+    PORTFOLIO_NAME_DUPLICATE(1000402, "投资组合名称已存在"),
+    PORTFOLIO_ACCOUNT_NOT_FOUND(1000403, "券商账户不存在"),
+    PORTFOLIO_ACCOUNT_DUPLICATE(1000404, "该券商账户已存在"),
+    PORTFOLIO_TRADE_PARAMS_ILLEGAL(1000405, "交易流水参数不完整"),
+    PORTFOLIO_POSITION_INSUFFICIENT(1000406, "卖出或转出数量超过当前持仓"),
+    PORTFOLIO_CURRENCY_UNSUPPORTED(1000407, "暂不支持该币种的组合汇总");
 
     /**
      * 应用(1~2位)、服务(2位)、模块(2位)、异常(2位)
