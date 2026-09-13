@@ -22,9 +22,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -295,11 +299,30 @@ public class StockIndustryBoardEmSyncService {
             entity.setLowPrice(item.getLowPrice());
             entity.setVolume(item.getVolume());
             entity.setAmount(item.getAmount());
-            entity.setChangeAmount(item.getClosePrice() == null || item.getOpenPrice() == null
-                    ? null : item.getClosePrice().subtract(item.getOpenPrice()));
+            entity.setChangeAmount(null);
             entity.setChangePercent(null);
             entity.setCreateTime(now);
             saves.put(tradeDate, entity);
+        }
+        // 东财板块 K 线不返回涨跌幅，以收盘价相对前一交易日收盘推算当日涨跌幅（首条记录无昨收则留空）
+        Map<String, StockIndustryBoardHistoryEm> merged = new LinkedHashMap<>(existing);
+        merged.putAll(saves);
+        List<StockIndustryBoardHistoryEm> ordered = new ArrayList<>(merged.values());
+        ordered.sort(Comparator.comparing(StockIndustryBoardHistoryEm::getTradeDate));
+        BigDecimal previousClose = null;
+        for (StockIndustryBoardHistoryEm entity : ordered) {
+            if (entity.getClosePrice() != null && previousClose != null) {
+                BigDecimal changeAmount = entity.getClosePrice().subtract(previousClose);
+                entity.setChangeAmount(changeAmount);
+                entity.setChangePercent(previousClose.signum() == 0 ? BigDecimal.ZERO
+                        : changeAmount.multiply(BigDecimal.valueOf(100)).divide(previousClose, 4, RoundingMode.HALF_UP));
+            } else if (entity.getClosePrice() != null) {
+                entity.setChangeAmount(null);
+                entity.setChangePercent(null);
+            }
+            if (entity.getClosePrice() != null) {
+                previousClose = entity.getClosePrice();
+            }
         }
         historyRepository.saveAll(saves.values());
     }

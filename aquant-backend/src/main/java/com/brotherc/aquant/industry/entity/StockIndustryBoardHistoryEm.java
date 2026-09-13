@@ -11,7 +11,10 @@ import java.time.LocalDateTime;
  */
 @Data
 @Entity
-@Table(name = "stock_industry_board_history_em")
+@Table(name = "stock_industry_board_history_em", indexes = {
+        @Index(name = "uk_industry_history_em_sector_date", columnList = "sector_name, trade_date", unique = true),
+        @Index(name = "idx_industry_history_em_trade_date", columnList = "trade_date")
+})
 public class StockIndustryBoardHistoryEm {
 
     /**

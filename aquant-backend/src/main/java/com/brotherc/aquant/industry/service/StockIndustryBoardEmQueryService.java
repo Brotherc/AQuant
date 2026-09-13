@@ -38,9 +38,12 @@ public class StockIndustryBoardEmQueryService {
         if (rankLimit == null || rankLimit < 1 || rankLimit > MAX_RANK_LIMIT) {
             throw new BusinessException(ExceptionEnum.SYS_CHECK_ERROR, "排名数量必须在1到100之间");
         }
+        List<StockIndustryBoardHistoryEm> range = historyRepository
+                .findByTradeDateBetweenOrderByTradeDateAscSectorNameAsc(startDate.toString(), endDate.toString());
+        // 东财历史行情落库时涨跌幅恒为 null（K线不返回涨跌幅），此处像同花顺一样按收盘价相对前一日收盘补算
+        populateMissingChangeMetrics(range, startDate);
         Map<String, List<StockIndustryBoardHistoryEm>> byDate = new LinkedHashMap<>();
-        for (StockIndustryBoardHistoryEm item : historyRepository
-                .findByTradeDateBetweenOrderByTradeDateAscSectorNameAsc(startDate.toString(), endDate.toString())) {
+        for (StockIndustryBoardHistoryEm item : range) {
             if (item.getChangePercent() != null) byDate.computeIfAbsent(item.getTradeDate(), ignored -> new ArrayList<>()).add(item);
         }
         Comparator<StockIndustryBoardHistoryEm> comparator = Comparator
@@ -61,6 +64,48 @@ public class StockIndustryBoardEmQueryService {
     @Transactional(readOnly = true)
     public StockIndustryBoardVO overview(String industry) {
         return overview(industry, null);
+    }
+
+    private void populateMissingChangeMetrics(List<StockIndustryBoardHistoryEm> range, LocalDate startDate) {
+        boolean requiresFallback = range.stream()
+                .anyMatch(row -> row.getChangePercent() == null && row.getClosePrice() != null);
+        if (!requiresFallback) {
+            return;
+        }
+        Map<String, BigDecimal> previousCloseBySector = new LinkedHashMap<>();
+        for (StockIndustryBoardHistoryEm predecessor : historyRepository
+                .findLatestBeforeTradeDateForEachSector(startDate.toString())) {
+            if (predecessor.getClosePrice() != null) {
+                previousCloseBySector.put(predecessor.getSectorName(), predecessor.getClosePrice());
+            }
+        }
+        Map<String, List<StockIndustryBoardHistoryEm>> rowsBySector = new LinkedHashMap<>();
+        for (StockIndustryBoardHistoryEm history : range) {
+            rowsBySector.computeIfAbsent(history.getSectorName(), ignored -> new ArrayList<>()).add(history);
+        }
+        for (List<StockIndustryBoardHistoryEm> sectorRows : rowsBySector.values()) {
+            sectorRows.sort(Comparator.comparing(StockIndustryBoardHistoryEm::getTradeDate));
+            BigDecimal previousClose = previousCloseBySector.get(sectorRows.get(0).getSectorName());
+            for (StockIndustryBoardHistoryEm history : sectorRows) {
+                if (history.getChangePercent() == null && history.getClosePrice() != null && previousClose != null) {
+                    BigDecimal changeAmount = history.getClosePrice().subtract(previousClose);
+                    history.setChangeAmount(changeAmount);
+                    history.setChangePercent(toChangePercent(changeAmount, previousClose));
+                }
+                if (history.getClosePrice() != null) {
+                    previousClose = history.getClosePrice();
+                }
+            }
+        }
+    }
+
+    private BigDecimal toChangePercent(BigDecimal changeAmount, BigDecimal previousClose) {
+        if (previousClose.signum() == 0) {
+            return BigDecimal.ZERO;
+        }
+        return changeAmount.divide(previousClose, 6, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                .setScale(4, RoundingMode.HALF_UP);
     }
 
     @Transactional(readOnly = true)
