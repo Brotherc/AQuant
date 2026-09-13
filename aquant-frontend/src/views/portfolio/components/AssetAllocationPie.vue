@@ -20,8 +20,8 @@
             <span class="legend-name">股票市值</span>
           </div>
           <div class="legend-right">
-            <span class="legend-amount">{{ formatMoney(summary?.totalMarketValue) }}</span>
-            <span class="legend-ratio">{{ calcRatio(summary?.totalMarketValue, summary?.totalAsset) }}</span>
+            <span class="legend-amount">{{ formatMoney(summary?.marketValue) }}</span>
+            <span class="legend-ratio">{{ calcRatio(summary?.marketValue, summary?.totalAsset) }}</span>
           </div>
         </div>
 
@@ -31,8 +31,8 @@
             <span class="legend-name">现金余额</span>
           </div>
           <div class="legend-right">
-            <span class="legend-amount">{{ formatMoney(summary?.cashBalance) }}</span>
-            <span class="legend-ratio">{{ calcRatio(summary?.cashBalance, summary?.totalAsset) }}</span>
+            <span class="legend-amount">{{ formatMoney(summary?.cashAmount) }}</span>
+            <span class="legend-ratio">{{ calcRatio(summary?.cashAmount, summary?.totalAsset) }}</span>
           </div>
         </div>
       </div>
@@ -72,8 +72,8 @@ const renderPie = () => {
     pieInstance = echarts.init(pieRef.value);
   }
 
-  const stockVal = Number(props.summary?.totalMarketValue) || 0;
-  const cashVal = Number(props.summary?.cashBalance) || 0;
+  const stockVal = Number(props.summary?.marketValue) || 0;
+  const cashVal = Number(props.summary?.cashAmount) || 0;
 
   const data = [
     { value: stockVal, name: '股票市值', itemStyle: { color: '#0f172a' } },

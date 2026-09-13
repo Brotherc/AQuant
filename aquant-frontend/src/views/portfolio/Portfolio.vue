@@ -389,12 +389,12 @@ const loadOverviewData = async () => {
       portfolioId: currentPortfolioId.value,
       baseCurrency: 'CNY',
       totalAsset: 24968.77,
-      totalMarketValue: 17904.0,
-      cashBalance: 7064.77,
-      totalCost: 17997.39,
+      marketValue: 17904.0,
+      cashAmount: 7064.77,
+      costAmount: 17997.39,
       unrealizedProfit: -93.39,
       unrealizedProfitRate: -0.52,
-      holdingCount: 3,
+      positionCount: 3,
       unpricedAssetCount: 0,
       unsupportedCurrencyCount: 0
     };

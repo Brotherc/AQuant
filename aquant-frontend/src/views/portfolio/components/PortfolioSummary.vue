@@ -22,11 +22,11 @@
           <div class="card-label">证券总市值</div>
           <div class="card-value">
             <a-spin :spinning="loading" size="small">
-              {{ formatMoney(summary?.totalMarketValue) }}
+              {{ formatMoney(summary?.marketValue) }}
             </a-spin>
           </div>
           <div class="card-sub-info">
-            <span>占比 {{ calcAssetRatio(summary?.totalMarketValue, summary?.totalAsset) }}</span>
+            <span>占比 {{ calcAssetRatio(summary?.marketValue, summary?.totalAsset) }}</span>
           </div>
         </div>
       </a-col>
@@ -37,11 +37,11 @@
           <div class="card-label">现金余额</div>
           <div class="card-value">
             <a-spin :spinning="loading" size="small">
-              {{ formatMoney(summary?.cashBalance) }}
+              {{ formatMoney(summary?.cashAmount) }}
             </a-spin>
           </div>
           <div class="card-sub-info">
-            <span>占比 {{ calcAssetRatio(summary?.cashBalance, summary?.totalAsset) }}</span>
+            <span>占比 {{ calcAssetRatio(summary?.cashAmount, summary?.totalAsset) }}</span>
           </div>
         </div>
       </a-col>
@@ -52,11 +52,11 @@
           <div class="card-label">持仓成本</div>
           <div class="card-value">
             <a-spin :spinning="loading" size="small">
-              {{ formatMoney(summary?.totalCost) }}
+              {{ formatMoney(summary?.costAmount) }}
             </a-spin>
           </div>
           <div class="card-sub-info">
-            <span>持仓标的 {{ summary?.holdingCount ?? (summary?.positions?.length || 0) }} 只</span>
+            <span>持仓标的 {{ summary?.positionCount ?? (summary?.positions?.length || 0) }} 只</span>
           </div>
         </div>
       </a-col>

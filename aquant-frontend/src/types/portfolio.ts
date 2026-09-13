@@ -166,15 +166,11 @@ export interface PortfolioOverview {
   baseCurrency: string;
   totalAsset: number;
   marketValue?: number;
-  totalMarketValue?: number;
   cashAmount?: number;
-  cashBalance?: number;
   costAmount?: number;
-  totalCost?: number;
   unrealizedProfit: number;
   unrealizedProfitRate?: number;
   positionCount?: number;
-  holdingCount?: number;
   unpricedAssetCount: number;
   unsupportedCurrencyCount: number;
   calculateTime?: string;

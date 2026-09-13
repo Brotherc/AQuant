@@ -173,8 +173,7 @@ import {
   StockOutlined,
   LineChartOutlined,
   RadarChartOutlined,
-  HeartOutlined,
-  WalletOutlined,
+  UserOutlined,
   LogoutOutlined,
   LoginOutlined,
   MailOutlined,
@@ -214,16 +213,14 @@ const navigationGroups: NavigationGroup[] = [
     path: '/dashboard'
   },
   {
-    key: '/watchlist',
-    title: '自选',
-    icon: HeartOutlined,
-    path: '/watchlist/index'
-  },
-  {
-    key: '/portfolio',
-    title: '我的持仓',
-    icon: WalletOutlined,
-    path: '/portfolio/index'
+    key: '/my',
+    title: '我的',
+    icon: UserOutlined,
+    popupClassName: 'top-nav-popup top-nav-popup-compact',
+    children: [
+      { key: '/watchlist/index', label: '自选' },
+      { key: '/portfolio/index', label: '持仓' }
+    ]
   },
   {
     key: '/data',
