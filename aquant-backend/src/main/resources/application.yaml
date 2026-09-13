@@ -1,83 +1,17 @@
-server:
-  port: 8084
-
+# ============================================================
+# 统一配置入口（本文件只负责 profile 切换，具体配置见各 profile 文件）
+#
+#   application-demo.yaml  演示环境（远端模板，占位符配置，随仓库提交）
+#   application-dev.yaml   本地开发环境（真实凭据，永不提交，已被 .gitignore 排除）
+#
+# 切换方式（优先级从高到低）：
+#   1. 命令行:  java -jar app.jar --spring.profiles.active=demo
+#   2. 环境变量: SPRING_PROFILES_ACTIVE=demo
+#   3. 缺省值:  dev（下方占位符默认值）
+#
+# 依据 Spring Boot 3.0 配置数据机制：application.yaml 先加载，
+# 随后自动叠加 application-{profile}.yaml 中的同名键覆盖
+# ============================================================
 spring:
-  application:
-    name: aquant-service
-  datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://127.0.0.1:3306/stock?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: test
-    password: testtest
-    type: com.alibaba.druid.pool.DruidDataSource
-    # Druid \u8FDE\u63A5\u6C60\u914D\u7F6E
-    druid:
-      initial-size: 5
-      min-idle: 5
-      max-active: 20
-      max-wait: 60000
-      time-between-eviction-runs-millis: 60000
-      min-evictable-idle-time-millis: 300000
-      validation-query: SELECT 1
-      test-while-idle: true
-      test-on-borrow: false
-      test-on-return: false
-      pool-prepared-statements: true
-      filters: stat,wall,slf4j
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: false
-    properties:
-      hibernate:
-        format_sql: true
-    database-platform: org.hibernate.dialect.MySQL8Dialect
-  mail:
-    host: smtp.qq.com # 请替换为您真实的 SMTP 服务器 (如 smtp.163.com)
-    username: your-email@qq.com # 请替换为您发件邮箱账号
-    password: your-smtp-auth-code # 请替换为发件邮箱对应的 SMTP 授权码（不是登录密码）
-    default-encoding: UTF-8
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-            required: true
-          ssl:
-            enable: true
-
-
-# Druid \u76D1\u63A7\u9875\u9762\u914D\u7F6E
-druid:
-  stat-view-servlet:
-    enabled: true
-    url-pattern: /druid/*
-    login-username: admin
-    login-password: admin
-
-akshare-address: http://127.0.0.1:8080
-ccbfund-address: https://www.ccbfund.cn
-gffund-address: https://www.gffunds.com.cn
-morganfund-address: https://www.cifm.com
-efund-address: https://www.efunds.com.cn
-efund-api-address: https://api.efunds.com.cn
-efund-cdn-address: https://cdn.efunds.com.cn
-nffund-address: https://www.nffund.com
-thfund-address: https://www.thfund.com.cn
-thfund-disclosure-api-address: https://api.fund.eastmoney.com
-thfund-disclosure-cdn-address: https://pdf.dfcfw.com
-jsfund-address: https://www.jsfund.cn
-chinaamc-address: https://fund.chinaamc.com
-cmffund-address: https://www.cmfchina.com
-htffund-address: https://www.99fund.com
-dcfund-address: https://www.dcfund.com.cn
-
-aquant:
-  stock:
-    max-notification-stock-count: 600
-  jwt:
-    # JWT 签名密钥
-    secret: AQuant@2025!SecretKey#Jwt
-    # Token 有效期（秒），默认 7 天 = 604800 秒
-    expire-seconds: 604800
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
