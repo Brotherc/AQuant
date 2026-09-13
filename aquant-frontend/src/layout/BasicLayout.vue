@@ -174,6 +174,7 @@ import {
   LineChartOutlined,
   RadarChartOutlined,
   HeartOutlined,
+  WalletOutlined,
   LogoutOutlined,
   LoginOutlined,
   MailOutlined,
@@ -217,6 +218,12 @@ const navigationGroups: NavigationGroup[] = [
     title: '自选',
     icon: HeartOutlined,
     path: '/watchlist/index'
+  },
+  {
+    key: '/portfolio',
+    title: '我的持仓',
+    icon: WalletOutlined,
+    path: '/portfolio/index'
   },
   {
     key: '/data',
@@ -268,7 +275,7 @@ const currentRouteMeta = computed(() => {
   if (route.path === '/dashboard') {
     return undefined;
   }
-  if (route.path === '/watchlist/index' || route.path === '/watchlist') {
+  if (route.path === '/watchlist/index' || route.path === '/watchlist' || route.path === '/portfolio/index' || route.path === '/portfolio') {
     return { parent: '', child: '' };
   }
   if (route.path === '/industry-detail/index') {

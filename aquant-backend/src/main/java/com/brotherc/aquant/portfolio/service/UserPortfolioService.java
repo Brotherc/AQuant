@@ -33,7 +33,9 @@ public class UserPortfolioService {
     private static final Set<String> ASSET_TYPES = Set.of("STOCK", "ETF", "FUND", "BOND", "CASH");
     private static final Set<String> POSITION_IN_TYPES = Set.of("BUY", "SUBSCRIBE", "POSITION_INIT", "TRANSFER_IN", "DIVIDEND_SHARE");
     private static final Set<String> POSITION_OUT_TYPES = Set.of("SELL", "REDEEM", "TRANSFER_OUT");
-    private static final Set<String> AMOUNT_ONLY_TYPES = Set.of("DIVIDEND_CASH", "FEE", "TAX", "INTEREST");
+    private static final Set<String> AMOUNT_ONLY_TYPES = Set.of(
+            "DIVIDEND_CASH", "FEE", "TAX", "INTEREST", "CASH_DEPOSIT", "CASH_WITHDRAW"
+    );
 
     private final UserPortfolioRepository portfolioRepository;
     private final UserBrokerAccountRepository accountRepository;
@@ -131,7 +133,6 @@ public class UserPortfolioService {
         }
     }
 
-    @Transactional(readOnly = true)
     public List<BrokerAccountVO> getAccounts(Long portfolioId) {
         Long userId = UserContext.requireCurrentUserId();
         getPortfolio(portfolioId, userId);
@@ -252,6 +253,18 @@ public class UserPortfolioService {
         UserBrokerAccount account = getAccount(accountId, userId);
         UserPortfolioTrade trade = tradeRepository.findByIdAndAccountId(tradeId, accountId)
                 .orElseThrow(ExceptionEnum.PORTFOLIO_TRADE_PARAMS_ILLEGAL::toException);
+        reverseTrade(account, trade);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void reverseTrade(Long tradeId) {
+        UserPortfolioTrade trade = tradeRepository.findById(tradeId)
+                .orElseThrow(ExceptionEnum.PORTFOLIO_TRADE_PARAMS_ILLEGAL::toException);
+        UserBrokerAccount account = getAccount(trade.getAccountId(), UserContext.requireCurrentUserId());
+        reverseTrade(account, trade);
+    }
+
+    private void reverseTrade(UserBrokerAccount account, UserPortfolioTrade trade) {
         if (!"REVERSED".equals(trade.getStatus())) {
             trade.setStatus("REVERSED");
             tradeRepository.save(trade);
@@ -265,8 +278,20 @@ public class UserPortfolioService {
         UserBrokerAccount account = getAccount(accountId, userId);
         UserPortfolioImportBatch batch = importBatchRepository.findByIdAndAccountId(batchId, accountId)
                 .orElseThrow(ExceptionEnum.PORTFOLIO_TRADE_PARAMS_ILLEGAL::toException);
+        reverseImportBatch(account, batch);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void reverseImportBatch(Long batchId) {
+        UserPortfolioImportBatch batch = importBatchRepository.findById(batchId)
+                .orElseThrow(ExceptionEnum.PORTFOLIO_TRADE_PARAMS_ILLEGAL::toException);
+        UserBrokerAccount account = getAccount(batch.getAccountId(), UserContext.requireCurrentUserId());
+        reverseImportBatch(account, batch);
+    }
+
+    private void reverseImportBatch(UserBrokerAccount account, UserPortfolioImportBatch batch) {
         if (!"REVERSED".equals(batch.getStatus())) {
-            List<UserPortfolioTrade> trades = tradeRepository.findAllByImportBatchIdAndAccountId(batchId, accountId);
+            List<UserPortfolioTrade> trades = tradeRepository.findAllByImportBatchIdAndAccountId(batch.getId(), account.getId());
             for (UserPortfolioTrade trade : trades) {
                 trade.setStatus("REVERSED");
             }
@@ -278,17 +303,41 @@ public class UserPortfolioService {
         }
     }
 
-    @Transactional(readOnly = true)
     public Page<PortfolioTradeVO> getTrades(Long accountId, Pageable pageable) {
-        getAccount(accountId, UserContext.requireCurrentUserId());
+        UserBrokerAccount account = getAccount(accountId, UserContext.requireCurrentUserId());
+        Map<Long, String> accountNames = Map.of(account.getId(), account.getAccountName());
         return tradeRepository.findAllByAccountIdOrderByTradeTimeDescIdDesc(accountId, pageable)
-                .map(this::toTradeVO);
+                .map(trade -> toTradeVO(trade, accountNames));
     }
 
-    @Transactional(readOnly = true)
+    public Page<PortfolioTradeVO> getTrades(Long portfolioId, Long accountId, Pageable pageable) {
+        Long userId = UserContext.requireCurrentUserId();
+        getPortfolio(portfolioId, userId);
+        List<UserBrokerAccount> accounts = getTargetAccounts(portfolioId, accountId, userId);
+        if (accounts.isEmpty()) {
+            return Page.empty(pageable);
+        }
+        Map<Long, String> accountNames = accounts.stream().collect(Collectors.toMap(
+                UserBrokerAccount::getId, UserBrokerAccount::getAccountName));
+        return tradeRepository.findAllByAccountIdInOrderByTradeTimeDescIdDesc(accountNames.keySet(), pageable)
+                .map(trade -> toTradeVO(trade, accountNames));
+    }
+
     public List<UserPortfolioImportBatch> getImportBatches(Long accountId) {
         getAccount(accountId, UserContext.requireCurrentUserId());
         return importBatchRepository.findAllByAccountIdOrderByCreateTimeDesc(accountId);
+    }
+
+    public List<UserPortfolioImportBatch> getImportBatches(Long portfolioId, Long accountId) {
+        Long userId = UserContext.requireCurrentUserId();
+        getPortfolio(portfolioId, userId);
+        List<Long> accountIds = getTargetAccounts(portfolioId, accountId, userId).stream()
+                .map(UserBrokerAccount::getId)
+                .toList();
+        if (accountIds.isEmpty()) {
+            return List.of();
+        }
+        return importBatchRepository.findAllByAccountIdInOrderByCreateTimeDesc(accountIds);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -309,10 +358,21 @@ public class UserPortfolioService {
         cashRepository.save(cash);
     }
 
-    @Transactional(readOnly = true)
     public List<UserPortfolioCash> getCash(Long accountId) {
         getAccount(accountId, UserContext.requireCurrentUserId());
         return cashRepository.findAllByAccountIdOrderByCurrencyAsc(accountId);
+    }
+
+    public List<UserPortfolioCash> getCash(Long portfolioId, Long accountId) {
+        Long userId = UserContext.requireCurrentUserId();
+        getPortfolio(portfolioId, userId);
+        List<Long> accountIds = getTargetAccounts(portfolioId, accountId, userId).stream()
+                .map(UserBrokerAccount::getId)
+                .toList();
+        if (accountIds.isEmpty()) {
+            return List.of();
+        }
+        return cashRepository.findAllByAccountIdIn(accountIds);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -376,7 +436,6 @@ public class UserPortfolioService {
         generateSnapshot(portfolio, getTargetAccounts(portfolioId, null, userId), snapshotDate);
     }
 
-    @Transactional(readOnly = true)
     public List<Long> getActivePortfolioIds() {
         return portfolioRepository.findAllByDeletedFalseOrderByIdAsc().stream().map(UserPortfolio::getId).toList();
     }
@@ -447,7 +506,6 @@ public class UserPortfolioService {
         }
     }
 
-    @Transactional(readOnly = true)
     public List<UserPortfolioAccountSnapshot> getSnapshots(Long portfolioId, LocalDate startDate, LocalDate endDate) {
         Long userId = UserContext.requireCurrentUserId();
         getPortfolio(portfolioId, userId);
@@ -747,9 +805,11 @@ public class UserPortfolioService {
         return vo;
     }
 
-    private PortfolioTradeVO toTradeVO(UserPortfolioTrade trade) {
+    private PortfolioTradeVO toTradeVO(UserPortfolioTrade trade, Map<Long, String> accountNames) {
         PortfolioTradeVO vo = new PortfolioTradeVO();
         vo.setId(trade.getId());
+        vo.setAccountId(trade.getAccountId());
+        vo.setAccountName(accountNames.get(trade.getAccountId()));
         vo.setImportBatchId(trade.getImportBatchId());
         vo.setAssetType(trade.getAssetType());
         vo.setMarket(trade.getMarket());
@@ -770,4 +830,5 @@ public class UserPortfolioService {
         vo.setRemark(trade.getRemark());
         return vo;
     }
+
 }

@@ -64,7 +64,9 @@ public enum ExceptionEnum {
     PORTFOLIO_ACCOUNT_DUPLICATE(1000404, "该券商账户已存在"),
     PORTFOLIO_TRADE_PARAMS_ILLEGAL(1000405, "交易流水参数不完整"),
     PORTFOLIO_POSITION_INSUFFICIENT(1000406, "卖出或转出数量超过当前持仓"),
-    PORTFOLIO_CURRENCY_UNSUPPORTED(1000407, "暂不支持该币种的组合汇总");
+    PORTFOLIO_CURRENCY_UNSUPPORTED(1000407, "暂不支持该币种的组合汇总"),
+    PORTFOLIO_IMPORT_FILE_INVALID(1000408, "交易文件格式或内容不正确"),
+    PORTFOLIO_IMPORT_FILE_DUPLICATE(1000409, "该交易文件已经成功导入");
 
     /**
      * 应用(1~2位)、服务(2位)、模块(2位)、异常(2位)

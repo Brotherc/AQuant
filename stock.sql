@@ -824,15 +824,7 @@ CREATE TABLE `user_article` (
   CONSTRAINT `fk_article_author` FOREIGN KEY (`author_id`) REFERENCES `sys_user` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户文章表';
 
-DROP TABLE IF EXISTS `user_portfolio_position_snapshot`;
-DROP TABLE IF EXISTS `user_portfolio_account_snapshot`;
-DROP TABLE IF EXISTS `user_portfolio_cash`;
-DROP TABLE IF EXISTS `user_portfolio_position`;
-DROP TABLE IF EXISTS `user_portfolio_trade`;
-DROP TABLE IF EXISTS `user_portfolio_import_batch`;
-DROP TABLE IF EXISTS `user_broker_account`;
 DROP TABLE IF EXISTS `user_portfolio`;
-
 CREATE TABLE `user_portfolio` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `user_id` bigint NOT NULL COMMENT '用户ID',
@@ -849,6 +841,7 @@ CREATE TABLE `user_portfolio` (
   CONSTRAINT `fk_user_portfolio_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户投资组合';
 
+DROP TABLE IF EXISTS `user_broker_account`;
 CREATE TABLE `user_broker_account` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `portfolio_id` bigint NOT NULL COMMENT '投资组合ID',
@@ -871,6 +864,7 @@ CREATE TABLE `user_broker_account` (
   CONSTRAINT `fk_broker_account_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户券商账户';
 
+DROP TABLE IF EXISTS `user_portfolio_import_batch`;
 CREATE TABLE `user_portfolio_import_batch` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `account_id` bigint NOT NULL COMMENT '券商账户ID',
@@ -892,6 +886,7 @@ CREATE TABLE `user_portfolio_import_batch` (
   CONSTRAINT `fk_portfolio_import_account` FOREIGN KEY (`account_id`) REFERENCES `user_broker_account` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='持仓交易导入批次';
 
+DROP TABLE IF EXISTS `user_portfolio_trade`;
 CREATE TABLE `user_portfolio_trade` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `account_id` bigint NOT NULL COMMENT '券商账户ID',
@@ -928,6 +923,7 @@ CREATE TABLE `user_portfolio_trade` (
   CONSTRAINT `fk_portfolio_trade_batch` FOREIGN KEY (`import_batch_id`) REFERENCES `user_portfolio_import_batch` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户投资组合交易流水';
 
+DROP TABLE IF EXISTS `user_portfolio_position`;
 CREATE TABLE `user_portfolio_position` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `account_id` bigint NOT NULL COMMENT '券商账户ID',
@@ -953,6 +949,7 @@ CREATE TABLE `user_portfolio_position` (
   CONSTRAINT `fk_portfolio_position_account` FOREIGN KEY (`account_id`) REFERENCES `user_broker_account` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户账户当前持仓';
 
+DROP TABLE IF EXISTS `user_portfolio_cash`;
 CREATE TABLE `user_portfolio_cash` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `account_id` bigint NOT NULL COMMENT '券商账户ID',
@@ -966,6 +963,7 @@ CREATE TABLE `user_portfolio_cash` (
   CONSTRAINT `fk_portfolio_cash_account` FOREIGN KEY (`account_id`) REFERENCES `user_broker_account` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户账户当前现金';
 
+DROP TABLE IF EXISTS `user_portfolio_account_snapshot`;
 CREATE TABLE `user_portfolio_account_snapshot` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `account_id` bigint NOT NULL COMMENT '券商账户ID',
@@ -984,6 +982,7 @@ CREATE TABLE `user_portfolio_account_snapshot` (
   CONSTRAINT `fk_portfolio_snapshot_account` FOREIGN KEY (`account_id`) REFERENCES `user_broker_account` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户账户每日资产快照';
 
+DROP TABLE IF EXISTS `user_portfolio_position_snapshot`;
 CREATE TABLE `user_portfolio_position_snapshot` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `account_snapshot_id` bigint NOT NULL COMMENT '账户快照ID',
