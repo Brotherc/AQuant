@@ -105,6 +105,27 @@ export const getIndustryConstituents = (params: { industry: string; tradeDate?: 
     return api.get<ResponseDTO<StockIndustryConstituentSnapshotVO>>('/stockIndustryBoard/constituents', { params });
 };
 
+export interface StockBoardTrendsPoint {
+    time: string;
+    price: number | null;
+    avgPrice: number | null;
+    volume: number | null;
+}
+
+export interface StockBoardTrendsVO {
+    boardCode: string;
+    name: string;
+    prevClose: number | null;
+    latestPrice: number | null;
+    points: StockBoardTrendsPoint[];
+}
+
+export const getBoardIntradayTrends = (params: { boardCode: string }) =>
+    api.get<ResponseDTO<StockBoardTrendsVO>>('/stockIndustryBoard/minute/intraday', { params });
+
+export const getBoardTrends5d = (params: { boardCode: string }) =>
+    api.get<ResponseDTO<StockBoardTrendsVO>>('/stockIndustryBoard/minute/trends5d', { params });
+
 export const getStockBoardIndustryLatest = () => {
     return api.get<ResponseDTO<string>>('/stockSync/stockBoardIndustryLatest');
 };

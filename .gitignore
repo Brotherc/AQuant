@@ -32,3 +32,13 @@ build/
 ### VS Code ###
 .vscode/
 .trae/
+/.opencode/
+/.claude/
+/.workbuddy/
+/index.js
+/gridlist.html
+
+### 本地环境配置（真实凭据，永不提交）###
+aquant-backend/src/main/resources/application-dev.yaml
+aquant-backend/src/main/resources/application-dev.yml
+aquant-backend/src/main/resources/application-local.yaml

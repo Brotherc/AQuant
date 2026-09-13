@@ -1,0 +1,112 @@
+# ============================================================
+# 演示环境配置（随仓库提交，公开的占位符模板值）
+# 由统一入口 application.yaml 通过 spring.profiles.active=demo 激活
+# ============================================================
+server:
+  port: 8084
+
+spring:
+  application:
+    name: aquant-service
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/stock?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: test
+    password: testtest
+    type: com.alibaba.druid.pool.DruidDataSource
+    # Druid 连接池配置
+    druid:
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 60000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      validation-query: SELECT 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      pool-prepared-statements: true
+      filters: stat,wall,slf4j
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+    # Spring Boot 3.0 使用 Hibernate 6，可从 JDBC 连接自动检测方言，
+    # 不再需要显式指定 database-platform（原 MySQL8Dialect 在 Hibernate 6 中已废弃）
+
+  mail:
+    host: smtp.qq.com # 请替换为您真实的 SMTP 服务器 (如 smtp.163.com)
+    username: your-email@qq.com # 请替换为您发件邮箱账号
+    password: your-smtp-auth-code # 请替换为发件邮箱对应的 SMTP 授权码（不是登录密码）
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          ssl:
+            enable: true
+
+
+# Druid 监控页面配置
+druid:
+  stat-view-servlet:
+    enabled: true
+    url-pattern: /druid/*
+    login-username: admin
+    login-password: admin
+
+akshare-address: http://127.0.0.1:8080
+ccbfund-address: https://www.ccbfund.cn
+gffund-address: https://www.gffunds.com.cn
+morganfund-address: https://www.cifm.com
+efund-address: https://www.efunds.com.cn
+efund-api-address: https://api.efunds.com.cn
+efund-cdn-address: https://cdn.efunds.com.cn
+nffund-address: https://www.nffund.com
+thfund-address: https://www.thfund.com.cn
+thfund-disclosure-api-address: https://api.fund.eastmoney.com
+thfund-disclosure-cdn-address: https://pdf.dfcfw.com
+jsfund-address: https://www.jsfund.cn
+chinaamc-address: https://fund.chinaamc.com
+cmffund-address: https://www.cmfchina.com
+htffund-address: https://www.99fund.com
+dcfund-address: https://www.dcfund.com.cn
+
+aquant:
+  stock:
+    max-notification-stock-count: 600
+  eastmoney:
+    # TLS 指纹模拟开关。关闭后回落到 JDK 默认 SSLContext，用于排查拦截是否由 TLS 指纹触发
+    tls-impersonate: ${EASTMONEY_TLS_IMPERSONATE:true}
+    # 失败重试次数（不含首次）。东财按主机做短时软封，表现为 502/空响应体，退避重试可自愈
+    max-retries: ${EASTMONEY_MAX_RETRIES:2}
+    # 相邻请求最小间隔与随机浮动范围，实际间隔 = min + random(0, spread)。
+    # 会话 Cookie 有 TTL（重度使用约 30-40 分钟失效），间隔需保证全量同步（约 2000 请求）
+    # 能在其窗口内完成；若触发封禁由熔断兜底，再把间隔调大
+    pace-min-millis: ${EASTMONEY_PACE_MIN_MILLIS:300}
+    pace-spread-millis: ${EASTMONEY_PACE_SPREAD_MILLIS:500}
+    # 单主机连续传输级失败（连接被掐断/502/空响应）达到阈值后熔断，冷却期内不再向该主机发请求。
+    # 东财封禁期内的重试只会刷新封禁窗口，必须停下来等冷却
+    breaker-threshold: ${EASTMONEY_BREAKER_THRESHOLD:3}
+    cooldown-millis: ${EASTMONEY_COOLDOWN_MILLIS:900000}
+    # 会话 Cookie（完整 Cookie 请求头字符串，可留空）。quote.eastmoney.com 首次访问会触发滑块验证，
+    # 通过后浏览器持有的会话 Cookie 是 push2 接口的通行证：在本机浏览器通过滑块后，
+    # 从 DevTools -> Network -> 任意 push2 请求 -> Request Headers 复制完整 Cookie 值粘贴到这里，
+    # 或在前端"我的"→"东财 Cookie"热更新（推荐，立即生效并自动触发同步）
+    cookie: ${EASTMONEY_COOKIE:}
+    # 实时行情接口主机（逗号分隔，按优先级，失败自动切换下一主机，覆盖 clist 板块列表/成分股、分笔明细）。
+    # push2 实时主机对程序化客户端做间歇性主机级软封（时段性 502，浏览器正常，akshare#7230），
+    # push2delay 为 akshare 官方采用的延迟行情主机，数据滞后约 1-2 分钟，收盘后同步无影响
+    quote-base-urls: ${EASTMONEY_QUOTE_BASE_URLS:https://push2delay.eastmoney.com,https://push2.eastmoney.com}
+  jwt:
+    # JWT 签名密钥（演示默认值，生产环境务必替换）
+    secret: AQuant@2025!SecretKey#Jwt
+    # Token 有效期（秒），默认 7 天 = 604800 秒
+    expire-seconds: 604800
