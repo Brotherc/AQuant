@@ -323,6 +323,40 @@ public class UserPortfolioService {
                 .map(trade -> toTradeVO(trade, accountNames));
     }
 
+    public List<PortfolioTradeVO> getTradesByAssetCode(String assetCode) {
+        if (StringUtils.isBlank(assetCode)) {
+            return List.of();
+        }
+        Long userId = UserContext.requireCurrentUserId();
+        List<UserBrokerAccount> accounts = accountRepository.findAllByUserIdAndDeletedFalse(userId);
+        if (accounts.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, String> accountNames = accounts.stream().collect(Collectors.toMap(
+                UserBrokerAccount::getId, UserBrokerAccount::getAccountName));
+
+        String rawCode = assetCode.trim();
+        String normalizedCode = normalizeAssetCode("STOCK", null, rawCode);
+        String plain = plainCode(rawCode);
+        Set<String> searchCodes = new HashSet<>();
+        if (normalizedCode != null) {
+            searchCodes.add(normalizedCode.toLowerCase());
+            searchCodes.add(normalizedCode.toUpperCase());
+        }
+        if (plain != null) {
+            searchCodes.add(plain.toLowerCase());
+            searchCodes.add(plain.toUpperCase());
+        }
+        searchCodes.add(rawCode.toLowerCase());
+        searchCodes.add(rawCode.toUpperCase());
+
+        return tradeRepository.findAllByAccountIdInAndAssetCodeInAndStatusOrderByTradeTimeAscIdAsc(
+                        accountNames.keySet(), searchCodes, "NORMAL")
+                .stream()
+                .map(trade -> toTradeVO(trade, accountNames))
+                .toList();
+    }
+
     public List<UserPortfolioImportBatch> getImportBatches(Long accountId) {
         getAccount(accountId, UserContext.requireCurrentUserId());
         return importBatchRepository.findAllByAccountIdOrderByCreateTimeDesc(accountId);
