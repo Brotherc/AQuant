@@ -69,6 +69,13 @@
             <version>4.11.0</version>
         </dependency>
 
+        <!-- 模拟 Chrome TLS/JA3/JA4 指纹（BCJSSE），规避东财 WAF 对 JDK 默认 TLS 指纹的拦截 -->
+        <dependency>
+            <groupId>com.github.zhkl0228</groupId>
+            <artifactId>impersonator-bctls</artifactId>
+            <version>1.5.2</version>
+        </dependency>
+
         <!-- 基金公司官网当前额度表 HTML 解析 -->
         <dependency>
             <groupId>org.jsoup</groupId>

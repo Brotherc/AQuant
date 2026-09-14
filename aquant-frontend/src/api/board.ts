@@ -105,6 +105,27 @@ export const getIndustryConstituents = (params: { industry: string; tradeDate?: 
     return api.get<ResponseDTO<StockIndustryConstituentSnapshotVO>>('/stockIndustryBoard/constituents', { params });
 };
 
+export interface StockBoardTrendsPoint {
+    time: string;
+    price: number | null;
+    avgPrice: number | null;
+    volume: number | null;
+}
+
+export interface StockBoardTrendsVO {
+    boardCode: string;
+    name: string;
+    prevClose: number | null;
+    latestPrice: number | null;
+    points: StockBoardTrendsPoint[];
+}
+
+export const getBoardIntradayTrends = (params: { boardCode: string }) =>
+    api.get<ResponseDTO<StockBoardTrendsVO>>('/stockIndustryBoard/minute/intraday', { params });
+
+export const getBoardTrends5d = (params: { boardCode: string }) =>
+    api.get<ResponseDTO<StockBoardTrendsVO>>('/stockIndustryBoard/minute/trends5d', { params });
+
 export const getStockBoardIndustryLatest = () => {
     return api.get<ResponseDTO<string>>('/stockSync/stockBoardIndustryLatest');
 };
@@ -112,6 +133,15 @@ export const getStockBoardIndustryLatest = () => {
 export const getIndustrySourceAnalysis = (params: {
     source: IndustryDataSource; startDate: string; endDate: string; rankLimit?: number
 }) => api.get<ResponseDTO<IndustrySourceSnapshot<IndustryRiseAnalysisPoint[]>>>('/industrySource/analysis', { params, timeout: 60000 });
+
+export const getIndustrySourceBoardPage = (params: {
+    source: IndustryDataSource; boardName?: string; page: number; size: number; sort?: string[]
+}) => api.get<ResponseDTO<IndustrySourceSnapshot<PageResult<StockIndustryBoardVO>>>>('/industrySource/board/page', {
+    params,
+    paramsSerializer: {
+        indexes: null
+    }
+});
 
 export const getIndustrySourceOverview = (params: { source: IndustryDataSource; industry: string; tradeDate?: string }) =>
     api.get<ResponseDTO<IndustrySourceSnapshot<StockIndustryBoardVO>>>('/industrySource/overview', { params });

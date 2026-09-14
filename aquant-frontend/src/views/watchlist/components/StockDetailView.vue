@@ -7,14 +7,41 @@
           {{ stock.stockName }}
           <a-tag class="stock-code-tag">{{ stock.stockCode }}</a-tag>
         </h2>
-        <div class="price-row" :class="getPriceColor(stock.changePercent)">
-          <span class="latest-price">{{ stock.latestPrice.toFixed(2) }}</span>
-          <span class="price-change">{{ stock.changePercent.toFixed(2) }}%</span>
+        <div class="price-row" :class="getPriceColor(displayChangePercent)">
+          <span class="latest-price">{{ displayPrice.toFixed(2) }}</span>
+          <span v-if="displayChangeAmount != null" class="price-change">{{ formatSigned(displayChangeAmount) }}</span>
+          <span class="price-change">{{ formatSigned(displayChangePercent) }}%</span>
         </div>
       </div>
       
       <div class="header-right">
-        <div class="quote-stats" v-if="orderBook && frequency === 'minute'">
+        <!-- 分时模式悬停分钟卡：置于"今开/昨收"卡左侧，数值随十字光标联动，未悬停时显示最后一分钟 -->
+        <div class="quote-stats minute-card" v-if="frequency === 'minute' && currentMinute">
+          <div class="qs-grid">
+            <div class="qs-item">
+              <div class="qs-label">时间</div>
+              <div class="qs-value qs-time">{{ currentMinute.time }}</div>
+            </div>
+            <div class="qs-item">
+              <div class="qs-label">价格</div>
+              <div class="qs-value" :class="minutePctClass">{{ currentMinute.price }}</div>
+            </div>
+            <div class="qs-item">
+              <div class="qs-label">涨跌幅</div>
+              <div class="qs-value" :class="minutePctClass">{{ currentMinute.changePct }}</div>
+            </div>
+            <div class="qs-item">
+              <div class="qs-label">均价</div>
+              <div class="qs-value qs-avg">{{ currentMinute.avg }}</div>
+            </div>
+            <div class="qs-item">
+              <div class="qs-label">成交量(手)</div>
+              <div class="qs-value">{{ currentMinute.volume }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="quote-stats session-card" v-if="orderBook && frequency === 'minute'">
           <div class="qs-grid">
             <div class="qs-item">
               <div class="qs-label">今开/昨收</div>
@@ -43,27 +70,27 @@
           </div>
         </div>
 
-        <!-- K线模式悬停 OHLC 卡：与 PE 指标卡同高并列，数值随十字光标联动 -->
-        <div class="quote-stats" v-if="currentOhlc && isCandleMode">
+        <!-- K线模式悬停 OHLC 卡（1分/日/周/月/季/年共用）：两行三列网格，数值随十字光标联动 -->
+        <div class="quote-stats ohlc-card" v-if="currentOhlc && isCandleMode">
           <div class="qs-grid">
             <div class="qs-item">
               <div class="qs-label">{{ frequency === '1m' ? '时间' : '日期' }}</div>
-              <div class="qs-value qs-date">{{ currentOhlc.date }}</div>
+              <div class="qs-value qs-time">{{ currentOhlc.date }}</div>
             </div>
             <div class="qs-item">
               <div class="qs-label">开/收</div>
               <div class="qs-value"><span>{{ formatIndicator(currentOhlc.open) }}</span> / <span :class="ohlcCloseClass">{{ formatIndicator(currentOhlc.close) }}</span></div>
             </div>
             <div class="qs-item">
-              <div class="qs-label">高/低</div>
-              <div class="qs-value"><span class="text-up">{{ formatIndicator(currentOhlc.high) }}</span> / <span class="text-down">{{ formatIndicator(currentOhlc.low) }}</span></div>
-            </div>
-            <div class="qs-item">
               <div class="qs-label">涨跌幅</div>
               <div class="qs-value" :class="ohlcPctClass">{{ currentOhlc.changePct }}</div>
             </div>
             <div class="qs-item">
-              <div class="qs-label">成交量(手)</div>
+              <div class="qs-label">高/低</div>
+              <div class="qs-value"><span class="text-up">{{ formatIndicator(currentOhlc.high) }}</span> / <span class="text-down">{{ formatIndicator(currentOhlc.low) }}</span></div>
+            </div>
+            <div class="qs-item">
+              <div class="qs-label">量</div>
               <div class="qs-value">{{ formatOhlcVolume(currentOhlc.volume) }}</div>
             </div>
           </div>
@@ -162,34 +189,31 @@
       </div>
 
       <div class="info-sidebar">
-        <div v-if="frequency === 'minute' && orderBook" class="sidebar-section">
-          <div class="section-title">实时盘口</div>
-          <div class="orderbook-panel">
-            <div class="ob-quote-head" :class="orderBook.change > 0 ? 'text-up' : orderBook.change < 0 ? 'text-down' : ''">
-              <span class="ob-latest">{{ orderBook.latestPrice.toFixed(2) }}</span>
-              <span class="ob-change">{{ formatSigned(orderBook.change) }} {{ formatSigned(orderBook.changePercent) }}%</span>
+        <div v-if="frequency === 'minute' && orderBook" class="sidebar-section ob-section">
+          <div class="section-title ob-title-row">
+            <span>实时盘口</span>
+            <span class="ob-quote-time">行情时间 {{ orderBook.quoteTime }}</span>
+          </div>
+          <div class="ob-levels">
+            <div v-for="(ask, i) in orderBookAsks" :key="'ask' + i" class="ob-level ob-ask">
+              <span class="ob-tag">卖{{ orderBookAsks.length - i }}</span>
+              <span class="ob-price" :class="ask.price >= orderBook.prevClose ? 'text-up' : 'text-down'">{{ ask.price.toFixed(2) }}</span>
+              <span class="ob-vol">{{ ask.volume }}</span>
             </div>
-
-            <div class="ob-levels">
-              <div v-for="(ask, i) in orderBookAsks" :key="'ask' + i" class="ob-level ob-ask">
-                <span class="ob-tag">卖{{ orderBookAsks.length - i }}</span>
-                <span class="ob-price" :class="ask.price >= orderBook.prevClose ? 'text-up' : 'text-down'">{{ ask.price.toFixed(2) }}</span>
-                <span class="ob-vol">{{ ask.volume }}</span>
-              </div>
-              <div class="ob-divider"></div>
-              <div v-for="(bid, i) in orderBook.bids" :key="'bid' + i" class="ob-level ob-bid">
-                <span class="ob-tag">买{{ i + 1 }}</span>
-                <span class="ob-price" :class="bid.price >= orderBook.prevClose ? 'text-up' : 'text-down'">{{ bid.price.toFixed(2) }}</span>
-                <span class="ob-vol">{{ bid.volume }}</span>
-              </div>
+            <div class="ob-divider"></div>
+            <div v-for="(bid, i) in orderBook.bids" :key="'bid' + i" class="ob-level ob-bid">
+              <span class="ob-tag">买{{ i + 1 }}</span>
+              <span class="ob-price" :class="bid.price >= orderBook.prevClose ? 'text-up' : 'text-down'">{{ bid.price.toFixed(2) }}</span>
+              <span class="ob-vol">{{ bid.volume }}</span>
             </div>
-
-            <div class="ob-quote-time">行情时间 {{ orderBook.quoteTime }}</div>
           </div>
         </div>
 
         <div v-if="frequency === 'minute' && displayTrades.length > 0" class="sidebar-section">
-          <div class="section-title">分时成交<span class="tick-total">共 {{ tickTrades?.total ?? 0 }} 笔</span></div>
+          <div class="section-title ob-title-row">
+            <span>分时成交</span>
+            <span class="ob-quote-time">共 {{ tickTrades?.total ?? 0 }} 笔</span>
+          </div>
           <div class="tick-list">
             <div v-for="(trade, i) in displayTrades" :key="trade.time + '-' + i" class="tick-row">
               <span class="tick-time">{{ trade.time }}</span>
@@ -290,6 +314,21 @@ const currentOhlc = ref<{
   changePct: string;
   volume: string | number;
 } | null>(null);
+// 分时模式悬停光标所在分钟的价格/均价/量/涨跌幅（图表上方固定指标行展示，未悬停时为最后一分钟）
+const currentMinute = ref<{
+  time: string;
+  price: string;
+  avg: string;
+  volume: string;
+  changePct: string;
+  pctNum: number | null;
+} | null>(null);
+// 分时悬停行涨跌色：+红 -绿 平/无值灰（价格与涨跌幅共用）
+const minutePctClass = computed(() => {
+  const pct = currentMinute.value?.pctNum;
+  if (pct == null || !Number.isFinite(pct) || pct === 0) return '';
+  return pct > 0 ? 'text-up' : 'text-down';
+});
 const indicatorVisibility = reactive({
   tradePoints: true,
   macd: false,
@@ -345,7 +384,7 @@ const buildOhlc = (dates: string[], values: any[][], volumes: any[], idx: number
     volume: volumes[idx] ?? '-'
   };
 };
-// 蜡烛图悬停联动：zr mousemove + 像素转数据索引驱动固定 OHLC 卡与图例数值
+// 图表悬停联动：zr mousemove + 像素转数据索引驱动头部固定数据卡与图例数值
 // （ECharts 6 的 updateAxisPointer 事件载荷不含 axesInfo，seriesDataIndices/value 方案均取不到索引）
 let candleMouseMoveHandler: ((e: any) => void) | null = null;
 let candleGlobalOutHandler: (() => void) | null = null;
@@ -363,34 +402,30 @@ const unbindCandlePointerEvents = () => {
   }
 };
 
-const bindCandlePointerEvents = (ctx: {
-  dates: string[];
-  values: any[][];
-  volumes: any[];
+const bindChartPointerEvents = (ctx: {
+  length: number;
   lastIdx: number;
-  applyIdx?: (idx: number) => void;
+  apply: (idx: number) => void;
 }) => {
   if (!chartInstance) return;
   unbindCandlePointerEvents();
-  const { dates, values, volumes, lastIdx, applyIdx } = ctx;
+  const { length, lastIdx, apply } = ctx;
   let lastAppliedIdx = -1;
-  const apply = (idx: number) => {
+  const applyIdx = (idx: number) => {
     if (idx === lastAppliedIdx) return;
     lastAppliedIdx = idx;
-    const ohlc = buildOhlc(dates, values, volumes, idx);
-    if (ohlc) currentOhlc.value = ohlc;
-    applyIdx?.(idx);
+    apply(idx);
   };
   candleMouseMoveHandler = (e: any) => {
-    if (!chartInstance || values.length === 0) return;
+    if (!chartInstance || length === 0) return;
     const point = [e.offsetX, e.offsetY];
     if (!chartInstance.containPixel('grid', point)) return;
     const converted = chartInstance.convertFromPixel({ seriesIndex: 0 }, point);
     if (!converted || converted.length < 1) return;
     let idx = Math.round(Number(converted[0]));
     if (!Number.isFinite(idx)) return;
-    idx = Math.max(0, Math.min(values.length - 1, idx));
-    apply(idx);
+    idx = Math.max(0, Math.min(length - 1, idx));
+    applyIdx(idx);
   };
   candleGlobalOutHandler = () => {
     if (lastIdx >= 0) apply(lastIdx);
@@ -724,6 +759,12 @@ const orderBook = ref<StockOrderBookVO | null>(null);
 // 卖档倒序展示：卖五在上、卖一在下
 const orderBookAsks = computed(() => (orderBook.value ? [...orderBook.value.asks].reverse() : []));
 
+// 分时页签下头部股价卡实时跟随盘口轮询（价格/涨跌幅/涨跌额），其余页签回退为打开时的快照值
+const isRealtimeQuote = computed(() => frequency.value === 'minute' && orderBook.value != null);
+const displayPrice = computed(() => (isRealtimeQuote.value ? orderBook.value!.latestPrice : props.stock.latestPrice));
+const displayChangePercent = computed(() => (isRealtimeQuote.value ? orderBook.value!.changePercent : props.stock.changePercent));
+const displayChangeAmount = computed(() => (isRealtimeQuote.value ? orderBook.value!.change : null));
+
 const formatSigned = (value: number) => (value > 0 ? '+' : '') + value.toFixed(2);
 
 const formatWan = (value: number) => {
@@ -731,13 +772,15 @@ const formatWan = (value: number) => {
   return value.toLocaleString('zh-CN', { maximumFractionDigits: 2 });
 };
 
-// 历史行情与 K 线数据的成交量单位为股，按 100 股一手转换后展示。
+// 历史K线成交量单位为股：换算为手并按万/亿分级缩写，兼顾正确单位与卡片宽度稳定
 const formatOhlcVolume = (val: string | number) => {
   if (val === '-' || val == null || val === '') return '-';
   const num = Number(val);
-  return Number.isFinite(num)
-    ? (num / 100).toLocaleString('zh-CN', { maximumFractionDigits: 2 })
-    : '-';
+  if (!Number.isFinite(num)) return '-';
+  const hands = num / 100;
+  if (hands >= 100000000) return (hands / 100000000).toFixed(2) + '亿手';
+  if (hands >= 10000) return (hands / 10000).toFixed(2) + '万手';
+  return hands.toLocaleString('zh-CN', { maximumFractionDigits: 2 });
 };
 
 const fetchOrderBook = async () => {
@@ -879,8 +922,10 @@ const renderMinuteChart = (vo: StockMinuteRealtimeVO) => {
   const option = {
     animation: false,
     axisPointer: { link: [{ xAxisIndex: 'all' }] },
+    // 悬停数据固定在上方指标卡展示，气泡不再弹出，仅保留十字光标
     tooltip: {
       show: true,
+      showContent: false,
       trigger: 'axis',
       axisPointer: {
         type: 'cross',
@@ -896,55 +941,6 @@ const renderMinuteChart = (vo: StockMinuteRealtimeVO) => {
           shadowColor: chartTooltipTheme.shadowColor,
           borderRadius: chartTooltipTheme.axisPointerLabelRadius
         }
-      },
-      backgroundColor: chartTooltipTheme.backgroundColor,
-      borderColor: chartTooltipTheme.borderColor,
-      borderWidth: 1,
-      padding: 12,
-      textStyle: { color: chartTooltipTheme.primaryTextColor },
-      shadowBlur: 12,
-      shadowColor: chartTooltipTheme.shadowColor,
-      extraCssText: `border-radius: ${chartTooltipTheme.tooltipBorderRadius}px;`,
-      formatter: (params: any) => {
-        const list = Array.isArray(params) ? params : [params];
-        const idx = list[0]?.dataIndex;
-        if (idx == null) return '';
-        const time = times[idx] ?? '';
-        const price = prices[idx]!;
-        const avg = avgPrices[idx];
-        const vol = volumes[idx];
-        const prev = vo.prevClose;
-        const pct = prev ? ((price - prev) / prev) * 100 : null;
-        const pctColor = pct == null || pct === 0
-          ? chartTooltipTheme.primaryTextColor
-          : pct > 0 ? '#EF4444' : '#10B981';
-
-        let res = `<div style="font-weight:bold;margin-bottom:8px;font-size:13px;color:${chartTooltipTheme.primaryTextColor};">${vo.tradeDate} ${time}</div>`;
-        res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;color:${chartTooltipTheme.secondaryTextColor};"><span>价格:</span> <span style="color:${chartTooltipTheme.primaryTextColor};font-weight:600;">${price}</span></div>`;
-        res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;color:${chartTooltipTheme.secondaryTextColor};"><span>均价:</span> <span style="color:#e8b004;font-weight:500;">${avg ?? '-'}</span></div>`;
-        res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:4px;color:${chartTooltipTheme.secondaryTextColor};"><span>成交量(手):</span> <span style="font-weight:500;color:${chartTooltipTheme.primaryTextColor};">${vol ?? '-'}</span></div>`;
-        if (pct != null) {
-          res += `<div style="display:flex;justify-content:space-between;gap:20px;color:${chartTooltipTheme.secondaryTextColor};"><span>涨跌幅:</span> <span style="color:${pctColor};font-weight:600;">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</span></div>`;
-        }
-        // 副图指标值不在 tooltip 中展示，收集后在图例区显示
-        const indicatorValues: Record<string, string | number> = {};
-        list.forEach((param: any) => {
-          if (['MACD', 'DIF', 'DEA', 'K', 'D', 'J'].includes(param.seriesName)) {
-            indicatorValues[param.seriesName] = param.value === '-' || param.value === undefined ? '-' : param.value;
-          }
-        });
-        currentIndicators.value = {
-          macd: indicatorValues.MACD ?? '-',
-          dif: indicatorValues.DIF ?? '-',
-          dea: indicatorValues.DEA ?? '-',
-          k: indicatorValues.K ?? '-',
-          d: indicatorValues.D ?? '-',
-          j: indicatorValues.J ?? '-',
-          bollUpper: '-',
-          bollMiddle: '-',
-          bollLower: '-'
-        };
-        return `<div style="min-width:150px;padding:4px;">${res}</div>`;
       }
     },
     grid: [
@@ -1123,9 +1119,46 @@ const renderMinuteChart = (vo: StockMinuteRealtimeVO) => {
     ]
   };
 
+  const buildMinutePoint = (idx: number) => {
+    const price = prices[idx];
+    if (price == null) return null;
+    const avg = avgPrices[idx];
+    const prev = vo.prevClose;
+    const pct = prev ? ((price - prev) / prev) * 100 : null;
+    return {
+      time: times[idx] ?? '',
+      price: Number(price).toFixed(2),
+      avg: avg == null || avg === '-' ? '-' : Number(avg).toFixed(2),
+      volume: volumes[idx] != null ? String(volumes[idx]) : '-',
+      changePct: pct == null || !Number.isFinite(pct) ? '-' : `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`,
+      pctNum: pct != null && Number.isFinite(pct) ? pct : null
+    };
+  };
+
   chartInstance?.clear();
   chartInstance?.setOption(option);
-  unbindCandlePointerEvents();
+  // 悬停联动：头部分钟指标卡 + 副图指标图例随十字光标更新；未悬停时显示最后一分钟
+  const lastIdx = points.length - 1;
+  currentMinute.value = lastIdx >= 0 ? buildMinutePoint(lastIdx) : null;
+  bindChartPointerEvents({
+    length: points.length,
+    lastIdx,
+    apply: (idx) => {
+      const point = buildMinutePoint(idx);
+      if (point) currentMinute.value = point;
+      currentIndicators.value = {
+        macd: macd.macd[idx] ?? '-',
+        dif: macd.dif[idx] ?? '-',
+        dea: macd.dea[idx] ?? '-',
+        k: kdj.k[idx] ?? '-',
+        d: kdj.d[idx] ?? '-',
+        j: kdj.j[idx] ?? '-',
+        bollUpper: '-',
+        bollMiddle: '-',
+        bollLower: '-'
+      };
+    }
+  });
 };
 
 // ==================== 分钟K线数据（'1分'K线与'五日分时'共用） ====================
@@ -1800,7 +1833,14 @@ const renderMinuteKlineChart = (bars: StockMinuteBar[]) => {
   chartInstance?.setOption(option);
   const lastIdx = bars.length - 1;
   currentOhlc.value = lastIdx >= 0 ? buildOhlc(dates, values, volumes, lastIdx) : null;
-  bindCandlePointerEvents({ dates, values, volumes, lastIdx });
+  bindChartPointerEvents({
+    length: values.length,
+    lastIdx,
+    apply: (idx) => {
+      const ohlc = buildOhlc(dates, values, volumes, idx);
+      if (ohlc) currentOhlc.value = ohlc;
+    }
+  });
 };
 
 const calculateMA = (dayCount: number, data: StockQuoteHistory[]) => {
@@ -2385,12 +2425,12 @@ const renderChart = (data: StockQuoteHistory[]) => {
   
   chartInstance?.setOption(option);
   // 悬停联动：固定 OHLC 行 + 均线/副图指标图例随十字光标更新
-  bindCandlePointerEvents({
-    dates,
-    values,
-    volumes,
+  bindChartPointerEvents({
+    length: values.length,
     lastIdx: lastIndex,
-    applyIdx: (idx) => {
+    apply: (idx) => {
+      const ohlc = buildOhlc(dates, values, volumes, idx);
+      if (ohlc) currentOhlc.value = ohlc;
       currentMA.value = {
         ma5: ma5[idx] ?? '-',
         ma10: ma10[idx] ?? '-',
@@ -2452,6 +2492,7 @@ watch(() => props.stock.stockCode, () => {
     currentMA.value = null;
     currentIndicators.value = null;
     currentOhlc.value = null;
+    currentMinute.value = null;
     fetchOrderBook();
     fetchUserTrades();
 });
@@ -2527,10 +2568,13 @@ onUnmounted(() => {
 }
 
 .metrics-grid {
-  display: flex;
-  gap: 24px;
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  column-gap: 20px;
+  row-gap: 8px;
+  justify-items: start;
   background: rgba(255, 255, 255, 0.03);
-  padding: 12px 20px;
+  padding: 10px 16px;
   border-radius: 8px;
   border: 1px solid var(--color-border);
 }
@@ -2538,20 +2582,22 @@ onUnmounted(() => {
 .metric-item {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
 }
 
 .metric-item .label {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--color-text-tertiary);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .metric-item .value {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-text-primary);
   font-family: 'DIN Alternate', sans-serif;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .detail-body {
@@ -2657,12 +2703,6 @@ onUnmounted(() => {
   gap: 4px;
   font-size: 11px;
   color: #64748b;
-}
-
-/* K线模式悬停 OHLC 卡：与图例行同款紧凑节奏，数字槽位等宽防跳动 */
-.qs-date {
-  font-size: 16px;
-  letter-spacing: 0;
 }
 
 .ma-label {
@@ -2865,40 +2905,23 @@ onUnmounted(() => {
 
 /* ==================== 实时盘口 ==================== */
 
-.orderbook-panel {
-  margin-top: 14px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 4px 12px 4px 10px;
-}
-
-.ob-quote-head {
+/* 盘口标题行：行情时间靠右，与分时成交标题行同款小字 */
+.ob-title-row {
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  padding: 6px 0 12px;
+  justify-content: space-between;
 }
 
-.ob-latest {
-  font-size: 26px;
-  font-weight: 700;
-  font-family: 'DIN Alternate', sans-serif;
+/* 盘口区块固定高度不伸缩，剩余空间留给分时成交 */
+.ob-section {
+  flex: 0 0 auto;
 }
 
-.ob-change {
-  font-size: 13px;
-  font-weight: 600;
-  font-family: 'DIN Alternate', sans-serif;
-}
-
+/* 档位列表：固定高度滚轮滚动，无包裹块，样式对齐分时成交 tick-list */
 .ob-levels {
-  border: 1px solid var(--color-divider);
-  border-radius: 8px;
-  padding: 6px 10px;
-  margin-bottom: 12px;
+  margin-top: 14px;
+  max-height: 264px;
+  overflow-y: auto;
 }
 
 .ob-level {
@@ -2973,38 +2996,100 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
-/* 悬停联动时数值位数变化不改变布局：等宽数字 + 固定最小宽度 + 右对齐 */
-.qs-item:nth-child(2) .qs-value,
-.qs-item:nth-child(3) .qs-value {
-  min-width: 16ch;
-  text-align: right;
+/* 涨跌色需覆盖 .qs-value 的基础色（.qs-value 定义在 .text-up/.text-down 之后，
+   同优先级会胜出，故用双类选择器提高优先级） */
+.qs-value.text-up { color: #EF4444; }
+.qs-value.text-down { color: #10B981; }
+
+/* 头部指标卡统一两行三列紧凑网格：分钟卡/今开昨收卡/OHLC卡/估值卡共用，左对齐 + 小字号 */
+.minute-card,
+.session-card,
+.ohlc-card {
+  padding: 10px 16px;
 }
 
-.qs-item:nth-child(4) .qs-value {
-  min-width: 7ch;
-  text-align: right;
+.minute-card .qs-grid,
+.session-card .qs-grid,
+.ohlc-card .qs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  column-gap: 20px;
+  row-gap: 8px;
+  justify-items: start;
 }
 
-.qs-item:nth-child(5) .qs-value {
-  min-width: 8ch;
-  text-align: right;
+.minute-card .qs-item,
+.session-card .qs-item,
+.ohlc-card .qs-item {
+  align-items: flex-start;
+}
+
+.minute-card .qs-label,
+.session-card .qs-label,
+.ohlc-card .qs-label {
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+
+.minute-card .qs-value,
+.session-card .qs-value,
+.ohlc-card .qs-value {
+  font-size: 14px;
+}
+
+/* 悬停滑动时数值位数变化不改列宽：auto 列宽会随内容伸缩导致卡片和相邻指标跳动，
+   每个槽位设最小宽度（取该槽位可能的最长值），列宽稳定为 max(标签宽, 槽位宽) */
+.ohlc-card .qs-item:nth-child(1) .qs-value {
+  min-width: 16ch; /* 日期/时间：1分K线 "2026-09-04 13:05" */
+}
+
+.ohlc-card .qs-item:nth-child(2) .qs-value {
+  min-width: 15ch; /* 开/收："999.99 / 999.99" */
+}
+
+.ohlc-card .qs-item:nth-child(3) .qs-value {
+  min-width: 7ch; /* 涨跌幅："+10.00%" */
+}
+
+.ohlc-card .qs-item:nth-child(4) .qs-value {
+  min-width: 15ch; /* 高/低："999.99 / 999.99" */
+}
+
+.ohlc-card .qs-item:nth-child(5) .qs-value {
+  min-width: 10ch; /* 量："955.92万手" */
+}
+
+.minute-card .qs-item:nth-child(1) .qs-value {
+  min-width: 5ch; /* 时间："15:30" */
+}
+
+.minute-card .qs-item:nth-child(2) .qs-value {
+  min-width: 6ch; /* 价格 */
+}
+
+.minute-card .qs-item:nth-child(3) .qs-value {
+  min-width: 7ch; /* 涨跌幅 */
+}
+
+.minute-card .qs-item:nth-child(4) .qs-value {
+  min-width: 6ch; /* 均价 */
+}
+
+.minute-card .qs-item:nth-child(5) .qs-value {
+  min-width: 8ch; /* 成交量(手) */
+}
+
+.qs-avg {
+  color: #e8b004;
 }
 
 .ob-quote-time {
-  margin-top: 10px;
-  font-size: 11px;
-  color: var(--color-text-tertiary);
-  text-align: right;
-}
-
-/* 分时成交列表：最新在前，方向着色（买红/卖绿/中性灰） */
-.tick-total {
-  margin-left: 8px;
   font-size: 11px;
   font-weight: 400;
   color: var(--color-text-tertiary);
 }
 
+/* 分时成交列表：最新在前，方向着色（买红/卖绿/中性灰） */
 .tick-list {
   max-height: 420px;
   overflow-y: auto;

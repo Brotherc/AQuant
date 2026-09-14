@@ -10,6 +10,13 @@
     <!-- 顶部全局操作区 (传送至卡片外部顶部) -->
     <Teleport to="#page-header-extra" v-if="isMounted">
       <div class="page-header-extra-actions">
+        <a-select
+          v-model:value="source"
+          class="source-select"
+          :options="sourceOptions"
+          title="选择行业数据源"
+          @change="handleSourceChange"
+        />
         <span class="refresh-time-text" v-if="lastRefreshTime">
           更新于 {{ lastRefreshTime }}
         </span>
@@ -128,6 +135,58 @@
               {{ selectedBoard.leadingStockChangePercent > 0 ? '+' : '' }}{{ selectedBoard.leadingStockChangePercent != null ? selectedBoard.leadingStockChangePercent + '%' : '' }}
             </span>
           </div>
+
+          <!-- 图表悬停卡（与自选-查看详情弹窗样式一致，数值随十字光标联动） -->
+          <!-- 分时模式：分钟卡 -->
+          <div class="quote-stats minute-card" v-if="boardHoverMinute">
+            <div class="qs-grid">
+              <div class="qs-item">
+                <div class="qs-label">时间</div>
+                <div class="qs-value qs-time">{{ boardHoverMinute.time }}</div>
+              </div>
+              <div class="qs-item">
+                <div class="qs-label">价格</div>
+                <div class="qs-value" :class="hoverMinutePctClass">{{ boardHoverMinute.price }}</div>
+              </div>
+              <div class="qs-item">
+                <div class="qs-label">涨跌幅</div>
+                <div class="qs-value" :class="hoverMinutePctClass">{{ boardHoverMinute.changePct }}</div>
+              </div>
+              <div class="qs-item">
+                <div class="qs-label">均价</div>
+                <div class="qs-value qs-avg">{{ boardHoverMinute.avg }}</div>
+              </div>
+              <div class="qs-item">
+                <div class="qs-label">成交量(手)</div>
+                <div class="qs-value">{{ boardHoverMinute.volume }}</div>
+              </div>
+            </div>
+          </div>
+          <!-- K线模式：OHLC 卡 -->
+          <div class="quote-stats ohlc-card" v-else-if="boardHoverOhlc">
+            <div class="qs-grid">
+              <div class="qs-item">
+                <div class="qs-label">日期</div>
+                <div class="qs-value qs-time">{{ boardHoverOhlc.date }}</div>
+              </div>
+              <div class="qs-item">
+                <div class="qs-label">开/收</div>
+                <div class="qs-value"><span>{{ formatHoverIndicator(boardHoverOhlc.open) }}</span> / <span :class="hoverOhlcCloseClass">{{ formatHoverIndicator(boardHoverOhlc.close) }}</span></div>
+              </div>
+              <div class="qs-item">
+                <div class="qs-label">涨跌幅</div>
+                <div class="qs-value" :class="hoverOhlcPctClass">{{ boardHoverOhlc.changePct }}</div>
+              </div>
+              <div class="qs-item">
+                <div class="qs-label">高/低</div>
+                <div class="qs-value"><span class="text-up">{{ formatHoverIndicator(boardHoverOhlc.high) }}</span> / <span class="text-down">{{ formatHoverIndicator(boardHoverOhlc.low) }}</span></div>
+              </div>
+              <div class="qs-item">
+                <div class="qs-label">量</div>
+                <div class="qs-value">{{ formatOhlcVolume(boardHoverOhlc.volume) }}</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -138,6 +197,9 @@
           <BoardHistoryChart
             :boardCode="currentBoardCode"
             :boardName="currentBoardName"
+            :source="chartSource"
+            @hover-minute="onBoardHoverMinute"
+            @hover-ohlc="onBoardHoverOhlc"
           />
         </div>
 
@@ -208,7 +270,8 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getBoardPage, getStockBoardIndustryLatest, type StockIndustryBoardVO } from '@/api/board';
+import { getBoardPage, getIndustrySourceBoardPage, getStockBoardIndustryLatest, type IndustryDataSource, type StockIndustryBoardVO } from '@/api/board';
+import type { PageResult } from '@/api/stock';
 import BoardHistoryChart from './components/BoardHistoryChart.vue';
 import { ArrowLeftOutlined, SearchOutlined, SyncOutlined } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
@@ -222,6 +285,15 @@ const isMounted = ref(false);
 const route = useRoute();
 const router = useRouter();
 const isFromIndustryAnalysis = computed(() => route.query.from === 'industry-analysis');
+
+// 数据源切换（同花顺/东方财富）
+const validSource = (value: unknown): value is IndustryDataSource => value === 'THS' || value === 'EM';
+const source = ref<IndustryDataSource>(validSource(route.query.source) ? route.query.source : 'THS');
+const sourceOptions = [
+  { value: 'THS', label: '同花顺' },
+  { value: 'EM', label: '东方财富' }
+];
+const chartSource = computed(() => (source.value === 'EM' ? 'EM' : undefined));
 
 // 刷新状态
 const refreshLoading = ref(false);
@@ -244,6 +316,71 @@ const selectedBoard = ref<StockIndustryBoardVO | null>(null);
 const currentBoardCode = computed(() => selectedBoard.value?.sectorName || '');
 const currentBoardName = computed(() => selectedBoard.value?.sectorName || '');
 
+// ===== 图表悬停卡（头部右上角，与自选-查看详情弹窗样式一致）：分时模式分钟卡 / K线模式 OHLC 卡 =====
+interface BoardHoverMinutePayload {
+  time: string;
+  price: string;
+  avg: string;
+  volume: string;
+  changePct: string;
+  pctNum: number | null;
+}
+
+interface BoardHoverOhlcPayload {
+  date: string;
+  open: string | number;
+  close: string | number;
+  high: string | number;
+  low: string | number;
+  changePct: string;
+  volume: string | number;
+  pctNum: number | null;
+}
+
+const boardHoverMinute = ref<BoardHoverMinutePayload | null>(null);
+const boardHoverOhlc = ref<BoardHoverOhlcPayload | null>(null);
+const onBoardHoverMinute = (payload: BoardHoverMinutePayload | null) => {
+  boardHoverMinute.value = payload;
+};
+const onBoardHoverOhlc = (payload: BoardHoverOhlcPayload | null) => {
+  boardHoverOhlc.value = payload;
+};
+// OHLC/指标数值格式化：无值显示 '-'（与详情弹窗一致）
+const formatHoverIndicator = (val: string | number) => {
+  if (val === '-' || val == null || val === '') return '-';
+  const num = Number(val);
+  return Number.isFinite(num) ? num.toFixed(2) : '-';
+};
+// K线成交量按万/亿分级缩写（板块历史数据单位未统一，此处不做手数换算）
+const formatOhlcVolume = (val: string | number) => {
+  if (val === '-' || val == null || val === '') return '-';
+  const num = Number(val);
+  if (!Number.isFinite(num)) return '-';
+  if (num >= 100000000) return (num / 100000000).toFixed(2) + '亿';
+  if (num >= 10000) return (num / 10000).toFixed(2) + '万';
+  return num.toLocaleString('zh-CN', { maximumFractionDigits: 2 });
+};
+// 分钟卡涨跌色：+红 -绿 平/无值灰（价格与涨跌幅共用）
+const hoverMinutePctClass = computed(() => {
+  const pct = boardHoverMinute.value?.pctNum;
+  if (pct == null || !Number.isFinite(pct) || pct === 0) return '';
+  return pct > 0 ? 'text-up' : 'text-down';
+});
+// OHLC 卡涨跌幅色：+红 -绿 无值灰
+const hoverOhlcPctClass = computed(() => {
+  const pct = boardHoverOhlc.value?.changePct;
+  if (!pct || pct === '-') return '';
+  if (pct.startsWith('+')) return 'text-up';
+  if (pct.startsWith('-')) return 'text-down';
+  return '';
+});
+// OHLC 收盘色沿用原 tooltip 逻辑：收≥开红、收<开绿（开盘中性色）
+const hoverOhlcCloseClass = computed(() => {
+  const o = boardHoverOhlc.value;
+  if (!o || o.close === '-' || o.open === '-') return '';
+  return Number(o.close) >= Number(o.open) ? 'text-up' : 'text-down';
+});
+
 let searchTimer: ReturnType<typeof setTimeout> | undefined;
 let boardRequestSequence = 0;
 
@@ -255,6 +392,10 @@ const getPriceColorClass = (val: number | undefined | null) => {
 
 // 获取最新同步时间
 const fetchRefreshTime = async () => {
+  if (source.value === 'EM') {
+    lastRefreshTime.value = '';
+    return;
+  }
   try {
     const res = await getStockBoardIndustryLatest();
     if (res.data.success) {
@@ -270,19 +411,48 @@ const fetchData = async (refresh: boolean = false) => {
   const requestSequence = ++boardRequestSequence;
   loading.value = true;
   try {
-    const res = await getBoardPage({
-      boardName: searchKeyword.value.trim() ? searchKeyword.value.trim() : undefined,
-      page: pagination.current - 1,
-      size: pagination.pageSize,
-      sort: ['changePercent,desc'],
-      refresh,
-    });
-    if (requestSequence !== boardRequestSequence) {
-      return;
+    const keyword = searchKeyword.value.trim() ? searchKeyword.value.trim() : undefined;
+    let pageResult: PageResult<StockIndustryBoardVO> | undefined;
+    if (source.value === 'THS') {
+      const res = await getBoardPage({
+        boardName: keyword,
+        page: pagination.current - 1,
+        size: pagination.pageSize,
+        sort: ['changePercent,desc'],
+        refresh,
+      });
+      if (requestSequence !== boardRequestSequence) {
+        return;
+      }
+      const { data } = res;
+      if (data.success || data.code === 0) {
+        pageResult = data.data;
+      }
+    } else {
+      const res = await getIndustrySourceBoardPage({
+        source: source.value,
+        boardName: keyword,
+        page: pagination.current - 1,
+        size: pagination.pageSize,
+        sort: ['changePercent,desc'],
+      });
+      if (requestSequence !== boardRequestSequence) {
+        return;
+      }
+      const { data } = res;
+      if (data.success || data.code === 0) {
+        const snapshot = data.data;
+        pageResult = snapshot.content;
+        if (snapshot.fallback) {
+          source.value = snapshot.effectiveSource;
+          await router.replace({ query: { ...route.query, source: source.value } });
+          message.warning(snapshot.message || '所选数据源暂无可用数据，已自动切换');
+        } else if (!snapshot.available) {
+          message.warning(snapshot.message || '当前数据源暂无可用数据');
+        }
+      }
     }
-    const { data } = res;
-    if (data.success || data.code === 0) {
-      const pageResult = data.data;
+    if (pageResult) {
       dataSource.value = pageResult.content;
       pagination.total = pageResult.totalElements;
 
@@ -336,6 +506,14 @@ const handleSearchInput = (value: string) => {
     pagination.current = 1;
     fetchData();
   }, 300);
+};
+
+// 切换数据源
+const handleSourceChange = async () => {
+  pagination.current = 1;
+  fetchRefreshTime();
+  await router.replace({ query: { ...route.query, source: source.value } });
+  fetchData();
 };
 
 // 分页变化
@@ -419,6 +597,10 @@ watch(() => route.query.industry, industry => {
 .analysis-return-button:hover {
   color: #0f172a;
   background: #f1f5f9;
+}
+
+.source-select {
+  width: 118px;
 }
 
 .refresh-time-text {
@@ -612,6 +794,8 @@ watch(() => route.query.industry, industry => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
   padding-bottom: 16px;
   border-bottom: 1px solid #edf2f7;
   margin-bottom: 14px;
@@ -695,6 +879,57 @@ watch(() => route.query.industry, industry => {
 .capsule-change {
   font-weight: 700;
 }
+
+/* ===== 图表悬停卡（右上角，样式与自选-查看详情弹窗一致） ===== */
+.minute-card,
+.ohlc-card {
+  padding: 10px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.qs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  column-gap: 20px;
+  row-gap: 8px;
+  justify-items: start;
+}
+
+.qs-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.qs-label {
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.qs-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  font-family: 'DIN Alternate', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* 涨跌色需覆盖 .qs-value 基础色：双类选择器提高优先级（与详情弹窗一致） */
+.qs-value.text-up { color: #EF4444; }
+.qs-value.text-down { color: #10B981; }
+
+/* 悬停滑动时数值位数变化不改列宽：每个槽位设最小宽度 */
+.qs-item:nth-child(1) .qs-value { min-width: 5ch; } /* 时间/日期 */
+.qs-item:nth-child(2) .qs-value { min-width: 6ch; } /* 价格/开收 */
+.qs-item:nth-child(3) .qs-value { min-width: 7ch; } /* 涨跌幅 */
+.qs-item:nth-child(4) .qs-value { min-width: 6ch; } /* 均价/高低 */
+.qs-item:nth-child(5) .qs-value { min-width: 8ch; } /* 成交量 */
+
+.qs-avg { color: #e8b004; }
 
 /* 下部区域：图表 + 行情数据 */
 .stock-main-body {

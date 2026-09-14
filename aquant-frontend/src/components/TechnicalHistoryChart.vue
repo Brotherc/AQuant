@@ -22,7 +22,30 @@
           <span class="ma-item ma60">MA60: {{ currentMA.ma60 }}</span>
         </div>
 
-        <div class="indicator-switches">
+        <!-- 悬停卡模式（行业板块页）：副图指标数值随十字光标联动（与详情弹窗一致） -->
+        <div v-if="hoverCard && currentIndicators" class="ma-legend-bar">
+          <template v-if="indicatorVisibility.macd">
+            <span class="ma-label">MACD:</span>
+            <span class="ma-item macd">MACD <span class="ma-num">{{ formatIndicator(currentIndicators.macd) }}</span></span>
+            <span class="ma-item dif">DIF<span class="ma-num">{{ formatIndicator(currentIndicators.dif) }}</span></span>
+            <span class="ma-item dea">DEA<span class="ma-num">{{ formatIndicator(currentIndicators.dea) }}</span></span>
+          </template>
+          <template v-if="indicatorVisibility.kdj">
+            <span class="ma-label">KDJ:</span>
+            <span class="ma-item k">K <span class="ma-num">{{ formatIndicator(currentIndicators.k) }}</span></span>
+            <span class="ma-item d">D <span class="ma-num">{{ formatIndicator(currentIndicators.d) }}</span></span>
+            <span class="ma-item j">J <span class="ma-num">{{ formatIndicator(currentIndicators.j) }}</span></span>
+          </template>
+          <template v-if="indicatorVisibility.boll">
+            <span class="ma-label">BOLL:</span>
+            <span class="ma-item boll-upper">上 <span class="ma-num">{{ formatIndicator(currentIndicators.bollUpper) }}</span></span>
+            <span class="ma-item boll-mid">中 <span class="ma-num">{{ formatIndicator(currentIndicators.bollMiddle) }}</span></span>
+            <span class="ma-item boll-lower">下 <span class="ma-num">{{ formatIndicator(currentIndicators.bollLower) }}</span></span>
+          </template>
+        </div>
+
+        <!-- 行业板块页（hoverCard）只保留 MACD 一个副图指标，故隐藏指标开关，避免堆叠多个副图 -->
+        <div class="indicator-switches" v-if="!props.hoverCard">
           <span class="indicator-switch">
             <span>MACD</span>
             <a-switch v-model:checked="indicatorVisibility.macd" size="small" />
@@ -54,6 +77,7 @@ import {
   calculateMA,
   calculateMACD,
   getTechnicalChartLayout,
+  type IndicatorValue,
   type IndicatorVisibility,
   type TechnicalHistoryPoint
 } from '@/utils/technicalIndicators';
@@ -67,12 +91,28 @@ const props = withDefaults(defineProps<{
   emptyDescription: string;
   loadHistory: HistoryLoader;
   resetFrequencyOnCodeChange?: boolean;
+  /** 悬停卡模式（行业板块页专用）：无 tooltip 气泡，K线数据上抛给页面头部卡片展示；默认关闭，不影响个股页 */
+  hoverCard?: boolean;
 }>(), {
-  resetFrequencyOnCodeChange: false
+  resetFrequencyOnCodeChange: false,
+  hoverCard: false
 });
+
+// K线悬停卡上抛给页面头部（BoardData.vue 头部右上角展示）：null 表示当前无数据
+interface HistoryOhlcPayload {
+  date: string;
+  open: string | number;
+  close: string | number;
+  high: string | number;
+  low: string | number;
+  changePct: string;
+  volume: string | number;
+  pctNum: number | null;
+}
 
 const emit = defineEmits<{
   'date-select': [tradeDate: string];
+  'hover-ohlc': [payload: HistoryOhlcPayload | null];
 }>();
 
 const periods: Array<{ value: Frequency; label: string }> = [
@@ -88,11 +128,33 @@ const frequency = ref<Frequency>('1d');
 const chartContainer = ref<HTMLElement>();
 const historyData = ref<TechnicalHistoryPoint[]>([]);
 const currentMA = ref<{ ma5: string | number; ma10: string | number; ma20: string | number; ma60: string | number } | null>(null);
-const indicatorVisibility = reactive<IndicatorVisibility>({
-  macd: false,
-  kdj: false,
-  boll: false
+// 悬停卡模式（hoverCard）：光标所在K线的 OHLC/涨跌幅/量，未悬停时为最后一根
+const currentOhlc = ref<HistoryOhlcPayload | null>(null);
+// 悬停卡模式：副图指标 MACD/KDJ/BOLL 数值随十字光标联动，未悬停时为最后一根；null 表示无值
+const currentIndicators = ref<{
+  macd: IndicatorValue | null;
+  dif: IndicatorValue | null;
+  dea: IndicatorValue | null;
+  k: IndicatorValue | null;
+  d: IndicatorValue | null;
+  j: IndicatorValue | null;
+  bollUpper: IndicatorValue | null;
+  bollMiddle: IndicatorValue | null;
+  bollLower: IndicatorValue | null;
+} | null>(null);
+// 指标数值格式化：与详情弹窗一致，无值/非数值显示 '-'
+const formatIndicator = (val: string | number | null | undefined): string => {
+  if (val == null || val === '' || !Number.isFinite(Number(val))) return '-';
+  return Number(val).toFixed(2);
+};
+// OHLC 悬停卡数据变化即上抛给页面头部：悬停联动、切换代码/周期清空、卸载清空都会触发
+watch(currentOhlc, (value) => {
+  emit('hover-ohlc', value);
 });
+// 行业板块页（hoverCard）只保留一个底部副图指标：默认开启 MACD，隐藏 KDJ/BOLL（满足“只保留最下方副图指标的一个”需求）
+const indicatorVisibility = reactive<IndicatorVisibility>(props.hoverCard
+  ? { macd: true, kdj: false, boll: false }
+  : { macd: false, kdj: false, boll: false });
 let chartInstance: echarts.ECharts | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let requestSequence = 0;
@@ -114,11 +176,48 @@ const initChart = () => {
   resizeObserver.observe(chartContainer.value);
 };
 
+// 悬停卡模式：zr 事件解绑句柄（每次 renderChart 重绑前先解绑，避免重复监听）
+let unbindKlineHover: (() => void) | null = null;
+
+// 悬停卡模式：zr mousemove + containPixel + convertFromPixel 反推K线索引（与详情弹窗一致，
+// tooltip formatter 在 showContent:false 时不执行，MA/指标数值也需在 apply 内联动更新）
+const bindKlineHoverEvents = (apply: (idx: number) => void, length: number) => {
+  if (!chartInstance) return;
+  const zr = chartInstance.getZr();
+  const onMove = (event: { offsetX?: number; offsetY?: number }) => {
+    if (!chartInstance) return;
+    if (event.offsetX == null || event.offsetY == null) return;
+    if (!chartInstance.containPixel('grid', [event.offsetX, event.offsetY])) return;
+    const pixel = chartInstance.convertFromPixel('grid', [event.offsetX, event.offsetY]);
+    const idx = Math.round(pixel?.[0] ?? NaN);
+    if (!Number.isFinite(idx) || idx < 0 || idx >= length) return;
+    apply(idx);
+  };
+  const onGlobalOut = () => {
+    if (length > 0) apply(length - 1);
+  };
+  zr.on('mousemove', onMove);
+  zr.on('globalout', onGlobalOut);
+  unbindKlineHover = () => {
+    zr.off('mousemove', onMove);
+    zr.off('globalout', onGlobalOut);
+    unbindKlineHover = null;
+  };
+};
+
+const unbindKlineHoverEvents = () => {
+  unbindKlineHover?.();
+  unbindKlineHover = null;
+};
+
 const disposeChart = () => {
+  unbindKlineHoverEvents();
   resizeObserver?.disconnect();
   resizeObserver = null;
   chartInstance?.dispose();
   chartInstance = null;
+  currentOhlc.value = null;
+  currentIndicators.value = null;
 };
 
 const changeFrequency = (nextFrequency: Frequency) => {
@@ -147,13 +246,19 @@ const fetchHistory = async () => {
     if (data.length > 0) {
       renderChart(data);
     } else {
+      unbindKlineHoverEvents();
       chartInstance?.clear();
       currentMA.value = null;
+      currentOhlc.value = null;
+      currentIndicators.value = null;
     }
   } catch (error) {
     if (requestId !== requestSequence) return;
     historyData.value = [];
+    unbindKlineHoverEvents();
     currentMA.value = null;
+    currentOhlc.value = null;
+    currentIndicators.value = null;
     chartInstance?.clear();
     console.error(`Failed to fetch history for ${code}:`, error);
   }
@@ -195,12 +300,20 @@ const renderChart = (data: TechnicalHistoryPoint[]) => {
   const option = {
     animation: false,
     axisPointer: {
-      link: [{ xAxisIndex: 'all' }]
+      link: [{ xAxisIndex: 'all' }],
+      // 关闭十字光标动画并吸附到数据点，消除鼠标滑动时K线整体抽动（与分时图一致的稳定手感）
+      animation: false,
+      snap: true
     },
     tooltip: {
       trigger: 'axis',
+      // 悬停卡模式（行业板块页）：无气泡，数据上抛页面头部卡片展示（与详情弹窗交互一致）
+      showContent: !props.hoverCard,
       axisPointer: {
         type: 'cross',
+        // 吸附到数据点 + 关闭滑动动画，避免鼠标移动时十字光标追帧导致的整体抽动
+        snap: true,
+        animation: false,
         lineStyle: { type: 'dashed', color: chartTooltipTheme.axisPointerColor },
         label: {
           backgroundColor: chartTooltipTheme.backgroundColor,
@@ -309,7 +422,9 @@ const renderChart = (data: TechnicalHistoryPoint[]) => {
         data: dates,
         axisLine: { lineStyle: { color: '#e2e8f0' } },
         axisTick: { show: false },
-        axisLabel: { show: layout.subIndicatorCount === 0, fontSize: 10, color: '#94a3b8', margin: 6 }
+        axisLabel: { show: layout.subIndicatorCount === 0, fontSize: 10, color: '#94a3b8', margin: 6 },
+        // 价格轴不显示时间气泡，时间气泡统一落在最下方坐标轴（与分时图一致）
+        axisPointer: { label: { show: false } }
       },
       {
         type: 'category',
@@ -317,7 +432,9 @@ const renderChart = (data: TechnicalHistoryPoint[]) => {
         data: dates,
         axisLabel: { show: false },
         axisLine: { show: false },
-        axisTick: { show: false }
+        axisTick: { show: false },
+        // 无副图指标时，时间气泡落在成交量轴（与分时图一致：气泡锚定在图表底部）
+        axisPointer: { label: { show: layout.subIndicatorCount === 0 } }
       },
       {
         type: 'category',
@@ -326,7 +443,8 @@ const renderChart = (data: TechnicalHistoryPoint[]) => {
         show: indicatorVisibility.macd,
         axisLine: { show: layout.showMacdDates, lineStyle: { color: '#e2e8f0' } },
         axisLabel: { show: layout.showMacdDates, fontSize: 10, color: '#94a3b8' },
-        axisTick: { show: false }
+        axisTick: { show: false },
+        axisPointer: { label: { show: layout.showMacdDates } }
       },
       {
         type: 'category',
@@ -335,7 +453,8 @@ const renderChart = (data: TechnicalHistoryPoint[]) => {
         show: indicatorVisibility.kdj,
         axisLine: { show: layout.showKdjDates, lineStyle: { color: '#e2e8f0' } },
         axisLabel: { show: layout.showKdjDates, fontSize: 10, color: '#94a3b8' },
-        axisTick: { show: false }
+        axisTick: { show: false },
+        axisPointer: { label: { show: layout.showKdjDates } }
       },
       {
         type: 'category',
@@ -344,7 +463,8 @@ const renderChart = (data: TechnicalHistoryPoint[]) => {
         show: indicatorVisibility.boll,
         axisLine: { lineStyle: { color: '#e2e8f0' } },
         axisLabel: { fontSize: 10, color: '#94a3b8' },
-        axisTick: { show: false }
+        axisTick: { show: false },
+        axisPointer: { label: { show: indicatorVisibility.boll } }
       }
     ],
     yAxis: [
@@ -571,6 +691,60 @@ const renderChart = (data: TechnicalHistoryPoint[]) => {
   };
 
   chartInstance.setOption(option, true);
+
+  // 悬停卡模式（行业板块页）：OHLC/指标数值随十字光标联动，未悬停时为最后一根（与详情弹窗一致）
+  if (props.hoverCard && data.length > 0) {
+    const buildOhlc = (idx: number): HistoryOhlcPayload | null => {
+      const value = values[idx];
+      if (!value) return null;
+      // K线 OHLC 数组恒为四元组，非空断言与 technicalIndicators.ts 的索引风格一致
+      const open = value[0]!;
+      const close = value[1]!;
+      const low = value[2]!;
+      const high = value[3]!;
+      const prevClose = idx > 0 ? values[idx - 1]?.[1] ?? null : null;
+      const pctNum = prevClose != null && prevClose !== 0
+        ? ((close - prevClose) / prevClose) * 100
+        : null;
+      const changePct = pctNum == null || !Number.isFinite(pctNum)
+        ? '-'
+        : `${pctNum >= 0 ? '+' : ''}${pctNum.toFixed(2)}%`;
+      return {
+        date: dates[idx] ?? '',
+        open,
+        close,
+        high,
+        low,
+        changePct,
+        volume: volumes[idx] ?? '-',
+        pctNum: pctNum != null && Number.isFinite(pctNum) ? pctNum : null
+      };
+    };
+    const buildIndicators = (idx: number) => ({
+      macd: macd.macd[idx] ?? null,
+      dif: macd.dif[idx] ?? null,
+      dea: macd.dea[idx] ?? null,
+      k: kdj.k[idx] ?? null,
+      d: kdj.d[idx] ?? null,
+      j: kdj.j[idx] ?? null,
+      bollUpper: boll.upper[idx] ?? null,
+      bollMiddle: boll.middle[idx] ?? null,
+      bollLower: boll.lower[idx] ?? null
+    });
+    const applyHover = (idx: number) => {
+      currentOhlc.value = buildOhlc(idx);
+      currentIndicators.value = buildIndicators(idx);
+      currentMA.value = {
+        ma5: ma5[idx] ?? '-',
+        ma10: ma10[idx] ?? '-',
+        ma20: ma20[idx] ?? '-',
+        ma60: ma60[idx] ?? '-'
+      };
+    };
+    unbindKlineHoverEvents();
+    applyHover(lastIndex);
+    bindKlineHoverEvents(applyHover, data.length);
+  }
 };
 
 watch(
@@ -579,6 +753,10 @@ watch(
     requestSequence += 1;
     historyData.value = [];
     currentMA.value = null;
+    // 切换代码时立即清掉悬停卡，避免展示上一只的残留数值
+    currentOhlc.value = null;
+    currentIndicators.value = null;
+    unbindKlineHoverEvents();
 
     if (!newCode) {
       disposeChart();
@@ -609,6 +787,8 @@ onMounted(async () => {
 
 onUnmounted(() => {
   requestSequence += 1;
+  // 卸载时 watcher 已停止，需显式上抛 null 清掉页面头部的K线卡
+  emit('hover-ohlc', null);
   disposeChart();
 });
 </script>
@@ -702,6 +882,19 @@ onUnmounted(() => {
 .ma-item.ma10 { color: #F59E0B; }
 .ma-item.ma20 { color: #EC4899; }
 .ma-item.ma60 { color: #10B981; }
+
+/* 悬停卡模式指标图例颜色：与副图线条颜色一致 */
+.ma-item.macd { color: #94a3b8; }
+.ma-item.dif,
+.ma-item.k,
+.ma-item.boll-mid { color: #F59E0B; }
+.ma-item.dea,
+.ma-item.d,
+.ma-item.boll-lower { color: #3B82F6; }
+.ma-item.j,
+.ma-item.boll-upper { color: #EC4899; }
+/* 悬停卡模式指标数值固定槽位：滑动时名称与槽位不动，仅数字变化，避免工具栏换行导致的布局抖动 */
+.ma-num { display: inline-block; min-width: 6ch; text-align: right; font-variant-numeric: tabular-nums; }
 
 .indicator-switches {
   gap: 12px;

@@ -10,6 +10,7 @@ public enum ExceptionEnum {
     SYS_ERROR(1000001, "系统异常"),
     SYS_CHECK_ERROR(1000002, "系统校验异常"),
     API_REQUEST_ERROR(1000003, "外部API访问异常"),
+    API_DATA_NOT_FOUND(1000004, "外部API数据不存在"),
 
     STOCK_STRATEGY_DUAL_MA_ILLEGAL(1000101, "短期均线必须小于长期均线"),
     STOCK_STRATEGY_MACD_PARAMS_ILLEGAL(1000111, "MACD参数非法，快线周期必须小于慢线周期且各周期必须大于0"),

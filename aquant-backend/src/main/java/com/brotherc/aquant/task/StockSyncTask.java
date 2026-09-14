@@ -2,6 +2,7 @@ package com.brotherc.aquant.task;
 
 import com.brotherc.aquant.common.constant.StockConstant;
 import com.brotherc.aquant.common.constant.StockSyncConstant;
+import com.brotherc.aquant.common.exception.ExternalDataNotFoundException;
 import com.brotherc.aquant.industry.entity.StockIndustryBoard;
 import com.brotherc.aquant.fund.entity.StockFundInfo;
 import com.brotherc.aquant.stock.entity.StockQuote;
@@ -276,6 +277,9 @@ public class StockSyncTask {
         return lastTimestamp < watermark.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
     }
 
+    /** 单只股票/板块回补的执行结果：NO_DATA 表示上游确认暂无数据，重试无法恢复，直接跳过。 */
+    private enum BackfillOutcome { SUCCESS, RETRY_FAILED, NO_DATA }
+
     /** 历史行情回补失败后的退避重试间隔（毫秒），依次为 5 秒、10 秒、15 秒，股票与板块共用。 */
     private static final long[] BACKFILL_RETRY_BACKOFF_MILLIS = {5000L, 10000L, 15000L};
 
@@ -321,6 +325,7 @@ public class StockSyncTask {
         Map<String, String> maxTradeDateMap = findMaxTradeDateMap(codes, historyEndDate);
         String historyEnd = historyEndDate.toString();
         List<StockBackfillContext> failedContexts = new ArrayList<>();
+        int noDataCount = 0;
 
         for (Map.Entry<String, String> entry : historyTargetMap.entrySet()) {
             String code = entry.getKey();
@@ -342,25 +347,31 @@ public class StockSyncTask {
             boolean wroteLatest = shouldWriteLatestHistory && latestSpot != null;
             StockBackfillContext context = new StockBackfillContext(
                     code, name, historyStart, historyEnd, shouldBackfill, latestSpot, wroteLatest);
-            if (!executeStockBackfillWithRetry(context, syncTime)) {
+            BackfillOutcome outcome = executeStockBackfillWithRetry(context, syncTime);
+            if (outcome == BackfillOutcome.RETRY_FAILED) {
                 failedContexts.add(context);
+            } else if (outcome == BackfillOutcome.NO_DATA) {
+                noDataCount++;
             }
         }
 
+        if (noDataCount > 0) {
+            log.info("股票历史行情回补：{} 只上游暂无数据已跳过（多为上市首日新股，待上游补数后按水位自动补齐）", noDataCount);
+        }
         retryFailedStockBackfills(failedContexts, syncTime);
     }
 
     /**
      * 执行单只股票的历史行情回补，失败时按 {@link #BACKFILL_RETRY_BACKOFF_MILLIS} 退避重试。
      *
-     * @return 全部重试结束后是否成功
+     * @return 执行结果：上游暂无数据时返回 {@link BackfillOutcome#NO_DATA}，不做任何重试
      */
-    private boolean executeStockBackfillWithRetry(StockBackfillContext context, LocalDateTime syncTime) {
+    private BackfillOutcome executeStockBackfillWithRetry(StockBackfillContext context, LocalDateTime syncTime) {
         int totalAttempts = BACKFILL_RETRY_BACKOFF_MILLIS.length + 1;
         for (int attempt = 1; attempt <= totalAttempts; attempt++) {
             if (attempt > 1 && !sleepBeforeRetry(BACKFILL_RETRY_BACKOFF_MILLIS[attempt - 2])) {
                 log.warn("股票历史行情重试等待被中断，提前结束该股票重试，code={}", context.code());
-                return false;
+                return BackfillOutcome.RETRY_FAILED;
             }
             try {
                 executeStockBackfill(context, syncTime);
@@ -372,14 +383,18 @@ public class StockSyncTask {
                     log.info("同步股票最新行情完成（历史无缺口，跳过回补），code={}, wroteLatest={}, attempt={}/{}",
                             context.code(), context.wroteLatest(), attempt, totalAttempts);
                 }
-                return true;
+                return BackfillOutcome.SUCCESS;
+            } catch (ExternalDataNotFoundException e) {
+                log.warn("同步单只股票历史行情跳过：上游暂无该股数据（多为上市首日新股），code={}, backfillRange=[{}, {}]",
+                        context.code(), context.historyStart(), context.historyEnd());
+                return BackfillOutcome.NO_DATA;
             } catch (Exception e) {
                 log.error("同步单只股票历史行情失败，code={}, shouldBackfill={}, backfillRange=[{}, {}], wroteLatest={}, attempt={}/{}",
                         context.code(), context.shouldBackfill(), context.historyStart(), context.historyEnd(),
                         context.wroteLatest(), attempt, totalAttempts, e);
             }
         }
-        return false;
+        return BackfillOutcome.RETRY_FAILED;
     }
 
     private void executeStockBackfill(StockBackfillContext context, LocalDateTime syncTime) {
@@ -575,7 +590,8 @@ public class StockSyncTask {
 
             String historyStart = historyStartDate == null ? null : historyStartDate.toString();
             BoardBackfillContext context = new BoardBackfillContext(sectorName, historyStart, historyEnd);
-            if (!executeBoardBackfillWithRetry(context, timestamp)) {
+            BackfillOutcome outcome = executeBoardBackfillWithRetry(context, timestamp);
+            if (outcome == BackfillOutcome.RETRY_FAILED) {
                 failedContexts.add(context);
             }
 
@@ -593,26 +609,30 @@ public class StockSyncTask {
     /**
      * 执行单个板块的历史K线回补，失败时按 {@link #BACKFILL_RETRY_BACKOFF_MILLIS} 退避重试。
      *
-     * @return 全部重试结束后是否成功
+     * @return 执行结果：上游暂无数据时返回 {@link BackfillOutcome#NO_DATA}，不做任何重试
      */
-    private boolean executeBoardBackfillWithRetry(BoardBackfillContext context, LocalDateTime timestamp) {
+    private BackfillOutcome executeBoardBackfillWithRetry(BoardBackfillContext context, LocalDateTime timestamp) {
         int totalAttempts = BACKFILL_RETRY_BACKOFF_MILLIS.length + 1;
         for (int attempt = 1; attempt <= totalAttempts; attempt++) {
             if (attempt > 1 && !sleepBeforeRetry(BACKFILL_RETRY_BACKOFF_MILLIS[attempt - 2])) {
                 log.warn("板块历史K线重试等待被中断，提前结束该板块重试，sectorName={}", context.sectorName());
-                return false;
+                return BackfillOutcome.RETRY_FAILED;
             }
             try {
                 executeBoardBackfill(context, timestamp);
                 log.info("同步板块历史K线完成，sectorName={}, start={}, end={}, attempt={}/{}",
                         context.sectorName(), context.historyStart(), context.historyEnd(), attempt, totalAttempts);
-                return true;
+                return BackfillOutcome.SUCCESS;
+            } catch (ExternalDataNotFoundException e) {
+                log.warn("同步板块历史K线跳过：上游暂无该板块数据，sectorName={}, start={}, end={}",
+                        context.sectorName(), context.historyStart(), context.historyEnd());
+                return BackfillOutcome.NO_DATA;
             } catch (Exception e) {
                 log.error("同步板块历史K线失败，sectorName={}, end={}, attempt={}/{}",
                         context.sectorName(), context.historyEnd(), attempt, totalAttempts, e);
             }
         }
-        return false;
+        return BackfillOutcome.RETRY_FAILED;
     }
 
     private void executeBoardBackfill(BoardBackfillContext context, LocalDateTime timestamp) {

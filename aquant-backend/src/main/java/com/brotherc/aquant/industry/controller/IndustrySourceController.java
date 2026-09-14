@@ -14,10 +14,14 @@ import com.brotherc.aquant.industry.service.StockIndustryBoardAnalysisService;
 import com.brotherc.aquant.industry.service.StockIndustryBoardEmQueryService;
 import com.brotherc.aquant.industry.service.StockIndustryBoardEmSyncService;
 import com.brotherc.aquant.industry.service.StockIndustryBoardHistoryService;
+import com.brotherc.aquant.industry.service.StockIndustryBoardService;
 import com.brotherc.aquant.sync.entity.StockSync;
 import com.brotherc.aquant.sync.repository.StockSyncRepository;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,6 +40,7 @@ public class IndustrySourceController {
     private final StockIndustryBoardAnalysisService analysisService;
     private final StockIndustryBoardEmQueryService emQueryService;
     private final StockIndustryBoardHistoryService historyService;
+    private final StockIndustryBoardService boardService;
     private final StockBoardConstituentService constituentService;
     private final StockBoardConstituentEmService emConstituentService;
     private final StockIndustryBoardRepository boardRepository;
@@ -62,6 +67,19 @@ public class IndustrySourceController {
     ) {
         return ResponseDTO.success(resolve(source, current -> current == IndustryDataSource.THS
                 ? thsOverview(industry, tradeDate) : emQueryService.overview(industry, tradeDate)));
+    }
+
+    @GetMapping("/board/page")
+    public ResponseDTO<IndustrySourceSnapshotVO<Page<StockIndustryBoardVO>>> boardPage(
+            @RequestParam(defaultValue = "THS") IndustryDataSource source,
+            @RequestParam(required = false) String boardName,
+            @ParameterObject Pageable pageable
+    ) {
+        StockIndustryBoardPageReqVO reqVO = new StockIndustryBoardPageReqVO(Boolean.FALSE);
+        reqVO.setBoardName(boardName);
+        return ResponseDTO.success(resolve(source, current -> current == IndustryDataSource.THS
+                ? boardService.stockIndustryBoardPage(reqVO, pageable)
+                : emQueryService.boardPage(boardName, pageable)));
     }
 
     @GetMapping("/history/kline")
@@ -113,7 +131,10 @@ public class IndustrySourceController {
     }
 
     private boolean isUnavailable(Object content) {
-        return content == null || (content instanceof List<?> list && list.isEmpty());
+        if (content == null) return true;
+        if (content instanceof List<?> list) return list.isEmpty();
+        if (content instanceof Page<?> page) return page.isEmpty();
+        return false;
     }
 
     private StockIndustryBoardVO thsOverview(String industry, LocalDate tradeDate) {

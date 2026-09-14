@@ -7,6 +7,8 @@ import com.brotherc.aquant.industry.model.vo.StockIndustryBoardPageReqVO;
 import com.brotherc.aquant.industry.model.vo.StockIndustryBoardVO;
 import com.brotherc.aquant.industry.model.vo.IndustryRiseAnalysisVO;
 import com.brotherc.aquant.industry.model.vo.StockIndustryConstituentSnapshotVO;
+import com.brotherc.aquant.industry.model.vo.StockBoardTrendsVO;
+import com.brotherc.aquant.industry.service.StockBoardMinuteService;
 import com.brotherc.aquant.industry.service.StockIndustryBoardAnalysisService;
 import com.brotherc.aquant.industry.service.StockBoardConstituentService;
 import com.brotherc.aquant.industry.service.StockIndustryBoardHistoryService;
@@ -40,6 +42,7 @@ public class StockIndustryBoardController {
     private final StockIndustryBoardHistoryService stockIndustryBoardHistoryService;
     private final StockIndustryBoardAnalysisService stockIndustryBoardAnalysisService;
     private final StockBoardConstituentService stockBoardConstituentService;
+    private final StockBoardMinuteService stockBoardMinuteService;
 
     @Operation(summary = "分页查询板块数据")
     @GetMapping("/page")
@@ -74,6 +77,20 @@ public class StockIndustryBoardController {
         return snapshot.isAvailable()
                 ? ResponseDTO.success(snapshot)
                 : ResponseDTO.fail(ExceptionEnum.API_REQUEST_ERROR.getCode(), snapshot.getMessage(), snapshot);
+    }
+
+    @Operation(summary = "获取板块当日分时走势(实时,10秒缓存)")
+    @GetMapping("/minute/intraday")
+    public ResponseDTO<StockBoardTrendsVO> intradayTrends(
+            @Parameter(description = "板块代码(行业名称)") @RequestParam @NotBlank String boardCode) {
+        return ResponseDTO.success(stockBoardMinuteService.getIntradayTrends(boardCode));
+    }
+
+    @Operation(summary = "获取板块近5日分时走势")
+    @GetMapping("/minute/trends5d")
+    public ResponseDTO<StockBoardTrendsVO> trends5d(
+            @Parameter(description = "板块代码(行业名称)") @RequestParam @NotBlank String boardCode) {
+        return ResponseDTO.success(stockBoardMinuteService.getTrends5d(boardCode));
     }
 
 }

@@ -69,6 +69,10 @@
                     <mail-outlined />
                     <span style="margin-left: 8px;">修改邮箱</span>
                   </a-menu-item>
+                  <a-menu-item key="eastmoneyCookie" @click="showCookieModal">
+                    <key-outlined />
+                    <span style="margin-left: 8px;">东财 Cookie</span>
+                  </a-menu-item>
                   <a-menu-divider />
                   <a-menu-item key="logout" @click="handleLogout">
                     <logout-outlined />
@@ -119,6 +123,36 @@
           <a-input v-model:value="emailForm.email" placeholder="请输入您的新邮箱" />
         </a-form-item>
       </a-form>
+    </a-modal>
+
+    <!-- 东财 Cookie Modal -->
+    <a-modal
+      v-model:visible="cookieModalVisible"
+      title="东财会话 Cookie"
+      @ok="handleUpdateCookie"
+      :confirmLoading="cookieSaving"
+      destroyOnClose
+    >
+      <a-alert
+        v-if="cookieConfigured !== null"
+        :message="cookieConfigured ? '当前已配置会话 Cookie' : '当前未配置会话 Cookie'"
+        :type="cookieConfigured ? 'success' : 'warning'"
+        show-icon
+        style="margin-bottom: 12px;"
+      />
+      <a-form layout="vertical">
+        <a-form-item label="完整 Cookie 请求头字符串" required>
+          <a-textarea
+            v-model:value="cookieForm.cookie"
+            :rows="4"
+            placeholder="qgqp_b_id=...; ct=...; ut=...; ..."
+          />
+        </a-form-item>
+      </a-form>
+      <div class="cookie-help">
+        <p>获取方式：① 浏览器打开东方财富行情中心页面，如遇滑块验证先完成；② F12 → Network → 任意 push2 请求 → Request Headers → 复制完整 Cookie 值；③ 粘贴保存后立即生效，无需重启。</p>
+        <p>Cookie 有时效（重度使用约 30-40 分钟），失效后东财同步会自动熔断并提示，重复上述步骤更新即可。</p>
+      </div>
     </a-modal>
 
     <a-drawer
@@ -178,10 +212,12 @@ import {
   LoginOutlined,
   MailOutlined,
   MenuOutlined,
-  FileTextOutlined
+  FileTextOutlined,
+  KeyOutlined
 } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
 import { updateEmail } from '@/api/auth';
+import { getEastmoneyCookieStatus, updateEastmoneyCookie } from '@/api/eastmoney';
 
 type NavigationChild = {
   key: string;
@@ -374,6 +410,47 @@ const handleUpdateEmail = async () => {
     console.error('Failed to update email:', error);
   } finally {
     emailLoading.value = false;
+  }
+};
+
+// 东财 Cookie 相关
+const cookieModalVisible = ref(false);
+const cookieSaving = ref(false);
+const cookieConfigured = ref<boolean | null>(null);
+const cookieForm = ref({ cookie: '' });
+
+const showCookieModal = async () => {
+  cookieForm.value.cookie = '';
+  cookieConfigured.value = null;
+  cookieModalVisible.value = true;
+  try {
+    const res = await getEastmoneyCookieStatus();
+    if (res.data.success) {
+      cookieConfigured.value = res.data.data === true;
+    }
+  } catch (error) {
+    console.error('Failed to query eastmoney cookie status:', error);
+  }
+};
+
+const handleUpdateCookie = async () => {
+  const cookie = cookieForm.value.cookie.trim();
+  if (!cookie) {
+    message.warning('请粘贴完整的 Cookie 字符串');
+    return;
+  }
+  cookieSaving.value = true;
+  try {
+    const res = await updateEastmoneyCookie({ cookie });
+    if (res.data.success) {
+      message.success('东财 Cookie 更新成功，已即时生效并自动触发同步');
+      cookieConfigured.value = true;
+      cookieModalVisible.value = false;
+    }
+  } catch (error) {
+    console.error('Failed to update eastmoney cookie:', error);
+  } finally {
+    cookieSaving.value = false;
   }
 };
 </script>
@@ -630,6 +707,24 @@ const handleUpdateEmail = async () => {
   background: transparent;
   padding: 24px 0;
   font-size: var(--font-size-xs);
+}
+
+.cookie-help {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+}
+
+.cookie-help p {
+  margin: 0 0 6px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.cookie-help p:last-child {
+  margin-bottom: 0;
 }
 
 .nav-text {
