@@ -16,6 +16,7 @@
       v-if="activeMode !== 'kline'"
       :board-code="boardCode"
       :mode="activeMode === 'intraday' ? 'intraday' : 'trends5d'"
+      @hover-minute="emit('hover-minute', $event)"
     />
     <TechnicalHistoryChart
       v-else
@@ -24,7 +25,9 @@
       empty-description="请选择板块查看行情"
       :load-history="loadHistory"
       reset-frequency-on-code-change
+      hover-card
       @date-select="emit('date-select', $event)"
+      @hover-ohlc="emit('hover-ohlc', $event)"
     />
   </div>
   <a-empty v-else description="请选择板块查看行情" class="chart-empty" />
@@ -44,8 +47,31 @@ const props = defineProps<{
   source?: IndustryDataSource;
 }>();
 
+// 悬停卡数据上抛给页面头部（BoardData.vue 头部右上角展示）：分时模式为分钟卡，K线模式为 OHLC 卡
+interface BoardHoverMinutePayload {
+  time: string;
+  price: string;
+  avg: string;
+  volume: string;
+  changePct: string;
+  pctNum: number | null;
+}
+
+interface BoardHoverOhlcPayload {
+  date: string;
+  open: string | number;
+  close: string | number;
+  high: string | number;
+  low: string | number;
+  changePct: string;
+  volume: string | number;
+  pctNum: number | null;
+}
+
 const emit = defineEmits<{
   'date-select': [tradeDate: string];
+  'hover-minute': [payload: BoardHoverMinutePayload | null];
+  'hover-ohlc': [payload: BoardHoverOhlcPayload | null];
 }>();
 
 const modes: Array<{ value: BoardChartMode; label: string }> = [

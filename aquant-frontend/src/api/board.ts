@@ -134,6 +134,15 @@ export const getIndustrySourceAnalysis = (params: {
     source: IndustryDataSource; startDate: string; endDate: string; rankLimit?: number
 }) => api.get<ResponseDTO<IndustrySourceSnapshot<IndustryRiseAnalysisPoint[]>>>('/industrySource/analysis', { params, timeout: 60000 });
 
+export const getIndustrySourceBoardPage = (params: {
+    source: IndustryDataSource; boardName?: string; page: number; size: number; sort?: string[]
+}) => api.get<ResponseDTO<IndustrySourceSnapshot<PageResult<StockIndustryBoardVO>>>>('/industrySource/board/page', {
+    params,
+    paramsSerializer: {
+        indexes: null
+    }
+});
+
 export const getIndustrySourceOverview = (params: { source: IndustryDataSource; industry: string; tradeDate?: string }) =>
     api.get<ResponseDTO<IndustrySourceSnapshot<StockIndustryBoardVO>>>('/industrySource/overview', { params });
 

@@ -11,8 +11,11 @@ import com.brotherc.aquant.industry.repository.StockIndustryBoardEmRepository;
 import com.brotherc.aquant.industry.repository.StockIndustryBoardHistoryEmRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -59,6 +62,18 @@ public class StockIndustryBoardEmQueryService {
             }
         }
         return result;
+    }
+
+    @Transactional(readOnly = true)
+    public Page<StockIndustryBoardVO> boardPage(String boardName, Pageable pageable) {
+        Page<StockIndustryBoardEm> page = StringUtils.hasText(boardName)
+                ? boardRepository.findBySectorNameContaining(boardName, pageable)
+                : boardRepository.findAll(pageable);
+        return page.map(item -> {
+            StockIndustryBoardVO view = new StockIndustryBoardVO();
+            BeanUtils.copyProperties(item, view);
+            return view;
+        });
     }
 
     @Transactional(readOnly = true)
