@@ -40,6 +40,18 @@ const router = createRouter({
                     ]
                 },
                 {
+                    path: 'portfolio',
+                    name: 'PortfolioRoot',
+                    children: [
+                        {
+                            path: 'index',
+                            name: 'Portfolio',
+                            component: () => import('@/views/portfolio/Portfolio.vue'),
+                            meta: { requiresAuth: true }
+                        }
+                    ]
+                },
+                {
                     path: 'stock-data',
                     name: 'StockDataRoot',
                     children: [

@@ -6,6 +6,7 @@ import org.apache.commons.lang3.StringUtils;
 import java.math.BigDecimal;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -187,6 +188,56 @@ public class StockUtils {
             return amount.multiply(BigDecimal.valueOf(100000000));
         }
         return "万".equals(unit) ? amount.multiply(BigDecimal.valueOf(10000)) : amount;
+    }
+
+    /**
+     * 将可能包含千分位逗号的文本转换为数值，空白文本返回 {@code null}。
+     *
+     * @param value 待转换文本
+     * @param field 字段名称，用于生成格式错误提示
+     */
+    public static BigDecimal decimal(String value, String field) {
+        if (StringUtils.isBlank(value)) {
+            return null;
+        }
+        try {
+            return new BigDecimal(value.replace(",", "").trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(field + "不是有效数字：" + value);
+        }
+    }
+
+    /** 将成交日期转换为本地日期，支持 yyyyMMdd 和 yyyy-MM-dd 格式。 */
+    public static LocalDate parseTradeDate(String value) {
+        for (DateTimeFormatter formatter : List.of(DateTimeFormatter.BASIC_ISO_DATE,
+                DateTimeFormatter.ISO_LOCAL_DATE)) {
+            try {
+                return LocalDate.parse(value, formatter);
+            } catch (DateTimeParseException ignored) {
+                // 继续尝试下一种成交日期格式。
+            }
+        }
+        throw new IllegalArgumentException("成交日期格式不正确：" + value);
+    }
+
+    /** 根据 A 股证券代码前缀推断 SH、SZ 或 BJ 交易市场。 */
+    public static String market(String assetCode) {
+        if (StringUtils.isBlank(assetCode)) {
+            return null;
+        }
+        if (assetCode.startsWith("6") || assetCode.startsWith("5") || assetCode.startsWith("7")
+                || assetCode.startsWith("10") || assetCode.startsWith("11")) {
+            return "SH";
+        }
+        if (assetCode.startsWith("4") || assetCode.startsWith("8") || assetCode.startsWith("9")) {
+            return "BJ";
+        }
+        return "SZ";
+    }
+
+    public static boolean isBond(String assetCode) {
+        return assetCode.startsWith("10") || assetCode.startsWith("11") || assetCode.startsWith("12")
+                || assetCode.startsWith("13") || assetCode.startsWith("7");
     }
 
 }

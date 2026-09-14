@@ -823,3 +823,185 @@ CREATE TABLE `user_article` (
   KEY `idx_visibility` (`visibility`),
   CONSTRAINT `fk_article_author` FOREIGN KEY (`author_id`) REFERENCES `sys_user` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户文章表';
+
+DROP TABLE IF EXISTS `user_portfolio`;
+CREATE TABLE `user_portfolio` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `name` varchar(100) NOT NULL COMMENT '投资组合名称',
+  `base_currency` varchar(10) NOT NULL DEFAULT 'CNY' COMMENT '组合基础币种',
+  `benchmark_code` varchar(20) DEFAULT NULL COMMENT '业绩比较基准代码',
+  `is_default` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否为默认组合',
+  `deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_user_portfolio_user` (`user_id`,`deleted`),
+  KEY `idx_user_portfolio_name` (`user_id`,`name`,`deleted`),
+  CONSTRAINT `fk_user_portfolio_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户投资组合';
+
+DROP TABLE IF EXISTS `user_broker_account`;
+CREATE TABLE `user_broker_account` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `portfolio_id` bigint NOT NULL COMMENT '投资组合ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID，用于直接校验账户归属',
+  `account_name` varchar(100) NOT NULL COMMENT '账户名称',
+  `broker_code` varchar(50) NOT NULL COMMENT '券商代码',
+  `broker_name` varchar(100) DEFAULT NULL COMMENT '券商名称',
+  `account_no_masked` varchar(100) DEFAULT NULL COMMENT '脱敏账户号码',
+  `account_no_hash` char(64) DEFAULT NULL COMMENT '用户、券商和账户号码的SHA-256摘要',
+  `account_type` varchar(30) NOT NULL DEFAULT 'SECURITIES' COMMENT '账户类型',
+  `sync_mode` varchar(30) NOT NULL DEFAULT 'MANUAL' COMMENT '同步方式',
+  `status` varchar(20) NOT NULL DEFAULT 'ACTIVE' COMMENT '账户状态',
+  `deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_broker_account_hash` (`user_id`,`broker_code`,`account_no_hash`),
+  KEY `idx_broker_account_portfolio` (`portfolio_id`,`deleted`),
+  CONSTRAINT `fk_broker_account_portfolio` FOREIGN KEY (`portfolio_id`) REFERENCES `user_portfolio` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_broker_account_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户券商账户';
+
+DROP TABLE IF EXISTS `user_portfolio_import_batch`;
+CREATE TABLE `user_portfolio_import_batch` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `account_id` bigint NOT NULL COMMENT '券商账户ID',
+  `source` varchar(30) NOT NULL COMMENT '数据来源',
+  `source_file_name` varchar(255) DEFAULT NULL COMMENT '来源文件名',
+  `source_file_hash` char(64) DEFAULT NULL COMMENT '来源文件摘要',
+  `status` varchar(20) NOT NULL COMMENT '批次状态',
+  `total_count` int NOT NULL DEFAULT '0' COMMENT '总记录数',
+  `success_count` int NOT NULL DEFAULT '0' COMMENT '成功数',
+  `skip_count` int NOT NULL DEFAULT '0' COMMENT '重复跳过数',
+  `failure_count` int NOT NULL DEFAULT '0' COMMENT '失败数',
+  `error_message` varchar(1000) DEFAULT NULL COMMENT '失败信息',
+  `start_time` datetime NOT NULL COMMENT '开始时间',
+  `finish_time` datetime DEFAULT NULL COMMENT '完成时间',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_portfolio_import_account` (`account_id`,`create_time`),
+  KEY `idx_portfolio_import_file` (`account_id`,`source_file_hash`),
+  CONSTRAINT `fk_portfolio_import_account` FOREIGN KEY (`account_id`) REFERENCES `user_broker_account` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='持仓交易导入批次';
+
+DROP TABLE IF EXISTS `user_portfolio_trade`;
+CREATE TABLE `user_portfolio_trade` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `account_id` bigint NOT NULL COMMENT '券商账户ID',
+  `import_batch_id` bigint DEFAULT NULL COMMENT '导入批次ID',
+  `asset_type` varchar(20) NOT NULL COMMENT '资产类型',
+  `market` varchar(10) DEFAULT NULL COMMENT '交易市场',
+  `asset_code` varchar(30) DEFAULT NULL COMMENT '系统标准资产代码',
+  `asset_name` varchar(100) DEFAULT NULL COMMENT '资产名称快照',
+  `trade_type` varchar(30) NOT NULL COMMENT '流水类型',
+  `trade_time` datetime NOT NULL COMMENT '交易时间',
+  `settlement_date` date DEFAULT NULL COMMENT '交收日期',
+  `quantity` decimal(24,8) DEFAULT NULL COMMENT '成交数量',
+  `price` decimal(24,8) DEFAULT NULL COMMENT '成交价格',
+  `gross_amount` decimal(24,4) DEFAULT NULL COMMENT '成交总额',
+  `commission` decimal(24,4) NOT NULL DEFAULT '0' COMMENT '佣金',
+  `stamp_duty` decimal(24,4) NOT NULL DEFAULT '0' COMMENT '印花税',
+  `transfer_fee` decimal(24,4) NOT NULL DEFAULT '0' COMMENT '过户费',
+  `other_fee` decimal(24,4) NOT NULL DEFAULT '0' COMMENT '其他费用',
+  `net_amount` decimal(24,4) DEFAULT NULL COMMENT '对现金的净影响金额',
+  `currency` varchar(10) NOT NULL DEFAULT 'CNY' COMMENT '币种',
+  `source` varchar(30) NOT NULL COMMENT '数据来源',
+  `source_trade_id` varchar(100) DEFAULT NULL COMMENT '来源系统流水号',
+  `dedup_key` char(64) NOT NULL COMMENT '流水幂等摘要',
+  `status` varchar(20) NOT NULL DEFAULT 'NORMAL' COMMENT 'NORMAL或REVERSED',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_portfolio_trade_dedup` (`account_id`,`dedup_key`),
+  KEY `idx_portfolio_trade_time` (`account_id`,`trade_time`),
+  KEY `idx_portfolio_trade_asset` (`account_id`,`asset_type`,`asset_code`),
+  KEY `idx_portfolio_trade_batch` (`import_batch_id`),
+  CONSTRAINT `fk_portfolio_trade_account` FOREIGN KEY (`account_id`) REFERENCES `user_broker_account` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_portfolio_trade_batch` FOREIGN KEY (`import_batch_id`) REFERENCES `user_portfolio_import_batch` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户投资组合交易流水';
+
+DROP TABLE IF EXISTS `user_portfolio_position`;
+CREATE TABLE `user_portfolio_position` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `account_id` bigint NOT NULL COMMENT '券商账户ID',
+  `asset_type` varchar(20) NOT NULL COMMENT '资产类型',
+  `market` varchar(10) DEFAULT NULL COMMENT '交易市场',
+  `asset_code` varchar(30) NOT NULL COMMENT '系统标准资产代码',
+  `asset_name` varchar(100) DEFAULT NULL COMMENT '资产名称',
+  `currency` varchar(10) NOT NULL DEFAULT 'CNY' COMMENT '币种',
+  `quantity` decimal(24,8) NOT NULL COMMENT '持仓数量',
+  `available_quantity` decimal(24,8) DEFAULT NULL COMMENT '可用数量',
+  `cost_price` decimal(24,8) DEFAULT NULL COMMENT '平均成本价',
+  `cost_amount` decimal(24,4) DEFAULT NULL COMMENT '持仓成本金额',
+  `latest_price` decimal(24,8) DEFAULT NULL COMMENT '最新价格或净值',
+  `market_value` decimal(24,4) DEFAULT NULL COMMENT '最新市值',
+  `unrealized_profit` decimal(24,4) DEFAULT NULL COMMENT '未实现盈亏',
+  `quote_date` date DEFAULT NULL COMMENT '行情或净值日期',
+  `calculate_time` datetime NOT NULL COMMENT '计算时间',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_portfolio_position_asset` (`account_id`,`asset_type`,`asset_code`),
+  KEY `idx_portfolio_position_value` (`account_id`,`market_value`),
+  CONSTRAINT `fk_portfolio_position_account` FOREIGN KEY (`account_id`) REFERENCES `user_broker_account` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户账户当前持仓';
+
+DROP TABLE IF EXISTS `user_portfolio_cash`;
+CREATE TABLE `user_portfolio_cash` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `account_id` bigint NOT NULL COMMENT '券商账户ID',
+  `currency` varchar(10) NOT NULL COMMENT '币种',
+  `total_balance` decimal(24,4) NOT NULL COMMENT '现金总余额',
+  `available_balance` decimal(24,4) DEFAULT NULL COMMENT '可用余额',
+  `frozen_balance` decimal(24,4) DEFAULT NULL COMMENT '冻结余额',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_portfolio_cash_currency` (`account_id`,`currency`),
+  CONSTRAINT `fk_portfolio_cash_account` FOREIGN KEY (`account_id`) REFERENCES `user_broker_account` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户账户当前现金';
+
+DROP TABLE IF EXISTS `user_portfolio_account_snapshot`;
+CREATE TABLE `user_portfolio_account_snapshot` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `account_id` bigint NOT NULL COMMENT '券商账户ID',
+  `snapshot_date` date NOT NULL COMMENT '快照日期',
+  `currency` varchar(10) NOT NULL COMMENT '汇总币种',
+  `cash_amount` decimal(24,4) NOT NULL COMMENT '现金余额',
+  `market_value` decimal(24,4) NOT NULL COMMENT '持仓市值',
+  `total_asset` decimal(24,4) NOT NULL COMMENT '总资产',
+  `cost_amount` decimal(24,4) NOT NULL COMMENT '持仓成本',
+  `unrealized_profit` decimal(24,4) NOT NULL COMMENT '未实现盈亏',
+  `unpriced_asset_count` int NOT NULL DEFAULT '0' COMMENT '缺少行情的资产数量',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_portfolio_account_snapshot` (`account_id`,`snapshot_date`),
+  KEY `idx_portfolio_snapshot_date` (`snapshot_date`),
+  CONSTRAINT `fk_portfolio_snapshot_account` FOREIGN KEY (`account_id`) REFERENCES `user_broker_account` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户账户每日资产快照';
+
+DROP TABLE IF EXISTS `user_portfolio_position_snapshot`;
+CREATE TABLE `user_portfolio_position_snapshot` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `account_snapshot_id` bigint NOT NULL COMMENT '账户快照ID',
+  `account_id` bigint NOT NULL COMMENT '券商账户ID',
+  `asset_type` varchar(20) NOT NULL COMMENT '资产类型',
+  `market` varchar(10) DEFAULT NULL COMMENT '交易市场',
+  `asset_code` varchar(30) NOT NULL COMMENT '系统标准资产代码',
+  `asset_name` varchar(100) DEFAULT NULL COMMENT '资产名称',
+  `currency` varchar(10) NOT NULL COMMENT '币种',
+  `quantity` decimal(24,8) NOT NULL COMMENT '持仓数量',
+  `cost_price` decimal(24,8) DEFAULT NULL COMMENT '平均成本价',
+  `cost_amount` decimal(24,4) DEFAULT NULL COMMENT '持仓成本金额',
+  `latest_price` decimal(24,8) DEFAULT NULL COMMENT '快照价格',
+  `market_value` decimal(24,4) DEFAULT NULL COMMENT '快照市值',
+  `unrealized_profit` decimal(24,4) DEFAULT NULL COMMENT '未实现盈亏',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_position_snapshot_asset` (`account_snapshot_id`,`asset_type`,`asset_code`),
+  KEY `idx_position_snapshot_account` (`account_id`,`asset_code`),
+  CONSTRAINT `fk_position_snapshot_header` FOREIGN KEY (`account_snapshot_id`) REFERENCES `user_portfolio_account_snapshot` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_position_snapshot_account` FOREIGN KEY (`account_id`) REFERENCES `user_broker_account` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户账户每日持仓明细快照';
