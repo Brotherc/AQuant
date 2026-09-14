@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="stock-detail-view">
     <!-- Header: Stats Summary -->
     <div class="detail-header">
@@ -133,12 +133,16 @@
             </a-radio-group>
           </div>
           <div class="chart-toolbar-right">
-            <div v-if="isDailyMode || isMinuteMode" class="indicator-switches">
-              <span class="indicator-switch">
+            <div v-if="isDailyMode || isMinuteMode || isCandleMode" class="indicator-switches">
+              <span v-if="isCandleMode" class="indicator-switch">
+                <span>买卖点</span>
+                <a-switch v-model:checked="indicatorVisibility.tradePoints" size="small" />
+              </span>
+              <span v-if="isDailyMode || isMinuteMode" class="indicator-switch">
                 <span>MACD</span>
                 <a-switch v-model:checked="indicatorVisibility.macd" size="small" />
               </span>
-              <span class="indicator-switch">
+              <span v-if="isDailyMode || isMinuteMode" class="indicator-switch">
                 <span>KDJ</span>
                 <a-switch v-model:checked="indicatorVisibility.kdj" size="small" />
               </span>
@@ -263,6 +267,8 @@ import {
 } from '@/api/stock';
 import type { WatchlistStockVO } from '@/api/watchlist';
 import { getDividendDetailByCode, type StockDividendDetail } from '@/api/indicator';
+import { getTradesByAssetCode } from '@/api/portfolio';
+import type { PortfolioTrade } from '@/types/portfolio';
 import { chartTooltipTheme } from '@/utils/chartTheme';
 
 const props = defineProps<{
@@ -277,6 +283,8 @@ const isDailyMode = computed(() => frequency.value !== 'minute' && frequency.val
 const isMinuteMode = computed(() => frequency.value === 'minute' || frequency.value === '5d');
 const loadingChart = ref(false);
 const historyData = ref<StockQuoteHistory[]>([]);
+const userTrades = ref<PortfolioTrade[]>([]);
+const loadingTrades = ref(false);
 const currentMA = ref<{
   ma5: string | number;
   ma10: string | number;
@@ -322,6 +330,7 @@ const minutePctClass = computed(() => {
   return pct > 0 ? 'text-up' : 'text-down';
 });
 const indicatorVisibility = reactive({
+  tradePoints: true,
   macd: false,
   kdj: false,
   boll: false
@@ -419,7 +428,8 @@ const bindChartPointerEvents = (ctx: {
     applyIdx(idx);
   };
   candleGlobalOutHandler = () => {
-    if (lastIdx >= 0) applyIdx(lastIdx);
+    if (lastIdx >= 0) apply(lastIdx);
+    chartInstance?.dispatchAction({ type: 'hideTip' });
   };
   chartInstance.getZr().on('mousemove', candleMouseMoveHandler);
   chartInstance.getZr().on('globalout', candleGlobalOutHandler);
@@ -441,6 +451,196 @@ const fetchAllDividends = async () => {
   } finally {
     loadingDividends.value = false;
   }
+};
+
+// 用户交易流水打点数据加载
+const fetchUserTrades = async () => {
+  const token = localStorage.getItem('token');
+  if (!token || !props.stock.stockCode) {
+    userTrades.value = [];
+    return;
+  }
+  loadingTrades.value = true;
+  try {
+    const trades = await getTradesByAssetCode(props.stock.stockCode);
+    userTrades.value = trades || [];
+  } catch (error) {
+    console.error('Failed to fetch user trades for chart marks:', error);
+    userTrades.value = [];
+  } finally {
+    loadingTrades.value = false;
+  }
+};
+
+const isBuyTradeType = (type: string) => type === 'BUY' || type === 'POSITION_INIT' || type === 'TRANSFER_IN';
+const isSellTradeType = (type: string) => type === 'SELL' || type === 'TRANSFER_OUT';
+
+const formatTradePointTooltip = (params: any) => {
+  const data = params.data;
+  if (!data || !data.trades || data.trades.length === 0) return '';
+  const trades: PortfolioTrade[] = data.trades;
+  const isBuy = data.actionType === 'BUY';
+  const headerTitle = isBuy ? '买入 / 期初记录' : '卖出记录';
+  const theme = chartTooltipTheme;
+  const displayDate = typeof data.date === 'string' && data.date.length >= 10 ? data.date.substring(0, 10) : data.date;
+
+  let contentHtml = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px; color: ${theme.primaryTextColor}; min-width: 180px;">
+      <div style="font-weight: 600; padding-bottom: 6px; margin-bottom: 6px; border-bottom: 1px solid ${theme.borderColor}; display: flex; justify-content: space-between; align-items: center;">
+        <span>${displayDate}</span>
+        <span style="color: ${isBuy ? '#ef4444' : '#10b981'}; font-weight: 600;">${headerTitle}</span>
+      </div>
+  `;
+
+  trades.forEach((t, idx) => {
+    const priceText = t.price != null ? `¥${Number(t.price).toFixed(2)}` : '-';
+    const qtyText = t.quantity != null ? `${t.quantity.toLocaleString()} 股` : '-';
+    const amtText = t.amount != null ? `¥${Number(t.amount).toFixed(2)}` : (t.grossAmount != null ? `¥${Number(t.grossAmount).toFixed(2)}` : '-');
+    const accountText = t.accountName ? `<div style="display: flex; justify-content: space-between; color: ${theme.secondaryTextColor}; line-height: 1.6;"><span>所属账户:</span><span style="color: ${theme.primaryTextColor}; font-weight: 500;">${t.accountName}</span></div>` : '';
+
+    contentHtml += `
+      <div style="${idx > 0 ? `margin-top: 8px; padding-top: 8px; border-top: 1px dashed ${theme.borderColor};` : ''}">
+        <div style="display: flex; justify-content: space-between; color: ${theme.secondaryTextColor}; line-height: 1.6;">
+          <span>成交价格:</span>
+          <span style="color: ${theme.primaryTextColor}; font-weight: 500;">${priceText}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; color: ${theme.secondaryTextColor}; line-height: 1.6;">
+          <span>成交数量:</span>
+          <span style="color: ${theme.primaryTextColor}; font-weight: 500;">${qtyText}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; color: ${theme.secondaryTextColor}; line-height: 1.6;">
+          <span>发生金额:</span>
+          <span style="color: ${theme.primaryTextColor}; font-weight: 500;">${amtText}</span>
+        </div>
+        ${accountText}
+      </div>
+    `;
+  });
+
+  contentHtml += `</div>`;
+  return contentHtml;
+};
+
+const buildTradeMarkPoints = (dates: string[], values: any[][]) => {
+  if (!indicatorVisibility.tradePoints || !userTrades.value || userTrades.value.length === 0 || dates.length === 0) {
+    return [];
+  }
+
+  const markPoints: any[] = [];
+  const dateIndexMap = new Map<string, number>();
+  dates.forEach((d, idx) => {
+    const dayKey = d.length > 10 ? d.substring(0, 10) : d;
+    if (!dateIndexMap.has(dayKey)) {
+      dateIndexMap.set(dayKey, idx);
+    }
+    if (d.length > 10) {
+      dateIndexMap.set(d.substring(0, 16), idx);
+    }
+  });
+
+  const tradesByDate = new Map<string, { buy: PortfolioTrade[]; sell: PortfolioTrade[] }>();
+
+  userTrades.value.forEach(t => {
+    const rawTime = t.tradeTime || t.tradeDate || '';
+    if (!rawTime) return;
+    const dayKey = rawTime.substring(0, 10);
+    const minuteKey = rawTime.length >= 16 ? rawTime.substring(0, 16) : dayKey;
+
+    let matchedDate: string | undefined;
+    if (dateIndexMap.has(minuteKey)) {
+      matchedDate = dates[dateIndexMap.get(minuteKey)!];
+    } else if (dateIndexMap.has(dayKey)) {
+      matchedDate = dates[dateIndexMap.get(dayKey)!];
+    } else if (frequency.value !== '1d' && frequency.value !== '1m') {
+      // 周期线（周/月/季/年K）匹配区间内对应bar
+      for (let i = dates.length - 1; i >= 0; i--) {
+        const bar = dates[i];
+        if (!bar) continue;
+        const barDate = bar.substring(0, 10);
+        if (dayKey >= barDate) {
+          matchedDate = bar;
+          break;
+        }
+      }
+    }
+
+    if (matchedDate) {
+      if (!tradesByDate.has(matchedDate)) {
+        tradesByDate.set(matchedDate, { buy: [], sell: [] });
+      }
+      const group = tradesByDate.get(matchedDate)!;
+      if (isBuyTradeType(t.tradeType)) {
+        group.buy.push(t);
+      } else if (isSellTradeType(t.tradeType)) {
+        group.sell.push(t);
+      }
+    }
+  });
+
+  tradesByDate.forEach((group, matchedDate) => {
+    const idx = dates.indexOf(matchedDate);
+    if (idx === -1 || !values[idx]) return;
+    const lowPrice = values[idx][2];
+    const highPrice = values[idx][3];
+
+    if (group.buy.length > 0) {
+      markPoints.push({
+        name: '买入点',
+        coord: [matchedDate, lowPrice],
+        symbol: 'circle',
+        symbolSize: 22,
+        symbolOffset: [0, 15],
+        itemStyle: {
+          color: '#ef4444',
+          borderColor: '#ffffff',
+          borderWidth: 1.5,
+          shadowColor: 'rgba(239, 68, 68, 0.45)',
+          shadowBlur: 5
+        },
+        label: {
+          show: true,
+          formatter: 'B',
+          color: '#ffffff',
+          fontWeight: 'bold',
+          fontSize: 11,
+          offset: [0, 0]
+        },
+        actionType: 'BUY',
+        date: matchedDate,
+        trades: group.buy
+      });
+    }
+
+    if (group.sell.length > 0) {
+      markPoints.push({
+        name: '卖出点',
+        coord: [matchedDate, highPrice],
+        symbol: 'circle',
+        symbolSize: 22,
+        symbolOffset: [0, -15],
+        itemStyle: {
+          color: '#10b981',
+          borderColor: '#ffffff',
+          borderWidth: 1.5,
+          shadowColor: 'rgba(16, 185, 129, 0.45)',
+          shadowBlur: 5
+        },
+        label: {
+          show: true,
+          formatter: 'S',
+          color: '#ffffff',
+          fontWeight: 'bold',
+          fontSize: 11,
+          offset: [0, 0]
+        },
+        actionType: 'SELL',
+        date: matchedDate,
+        trades: group.sell
+      });
+    }
+  });
+
+  return markPoints;
 };
 
 const formatDividendText = (div: StockDividendDetail) => {
@@ -473,6 +673,17 @@ const initChart = () => {
   if (chartContainer.value) {
     chartInstance = echarts.init(chartContainer.value);
     
+    // 监听鼠标离开标记点与画布事件，及时隐藏打点浮层卡片
+    chartInstance.on('mouseout', (params: any) => {
+      if (params?.componentType === 'markPoint') {
+        chartInstance?.dispatchAction({ type: 'hideTip' });
+      }
+    });
+
+    chartInstance.on('globalout', () => {
+      chartInstance?.dispatchAction({ type: 'hideTip' });
+    });
+
     if (resizeObserver) resizeObserver.disconnect();
     
     resizeObserver = new ResizeObserver(() => {
@@ -1428,24 +1639,28 @@ const renderFiveDayIntraday = () => {
 
 // ==================== 1分K线（近5个已收盘交易日1分钟蜡烛图） ====================
 
+const minuteKlineBars = ref<StockMinuteBar[]>([]);
+
 const fetchMinuteKlineData = async () => {
   if (!props.stock.stockCode) return;
 
   loadingChart.value = true;
   try {
     const bars = await loadMinuteKline();
+    minuteKlineBars.value = bars;
     currentMA.value = null;
-      currentIndicators.value = null;
-      currentOhlc.value = null;
+    currentIndicators.value = null;
+    currentOhlc.value = null;
     if (bars.length > 0) {
       renderMinuteKlineChart(bars);
     } else {
       chartInstance?.clear();
     }
   } catch (error) {
+    minuteKlineBars.value = [];
     currentMA.value = null;
-      currentIndicators.value = null;
-      currentOhlc.value = null;
+    currentIndicators.value = null;
+    currentOhlc.value = null;
     chartInstance?.clear();
     console.error('Failed to fetch minute kline:', error);
   } finally {
@@ -1459,6 +1674,7 @@ const renderMinuteKlineChart = (bars: StockMinuteBar[]) => {
   const dates = bars.map(b => b.barTime);
   const values = bars.map(b => [b.openPrice, b.closePrice, b.lowPrice, b.highPrice]);
   const volumes = bars.map(b => b.volume);
+  const tradeMarkPoints = buildTradeMarkPoints(dates, values);
 
   let lastShownDay = '';
   const formatBarLabel = (value: string, idx: number) => {
@@ -1574,7 +1790,27 @@ const renderMinuteKlineChart = (bars: StockMinuteBar[]) => {
           color0: '#10B981',
           borderColor: '#EF4444',
           borderColor0: '#10B981'
-        }
+        },
+        markPoint: (indicatorVisibility.tradePoints && tradeMarkPoints.length > 0) ? {
+          data: tradeMarkPoints,
+          tooltip: {
+            show: true,
+            showContent: true,
+            trigger: 'item',
+            confine: true,
+            enterable: false,
+            backgroundColor: chartTooltipTheme.backgroundColor,
+            borderColor: chartTooltipTheme.borderColor,
+            borderWidth: 1,
+            padding: [8, 12],
+            textStyle: {
+              color: chartTooltipTheme.primaryTextColor,
+              fontSize: 12
+            },
+            extraCssText: `box-shadow: 0 4px 12px ${chartTooltipTheme.shadowColor}; border-radius: ${chartTooltipTheme.tooltipBorderRadius}px; z-index: 100; pointer-events: none;`,
+            formatter: (params: any) => formatTradePointTooltip(params)
+          }
+        } : undefined
       },
       {
         name: '成交量',
@@ -1726,6 +1962,7 @@ const renderChart = (data: StockQuoteHistory[]) => {
     item.lowPrice,
     item.highPrice
   ]);
+  const tradeMarkPoints = buildTradeMarkPoints(dates, values);
 
   const ma5 = calculateMA(5, data).slice(displayStart);
   const ma10 = calculateMA(10, data).slice(displayStart);
@@ -2006,7 +2243,27 @@ const renderChart = (data: StockQuoteHistory[]) => {
           color0: '#10B981',
           borderColor: '#EF4444',
           borderColor0: '#10B981'
-        }
+        },
+        markPoint: (indicatorVisibility.tradePoints && tradeMarkPoints.length > 0) ? {
+          data: tradeMarkPoints,
+          tooltip: {
+            show: true,
+            showContent: true,
+            trigger: 'item',
+            confine: true,
+            enterable: false,
+            backgroundColor: chartTooltipTheme.backgroundColor,
+            borderColor: chartTooltipTheme.borderColor,
+            borderWidth: 1,
+            padding: [8, 12],
+            textStyle: {
+              color: chartTooltipTheme.primaryTextColor,
+              fontSize: 12
+            },
+            extraCssText: `box-shadow: 0 4px 12px ${chartTooltipTheme.shadowColor}; border-radius: ${chartTooltipTheme.tooltipBorderRadius}px; z-index: 100; pointer-events: none;`,
+            formatter: (params: any) => formatTradePointTooltip(params)
+          }
+        } : undefined
       },
       {
         name: 'MA5',
@@ -2201,6 +2458,10 @@ watch(indicatorVisibility, () => {
     if (historyData.value.length > 0) {
       renderChart(historyData.value);
     }
+  } else if (frequency.value === '1m') {
+    if (minuteKlineBars.value.length > 0) {
+      renderMinuteKlineChart(minuteKlineBars.value);
+    }
   } else if (frequency.value === 'minute') {
     if (lastMinuteVo) {
       renderMinuteChart(lastMinuteVo);
@@ -2211,6 +2472,14 @@ watch(indicatorVisibility, () => {
     }
   }
 }, { deep: true });
+
+watch(userTrades, () => {
+  if (isDailyMode.value && historyData.value.length > 0) {
+    renderChart(historyData.value);
+  } else if (frequency.value === '1m' && minuteKlineBars.value.length > 0) {
+    renderMinuteKlineChart(minuteKlineBars.value);
+  }
+});
 
 watch([() => props.stock.stockCode, frequency], () => {
     fetchHistory();
@@ -2225,11 +2494,13 @@ watch(() => props.stock.stockCode, () => {
     currentOhlc.value = null;
     currentMinute.value = null;
     fetchOrderBook();
+    fetchUserTrades();
 });
 
 onMounted(() => {
   initChart();
   fetchHistory();
+  fetchUserTrades();
   fetchAllDividends();
   fetchOrderBook();
 });

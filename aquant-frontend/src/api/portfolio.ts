@@ -135,6 +135,14 @@ export const getTradePage = async (
   return res.data?.data || { content: [], totalElements: 0, totalPages: 0, size: 10, number: 0 };
 };
 
+/** 按标的代码查询用户所有账户的历史交易流水（用于在K线图打点） */
+export const getTradesByAssetCode = async (assetCode: string): Promise<PortfolioTrade[]> => {
+  const res = await request.get<ResponseDTO<PortfolioTrade[]>>('/portfolio/trade/byAsset', {
+    params: { assetCode }
+  });
+  return res.data?.data || [];
+};
+
 /** 单笔流水冲正 */
 export const reverseTrade = async (
   tradeId: number,

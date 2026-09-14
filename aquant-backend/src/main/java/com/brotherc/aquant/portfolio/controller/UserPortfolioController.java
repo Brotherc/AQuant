@@ -126,6 +126,12 @@ public class UserPortfolioController {
         throw ExceptionEnum.PORTFOLIO_TRADE_PARAMS_ILLEGAL.toException();
     }
 
+    @Operation(summary = "按标的代码查询用户所有账户的历史交易流水")
+    @GetMapping("/trade/byAsset")
+    public ResponseDTO<List<PortfolioTradeVO>> tradeListByAsset(@RequestParam String assetCode) {
+        return ResponseDTO.success(portfolioService.getTradesByAssetCode(assetCode));
+    }
+
     @Operation(summary = "冲正交易流水")
     @PostMapping("/trade/reverse")
     public ResponseDTO<Void> reverseTrade(
@@ -225,4 +231,5 @@ public class UserPortfolioController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return ResponseDTO.success(portfolioService.getSnapshots(portfolioId, startDate, endDate));
     }
+
 }

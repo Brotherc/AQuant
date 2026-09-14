@@ -17,6 +17,9 @@ public interface UserPortfolioTradeRepository extends JpaRepository<UserPortfoli
 
     List<UserPortfolioTrade> findAllByAccountIdAndStatusOrderByTradeTimeAscIdAsc(Long accountId, String status);
 
+    List<UserPortfolioTrade> findAllByAccountIdInAndAssetCodeInAndStatusOrderByTradeTimeAscIdAsc(
+            Collection<Long> accountIds, Collection<String> assetCodes, String status);
+
     List<UserPortfolioTrade> findAllByImportBatchIdAndAccountId(Long importBatchId, Long accountId);
 
     Optional<UserPortfolioTrade> findByIdAndAccountId(Long id, Long accountId);
