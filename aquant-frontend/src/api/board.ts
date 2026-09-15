@@ -13,6 +13,15 @@ export interface StockIndustryBoardVO {
     riseCount: number;
     fallCount: number;
     averagePrice: number;
+    openPrice: number | null;
+    preClosePrice: number | null;
+    highPrice: number | null;
+    lowPrice: number | null;
+    turnoverRate: number | null;
+    volumeRatio: number | null;
+    outerDisc: number | null;
+    circulatingMarketValue: number | null;
+    circulatingShares: number | null;
     leadingStock: string;
     leadingStockPrice: number;
     leadingStockChangePercent: number;

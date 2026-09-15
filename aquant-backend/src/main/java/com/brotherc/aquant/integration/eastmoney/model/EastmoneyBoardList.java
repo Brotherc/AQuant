@@ -24,8 +24,12 @@ public class EastmoneyBoardList {
         private BigDecimal latestPrice;
         /** 涨跌幅（百分比，东财 fltt=2 时已放大100倍为数值，如 2.57 表示 +2.57%） */
         private BigDecimal changePercent;
-        /** 总市值（元） */
-        private BigDecimal totalMarketValue;
+        /** 总成交量（手） */
+        private BigDecimal totalVolume;
+        /** 总成交额（元） */
+        private BigDecimal totalAmount;
+        /** 主力净流入（元，可能为负） */
+        private BigDecimal netInflow;
         /** 上涨家数 */
         private Integer riseCount;
         /** 下跌家数 */

@@ -144,6 +144,16 @@ public class StockIndustryBoardEmQueryService {
             view.setLeadingStock(null);
             view.setLeadingStockPrice(null);
             view.setLeadingStockChangePercent(null);
+            // 今开/昨收/最高/最低等详情快照只属于当前会话：历史日期视图改用该日K线数据，其余快照字段清空
+            view.setOpenPrice(history.getOpenPrice());
+            view.setHighPrice(history.getHighPrice());
+            view.setLowPrice(history.getLowPrice());
+            view.setPreClosePrice(null);
+            view.setTurnoverRate(null);
+            view.setVolumeRatio(null);
+            view.setOuterDisc(null);
+            view.setCirculatingMarketValue(null);
+            view.setCirculatingShares(null);
         }
         return view;
     }

@@ -82,6 +82,22 @@
                 <span class="quote-label">板块均价</span>
                 <span class="quote-value">{{ selectedBoard.averagePrice != null ? selectedBoard.averagePrice : '-' }}</span>
               </div>
+              <div v-if="selectedBoard.openPrice != null" class="quotes-item">
+                <span class="quote-label">今开</span>
+                <span class="quote-value">{{ formatFixed2(selectedBoard.openPrice) }}</span>
+              </div>
+              <div v-if="selectedBoard.preClosePrice != null" class="quotes-item">
+                <span class="quote-label">昨收</span>
+                <span class="quote-value">{{ formatFixed2(selectedBoard.preClosePrice) }}</span>
+              </div>
+              <div v-if="selectedBoard.highPrice != null" class="quotes-item">
+                <span class="quote-label">最高</span>
+                <span class="quote-value">{{ formatFixed2(selectedBoard.highPrice) }}</span>
+              </div>
+              <div v-if="selectedBoard.lowPrice != null" class="quotes-item">
+                <span class="quote-label">最低</span>
+                <span class="quote-value">{{ formatFixed2(selectedBoard.lowPrice) }}</span>
+              </div>
               <div class="quotes-item">
                 <span class="quote-label">总成交额</span>
                 <span class="quote-value">{{ selectedBoard.totalAmount != null ? selectedBoard.totalAmount + ' 亿元' : '-' }}</span>
@@ -89,6 +105,30 @@
               <div class="quotes-item">
                 <span class="quote-label">总成交量</span>
                 <span class="quote-value">{{ selectedBoard.totalVolume != null ? selectedBoard.totalVolume + ' 万手' : '-' }}</span>
+              </div>
+              <div v-if="selectedBoard.turnoverRate != null" class="quotes-item">
+                <span class="quote-label">换手率</span>
+                <span class="quote-value">{{ selectedBoard.turnoverRate + '%' }}</span>
+              </div>
+              <div v-if="selectedBoard.volumeRatio != null" class="quotes-item">
+                <span class="quote-label">量比</span>
+                <span class="quote-value">{{ selectedBoard.volumeRatio }}</span>
+              </div>
+              <div v-if="selectedBoard.outerDisc != null" class="quotes-item">
+                <span class="quote-label">外盘</span>
+                <span class="quote-value">{{ selectedBoard.outerDisc + ' 万手' }}</span>
+              </div>
+              <div v-if="selectedBoard.outerDisc != null && selectedBoard.totalVolume != null" class="quotes-item">
+                <span class="quote-label">内盘</span>
+                <span class="quote-value">{{ formatFixed2(selectedBoard.totalVolume - selectedBoard.outerDisc) + ' 万手' }}</span>
+              </div>
+              <div v-if="selectedBoard.circulatingMarketValue != null" class="quotes-item">
+                <span class="quote-label">流通市值</span>
+                <span class="quote-value">{{ formatYiAmount(selectedBoard.circulatingMarketValue) }}</span>
+              </div>
+              <div v-if="selectedBoard.circulatingShares != null" class="quotes-item">
+                <span class="quote-label">流通股本</span>
+                <span class="quote-value">{{ formatYiAmount(selectedBoard.circulatingShares) }}股</span>
               </div>
               <div class="quotes-item">
                 <span class="quote-label">净流入</span>
@@ -249,6 +289,14 @@ const formatSignedPercent = (value: number | null) => {
   if (value == null) return '-';
   return `${value > 0 ? '+' : ''}${value.toFixed(2)}%`;
 };
+
+// 亿为单位的大数人性化：超过万亿换算为万亿展示（对齐东财详情页"15.68万亿"样式）
+const formatYiAmount = (value: number | null) => {
+  if (value == null) return '-';
+  return value >= 10000 ? `${(value / 10000).toFixed(2)} 万亿` : `${value} 亿`;
+};
+
+const formatFixed2 = (value: number | null) => (value == null ? '-' : value.toFixed(2));
 
 const getSparklinePath = (prices: number[]) => {
   const min = Math.min(...prices);
