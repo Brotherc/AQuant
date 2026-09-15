@@ -48,6 +48,7 @@ const timeOptions = [
 
 const chartRef = ref<HTMLDivElement | null>(null);
 let chartInstance: echarts.ECharts | null = null;
+let resizeObserver: ResizeObserver | null = null;
 
 // 根据日期聚合数据
 const aggregatedData = computed(() => {
@@ -179,6 +180,7 @@ const renderChart = () => {
   };
 
   chartInstance.setOption(option, true);
+  chartInstance.resize();
 };
 
 const handleResize = () => {
@@ -198,12 +200,20 @@ watch(
 onMounted(() => {
   nextTick(() => {
     renderChart();
+    if (chartRef.value && typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => {
+        chartInstance?.resize();
+      });
+      resizeObserver.observe(chartRef.value);
+    }
   });
   window.addEventListener('resize', handleResize);
 });
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize);
+  resizeObserver?.disconnect();
+  resizeObserver = null;
   chartInstance?.dispose();
   chartInstance = null;
 });
@@ -259,7 +269,7 @@ onUnmounted(() => {
 
 .detail-freq-selector :deep(.ant-radio-button-wrapper::before) {
   display: none !important;
-}
+  }
 
 .detail-freq-selector :deep(.ant-radio-button-wrapper:hover) {
   color: #0f172a !important;
@@ -276,6 +286,8 @@ onUnmounted(() => {
 .chart-body {
   flex: 1;
   min-height: 0;
+  width: 100%;
+  position: relative;
 }
 
 .chart-state-wrap {
@@ -297,5 +309,6 @@ onUnmounted(() => {
 .echarts-container {
   height: 100%;
   width: 100%;
+  min-width: 100%;
 }
 </style>

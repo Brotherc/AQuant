@@ -228,7 +228,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { message } from 'ant-design-vue';
 
 import type {
@@ -254,7 +254,8 @@ import {
   getTradePage,
   getCashList,
   getImportBatches,
-  downloadTradeImportTemplate
+  downloadTradeImportTemplate,
+  importTradeFile
 } from '@/api/portfolio';
 
 import PortfolioStepBanner from './components/PortfolioStepBanner.vue';
@@ -469,8 +470,13 @@ const loadActiveTabData = async () => {
   }
 };
 
-watch(activeTabKey, () => {
+watch(activeTabKey, (newTab) => {
   void loadActiveTabData();
+  if (newTab === 'overview') {
+    nextTick(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+  }
 });
 
 const handleStepClick = (step: number) => {
@@ -550,9 +556,31 @@ const handleTradeSuccess = () => {
   void loadActiveTabData();
 };
 
-const handleFileUpload = (file: File) => {
-  message.success(`文件 ${file.name} 解析导入成功，已更新持仓`);
-  void loadActiveTabData();
+const handleFileUpload = async (file: File, accountId?: number) => {
+  const targetId =
+    accountId ||
+    selectedAccountId.value ||
+    (accounts.value.length > 0 && accounts.value[0] ? accounts.value[0].id : undefined);
+
+  if (!targetId) {
+    message.warning('请先在【账户与资金】中创建或选择一个券商账户');
+    return;
+  }
+
+  const hide = message.loading(`正在上传并解析文件 ${file.name}...`, 0);
+  try {
+    const result = await importTradeFile(targetId, file, true);
+    hide();
+    if (result) {
+      message.success(
+        `导入成功！总计 ${result.totalCount || 0} 笔，成功 ${result.successCount || 0} 笔，跳过重复 ${result.skipCount || 0} 笔`
+      );
+      await loadActiveTabData();
+    }
+  } catch (err: any) {
+    hide();
+    message.error(err?.message || '文件导入失败，请检查文件格式或重试');
+  }
 };
 
 const handleDownloadTemplate = async () => {

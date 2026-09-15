@@ -131,7 +131,6 @@
 
 <script lang="ts" setup>
 import { ref, computed, watch } from 'vue';
-import { message } from 'ant-design-vue';
 import type { BrokerAccountVO } from '@/types/portfolio';
 
 const props = defineProps<{
@@ -140,7 +139,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'fileSelected', file: File): void;
+  (e: 'fileSelected', file: File, accountId?: number): void;
   (e: 'downloadTemplate'): void;
 }>();
 
@@ -181,8 +180,7 @@ const handleFileChange = (e: Event) => {
   const target = e.target as HTMLInputElement;
   if (target.files && target.files.length > 0 && target.files[0]) {
     const file = target.files[0];
-    emit('fileSelected', file);
-    message.success(`已选择文件：${file.name}`);
+    emit('fileSelected', file, targetAccountId.value);
     target.value = '';
   }
 };

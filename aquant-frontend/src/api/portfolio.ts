@@ -163,6 +163,21 @@ export const downloadTradeImportTemplate = async (): Promise<Blob> => {
   return res.data;
 };
 
+/** 导入 CSV/Excel 交易流水文件 */
+export const importTradeFile = async (
+  accountId: number,
+  file: File,
+  syncCashBalance = true
+): Promise<TradeImportResult> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await request.post<ResponseDTO<TradeImportResult>>('/portfolio/trade/import', formData, {
+    params: { accountId, syncCashBalance },
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return res.data?.data;
+};
+
 // -------------------------------------------------------------
 // 5. 现金与资产快照
 // -------------------------------------------------------------

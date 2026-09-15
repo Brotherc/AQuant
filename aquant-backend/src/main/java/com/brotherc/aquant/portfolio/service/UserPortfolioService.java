@@ -833,6 +833,7 @@ public class UserPortfolioService {
 
         if (trades.isEmpty()) {
             accountSnapshotRepository.deleteByAccountId(account.getId());
+            accountSnapshotRepository.flush();
             if (currentCash.signum() > 0) {
                 UserPortfolioAccountSnapshot snapshot = new UserPortfolioAccountSnapshot();
                 snapshot.setAccountId(account.getId());
@@ -845,6 +846,7 @@ public class UserPortfolioService {
                 snapshot.setUnrealizedProfit(BigDecimal.ZERO);
                 snapshot.setUnpricedAssetCount(0);
                 accountSnapshotRepository.save(snapshot);
+                accountSnapshotRepository.flush();
             }
             return;
         }
@@ -995,7 +997,11 @@ public class UserPortfolioService {
         }
 
         accountSnapshotRepository.deleteByAccountId(account.getId());
-        accountSnapshotRepository.saveAll(snapshots);
+        accountSnapshotRepository.flush();
+        if (!snapshots.isEmpty()) {
+            accountSnapshotRepository.saveAll(snapshots);
+            accountSnapshotRepository.flush();
+        }
     }
 
     private BigDecimal sumNetCashAfterDate(List<UserPortfolioTrade> trades, LocalDate date) {

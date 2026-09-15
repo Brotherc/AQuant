@@ -3,6 +3,10 @@ package com.brotherc.aquant.portfolio.repository;
 import com.brotherc.aquant.portfolio.entity.UserPortfolioAccountSnapshot;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
@@ -15,6 +19,8 @@ public interface UserPortfolioAccountSnapshotRepository extends JpaRepository<Us
     List<UserPortfolioAccountSnapshot> findAllByAccountIdInAndSnapshotDateBetweenOrderBySnapshotDateAsc(
             Collection<Long> accountIds, LocalDate startDate, LocalDate endDate);
 
-    void deleteByAccountId(Long accountId);
+    @Modifying
+    @Query("DELETE FROM UserPortfolioAccountSnapshot s WHERE s.accountId = :accountId")
+    void deleteByAccountId(@Param("accountId") Long accountId);
 
 }
