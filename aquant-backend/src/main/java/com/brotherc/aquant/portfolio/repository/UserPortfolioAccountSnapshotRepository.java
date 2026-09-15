@@ -14,4 +14,7 @@ public interface UserPortfolioAccountSnapshotRepository extends JpaRepository<Us
 
     List<UserPortfolioAccountSnapshot> findAllByAccountIdInAndSnapshotDateBetweenOrderBySnapshotDateAsc(
             Collection<Long> accountIds, LocalDate startDate, LocalDate endDate);
+
+    void deleteByAccountId(Long accountId);
+
 }

@@ -44,7 +44,7 @@
 
     <div class="banner-action-side">
       <button class="banner-cta-btn" @click="$emit('ctaClick')">
-        <span>{{ ctaText }}</span>
+        <span>{{ dynamicCtaText }}</span>
         <svg viewBox="0 0 1024 1024" width="14" height="14" class="btn-arrow">
           <path
             d="M869 487.8L491.2 159.9c-9.9-8.6-25-1.6-25 11.6v88.2c0 7 3.2 13.6 8.7 17.9L709.7 480H164c-13.3 0-24 10.7-24 24v48c0 13.3 10.7 24 24 24h545.7L474.9 746.4c-5.5 4.3-8.7 10.9-8.7 17.9v88.2c0 13.1 15.1 20.2 25 11.6l377.8-327.9c10.4-8.9 10.4-25.5 0-34.4z"
@@ -52,7 +52,7 @@
           />
         </svg>
       </button>
-      <div class="banner-sub-text">{{ ctaSubText }}</div>
+      <div class="banner-sub-text">{{ dynamicCtaSubText }}</div>
     </div>
   </div>
 </template>
@@ -69,11 +69,9 @@ const props = withDefaults(
     ctaSubText?: string;
   }>(),
   {
-    hasPortfolio: true,
-    hasAccount: true,
-    hasTrade: true,
-    ctaText: '查看持仓',
-    ctaSubText: '已完成全部设置，开始管理您的持仓'
+    hasPortfolio: false,
+    hasAccount: false,
+    hasTrade: false
   }
 );
 
@@ -81,6 +79,22 @@ defineEmits<{
   (e: 'stepClick', stepNumber: number): void;
   (e: 'ctaClick'): void;
 }>();
+
+const dynamicCtaText = computed(() => {
+  if (props.ctaText) return props.ctaText;
+  if (!props.hasPortfolio) return '创建组合';
+  if (!props.hasAccount) return '添加账户';
+  if (!props.hasTrade) return '导入流水';
+  return '查看持仓';
+});
+
+const dynamicCtaSubText = computed(() => {
+  if (props.ctaSubText) return props.ctaSubText;
+  if (!props.hasPortfolio) return '请先创建投资组合';
+  if (!props.hasAccount) return '请绑定券商资金账户';
+  if (!props.hasTrade) return '请导入交易流水以生成持仓';
+  return '已完成全部设置，开始管理您的持仓';
+});
 
 const steps = computed(() => [
   {

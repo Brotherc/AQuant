@@ -981,27 +981,3 @@ CREATE TABLE `user_portfolio_account_snapshot` (
   KEY `idx_portfolio_snapshot_date` (`snapshot_date`),
   CONSTRAINT `fk_portfolio_snapshot_account` FOREIGN KEY (`account_id`) REFERENCES `user_broker_account` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户账户每日资产快照';
-
-DROP TABLE IF EXISTS `user_portfolio_position_snapshot`;
-CREATE TABLE `user_portfolio_position_snapshot` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `account_snapshot_id` bigint NOT NULL COMMENT '账户快照ID',
-  `account_id` bigint NOT NULL COMMENT '券商账户ID',
-  `asset_type` varchar(20) NOT NULL COMMENT '资产类型',
-  `market` varchar(10) DEFAULT NULL COMMENT '交易市场',
-  `asset_code` varchar(30) NOT NULL COMMENT '系统标准资产代码',
-  `asset_name` varchar(100) DEFAULT NULL COMMENT '资产名称',
-  `currency` varchar(10) NOT NULL COMMENT '币种',
-  `quantity` decimal(24,8) NOT NULL COMMENT '持仓数量',
-  `cost_price` decimal(24,8) DEFAULT NULL COMMENT '平均成本价',
-  `cost_amount` decimal(24,4) DEFAULT NULL COMMENT '持仓成本金额',
-  `latest_price` decimal(24,8) DEFAULT NULL COMMENT '快照价格',
-  `market_value` decimal(24,4) DEFAULT NULL COMMENT '快照市值',
-  `unrealized_profit` decimal(24,4) DEFAULT NULL COMMENT '未实现盈亏',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_position_snapshot_asset` (`account_snapshot_id`,`asset_type`,`asset_code`),
-  KEY `idx_position_snapshot_account` (`account_id`,`asset_code`),
-  CONSTRAINT `fk_position_snapshot_header` FOREIGN KEY (`account_snapshot_id`) REFERENCES `user_portfolio_account_snapshot` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_position_snapshot_account` FOREIGN KEY (`account_id`) REFERENCES `user_broker_account` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户账户每日持仓明细快照';

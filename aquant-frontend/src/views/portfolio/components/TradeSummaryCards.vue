@@ -90,47 +90,43 @@ const formatSignedMoney = (val?: number | null): string => {
 };
 
 const totalCount = computed(() => {
-  return props.totalTradesCount ?? props.trades.length ?? 86;
+  return props.totalTradesCount ?? (props.trades ? props.trades.length : 0);
 });
 
 const buyTrades = computed(() => {
-  return props.trades.filter((t) => t.tradeType === 'BUY' || t.tradeType === 'SUBSCRIBE');
+  return (props.trades || []).filter((t) => t.tradeType === 'BUY' || t.tradeType === 'SUBSCRIBE');
 });
 
 const buyAmount = computed(() => {
-  const sum = buyTrades.value.reduce((acc, cur) => acc + (Number(cur.amount ?? cur.grossAmount) || 0), 0);
-  return sum > 0 ? sum : 12968.0;
+  return buyTrades.value.reduce((acc, cur) => acc + (Number(cur.amount ?? cur.grossAmount) || 0), 0);
 });
 
 const buyCount = computed(() => {
-  return buyTrades.value.length || 8;
+  return buyTrades.value.length;
 });
 
 const sellTrades = computed(() => {
-  return props.trades.filter((t) => t.tradeType === 'SELL' || t.tradeType === 'REDEEM');
+  return (props.trades || []).filter((t) => t.tradeType === 'SELL' || t.tradeType === 'REDEEM');
 });
 
 const sellAmount = computed(() => {
-  const sum = sellTrades.value.reduce((acc, cur) => acc + (Number(cur.amount ?? cur.grossAmount) || 0), 0);
-  return sum > 0 ? sum : 10230.0;
+  return sellTrades.value.reduce((acc, cur) => acc + (Number(cur.amount ?? cur.grossAmount) || 0), 0);
 });
 
 const sellCount = computed(() => {
-  return sellTrades.value.length || 6;
+  return sellTrades.value.length;
 });
 
 const dividendAmount = computed(() => {
-  const sum = props.trades
+  return (props.trades || [])
     .filter((t) => t.tradeType === 'DIVIDEND_CASH' || t.tradeType === 'DIVIDEND_SHARE')
     .reduce((acc, cur) => acc + (Number(cur.amount ?? cur.grossAmount) || 0), 0);
-  return sum > 0 ? sum : 8.8;
 });
 
 const taxAmount = computed(() => {
-  const sum = props.trades
+  return (props.trades || [])
     .filter((t) => t.tradeType === 'TAX' || t.tradeType === 'FEE')
     .reduce((acc, cur) => acc + (Number(cur.amount ?? cur.taxFee ?? cur.totalFee) || 0), 0);
-  return sum > 0 ? sum : 133.2;
 });
 
 const netDividendTax = computed(() => {
@@ -144,7 +140,7 @@ const dividendTaxClass = computed(() => {
 });
 
 const latestImportTime = computed(() => {
-  return props.lastImportTime || '2026-09-12 09:40:41';
+  return props.lastImportTime || '-';
 });
 </script>
 

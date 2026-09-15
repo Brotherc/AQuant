@@ -60,8 +60,8 @@
             </svg>
           </div>
           <div class="file-info">
-            <div class="file-name">{{ latestBatch.sourceFileName || latestBatch.batchNo || '资金流水.xlsx' }}</div>
-            <div class="file-time">{{ latestBatch.createdAt || latestBatch.createTime || '2026-09-12 09:40:41' }}</div>
+            <div class="file-name">{{ latestBatch.sourceFileName || latestBatch.batchNo || '-' }}</div>
+            <div class="file-time">{{ latestBatch.createdAt || latestBatch.createTime || '-' }}</div>
           </div>
         </div>
 
@@ -73,7 +73,7 @@
                 fill="#10b981"
               />
             </svg>
-            <span>{{ latestBatch.successRows ?? latestBatch.successCount ?? 86 }} / {{ latestBatch.totalRows ?? latestBatch.totalCount ?? 86 }} 成功</span>
+            <span>{{ latestBatch.successRows ?? latestBatch.successCount ?? 0 }} / {{ latestBatch.totalRows ?? latestBatch.totalCount ?? 0 }} 成功</span>
           </div>
         </div>
       </div>

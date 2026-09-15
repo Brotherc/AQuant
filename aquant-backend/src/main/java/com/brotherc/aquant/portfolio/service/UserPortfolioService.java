@@ -10,8 +10,11 @@ import com.brotherc.aquant.portfolio.entity.*;
 import com.brotherc.aquant.portfolio.model.vo.*;
 import com.brotherc.aquant.portfolio.repository.*;
 import com.brotherc.aquant.stock.entity.StockQuote;
+import com.brotherc.aquant.stock.entity.StockQuoteHistory;
+import com.brotherc.aquant.stock.repository.StockQuoteHistoryRepository;
 import com.brotherc.aquant.stock.repository.StockQuoteRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,6 +29,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserPortfolioService {
@@ -44,8 +48,8 @@ public class UserPortfolioService {
     private final UserPortfolioPositionRepository positionRepository;
     private final UserPortfolioCashRepository cashRepository;
     private final UserPortfolioAccountSnapshotRepository accountSnapshotRepository;
-    private final UserPortfolioPositionSnapshotRepository positionSnapshotRepository;
     private final StockQuoteRepository stockQuoteRepository;
+    private final StockQuoteHistoryRepository stockQuoteHistoryRepository;
     private final StockFundNetValueRepository fundNetValueRepository;
 
     @Transactional(rollbackFor = Exception.class)
@@ -116,15 +120,12 @@ public class UserPortfolioService {
     public void deletePortfolio(Long portfolioId) {
         Long userId = UserContext.requireCurrentUserId();
         UserPortfolio portfolio = getPortfolio(portfolioId, userId);
-        portfolio.setDeleted(true);
-        portfolio.setDefaultPortfolio(false);
-        portfolioRepository.save(portfolio);
-        for (UserBrokerAccount account : accountRepository
-                .findAllByPortfolioIdAndUserIdAndDeletedFalseOrderByCreateTimeAsc(portfolioId, userId)) {
-            account.setDeleted(true);
-            account.setStatus("DISABLED");
-            accountRepository.save(account);
+        List<UserBrokerAccount> accounts = accountRepository
+                .findAllByPortfolioIdAndUserIdAndDeletedFalseOrderByCreateTimeAsc(portfolioId, userId);
+        for (UserBrokerAccount account : accounts) {
+            deleteAccount(account.getId());
         }
+        portfolioRepository.delete(portfolio);
         List<UserPortfolio> remaining = portfolioRepository
                 .findAllByUserIdAndDeletedFalseOrderByDefaultPortfolioDescCreateTimeAsc(userId);
         if (!remaining.isEmpty() && remaining.stream().noneMatch(UserPortfolio::getDefaultPortfolio)) {
@@ -184,9 +185,12 @@ public class UserPortfolioService {
     @Transactional(rollbackFor = Exception.class)
     public void deleteAccount(Long accountId) {
         UserBrokerAccount account = getAccount(accountId, UserContext.requireCurrentUserId());
-        account.setDeleted(true);
-        account.setStatus("DISABLED");
-        accountRepository.save(account);
+        accountSnapshotRepository.deleteByAccountId(account.getId());
+        positionRepository.deleteByAccountId(account.getId());
+        cashRepository.deleteByAccountId(account.getId());
+        tradeRepository.deleteByAccountId(account.getId());
+        importBatchRepository.deleteByAccountId(account.getId());
+        accountRepository.delete(account);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -390,6 +394,10 @@ public class UserPortfolioService {
         cash.setAvailableBalance(reqVO.getAvailableBalance());
         cash.setFrozenBalance(reqVO.getFrozenBalance());
         cashRepository.save(cash);
+        UserBrokerAccount account = accountRepository.findById(reqVO.getAccountId()).orElse(null);
+        if (account != null) {
+            rebuildAccountHistoricalSnapshots(account);
+        }
     }
 
     public List<UserPortfolioCash> getCash(Long accountId) {
@@ -466,77 +474,10 @@ public class UserPortfolioService {
     @Transactional(rollbackFor = Exception.class)
     public void generateSnapshot(Long portfolioId, LocalDate snapshotDate) {
         Long userId = UserContext.requireCurrentUserId();
-        UserPortfolio portfolio = getPortfolio(portfolioId, userId);
-        generateSnapshot(portfolio, getTargetAccounts(portfolioId, null, userId), snapshotDate);
-    }
-
-    public List<Long> getActivePortfolioIds() {
-        return portfolioRepository.findAllByDeletedFalseOrderByIdAsc().stream().map(UserPortfolio::getId).toList();
-    }
-
-    @Transactional(rollbackFor = Exception.class)
-    public void generateSystemSnapshot(Long portfolioId, LocalDate snapshotDate) {
-        UserPortfolio portfolio = portfolioRepository.findById(portfolioId)
-                .filter(item -> !Boolean.TRUE.equals(item.getDeleted()))
-                .orElseThrow(ExceptionEnum.PORTFOLIO_NOT_FOUND::toException);
-        List<UserBrokerAccount> accounts = accountRepository
-                .findAllByPortfolioIdAndUserIdAndDeletedFalseOrderByCreateTimeAsc(portfolioId, portfolio.getUserId());
-        generateSnapshot(portfolio, accounts, snapshotDate);
-    }
-
-    private void generateSnapshot(
-            UserPortfolio portfolio, List<UserBrokerAccount> accounts, LocalDate snapshotDate
-    ) {
-        refreshPositionPrices(accounts);
-        LocalDate date = snapshotDate == null ? LocalDate.now() : snapshotDate;
-
+        getPortfolio(portfolioId, userId);
+        List<UserBrokerAccount> accounts = getTargetAccounts(portfolioId, null, userId);
         for (UserBrokerAccount account : accounts) {
-            List<UserPortfolioPosition> positions = positionRepository.findAllByAccountIdOrderByMarketValueDesc(account.getId());
-            BigDecimal cashAmount = cashRepository.findByAccountIdAndCurrency(account.getId(), portfolio.getBaseCurrency())
-                    .map(UserPortfolioCash::getTotalBalance).orElse(BigDecimal.ZERO);
-            BigDecimal marketValue = positions.stream().filter(item -> portfolio.getBaseCurrency().equals(item.getCurrency()))
-                    .map(UserPortfolioPosition::getMarketValue).filter(Objects::nonNull)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            BigDecimal costAmount = positions.stream().filter(item -> portfolio.getBaseCurrency().equals(item.getCurrency()))
-                    .map(UserPortfolioPosition::getCostAmount).filter(Objects::nonNull)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            BigDecimal profit = positions.stream().filter(item -> portfolio.getBaseCurrency().equals(item.getCurrency()))
-                    .map(UserPortfolioPosition::getUnrealizedProfit).filter(Objects::nonNull)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            UserPortfolioAccountSnapshot snapshot = accountSnapshotRepository
-                    .findByAccountIdAndSnapshotDate(account.getId(), date).orElseGet(UserPortfolioAccountSnapshot::new);
-            snapshot.setAccountId(account.getId());
-            snapshot.setSnapshotDate(date);
-            snapshot.setCurrency(portfolio.getBaseCurrency());
-            snapshot.setCashAmount(cashAmount);
-            snapshot.setMarketValue(marketValue);
-            snapshot.setTotalAsset(cashAmount.add(marketValue));
-            snapshot.setCostAmount(costAmount);
-            snapshot.setUnrealizedProfit(profit);
-            snapshot.setUnpricedAssetCount((int) positions.stream().filter(item -> item.getLatestPrice() == null).count());
-            snapshot = accountSnapshotRepository.save(snapshot);
-
-            positionSnapshotRepository.deleteByAccountSnapshotId(snapshot.getId());
-            List<UserPortfolioPositionSnapshot> details = new ArrayList<>();
-            for (UserPortfolioPosition position : positions) {
-                UserPortfolioPositionSnapshot detail = new UserPortfolioPositionSnapshot();
-                detail.setAccountSnapshotId(snapshot.getId());
-                detail.setAccountId(account.getId());
-                detail.setAssetType(position.getAssetType());
-                detail.setMarket(position.getMarket());
-                detail.setAssetCode(position.getAssetCode());
-                detail.setAssetName(position.getAssetName());
-                detail.setCurrency(position.getCurrency());
-                detail.setQuantity(position.getQuantity());
-                detail.setCostPrice(position.getCostPrice());
-                detail.setCostAmount(position.getCostAmount());
-                detail.setLatestPrice(position.getLatestPrice());
-                detail.setMarketValue(position.getMarketValue());
-                detail.setUnrealizedProfit(position.getUnrealizedProfit());
-                details.add(detail);
-            }
-            positionSnapshotRepository.saveAll(details);
+            rebuildAccountHistoricalSnapshots(account);
         }
     }
 
@@ -608,6 +549,7 @@ public class UserPortfolioService {
                 }).toList();
         positionRepository.saveAll(positions);
         refreshPositionPrices(List.of(account));
+        rebuildAccountHistoricalSnapshots(account);
     }
 
     private void refreshPositionPrices(List<UserBrokerAccount> accounts) {
@@ -863,6 +805,241 @@ public class UserPortfolioService {
         vo.setStatus(trade.getStatus());
         vo.setRemark(trade.getRemark());
         return vo;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void generateDailySnapshots() {
+        log.info("开始执行每日用户持仓资产快照与回溯...");
+        List<UserBrokerAccount> accounts = accountRepository.findAllByDeletedFalse();
+        for (UserBrokerAccount account : accounts) {
+            try {
+                rebuildAccountHistoricalSnapshots(account);
+            } catch (Exception e) {
+                log.error("生成账户资产快照失败, accountId: {}, error: {}", account.getId(), e.getMessage(), e);
+            }
+        }
+        log.info("每日用户持仓资产快照与回溯完成, 共处理 {} 个账户", accounts.size());
+    }
+
+    private void rebuildAccountHistoricalSnapshots(UserBrokerAccount account) {
+        List<UserPortfolioTrade> trades = tradeRepository
+                .findAllByAccountIdAndStatusOrderByTradeTimeAscIdAsc(account.getId(), "NORMAL");
+        UserPortfolio portfolio = portfolioRepository.findById(account.getPortfolioId()).orElse(null);
+        String baseCurrency = (portfolio != null && portfolio.getBaseCurrency() != null)
+                ? portfolio.getBaseCurrency() : "CNY";
+
+        BigDecimal currentCash = cashRepository.findByAccountIdAndCurrency(account.getId(), baseCurrency)
+                .map(UserPortfolioCash::getTotalBalance).orElse(BigDecimal.ZERO);
+
+        if (trades.isEmpty()) {
+            accountSnapshotRepository.deleteByAccountId(account.getId());
+            if (currentCash.signum() > 0) {
+                UserPortfolioAccountSnapshot snapshot = new UserPortfolioAccountSnapshot();
+                snapshot.setAccountId(account.getId());
+                snapshot.setSnapshotDate(LocalDate.now());
+                snapshot.setCurrency(baseCurrency);
+                snapshot.setCashAmount(currentCash);
+                snapshot.setMarketValue(BigDecimal.ZERO);
+                snapshot.setTotalAsset(currentCash);
+                snapshot.setCostAmount(BigDecimal.ZERO);
+                snapshot.setUnrealizedProfit(BigDecimal.ZERO);
+                snapshot.setUnpricedAssetCount(0);
+                accountSnapshotRepository.save(snapshot);
+            }
+            return;
+        }
+
+        LocalDate startDate = trades.get(0).getTradeTime().toLocalDate();
+        LocalDate endDate = LocalDate.now();
+        if (startDate.isAfter(endDate)) {
+            startDate = endDate;
+        }
+
+        List<LocalDate> dbTradeDates = stockQuoteHistoryRepository
+                .findTradeDatesBetween(startDate.toString(), endDate.toString()).stream()
+                .map(LocalDate::parse)
+                .toList();
+        Set<LocalDate> dateSet = new TreeSet<>(dbTradeDates);
+        for (UserPortfolioTrade t : trades) {
+            LocalDate d = t.getTradeTime().toLocalDate();
+            if (!d.isAfter(endDate)) {
+                dateSet.add(d);
+            }
+        }
+        dateSet.add(endDate);
+        List<LocalDate> tradeDates = new ArrayList<>(dateSet);
+
+        List<String> quoteCodes = trades.stream()
+                .filter(t -> "STOCK".equals(t.getAssetType()) || "ETF".equals(t.getAssetType()))
+                .map(UserPortfolioTrade::getAssetCode)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        Map<String, Map<LocalDate, BigDecimal>> historyCloseMap = new HashMap<>();
+        if (!quoteCodes.isEmpty()) {
+            List<StockQuoteHistory> historyList = stockQuoteHistoryRepository
+                    .findByCodeInAndTradeDateBetweenOrderByTradeDateAsc(
+                            quoteCodes, startDate.toString(), endDate.toString());
+            for (StockQuoteHistory h : historyList) {
+                if (h.getCode() != null && h.getTradeDate() != null && h.getClosePrice() != null) {
+                    historyCloseMap.computeIfAbsent(h.getCode(), k -> new HashMap<>())
+                            .put(LocalDate.parse(h.getTradeDate()), h.getClosePrice());
+                }
+            }
+        }
+        Map<String, StockQuote> latestQuoteMap = quoteCodes.isEmpty() ? Map.of()
+                : stockQuoteRepository.findByCodeIn(quoteCodes).stream()
+                .collect(Collectors.toMap(StockQuote::getCode, q -> q, (a, b) -> a));
+
+        Map<String, UserPortfolioPosition> positionMap = new HashMap<>();
+        Map<String, BigDecimal> lastKnownPriceMap = new HashMap<>();
+        int tradeIdx = 0;
+        int totalTrades = trades.size();
+
+        List<UserPortfolioAccountSnapshot> snapshots = new ArrayList<>();
+
+        for (LocalDate date : tradeDates) {
+            while (tradeIdx < totalTrades) {
+                UserPortfolioTrade trade = trades.get(tradeIdx);
+                if (trade.getTradeTime().toLocalDate().isAfter(date)) {
+                    break;
+                }
+                tradeIdx++;
+                if (!POSITION_IN_TYPES.contains(trade.getTradeType()) && !POSITION_OUT_TYPES.contains(trade.getTradeType())) {
+                    continue;
+                }
+                String key = trade.getAssetType() + ":" + trade.getAssetCode();
+                UserPortfolioPosition position = positionMap.computeIfAbsent(key, ignored -> {
+                    UserPortfolioPosition value = new UserPortfolioPosition();
+                    value.setAccountId(account.getId());
+                    value.setAssetType(trade.getAssetType());
+                    value.setMarket(trade.getMarket());
+                    value.setAssetCode(trade.getAssetCode());
+                    value.setAssetName(trade.getAssetName());
+                    value.setCurrency(trade.getCurrency());
+                    value.setQuantity(BigDecimal.ZERO);
+                    value.setCostAmount(BigDecimal.ZERO);
+                    return value;
+                });
+                BigDecimal quantity = trade.getQuantity();
+                if (POSITION_IN_TYPES.contains(trade.getTradeType())) {
+                    position.setQuantity(position.getQuantity().add(quantity));
+                    if (!"DIVIDEND_SHARE".equals(trade.getTradeType())) {
+                        position.setCostAmount(position.getCostAmount().add(calculateIncomingCost(trade)));
+                    }
+                } else {
+                    BigDecimal reducedCost = position.getQuantity().signum() == 0 ? BigDecimal.ZERO
+                            : position.getCostAmount().multiply(quantity)
+                            .divide(position.getQuantity(), 8, RoundingMode.HALF_UP);
+                    position.setQuantity(position.getQuantity().subtract(quantity));
+                    position.setCostAmount(position.getCostAmount().subtract(reducedCost));
+                }
+            }
+
+            for (String code : quoteCodes) {
+                Map<LocalDate, BigDecimal> dateMap = historyCloseMap.get(code);
+                if (dateMap != null && dateMap.containsKey(date)) {
+                    lastKnownPriceMap.put(code, dateMap.get(date));
+                }
+            }
+
+            BigDecimal dayMarketValue = BigDecimal.ZERO;
+            BigDecimal dayCostAmount = BigDecimal.ZERO;
+            int unpricedCount = 0;
+
+            for (UserPortfolioPosition pos : positionMap.values()) {
+                if (pos.getQuantity().signum() <= 0) {
+                    continue;
+                }
+                if (!baseCurrency.equals(pos.getCurrency())) {
+                    continue;
+                }
+                dayCostAmount = dayCostAmount.add(pos.getCostAmount());
+                BigDecimal price = null;
+                Map<LocalDate, BigDecimal> dateMap = historyCloseMap.get(pos.getAssetCode());
+                if (dateMap != null) {
+                    price = dateMap.get(date);
+                }
+                if (price == null) {
+                    price = lastKnownPriceMap.get(pos.getAssetCode());
+                }
+                if (price == null && date.equals(LocalDate.now())) {
+                    StockQuote q = latestQuoteMap.get(pos.getAssetCode());
+                    if (q != null) {
+                        price = q.getLatestPrice();
+                    }
+                }
+                if (price != null) {
+                    dayMarketValue = dayMarketValue.add(price.multiply(pos.getQuantity()).setScale(4, RoundingMode.HALF_UP));
+                } else {
+                    unpricedCount++;
+                }
+            }
+
+            BigDecimal cashAtDate = currentCash.subtract(sumNetCashAfterDate(trades, date));
+            BigDecimal dayTotalAsset = dayMarketValue.add(cashAtDate);
+            BigDecimal dayProfit = dayMarketValue.subtract(dayCostAmount);
+
+            UserPortfolioAccountSnapshot snapshot = new UserPortfolioAccountSnapshot();
+            snapshot.setAccountId(account.getId());
+            snapshot.setSnapshotDate(date);
+            snapshot.setCurrency(baseCurrency);
+            snapshot.setCashAmount(cashAtDate);
+            snapshot.setMarketValue(dayMarketValue);
+            snapshot.setTotalAsset(dayTotalAsset);
+            snapshot.setCostAmount(dayCostAmount);
+            snapshot.setUnrealizedProfit(dayProfit);
+            snapshot.setUnpricedAssetCount(unpricedCount);
+            snapshots.add(snapshot);
+        }
+
+        accountSnapshotRepository.deleteByAccountId(account.getId());
+        accountSnapshotRepository.saveAll(snapshots);
+    }
+
+    private BigDecimal sumNetCashAfterDate(List<UserPortfolioTrade> trades, LocalDate date) {
+        BigDecimal sum = BigDecimal.ZERO;
+        for (UserPortfolioTrade trade : trades) {
+            LocalDate tradeDate = trade.getTradeTime().toLocalDate();
+            if (tradeDate.isAfter(date)) {
+                sum = sum.add(calculateTradeNetCashDelta(trade));
+            }
+        }
+        return sum;
+    }
+
+    private BigDecimal calculateTradeNetCashDelta(UserPortfolioTrade trade) {
+        String type = trade.getTradeType();
+        BigDecimal gross = trade.getGrossAmount() != null ? trade.getGrossAmount().abs()
+                : (trade.getPrice() != null && trade.getQuantity() != null
+                ? trade.getPrice().multiply(trade.getQuantity()).abs() : BigDecimal.ZERO);
+        BigDecimal fee = totalFee(trade);
+        BigDecimal netAmount = trade.getNetAmount() != null ? trade.getNetAmount().abs() : null;
+
+        if ("BUY".equals(type) || "BUY_IN".equals(type) || "SUBSCRIBE".equals(type)) {
+            BigDecimal out = netAmount != null ? netAmount : gross.add(fee);
+            return out.negate();
+        } else if ("SELL".equals(type) || "SELL_OUT".equals(type) || "REDEEM".equals(type)) {
+            BigDecimal in = netAmount != null ? netAmount : gross.subtract(fee);
+            return in;
+        } else if ("DEPOSIT".equals(type) || "CASH_DEPOSIT".equals(type)
+                || "DIVIDEND_CASH".equals(type) || "INTEREST".equals(type)) {
+            BigDecimal in = netAmount != null ? netAmount : gross.subtract(fee);
+            return in;
+        } else if ("WITHDRAW".equals(type) || "CASH_WITHDRAW".equals(type)
+                || "FEE".equals(type) || "TAX".equals(type)) {
+            BigDecimal out = netAmount != null ? netAmount : gross.add(fee);
+            return out.negate();
+        } else if ("POSITION_INIT".equals(type) || "TRANSFER_IN".equals(type) || "TRANSFER_OUT".equals(type)
+                || "POSITION_TRANSFER_IN".equals(type) || "POSITION_TRANSFER_OUT".equals(type)
+                || "DIVIDEND_SHARE".equals(type)) {
+            if (fee.signum() > 0) {
+                return fee.negate();
+            }
+            return BigDecimal.ZERO;
+        }
+        return BigDecimal.ZERO;
     }
 
 }

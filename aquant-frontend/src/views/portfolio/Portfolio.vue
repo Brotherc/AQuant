@@ -6,7 +6,7 @@
       :has-account="accounts.length > 0"
       :has-trade="trades.length > 0 || !!tradeTotal"
       @step-click="handleStepClick"
-      @cta-click="activeTabKey = 'overview'"
+      @cta-click="handleCtaClick"
     />
 
     <!-- 2. 二级导航 Tab 与筛选选择器栏 -->
@@ -328,9 +328,9 @@ const quickTradeInitialData = ref<{
 const latestBatchTime = computed(() => {
   if (importBatches.value && importBatches.value.length > 0 && importBatches.value[0]) {
     const first = importBatches.value[0];
-    return first.createdAt || first.createTime || '2026-09-12 09:40:41';
+    return first.createdAt || first.createTime || '-';
   }
-  return '2026-09-12 09:40:41';
+  return '-';
 });
 
 // 加载投资组合列表
@@ -385,72 +385,8 @@ const loadOverviewData = async () => {
       getPositionList(currentPortfolioId.value, selectedAccountId.value),
       getSnapshotList(currentPortfolioId.value, selectedAccountId.value)
     ]);
-    summary.value = sumRes || {
-      portfolioId: currentPortfolioId.value,
-      baseCurrency: 'CNY',
-      totalAsset: 24968.77,
-      marketValue: 17904.0,
-      cashAmount: 7064.77,
-      costAmount: 17997.39,
-      unrealizedProfit: -93.39,
-      unrealizedProfitRate: -0.52,
-      positionCount: 3,
-      unpricedAssetCount: 0,
-      unsupportedCurrencyCount: 0
-    };
-    positions.value =
-      posRes && posRes.length > 0
-        ? posRes
-        : [
-            {
-              id: 1,
-              accountId: 1,
-              accountName: '招商证券主账户',
-              assetType: 'STOCK' as const,
-              symbol: 'sz002240',
-              symbolName: '盛新锂能',
-              quantity: 300,
-              costPrice: 30.801,
-              latestPrice: 27.25,
-              marketValue: 8175.0,
-              totalCost: 9240.29,
-              unrealizedProfit: -1065.29,
-              unrealizedProfitRate: -11.53,
-              positionRatio: 45.66
-            },
-            {
-              id: 2,
-              accountId: 1,
-              accountName: '招商证券主账户',
-              assetType: 'STOCK' as const,
-              symbol: 'sh601398',
-              symbolName: '工商银行',
-              quantity: 1000,
-              costPrice: 7.26,
-              latestPrice: 8.11,
-              marketValue: 8110.0,
-              totalCost: 7260.08,
-              unrealizedProfit: 849.92,
-              unrealizedProfitRate: 11.71,
-              positionRatio: 45.3
-            },
-            {
-              id: 3,
-              accountId: 1,
-              accountName: '招商证券主账户',
-              assetType: 'STOCK' as const,
-              symbol: 'sh601919',
-              symbolName: '中远海控',
-              quantity: 100,
-              costPrice: 14.97,
-              latestPrice: 16.19,
-              marketValue: 1619.0,
-              totalCost: 1497.02,
-              unrealizedProfit: 121.99,
-              unrealizedProfitRate: 8.15,
-              positionRatio: 9.04
-            }
-          ];
+    summary.value = sumRes || null;
+    positions.value = posRes || [];
     snapshots.value = snapRes || [];
   } catch (err: any) {
     message.error(err?.message || '获取概览数据失败');
@@ -473,113 +409,8 @@ const loadTradeData = async () => {
       size: tradePageSize.value
     };
     const res = await getTradePage(currentPortfolioId.value, query);
-    if (res.content && res.content.length > 0) {
-      trades.value = res.content;
-      tradeTotal.value = res.totalElements || 0;
-    } else {
-      // 预设图2流水数据展示
-      trades.value = [
-        {
-          id: 1,
-          accountId: 1,
-          accountName: '招商证券主账户',
-          assetType: 'STOCK' as const,
-          symbol: 'sz002240',
-          symbolName: '盛新锂能',
-          tradeType: 'BUY' as const,
-          tradeTime: '2026-09-02 00:00:00',
-          price: 30.04,
-          quantity: 100,
-          amount: 3004.0,
-          totalFee: 5.0,
-          status: 'NORMAL' as const,
-          source: 'FILE',
-          remark: '招商证券：证券买入'
-        },
-        {
-          id: 2,
-          accountId: 1,
-          accountName: '招商证券主账户',
-          assetType: 'STOCK' as const,
-          symbol: 'sh601919',
-          symbolName: '中远海控',
-          tradeType: 'TAX' as const,
-          tradeTime: '2026-08-24 00:00:00',
-          amount: 4.4,
-          totalFee: 0.0,
-          status: 'NORMAL' as const,
-          source: 'FILE',
-          remark: '招商证券：股息红利税补缴'
-        },
-        {
-          id: 3,
-          accountId: 1,
-          accountName: '招商证券主账户',
-          assetType: 'STOCK' as const,
-          symbol: 'sh601919',
-          symbolName: '中远海控',
-          tradeType: 'SELL' as const,
-          tradeTime: '2026-08-21 00:00:00',
-          price: 17.0,
-          quantity: 100,
-          amount: 1700.0,
-          totalFee: 5.87,
-          status: 'NORMAL' as const,
-          source: 'FILE',
-          remark: '招商证券：证券卖出'
-        },
-        {
-          id: 4,
-          accountId: 1,
-          accountName: '招商证券主账户',
-          assetType: 'STOCK' as const,
-          symbol: 'sh601398',
-          symbolName: '工商银行',
-          tradeType: 'TAX' as const,
-          tradeTime: '2026-07-30 00:00:00',
-          amount: 5.07,
-          totalFee: 0.0,
-          status: 'NORMAL' as const,
-          source: 'FILE',
-          remark: '招商证券：股息红利税补缴'
-        },
-        {
-          id: 5,
-          accountId: 1,
-          accountName: '招商证券主账户',
-          assetType: 'STOCK' as const,
-          symbol: 'sh601398',
-          symbolName: '工商银行',
-          tradeType: 'SELL' as const,
-          tradeTime: '2026-07-29 00:00:00',
-          price: 7.89,
-          quantity: 300,
-          amount: 2367.0,
-          totalFee: 6.2,
-          status: 'NORMAL' as const,
-          source: 'FILE',
-          remark: '招商证券：证券卖出'
-        },
-        {
-          id: 6,
-          accountId: 1,
-          accountName: '招商证券主账户',
-          assetType: 'STOCK' as const,
-          symbol: 'sz002240',
-          symbolName: '盛新锂能',
-          tradeType: 'BUY' as const,
-          tradeTime: '2026-07-29 00:00:00',
-          price: 29.5,
-          quantity: 100,
-          amount: 2950.0,
-          totalFee: 5.0,
-          status: 'NORMAL' as const,
-          source: 'FILE',
-          remark: '招商证券：证券买入'
-        }
-      ];
-      tradeTotal.value = 86;
-    }
+    trades.value = res?.content || [];
+    tradeTotal.value = res?.totalElements || 0;
   } catch (err: any) {
     message.error(err?.message || '获取交易流水失败');
   } finally {
@@ -648,6 +479,22 @@ const handleStepClick = (step: number) => {
   } else if (step === 3) {
     activeTabKey.value = 'import';
   } else {
+    activeTabKey.value = 'overview';
+  }
+};
+
+const handleCtaClick = () => {
+  if (!portfolioList.value || portfolioList.value.length === 0) {
+    // 尚未创建组合 -> 跳转到 账户与资金
+    activeTabKey.value = 'account';
+  } else if (!accounts.value || accounts.value.length === 0) {
+    // 尚未添加券商账户 -> 跳转到 账户与资金
+    activeTabKey.value = 'account';
+  } else if (!trades.value || (trades.value.length === 0 && !tradeTotal.value)) {
+    // 尚未导入交易流水 -> 跳转到 数据导入
+    activeTabKey.value = 'import';
+  } else {
+    // 全部设置已完成 -> 跳转到 总览查看持仓
     activeTabKey.value = 'overview';
   }
 };

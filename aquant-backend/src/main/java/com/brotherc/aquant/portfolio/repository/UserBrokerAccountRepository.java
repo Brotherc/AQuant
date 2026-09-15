@@ -19,6 +19,8 @@ public interface UserBrokerAccountRepository extends JpaRepository<UserBrokerAcc
 
     long countByPortfolioIdAndUserIdAndDeletedFalse(Long portfolioId, Long userId);
 
+    List<UserBrokerAccount> findAllByDeletedFalse();
+
     boolean existsByUserIdAndBrokerCodeAndAccountNoHashAndDeletedFalse(Long userId, String brokerCode, String accountNoHash);
 
 }

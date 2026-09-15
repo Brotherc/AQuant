@@ -17,4 +17,6 @@ public interface UserPortfolioImportBatchRepository extends JpaRepository<UserPo
 
     boolean existsByAccountIdAndSourceFileHashAndStatus(Long accountId, String sourceFileHash, String status);
 
+    void deleteByAccountId(Long accountId);
+
 }

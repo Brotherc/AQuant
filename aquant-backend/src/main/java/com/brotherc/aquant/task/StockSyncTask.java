@@ -5,6 +5,7 @@ import com.brotherc.aquant.common.constant.StockSyncConstant;
 import com.brotherc.aquant.common.exception.ExternalDataNotFoundException;
 import com.brotherc.aquant.industry.entity.StockIndustryBoard;
 import com.brotherc.aquant.fund.entity.StockFundInfo;
+import com.brotherc.aquant.portfolio.service.UserPortfolioService;
 import com.brotherc.aquant.stock.entity.StockQuote;
 import com.brotherc.aquant.sync.entity.StockSync;
 import com.brotherc.aquant.common.enums.CoreIndexEnum;
@@ -99,6 +100,7 @@ public class StockSyncTask {
     private final StockIndustryBoardRepository stockIndustryBoardRepository;
     private final StockIndustryBoardHistoryRepository stockIndustryBoardHistoryRepository;
     private final StockFundInfoRepository stockFundInfoRepository;
+    private final UserPortfolioService userPortfolioService;
 
     /**
      * 项目完全启动后，异步执行一次
@@ -116,6 +118,7 @@ public class StockSyncTask {
         stockStrategySnapshotService.refreshMomentumBacktestSnapshots();
         stockStrategySnapshotService.refreshMacdBacktestSnapshots();
         stockStrategySnapshotService.refreshGridBacktestSnapshots();
+        userPortfolioService.generateDailySnapshots();
     }
 
     private void syncStackDtaLatest() {

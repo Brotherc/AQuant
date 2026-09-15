@@ -13,6 +13,7 @@ import com.brotherc.aquant.portfolio.model.vo.PortfolioTradeBatchReqVO;
 import com.brotherc.aquant.portfolio.model.vo.PortfolioTradeSaveReqVO;
 import com.brotherc.aquant.portfolio.repository.*;
 import com.brotherc.aquant.stock.entity.StockQuote;
+import com.brotherc.aquant.stock.repository.StockQuoteHistoryRepository;
 import com.brotherc.aquant.stock.repository.StockQuoteRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,9 +56,9 @@ class UserPortfolioServiceTest {
     @Mock
     private UserPortfolioAccountSnapshotRepository accountSnapshotRepository;
     @Mock
-    private UserPortfolioPositionSnapshotRepository positionSnapshotRepository;
-    @Mock
     private StockQuoteRepository stockQuoteRepository;
+    @Mock
+    private StockQuoteHistoryRepository stockQuoteHistoryRepository;
     @Mock
     private StockFundNetValueRepository fundNetValueRepository;
 

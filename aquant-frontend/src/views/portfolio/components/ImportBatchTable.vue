@@ -56,7 +56,7 @@
 
         <!-- 导入时间 -->
         <template v-else-if="column.dataIndex === 'createdAt'">
-          <span class="time-text">{{ record.createdAt || record.createTime || '2026-09-12 09:40:41' }}</span>
+          <span class="time-text">{{ record.createdAt || record.createTime || '-' }}</span>
         </template>
 
         <!-- 操作 -->
@@ -115,49 +115,7 @@ const columns: TableColumnType<PortfolioImportBatchVO>[] = [
 ];
 
 const displayBatches = computed(() => {
-  if (props.batches && props.batches.length > 0) {
-    return props.batches;
-  }
-  // 兜底示例数据
-  return [
-    {
-      id: 3,
-      batchNo: '3',
-      accountId: 1,
-      accountName: '招商证券主账户',
-      sourceType: 'FILE',
-      sourceFileName: '20260910 资金流水.xlsx',
-      successRows: 86,
-      totalRows: 86,
-      status: 'SUCCESS' as const,
-      createdAt: '2026-09-12 09:40:41'
-    },
-    {
-      id: 2,
-      batchNo: '2',
-      accountId: 1,
-      accountName: '招商证券主账户',
-      sourceType: 'FILE',
-      sourceFileName: '20260821 交易记录.csv',
-      successRows: 120,
-      totalRows: 120,
-      status: 'SUCCESS' as const,
-      createdAt: '2026-08-21 14:23:16'
-    },
-    {
-      id: 1,
-      batchNo: '1',
-      accountId: 1,
-      accountName: '招商证券主账户',
-      sourceType: 'FILE',
-      sourceFileName: '20260729 交易流水.xlsx',
-      successRows: 72,
-      totalRows: 78,
-      status: 'FAILED' as const,
-      errorMessage: '格式错误 6 条记录',
-      createdAt: '2026-07-29 16:18:05'
-    }
-  ];
+  return props.batches || [];
 });
 
 const isSuccess = (status?: string): boolean => {
@@ -165,9 +123,9 @@ const isSuccess = (status?: string): boolean => {
 };
 
 const getAccountName = (accountId?: number): string => {
-  if (!accountId) return '招商证券主账户';
+  if (!accountId) return '-';
   const acc = props.accounts.find((a) => a.id === accountId);
-  return acc ? acc.accountName : '招商证券主账户';
+  return acc ? acc.accountName : '-';
 };
 
 const handleReverse = async (batchIdOrNo: number | string) => {

@@ -26,4 +26,6 @@ public interface UserPortfolioTradeRepository extends JpaRepository<UserPortfoli
 
     boolean existsByAccountIdAndDedupKey(Long accountId, String dedupKey);
 
+    void deleteByAccountId(Long accountId);
+
 }

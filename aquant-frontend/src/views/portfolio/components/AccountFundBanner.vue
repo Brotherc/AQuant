@@ -18,45 +18,57 @@
 
     <div class="banner-right-steps">
       <div class="step-check-row">
-        <div class="check-icon-circle">
-          <svg viewBox="0 0 1024 1024" width="12" height="12">
+        <div class="check-icon-circle" :class="{ 'is-active': hasPortfolio, 'is-pending': !hasPortfolio }">
+          <svg v-if="hasPortfolio" viewBox="0 0 1024 1024" width="12" height="12">
             <path
               d="M912 190h-69.9c-9.8 0-19.1 4.5-25.1 12.2L404.7 724.5 207 474a32 32 0 0 0-25.1-12.2H112c-6.7 0-10.4 7.7-6.3 12.9l273.9 347c12.8 16.2 37.4 16.2 50.3 0l488.4-618.8c4.1-5.1.4-12.9-6.3-12.9z"
               fill="#ffffff"
             />
           </svg>
+          <span v-else class="step-num">1</span>
         </div>
         <div class="step-label-wrap">
           <div class="step-name">创建投资组合</div>
           <div class="step-hint">设置组合名称、基准指数等</div>
         </div>
-        <div class="step-status-tag">已完成</div>
+        <div class="step-status-tag" :class="hasPortfolio ? 'tag-completed' : 'tag-pending'">
+          {{ hasPortfolio ? '已完成' : '待完成' }}
+        </div>
       </div>
 
       <div class="step-check-row">
-        <div class="check-icon-circle">
-          <svg viewBox="0 0 1024 1024" width="12" height="12">
+        <div class="check-icon-circle" :class="{ 'is-active': hasAccount, 'is-pending': !hasAccount }">
+          <svg v-if="hasAccount" viewBox="0 0 1024 1024" width="12" height="12">
             <path
               d="M912 190h-69.9c-9.8 0-19.1 4.5-25.1 12.2L404.7 724.5 207 474a32 32 0 0 0-25.1-12.2H112c-6.7 0-10.4 7.7-6.3 12.9l273.9 347c12.8 16.2 37.4 16.2 50.3 0l488.4-618.8c4.1-5.1.4-12.9-6.3-12.9z"
               fill="#ffffff"
             />
           </svg>
+          <span v-else class="step-num">2</span>
         </div>
         <div class="step-label-wrap">
           <div class="step-name">添加券商账户</div>
           <div class="step-hint">关联您的券商资金账户</div>
         </div>
-        <div class="step-status-tag">已完成</div>
+        <div class="step-status-tag" :class="hasAccount ? 'tag-completed' : 'tag-pending'">
+          {{ hasAccount ? '已完成' : '待完成' }}
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-defineProps<{
-  hasPortfolio?: boolean;
-  hasAccount?: boolean;
-}>();
+withDefaults(
+  defineProps<{
+    hasPortfolio?: boolean;
+    hasAccount?: boolean;
+  }>(),
+  {
+    hasPortfolio: false,
+    hasAccount: false
+  }
+);
 </script>
 
 <style scoped>
@@ -130,11 +142,22 @@ defineProps<{
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #0f172a;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.check-icon-circle.is-active {
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.check-icon-circle.is-pending {
+  background: #f1f5f9;
+  color: #94a3b8;
 }
 
 .step-label-wrap {
@@ -158,9 +181,18 @@ defineProps<{
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 4px;
+  font-weight: 500;
+}
+
+.step-status-tag.tag-completed {
   background: #f0fdf4;
   color: #16a34a;
-  font-weight: 500;
+}
+
+.step-status-tag.tag-pending {
+  background: #f8fafc;
+  color: #94a3b8;
+  border: 1px solid #e2e8f0;
 }
 
 @media (max-width: 992px) {

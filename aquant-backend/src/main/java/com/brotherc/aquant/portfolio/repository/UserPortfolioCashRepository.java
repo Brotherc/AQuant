@@ -14,4 +14,7 @@ public interface UserPortfolioCashRepository extends JpaRepository<UserPortfolio
     List<UserPortfolioCash> findAllByAccountIdOrderByCurrencyAsc(Long accountId);
 
     Optional<UserPortfolioCash> findByAccountIdAndCurrency(Long accountId, String currency);
+
+    void deleteByAccountId(Long accountId);
+
 }

@@ -15,7 +15,7 @@
         <div class="box-metrics-row">
           <div class="metric-col">
             <div class="m-label">现金总余额</div>
-            <div class="m-val">{{ formatMoney(item.balance ?? item.totalBalance ?? 7064.77) }}</div>
+            <div class="m-val">{{ formatMoney(item.balance ?? item.totalBalance ?? 0) }}</div>
           </div>
           <div class="metric-col">
             <div class="m-label">可用余额</div>
@@ -28,7 +28,7 @@
         </div>
 
         <div class="box-bottom-row">
-          <span class="time-text">最后更新时间 {{ item.updatedAt || item.updateTime || '2026-09-12 09:40:41' }}</span>
+          <span class="time-text">最后更新时间 {{ item.updatedAt || item.updateTime || '-' }}</span>
           <button class="btn-adjust-cash" @click="openUpdateCashModal(item)">
             <svg viewBox="0 0 1024 1024" width="12" height="12" fill="currentColor">
               <path d="M759.2 383c-4.9-18.1-12.2-35.3-21.7-51.2l61.6-61.6c4.7-4.7 4.7-12.3 0-17l-67.9-67.9c-4.7-4.7-12.3-4.7-17 0l-61.6 61.6c-15.9-9.5-33.1-16.8-51.2-21.7l-15.4-85.8C585 133 578 128 570 128h-96c-8 0-15 5-16 13.4l-15.4 85.8c-18.1 4.9-35.3 12.2-51.2 21.7l-61.6-61.6c-4.7-4.7-12.3-4.7-17 0l-67.9 67.9c-4.7 4.7-4.7 12.3 0 17l61.6 61.6c-9.5 15.9-16.8 33.1-21.7 51.2L133 439c-8.4 1-13.4 8-13.4 16v96c0 8 5 15 13.4 16l85.8 15.4c4.9 18.1 12.2 35.3 21.7 51.2l-61.6 61.6c-4.7 4.7-4.7 12.3 0 17l67.9 67.9c4.7 4.7 12.3 4.7 17 0l61.6-61.6c15.9 9.5 33.1 16.8 51.2 21.7l15.4 85.8c1 8.4 8 13.4 16 13.4h96c8 0 15-5 16-13.4l15.4-85.8c18.1-4.9 35.3-12.2 51.2-21.7l61.6 61.6c4.7 4.7 12.3 4.7 17 0l67.9-67.9c4.7-4.7 4.7-12.3 0-17l-61.6-61.6c9.5-15.9 16.8-33.1 21.7-51.2l85.8-15.4c8.4-1 13.4-8 13.4-16v-96c0-8-5-15-13.4-16l-85.8-15.4zM512 640c-70.7 0-128-57.3-128-128s57.3-128 128-128 128 57.3 128 128-57.3 128-128 128z" />
@@ -39,34 +39,15 @@
       </div>
     </div>
 
-    <!-- 空数据兜底卡片 -->
-    <div v-else class="cash-box-item">
-      <div class="box-top-row">
-        <span class="acc-name">{{ defaultAccountName }}</span>
-        <span class="currency-tag">CNY</span>
-      </div>
-
-      <div class="box-metrics-row">
-        <div class="metric-col">
-          <div class="m-label">现金总余额</div>
-          <div class="m-val">7,064.77</div>
-        </div>
-        <div class="metric-col">
-          <div class="m-label">可用余额</div>
-          <div class="m-val">0.00</div>
-        </div>
-        <div class="metric-col">
-          <div class="m-label">冻结金额</div>
-          <div class="m-val">0.00</div>
-        </div>
-      </div>
-
-      <div class="box-bottom-row">
-        <span class="time-text">最后更新时间 2026-09-12 09:40:41</span>
-        <button class="btn-adjust-cash" @click="openUpdateCashModal()">
-          <span>调整现金余额</span>
-        </button>
-      </div>
+    <!-- 空数据展示 -->
+    <div v-else class="cash-empty-wrap">
+      <a-empty description="暂无现金记录">
+        <template #extra>
+          <a-button type="primary" size="small" @click="openUpdateCashModal()">
+            录入现金余额
+          </a-button>
+        </template>
+      </a-empty>
     </div>
 
     <!-- 弹窗 -->
@@ -155,7 +136,7 @@ const cashAccounts = computed(() => {
 });
 
 const defaultAccountName = computed(() => {
-  return props.accounts.length > 0 && props.accounts[0] ? props.accounts[0].accountName : '招商证券主账户';
+  return props.accounts.length > 0 && props.accounts[0] ? props.accounts[0].accountName : '-';
 });
 
 const getAccountName = (accountId: number): string => {
@@ -179,7 +160,7 @@ const openUpdateCashModal = (cash?: PortfolioCashVO) => {
   } else {
     formState.accountId = props.accounts.length > 0 && props.accounts[0] ? props.accounts[0].id : (undefined as any);
     formState.currency = 'CNY';
-    formState.balance = 7064.77;
+    formState.balance = undefined as any;
   }
   modalVisible.value = true;
 };
