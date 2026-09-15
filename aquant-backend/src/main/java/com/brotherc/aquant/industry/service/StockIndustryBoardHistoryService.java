@@ -252,7 +252,7 @@ public class StockIndustryBoardHistoryService {
             LocalDate date = LocalDate.parse(dateStr);
             String key;
             switch (frequency) {
-                case "1w" -> key = date.getYear() + "-W" + date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
+                case "1w" -> key = date.get(IsoFields.WEEK_BASED_YEAR) + "-W" + date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
                 case "1M" -> key = date.getYear() + "-" + date.getMonthValue();
                 case "1Q" -> key = date.getYear() + "-Q" + date.get(IsoFields.QUARTER_OF_YEAR);
                 case "1Y" -> key = String.valueOf(date.getYear());

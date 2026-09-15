@@ -190,7 +190,7 @@ public class StockIndustryBoardEmQueryService {
     private String periodKey(String text, String frequency) {
         LocalDate date = LocalDate.parse(text);
         return switch (frequency) {
-            case "1w" -> date.getYear() + "-W" + date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
+            case "1w" -> date.get(IsoFields.WEEK_BASED_YEAR) + "-W" + date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
             case "1M" -> date.getYear() + "-" + date.getMonthValue();
             case "1Q" -> date.getYear() + "-Q" + date.get(IsoFields.QUARTER_OF_YEAR);
             case "1Y" -> String.valueOf(date.getYear());
