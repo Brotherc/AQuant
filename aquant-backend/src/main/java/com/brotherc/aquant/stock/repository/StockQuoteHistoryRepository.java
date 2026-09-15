@@ -42,6 +42,9 @@ public interface StockQuoteHistoryRepository extends JpaRepository<StockQuoteHis
     List<Object[]> findMaxTradeDateByCodeInBeforeOrEqual(@Param("codes") List<String> codes,
                                                          @Param("endDate") String endDate);
 
+    @Query("select min(s.tradeDate) from StockQuoteHistory s where s.code = :code")
+    String findMinTradeDateByCode(@Param("code") String code);
+
     long deleteByCodeIn(List<String> codeList);
 
 }

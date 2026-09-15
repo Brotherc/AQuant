@@ -302,6 +302,7 @@ public class StockSyncTask {
      * <ol>
      *     <li>先批量查出每只股票在历史表里已经同步到哪一天，避免对每只股票单独查库。</li>
      *     <li>补齐起点取“已同步最大交易日 + 1 天”；如果该股票历史表里还没有数据，则从第三方接口可返回的最早日期开始拉。</li>
+     *     <li>遇到名称以 XD、XR、DR 开头的除权除息股票时，从本地最早交易日重新拉取前复权行情，避免旧复权基准与当天行情混用。</li>
      *     <li>如果起止区间之间根本没有交易日，则直接跳过，避免发起没有意义的第三方请求。</li>
      *     <li>单只股票失败时按 5s/10s/15s 退避重试；全部股票处理完后统一做最后一次重试，仍失败则留待下次同步触发时按水位自动补齐。</li>
      * </ol>
@@ -332,9 +333,20 @@ public class StockSyncTask {
             String name = entry.getValue();
             String maxTradeDate = maxTradeDateMap.get(code);
             StockZhASpot latestSpot = latestSpotMap.get(code);
-            // 已有历史数据时，从“最后一条历史记录的下一天”开始补；没有历史数据则全量拉取。
-            LocalDate historyStartDate = maxTradeDate == null ? null : LocalDate.parse(maxTradeDate).plusDays(1);
-            boolean shouldBackfill = historyStartDate == null ||
+            String latestName = latestSpot == null ? null : StringUtils.upperCase(latestSpot.getName());
+            boolean shouldRefreshAdjustedHistory = StringUtils.startsWithAny(latestName, "XD", "XR", "DR");
+
+            // 前复权价格会在除权除息后回溯变化，因此除权股票从本地最早交易日回刷；普通股票仍从最后一条记录之后增量补齐。
+            LocalDate historyStartDate;
+            if (maxTradeDate == null) {
+                historyStartDate = null;
+            } else if (shouldRefreshAdjustedHistory) {
+                String minTradeDate = stockQuoteHistoryRepository.findMinTradeDateByCode(code);
+                historyStartDate = minTradeDate == null ? null : LocalDate.parse(minTradeDate);
+            } else {
+                historyStartDate = LocalDate.parse(maxTradeDate).plusDays(1);
+            }
+            boolean shouldBackfill = shouldRefreshAdjustedHistory || historyStartDate == null ||
                     (!historyStartDate.isAfter(historyEndDate) && stockHelper.hasTradeDayBetween(historyStartDate, historyEndDate));
 
             // 当前股票既没有历史缺口要补，也不需要写入最新已收盘日时，直接跳过。
@@ -345,6 +357,10 @@ public class StockSyncTask {
             // start 传 null 表示让第三方接口按默认最早范围返回，用于该股票首次落历史数据的场景。
             String historyStart = historyStartDate == null ? null : historyStartDate.toString();
             boolean wroteLatest = shouldWriteLatestHistory && latestSpot != null;
+            if (shouldRefreshAdjustedHistory) {
+                log.info("检测到股票除权除息，重新同步已落库区间的前复权历史，code={}, name={}, historyStart={}, historyEnd={}",
+                        code, latestSpot.getName(), historyStart, historyEnd);
+            }
             StockBackfillContext context = new StockBackfillContext(
                     code, name, historyStart, historyEnd, shouldBackfill, latestSpot, wroteLatest);
             BackfillOutcome outcome = executeStockBackfillWithRetry(context, syncTime);
