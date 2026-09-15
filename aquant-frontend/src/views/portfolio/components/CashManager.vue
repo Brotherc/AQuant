@@ -135,10 +135,6 @@ const cashAccounts = computed(() => {
   return props.cashList || [];
 });
 
-const defaultAccountName = computed(() => {
-  return props.accounts.length > 0 && props.accounts[0] ? props.accounts[0].accountName : '-';
-});
-
 const getAccountName = (accountId: number): string => {
   const acc = props.accounts.find((a) => a.id === accountId);
   return acc ? acc.accountName : `账户 #${accountId}`;
