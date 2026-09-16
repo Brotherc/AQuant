@@ -1,0 +1,39 @@
+{
+  "issue": "行业涨幅分析页面切换东方财富数据源加载超时",
+  "issue_number": "em-analysis-timeout",
+  "symptom": "数据库已有东方财富行业数据，前端 /industrySource/analysis?source=EM 请求超过 axios 60s 超时",
+  "call_chain": [
+    "IndustryRiseAnalysis.vue loadAnalysis -> getIndustrySourceAnalysis(timeout=60000)",
+    "IndustrySourceController.analysis -> resolve(source=EM, emQueryService::analysis)",
+    "StockIndustryBoardEmQueryService.analysis -> populateMissingChangeMetrics",
+    "StockIndustryBoardHistoryEmRepository.findLatestBeforeTradeDateForEachSector (阻塞点)"
+  ],
+  "root_cause": {
+    "summary": "findLatestBeforeTradeDateForEachSector 使用'外层全表扫描 + 相关子查询求 max(trade_date)'结构。stock_industry_board_history_em 含 2000 年至今全量 K 线 1,947,603 行（496 板块），外层每行各执行一次相关子查询（约 195 万次索引回溯），查询结构不可扩展",
+    "trigger_condition": "近 30 天窗口内 9920 行 change_percent 全部为 NULL（旧版落库代码未计算涨跌幅，且水位已最新导致同步永不重算）-> requiresFallback=true -> 每次请求必触发慢查询",
+    "evidence": [
+      {"check": "表规模", "result": "1,947,603 行 / 496 板块 / 2000-01-04 ~ 2026-09-11"},
+      {"check": "近30天窗口", "result": "range_rows=9920, null_pct_rows=9920 (100% NULL 触发补算路径)"},
+      {"check": "旧查询实测", "result": "25 秒熔断 ERROR 3024，未执行完成（真实耗时更长，前端 60s 超时）"},
+      {"check": "新查询实测", "result": "58ms，返回 496 行，语义等价；EXPLAIN: 派生表 Using index for group-by(4225行) + eq_ref 关联"},
+      {"check": "THS 对照", "result": "同结构子查询在 14.6 万行 + 复合索引下可容忍，解释 THS 正常而 EM 超时"}
+    ]
+  },
+  "affected_code": [
+    "aquant-backend/src/main/java/com/brotherc/aquant/industry/repository/StockIndustryBoardHistoryEmRepository.java (findLatestBeforeTradeDateForEachSector)",
+    "aquant-backend/src/main/java/com/brotherc/aquant/industry/entity/StockIndustryBoardHistoryEm.java (@Table 索引声明缺失)"
+  ],
+  "fix": [
+    "仓储查询改为'分组求 max + JOIN 回表'原生 SQL，实测 25s+ -> 58ms",
+    "实体补齐 uk_industry_history_em_sector_date(sector_name,trade_date 唯一) 与 idx_industry_history_em_trade_date 索引声明，与现库同名，ddl-auto:update 对现有库无操作，全新环境自动创建"
+  ],
+  "validation": [
+    "MySQL 8.0.40 真实库只读实测：旧查询 >25s 未完成，新查询 58ms/496 行",
+    "mvn compile EXIT=0",
+    "调用方（StockIndustryBoardEmQueryService.analysis）签名未变，无需改动"
+  ],
+  "remaining_risks": [
+    "THS 侧 StockIndustryBoardHistoryRepository.findLatestBeforeTradeDateForEachSector 为同结构查询，当前 14.6 万行可容忍，数据增长后建议同步改写",
+    "库中存量 change_percent=NULL 行不落库回填，由 populateMissingChangeMetrics 每次请求内存补算（现已无性能瓶颈）；下次某板块同步成功时 saveHistory 会自动重算该板块全部历史"
+  ]
+}

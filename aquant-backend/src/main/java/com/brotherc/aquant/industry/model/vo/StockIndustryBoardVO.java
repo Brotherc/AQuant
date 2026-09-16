@@ -42,6 +42,33 @@ public class StockIndustryBoardVO {
     @Schema(description = "均价")
     private BigDecimal averagePrice;
 
+    @Schema(description = "今开")
+    private BigDecimal openPrice;
+
+    @Schema(description = "昨收")
+    private BigDecimal preClosePrice;
+
+    @Schema(description = "最高")
+    private BigDecimal highPrice;
+
+    @Schema(description = "最低")
+    private BigDecimal lowPrice;
+
+    @Schema(description = "换手率(%)")
+    private BigDecimal turnoverRate;
+
+    @Schema(description = "量比")
+    private BigDecimal volumeRatio;
+
+    @Schema(description = "外盘(万手)")
+    private BigDecimal outerDisc;
+
+    @Schema(description = "流通市值(亿元)")
+    private BigDecimal circulatingMarketValue;
+
+    @Schema(description = "流通股本(亿股)")
+    private BigDecimal circulatingShares;
+
     @Schema(description = "领涨股")
     private String leadingStock;
 

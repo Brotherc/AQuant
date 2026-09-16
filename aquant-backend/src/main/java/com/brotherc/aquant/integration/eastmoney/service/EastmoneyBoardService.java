@@ -1,6 +1,7 @@
 package com.brotherc.aquant.integration.eastmoney.service;
 
 import com.brotherc.aquant.common.exception.ExceptionEnum;
+import com.brotherc.aquant.integration.eastmoney.model.EastmoneyBoardDetail;
 import com.brotherc.aquant.integration.eastmoney.model.EastmoneyBoardKline;
 import com.brotherc.aquant.integration.eastmoney.model.EastmoneyBoardList;
 import com.brotherc.aquant.integration.eastmoney.model.EastmoneyBoardTrends;
@@ -27,6 +28,14 @@ public class EastmoneyBoardService {
     private static final String BOARD_MARKET_PREFIX = "90.";
     private static final String KLINE_URL = "https://push2his.eastmoney.com/api/qt/stock/kline/get";
     private static final String TRENDS_URL = "https://push2his.eastmoney.com/api/qt/stock/trends2/get";
+    /**
+     * stock/get 详情快照字段（与浏览器详情页一致）：f57/f58 代码名称，f43 最新，f44-f46 最高/最低/今开，
+     * f47 成交量(手)，f48 成交额(元)，f49 外盘(手)，f50 量比，f60 昨收，f85 流通股本(股)，
+     * f117 流通市值(元)，f168 换手率，f169-f171 涨跌额/涨跌幅/振幅。
+     * 上游无独立内盘字段（内盘=成交量-外盘），f65/f66 对板块恒为空。
+     */
+    private static final String DETAIL_FIELDS =
+            "f57,f58,f43,f44,f45,f46,f47,f48,f49,f50,f60,f85,f117,f168,f169,f170,f171";
     /**
      * 单页条数。浏览器实际值为 20。pz=100 全量翻页请求更集中、单次响应更大，
      * 实测更容易触发东财按主机的频次软封（502 / 空响应体），故对齐浏览器行为。
@@ -67,7 +76,7 @@ public class EastmoneyBoardService {
                     .addQueryParameter("invt", "2")
                     .addQueryParameter("fid", "f3")
                     .addQueryParameter("fs", "m:90+t:2+f:!50")
-                    .addQueryParameter("fields", "f12,f14,f2,f3,f20,f104,f105,f140,f136"))
+                    .addQueryParameter("fields", "f12,f14,f2,f3,f5,f6,f62,f104,f105,f140,f136"))
                     .path("data");
             int total = data.path("total").asInt(0);
             JsonNode diff = data.path("diff");
@@ -81,7 +90,9 @@ public class EastmoneyBoardService {
                 board.setSectorName(item.path("f14").asText());
                 board.setLatestPrice(parseDecimal(item.path("f2")));
                 board.setChangePercent(parseDecimal(item.path("f3")));
-                board.setTotalMarketValue(parseDecimal(item.path("f20")));
+                board.setTotalVolume(parseDecimal(item.path("f5")));
+                board.setTotalAmount(parseDecimal(item.path("f6")));
+                board.setNetInflow(parseDecimal(item.path("f62")));
                 board.setRiseCount(item.path("f104").isNumber() ? item.path("f104").asInt() : null);
                 board.setFallCount(item.path("f105").isNumber() ? item.path("f105").asInt() : null);
                 board.setLeadingStock(item.path("f140").asText(null));
@@ -149,6 +160,44 @@ public class EastmoneyBoardService {
             }
         }
         return result;
+    }
+
+    /**
+     * 板块详情快照（详情页顶部盘口指标：今开/昨收/最高/最低/换手/量比/外盘/流通市值/流通股本等）。
+     * 走实时行情主机（push2delay 优先），与板块列表一致。
+     *
+     * @param sectorCode 板块代码，如 BK1201
+     */
+    public EastmoneyBoardDetail fetchBoardDetail(String sectorCode) {
+        JsonNode data = quoteGateway.executeQuote(builder -> builder
+                .addPathSegments("api/qt/stock/get")
+                .addQueryParameter("secid", BOARD_MARKET_PREFIX + sectorCode)
+                .addQueryParameter("fltt", "2")
+                .addQueryParameter("invt", "2")
+                .addQueryParameter("fields", DETAIL_FIELDS))
+                .path("data");
+        if (data.isMissingNode() || data.isNull() || data.path("f57").asText("").isBlank()) {
+            throw ExceptionEnum.API_REQUEST_ERROR.toException();
+        }
+        EastmoneyBoardDetail detail = new EastmoneyBoardDetail();
+        detail.setSectorCode(data.path("f57").asText());
+        detail.setSectorName(data.path("f58").asText(null));
+        detail.setLatestPrice(parseDecimal(data.path("f43")));
+        detail.setOpenPrice(parseDecimal(data.path("f46")));
+        detail.setPreClosePrice(parseDecimal(data.path("f60")));
+        detail.setHighPrice(parseDecimal(data.path("f44")));
+        detail.setLowPrice(parseDecimal(data.path("f45")));
+        detail.setChangeAmount(parseDecimal(data.path("f169")));
+        detail.setChangePercent(parseDecimal(data.path("f170")));
+        detail.setAmplitude(parseDecimal(data.path("f171")));
+        detail.setVolume(parseDecimal(data.path("f47")));
+        detail.setAmount(parseDecimal(data.path("f48")));
+        detail.setTurnoverRate(parseDecimal(data.path("f168")));
+        detail.setVolumeRatio(parseDecimal(data.path("f50")));
+        detail.setOuterDisc(parseDecimal(data.path("f49")));
+        detail.setCirculatingMarketValue(parseDecimal(data.path("f117")));
+        detail.setCirculatingShares(parseDecimal(data.path("f85")));
+        return detail;
     }
 
     /**

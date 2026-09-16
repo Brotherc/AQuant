@@ -2,12 +2,11 @@ package com.brotherc.aquant.industry.service;
 
 import com.brotherc.aquant.common.utils.StockHelper;
 import com.brotherc.aquant.common.utils.StockUtils;
-import com.brotherc.aquant.industry.entity.StockBoardConstituentEm;
 import com.brotherc.aquant.industry.entity.StockIndustryBoardEm;
 import com.brotherc.aquant.industry.entity.StockIndustryBoardHistoryEm;
-import com.brotherc.aquant.industry.repository.StockBoardConstituentEmRepository;
 import com.brotherc.aquant.industry.repository.StockIndustryBoardHistoryEmRepository;
 import com.brotherc.aquant.industry.repository.StockIndustryBoardEmRepository;
+import com.brotherc.aquant.integration.eastmoney.model.EastmoneyBoardDetail;
 import com.brotherc.aquant.integration.eastmoney.model.EastmoneyBoardKline;
 import com.brotherc.aquant.integration.eastmoney.model.EastmoneyBoardList;
 import com.brotherc.aquant.integration.eastmoney.service.EastmoneyBoardService;
@@ -19,22 +18,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -52,9 +43,9 @@ public class StockIndustryBoardEmSyncService {
     private final StockSyncRepository stockSyncRepository;
     private final StockIndustryBoardEmRepository boardRepository;
     private final StockIndustryBoardHistoryEmRepository historyRepository;
-    private final StockBoardConstituentEmRepository constituentRepository;
     private final EastmoneyBoardService eastmoneyBoardService;
     private final EastmoneyQuoteGateway eastmoneyQuoteGateway;
+    private final StockIndustryBoardEmPersistenceService industryBoardEmPersistenceService;
 
     /** 同步进行中标志：Cookie 触发与调度触发可能并发，CAS 保证同一时刻只有一轮同步 */
     private final AtomicBoolean syncRunning = new AtomicBoolean(false);
@@ -84,12 +75,9 @@ public class StockIndustryBoardEmSyncService {
     private void doSynchronizeIfRequired(LocalDateTime now) {
         long targetWatermark = stockHelper.getLatestClosedTradeDaySyncWatermark(now);
         Long currentWatermark = StockUtils.parseSyncTimestamp(stockSyncRepository.findByName(WATERMARK));
-        if (currentWatermark != null && currentWatermark >= targetWatermark
-                && !boardRepository.findAll().isEmpty()) {
-            log.info("东方财富行业同步跳过: 水位已是最新, watermark={}", currentWatermark);
-            return;
-        }
 
+        // 板块行情列表（含成交额/成交量/净流入）随每次触发刷新：单次 clist 分页拉取成本低、幂等，
+        // 且修正存量字段需即时生效，不随水位跳过
         EastmoneyBoardList boardList;
         try {
             boardList = callWithRetry(eastmoneyBoardService::fetchBoardList);
@@ -103,11 +91,19 @@ public class StockIndustryBoardEmSyncService {
             return;
         }
         try {
-            saveBoards(boards, now);
+            industryBoardEmPersistenceService.saveBoards(boards, now);
         } catch (RuntimeException exception) {
             log.warn("东方财富行业列表落库失败，保留缓存等待下次触发", exception);
             return;
         }
+
+        // 历史K线/成分股按逐板块水位与断点续传，成本较高；水位已是最新且详情快照均已刷新到当日时跳过逐板块拉取
+        if (currentWatermark != null && currentWatermark >= targetWatermark
+                && !boardRepository.existsByDetailTradeDateLessThanOrDetailTradeDateIsNull(now.toLocalDate())) {
+            log.info("东方财富行业列表已刷新，历史/成分股水位与详情快照已是最新, watermark={}", currentWatermark);
+            return;
+        }
+
         long startMillis = System.currentTimeMillis();
         log.info("东方财富行业同步开始: targetWatermark={}, 板块数={}", targetWatermark, boards.size());
         int synced = 0;
@@ -174,7 +170,10 @@ public class StockIndustryBoardEmSyncService {
             Long constituentWatermark = StockUtils.parseSyncTimestamp(
                     stockSyncRepository.findByName(CONSTITUENT_WATERMARK_PREFIX + sectorName));
             boolean requiresConstituents = constituentWatermark == null || constituentWatermark < targetWatermark;
-            if (!requiresHistory && !requiresConstituents) {
+            StockIndustryBoardEm boardRow = boardRepository.findBySectorCode(board.getSectorCode());
+            boolean requiresDetail = boardRow != null && (boardRow.getDetailTradeDate() == null
+                    || boardRow.getDetailTradeDate().isBefore(now.toLocalDate()));
+            if (!requiresHistory && !requiresConstituents && !requiresDetail) {
                 return BoardSyncOutcome.SKIPPED;
             }
             List<EastmoneyBoardKline.Bar> history = requiresHistory ? callWithRetry(() ->
@@ -191,11 +190,23 @@ public class StockIndustryBoardEmSyncService {
                 return BoardSyncOutcome.FAILED;
             }
             if (requiresHistory) {
-                saveHistory(sectorName, history, now);
+                industryBoardEmPersistenceService.saveHistory(sectorName, history, now);
             }
             if (requiresConstituents) {
-                saveConstituents(sectorName, constituents, now);
+                industryBoardEmPersistenceService.saveConstituents(sectorName, constituents, now);
                 writeConstituentWatermark(sectorName, targetWatermark);
+            }
+            if (requiresDetail) {
+                // 详情快照失败不判定板块失败：K线/成分股可能已成功落库，快照留待下次触发重抓
+                try {
+                    EastmoneyBoardDetail detail = callWithRetry(
+                            () -> eastmoneyBoardService.fetchBoardDetail(board.getSectorCode()));
+                    industryBoardEmPersistenceService.applyDetail(boardRow, detail, now);
+                } catch (EastmoneyCoolingDownException exception) {
+                    throw exception;
+                } catch (RuntimeException exception) {
+                    log.warn("东方财富板块详情快照抓取失败，sectorName={}，下次触发重试", sectorName, exception);
+                }
             }
             return BoardSyncOutcome.SYNCED;
         } catch (EastmoneyCoolingDownException exception) {
@@ -244,112 +255,6 @@ public class StockIndustryBoardEmSyncService {
             }
         }
         throw lastException == null ? new IllegalStateException("东方财富请求失败") : lastException;
-    }
-
-    @Transactional(rollbackFor = Exception.class)
-    void saveBoards(List<EastmoneyBoardList.Board> boards, LocalDateTime now) {
-        Map<String, StockIndustryBoardEm> existing = boardRepository.findAll().stream()
-                .collect(Collectors.toMap(StockIndustryBoardEm::getSectorCode, item -> item, (first, second) -> first));
-        // 上游按涨跌幅排序分页拼接，排名变动会使页边界板块在单次响应中重复出现，须批内去重
-        Map<String, StockIndustryBoardEm> saves = new LinkedHashMap<>();
-        int rank = 0;
-        for (EastmoneyBoardList.Board board : boards) {
-            if (board == null || board.getSectorName() == null || board.getSectorName().isBlank()) {
-                continue;
-            }
-            if (board.getSectorCode() == null || board.getSectorCode().isBlank()) {
-                continue;
-            }
-            rank++;
-            StockIndustryBoardEm entity = existing.getOrDefault(board.getSectorCode(), new StockIndustryBoardEm());
-            entity.setSeqNo(rank);
-            entity.setSectorName(board.getSectorName());
-            entity.setSectorCode(board.getSectorCode());
-            entity.setAveragePrice(board.getLatestPrice());
-            entity.setChangePercent(board.getChangePercent());
-            entity.setRiseCount(board.getRiseCount());
-            entity.setFallCount(board.getFallCount());
-            entity.setTotalAmount(board.getTotalMarketValue());
-            entity.setLeadingStock(board.getLeadingStock());
-            entity.setLeadingStockChangePercent(board.getLeadingStockChangePercent());
-            entity.setTradeDate(stockHelper.latestTradeDayFallback(now.toLocalDate()));
-            entity.setCreateTime(now);
-            saves.put(board.getSectorCode(), entity);
-        }
-        boardRepository.saveAll(saves.values());
-    }
-
-    @Transactional(rollbackFor = Exception.class)
-    void saveHistory(String sectorName, List<EastmoneyBoardKline.Bar> source, LocalDateTime now) {
-        Map<String, StockIndustryBoardHistoryEm> existing = historyRepository
-                .findBySectorNameOrderByTradeDateAsc(sectorName).stream()
-                .collect(Collectors.toMap(StockIndustryBoardHistoryEm::getTradeDate, item -> item, (first, second) -> first));
-        Map<String, StockIndustryBoardHistoryEm> saves = new LinkedHashMap<>();
-        for (EastmoneyBoardKline.Bar item : source) {
-            if (item == null || item.getTime() == null || item.getTime().isBlank()) {
-                continue;
-            }
-            String tradeDate = item.getTime().length() >= 10 ? item.getTime().substring(0, 10) : item.getTime();
-            StockIndustryBoardHistoryEm entity = existing.getOrDefault(tradeDate, new StockIndustryBoardHistoryEm());
-            entity.setSectorName(sectorName);
-            entity.setTradeDate(tradeDate);
-            entity.setOpenPrice(item.getOpenPrice());
-            entity.setClosePrice(item.getClosePrice());
-            entity.setHighPrice(item.getHighPrice());
-            entity.setLowPrice(item.getLowPrice());
-            entity.setVolume(item.getVolume());
-            entity.setAmount(item.getAmount());
-            entity.setChangeAmount(null);
-            entity.setChangePercent(null);
-            entity.setCreateTime(now);
-            saves.put(tradeDate, entity);
-        }
-        // 东财板块 K 线不返回涨跌幅，以收盘价相对前一交易日收盘推算当日涨跌幅（首条记录无昨收则留空）
-        Map<String, StockIndustryBoardHistoryEm> merged = new LinkedHashMap<>(existing);
-        merged.putAll(saves);
-        List<StockIndustryBoardHistoryEm> ordered = new ArrayList<>(merged.values());
-        ordered.sort(Comparator.comparing(StockIndustryBoardHistoryEm::getTradeDate));
-        BigDecimal previousClose = null;
-        for (StockIndustryBoardHistoryEm entity : ordered) {
-            if (entity.getClosePrice() != null && previousClose != null) {
-                BigDecimal changeAmount = entity.getClosePrice().subtract(previousClose);
-                entity.setChangeAmount(changeAmount);
-                entity.setChangePercent(previousClose.signum() == 0 ? BigDecimal.ZERO
-                        : changeAmount.multiply(BigDecimal.valueOf(100)).divide(previousClose, 4, RoundingMode.HALF_UP));
-            } else if (entity.getClosePrice() != null) {
-                entity.setChangeAmount(null);
-                entity.setChangePercent(null);
-            }
-            if (entity.getClosePrice() != null) {
-                previousClose = entity.getClosePrice();
-            }
-        }
-        historyRepository.saveAll(saves.values());
-    }
-
-    @Transactional(rollbackFor = Exception.class)
-    void saveConstituents(String sectorName, List<EastmoneyBoardList.Board> source, LocalDateTime now) {
-        String storageBoardCode = sectorName;
-        Map<String, StockBoardConstituentEm> existing = constituentRepository
-                .findByBoardCodeOrderByStockCodeAsc(storageBoardCode).stream()
-                .collect(Collectors.toMap(StockBoardConstituentEm::getStockCode, item -> item, (first, second) -> first));
-        Map<String, EastmoneyBoardList.Board> valid = source.stream()
-                .filter(item -> item != null && item.getSectorCode() != null && !item.getSectorCode().isBlank())
-                .filter(item -> item.getSectorName() != null && !item.getSectorName().isBlank())
-                .collect(Collectors.toMap(EastmoneyBoardList.Board::getSectorCode, item -> item, (first, second) -> second, LinkedHashMap::new));
-        if (valid.isEmpty()) {
-            throw new IllegalStateException("东方财富行业成分股上游未包含有效股票代码");
-        }
-        List<StockBoardConstituentEm> saves = valid.values().stream().map(item -> {
-            StockBoardConstituentEm entity = existing.getOrDefault(item.getSectorCode(), new StockBoardConstituentEm());
-            entity.setBoardCode(storageBoardCode);
-            entity.setStockCode(item.getSectorCode());
-            entity.setStockName(item.getSectorName());
-            entity.setSourceUpdatedAt(now);
-            return entity;
-        }).toList();
-        constituentRepository.saveAll(saves);
-        constituentRepository.deleteByBoardCodeAndStockCodeNotIn(storageBoardCode, List.copyOf(valid.keySet()));
     }
 
     private boolean sleep(long millis) {
