@@ -25,7 +25,40 @@ export type TradeType =
 export type TradeStatus = 'NORMAL' | 'REVERSED';
 export type AccountStatus = 'ACTIVE' | 'DISABLED';
 export type AccountType = 'SECURITIES' | 'FUND' | 'CASH' | 'MARGIN' | 'FUTURES';
-export type SyncMode = 'MANUAL' | 'FILE' | 'API';
+/** 券商实时持仓快照（直取券商接口口径，本地不推算） */
+export interface BrokerPositionItem {
+  securityCode: string;
+  securityName: string;
+  holdingQuantity: number | null;
+  enableQuantity: number | null;
+  /** 成本价（券商口径，摊薄后可为负） */
+  costPrice: number | null;
+  lastPrice: number | null;
+  marketValue: number | null;
+  income: number | null;
+  /** 持仓盈亏比例(%) */
+  incomeRate: number | null;
+  dayIncome: number | null;
+  /** 当日盈亏比例(%) */
+  dayIncomeRate: number | null;
+  keepCostPrice: number | null;
+}
+
+export interface BrokerPositionSnapshot {
+  totalAsset: number | null;
+  securityMarketValue: number | null;
+  enableBalance: number | null;
+  fetchBalance: number | null;
+  frozenBalance: number | null;
+  moneyBalance: number | null;
+  positionIncome: number | null;
+  dayIncome: number | null;
+  channel: string;
+  fetchTime: string | null;
+  positions: BrokerPositionItem[];
+}
+
+export type SyncMode = 'MANUAL' | 'EASYTRADER' | 'EM_WEB';
 export type ImportBatchStatus = 'PROCESSING' | 'SUCCESS' | 'REVERSED' | 'FAILED' | 'PENDING' | 'COMPLETED';
 export type ImportStatus = ImportBatchStatus;
 export type TradeSource = 'MANUAL' | 'FILE' | 'IMPORT' | 'API' | 'SYSTEM';
@@ -75,9 +108,9 @@ export const AccountTypeLabels: Record<string, string> = {
 export const ACCOUNT_TYPE_LABELS = AccountTypeLabels;
 
 export const SyncModeLabels: Record<SyncMode, string> = {
-  MANUAL: '手工录入',
-  FILE: '文件导入',
-  API: '自动同步'
+  MANUAL: '手动导入',
+  EASYTRADER: '客户端自动化',
+  EM_WEB: '网页交易自动同步'
 };
 export const SYNC_MODE_LABELS = SyncModeLabels;
 
@@ -155,6 +188,8 @@ export interface PortfolioPosition {
   marketValue?: number | null;
   unrealizedProfit?: number | null;
   unrealizedProfitRate?: number | null;
+  dayIncome?: number | null;
+  dayIncomeRate?: number | null;
   positionRatio?: number | null;
   quoteDate?: string;
 }

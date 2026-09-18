@@ -7,6 +7,11 @@ import com.brotherc.aquant.portfolio.model.dto.PortfolioTradeFileParseResult;
  */
 public interface BrokerTradeFileAdapter {
 
+    /** 适配器服务的券商代码（与 UserBrokerAccount.brokerCode 同一取值域），用于按账户路由优先匹配 */
+    default String brokerCode() {
+        return "";
+    }
+
     boolean supports(String brokerCode, String fileName, byte[] content);
 
     PortfolioTradeFileParseResult parse(String fileName, byte[] content);

@@ -39,6 +39,11 @@ public class CMSSecuritiesTradeFileAdapter implements BrokerTradeFileAdapter {
     );
 
     @Override
+    public String brokerCode() {
+        return BROKER_CODE;
+    }
+
+    @Override
     public boolean supports(String brokerCode, String fileName, byte[] content) {
         if (!BROKER_CODE.equalsIgnoreCase(brokerCode) || content.length == 0) {
             return false;

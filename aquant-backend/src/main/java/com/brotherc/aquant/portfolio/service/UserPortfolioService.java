@@ -3,16 +3,21 @@ package com.brotherc.aquant.portfolio.service;
 import com.brotherc.aquant.common.exception.BusinessException;
 import com.brotherc.aquant.common.exception.ExceptionEnum;
 import com.brotherc.aquant.common.utils.DigestUtils;
+import com.brotherc.aquant.sync.entity.StockSync;
+import com.brotherc.aquant.sync.repository.StockSyncRepository;
+import com.brotherc.aquant.common.utils.StockUtils;
 import com.brotherc.aquant.common.utils.UserContext;
 import com.brotherc.aquant.fund.entity.StockFundNetValue;
 import com.brotherc.aquant.fund.repository.StockFundNetValueRepository;
 import com.brotherc.aquant.portfolio.entity.*;
 import com.brotherc.aquant.portfolio.model.vo.*;
+import com.brotherc.aquant.portfolio.model.vo.BrokerPositionSnapshotVO.BrokerPositionItemVO;
 import com.brotherc.aquant.portfolio.repository.*;
 import com.brotherc.aquant.stock.entity.StockQuote;
 import com.brotherc.aquant.stock.entity.StockQuoteHistory;
 import com.brotherc.aquant.stock.repository.StockQuoteHistoryRepository;
 import com.brotherc.aquant.stock.repository.StockQuoteRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -21,6 +26,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
@@ -37,6 +43,8 @@ public class UserPortfolioService {
     private static final Set<String> ASSET_TYPES = Set.of("STOCK", "ETF", "FUND", "BOND", "CASH");
     private static final Set<String> POSITION_IN_TYPES = Set.of("BUY", "SUBSCRIBE", "POSITION_INIT", "TRANSFER_IN", "DIVIDEND_SHARE");
     private static final Set<String> POSITION_OUT_TYPES = Set.of("SELL", "REDEEM", "TRANSFER_OUT");
+    /** 券商持仓代码的 ETF 前缀（与导入适配器口径一致） */
+    private static final Set<String> BROKER_ETF_PREFIXES = Set.of("15", "16", "50", "51", "52", "53", "56", "58");
     private static final Set<String> AMOUNT_ONLY_TYPES = Set.of(
             "DIVIDEND_CASH", "FEE", "TAX", "INTEREST", "CASH_DEPOSIT", "CASH_WITHDRAW"
     );
@@ -51,6 +59,8 @@ public class UserPortfolioService {
     private final StockQuoteRepository stockQuoteRepository;
     private final StockQuoteHistoryRepository stockQuoteHistoryRepository;
     private final StockFundNetValueRepository fundNetValueRepository;
+    private final com.brotherc.aquant.sync.repository.StockSyncRepository stockSyncRepository;
+    private final ObjectMapper objectMapper;
 
     @Transactional(rollbackFor = Exception.class)
     public List<UserPortfolioVO> getPortfolios() {
@@ -220,7 +230,12 @@ public class UserPortfolioService {
                 successCount++;
             }
         }
-        rebuildPositions(account);
+        // 券商同步渠道（EM_WEB/EASYTRADER）的持仓与资产由接口快照直取落库
+        // （replacePositionsFromBroker，由 PortfolioBrokerSyncService 同步时调用）；
+        // 其成交接口只提供增量数据，用它重算会因历史持仓缺失把持仓错误清零，故不在此重算
+        if (!isBrokerSyncChannel(source)) {
+            rebuildPositions(account, isLenientOverSellSource(account, source));
+        }
         batch.setSuccessCount(successCount);
         batch.setSkipCount(skipCount);
         batch.setStatus("SUCCESS");
@@ -499,6 +514,161 @@ public class UserPortfolioService {
     }
 
     private void rebuildPositions(UserBrokerAccount account) {
+        rebuildPositions(account, false);
+    }
+
+    /**
+     * 卖出超持仓是否按宽松模式处理（钳制清仓而非报错）。
+     * 东财自动同步（EM_WEB）与客户端同步（EASYTRADER）只有当日成交、无历史持仓流水，
+     * 卖出必然"超额"；东财交割单文件导入同理。招商（CMS）及手动录入保持严格校验。
+     */
+    private boolean isLenientOverSellSource(UserBrokerAccount account, String source) {
+        String normalizedSource = StringUtils.defaultString(source).toUpperCase(Locale.ROOT);
+        if ("EASYTRADER".equals(normalizedSource) || "EM_WEB".equals(normalizedSource)) {
+            return true;
+        }
+        String syncMode = StringUtils.defaultString(account.getSyncMode()).toUpperCase(Locale.ROOT);
+        String brokerCode = StringUtils.defaultString(account.getBrokerCode()).toUpperCase(Locale.ROOT);
+        return "EM_WEB".equals(syncMode) || "EM".equals(brokerCode) || "EASTMONEY".equals(brokerCode);
+    }
+
+    /** 是否为券商自动同步渠道（持仓以接口快照为准，不用成交流水重算） */
+    private boolean isBrokerSyncChannel(String source) {
+        String normalized = StringUtils.defaultString(source).toUpperCase(Locale.ROOT);
+        return "EASYTRADER".equals(normalized) || "EM_WEB".equals(normalized);
+    }
+
+    /** 券商持仓快照在 stock_sync 表中的键前缀（按账户隔离） */
+    private static final String BROKER_SNAPSHOT_KEY_PREFIX = "portfolio_broker_snapshot_";
+
+    /** 持久化最近一次成功同步的券商持仓快照（Cookie 失效后页面仍可展示该数据） */
+    public void saveBrokerSnapshot(Long accountId, BrokerPositionSnapshotVO snapshot) {
+        try {
+            StockSync stored = stockSyncRepository.findByName(BROKER_SNAPSHOT_KEY_PREFIX + accountId);
+            if (stored == null) {
+                stored = new StockSync();
+                stored.setName(BROKER_SNAPSHOT_KEY_PREFIX + accountId);
+            }
+            stored.setValue(objectMapper.writeValueAsString(snapshot));
+            stockSyncRepository.save(stored);
+        } catch (RuntimeException | IOException exception) {
+            // 持久化失败不影响本次同步结果，仅下次打开页面看不到缓存
+            log.warn("券商持仓快照持久化失败: accountId={}", accountId, exception);
+        }
+    }
+
+    /** 读取最近一次成功同步的券商持仓快照（无则返回 null，前端展示引导文案） */
+    public BrokerPositionSnapshotVO getBrokerSnapshot(Long accountId) {
+        try {
+            StockSync stored = stockSyncRepository.findByName(BROKER_SNAPSHOT_KEY_PREFIX + accountId);
+            if (stored == null || StringUtils.isBlank(stored.getValue())) {
+                return null;
+            }
+            return objectMapper.readValue(stored.getValue(), BrokerPositionSnapshotVO.class);
+        } catch (RuntimeException | IOException exception) {
+            log.warn("券商持仓快照读取失败: accountId={}", accountId, exception);
+            return null;
+        }
+    }
+
+    /**
+     * 用券商接口持仓快照覆盖本地持仓（全部为券商口径原值，本地不做推算）。
+     *
+     * <p>券商渠道的成交接口只提供增量数据（当日至最近若干日），账户历史持仓不在其中，
+     * 用成交流水重算必然把持仓错误清零，因此这类账户的持仓以此方法为准：
+     * 持仓数量/可用数量/成本价/最新价/市值/持仓盈亏均直取接口值，
+     * 资金可用/冻结同步写入现金表（总资产含证券市值，不写现金余额以免重复计账）。</p>
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void replacePositionsFromBroker(Long accountId, Long userId, BrokerPositionSnapshotVO snapshot) {
+        UserBrokerAccount account = getAccount(accountId, userId);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDate today = now.toLocalDate();
+
+        // 旧持仓按代码留存：jywg 盘前/非交易时段返回的最新价/市值/盈亏为空，
+        // 这些字段用旧值兜底，避免把上一次同步的有效数据清成 NULL
+        Map<String, UserPortfolioPosition> previousByCode = positionRepository
+                .findAllByAccountIdOrderByMarketValueDesc(account.getId()).stream()
+                .collect(Collectors.toMap(UserPortfolioPosition::getAssetCode, item -> item, (first, second) -> first));
+
+        List<UserPortfolioPosition> positions = new ArrayList<>();
+        for (BrokerPositionItemVO item : snapshot.getPositions()) {
+            if (StringUtils.isBlank(item.getSecurityCode()) || item.getHoldingQuantity() == null
+                    || item.getHoldingQuantity().signum() <= 0) {
+                continue;
+            }
+            UserPortfolioPosition previous = previousByCode.get(item.getSecurityCode());
+            UserPortfolioPosition position = new UserPortfolioPosition();
+            position.setAccountId(account.getId());
+            position.setAssetType(brokerAssetType(item.getSecurityCode()));
+            position.setMarket(StockUtils.market(item.getSecurityCode()));
+            position.setAssetCode(item.getSecurityCode());
+            position.setAssetName(item.getSecurityName());
+            position.setCurrency("CNY");
+            position.setQuantity(item.getHoldingQuantity());
+            position.setAvailableQuantity(item.getEnableQuantity() == null
+                    ? item.getHoldingQuantity() : item.getEnableQuantity());
+            position.setCostPrice(item.getCostPrice());
+            // 成本额按券商成本价×数量推算；摊薄成本价可为负，属券商正常口径，原样保留
+            position.setCostAmount(item.getCostPrice() == null
+                    ? null : item.getCostPrice().multiply(item.getHoldingQuantity()));
+            // 最新价/市值/盈亏盘前或非交易时段可能为空：空值保留上一次同步的旧值（最后已知价模式）
+            position.setLatestPrice(item.getLastPrice() != null ? item.getLastPrice()
+                    : previous != null ? previous.getLatestPrice() : null);
+            position.setMarketValue(item.getMarketValue() != null ? item.getMarketValue()
+                    : previous != null ? previous.getMarketValue() : null);
+            position.setUnrealizedProfit(item.getIncome() != null ? item.getIncome()
+                    : previous != null ? previous.getUnrealizedProfit() : null);
+            position.setIncomeRate(item.getIncomeRate() != null ? item.getIncomeRate()
+                    : previous != null ? previous.getIncomeRate() : null);
+            position.setDayIncome(item.getDayIncome() != null ? item.getDayIncome()
+                    : previous != null ? previous.getDayIncome() : null);
+            position.setDayIncomeRate(item.getDayIncomeRate() != null ? item.getDayIncomeRate()
+                    : previous != null ? previous.getDayIncomeRate() : null);
+            position.setQuoteDate(today);
+            position.setCalculateTime(now);
+            positions.add(position);
+        }
+        positionRepository.deleteByAccountId(account.getId());
+        positionRepository.saveAll(positions);
+
+        if (snapshot.getEnableBalance() != null || snapshot.getFrozenBalance() != null) {
+            BigDecimal available = snapshot.getEnableBalance() == null
+                    ? BigDecimal.ZERO : snapshot.getEnableBalance();
+            BigDecimal frozen = snapshot.getFrozenBalance() == null
+                    ? BigDecimal.ZERO : snapshot.getFrozenBalance();
+            UserPortfolioCash cash = cashRepository.findByAccountIdAndCurrency(account.getId(), "CNY")
+                    .orElseGet(UserPortfolioCash::new);
+            cash.setAccountId(account.getId());
+            cash.setCurrency("CNY");
+            cash.setAvailableBalance(available);
+            cash.setFrozenBalance(frozen);
+            cash.setTotalBalance(available.add(frozen));
+            cashRepository.save(cash);
+        }
+        rebuildAccountHistoricalSnapshots(account);
+    }
+
+    /** 券商持仓代码推断资产类型（ETF 前缀 → ETF，债券代码 → BOND，其余 STOCK） */
+    private String brokerAssetType(String assetCode) {
+        if (StockUtils.isBond(assetCode)) {
+            return "BOND";
+        }
+        if (assetCode.length() >= 2 && BROKER_ETF_PREFIXES.contains(assetCode.substring(0, 2))) {
+            return "ETF";
+        }
+        return "STOCK";
+    }
+
+    /**
+     * 全量重算账户持仓。
+     *
+     * @param lenientOverSell 卖出超持仓时的处理：false 严格模式抛异常（手动录入/招商文件，
+     *                        数据可追溯、必须准确）；true 宽松模式按现有数量钳制扣减并告警
+     *                        （东财等自动同步/交割单导入只有当日成交，账户此前历史持仓不在
+     *                        流水里，卖出必然"超额"，属正常业务形态而非数据错误）
+     */
+    private void rebuildPositions(UserBrokerAccount account, boolean lenientOverSell) {
         Map<String, UserPortfolioPosition> positionMap = new LinkedHashMap<>();
         for (UserPortfolioTrade trade : tradeRepository
                 .findAllByAccountIdAndStatusOrderByTradeTimeAscIdAsc(account.getId(), "NORMAL")) {
@@ -526,8 +696,14 @@ public class UserPortfolioService {
                 }
             } else {
                 if (position.getQuantity().compareTo(quantity) < 0) {
-                    throw new BusinessException(ExceptionEnum.PORTFOLIO_POSITION_INSUFFICIENT,
-                            trade.getAssetCode() + "卖出或转出数量超过当前持仓");
+                    if (!lenientOverSell) {
+                        throw new BusinessException(ExceptionEnum.PORTFOLIO_POSITION_INSUFFICIENT,
+                                trade.getAssetCode() + "卖出或转出数量超过当前持仓");
+                    }
+                    // 宽松模式：历史持仓不在本流水内，按现有数量钳制扣减（数量归 0、成本全扣）
+                    log.warn("账户 {} 流水 {} 卖出数量 {} 超过当前持仓 {}，已按清仓处理（历史持仓不在导入流水内）",
+                            account.getId(), trade.getId(), quantity, position.getQuantity());
+                    quantity = position.getQuantity();
                 }
                 BigDecimal reducedCost = position.getQuantity().signum() == 0 ? BigDecimal.ZERO
                         : position.getCostAmount().multiply(quantity)
@@ -582,12 +758,15 @@ public class UserPortfolioService {
                     quoteDate = netValues.get(0).getNavDate() == null ? null : netValues.get(0).getNavDate().toLocalDate();
                 }
             }
-            position.setLatestPrice(latestPrice);
-            position.setQuoteDate(quoteDate);
-            position.setMarketValue(latestPrice == null ? null
-                    : latestPrice.multiply(position.getQuantity()).setScale(4, RoundingMode.HALF_UP));
-            position.setUnrealizedProfit(position.getMarketValue() == null ? null
-                    : position.getMarketValue().subtract(position.getCostAmount()));
+            // 无报价（券商同步的代码不在行情表内）时保留最后已知值，避免读取路径把数据清空
+            if (latestPrice != null) {
+                position.setLatestPrice(latestPrice);
+                position.setQuoteDate(quoteDate);
+                position.setMarketValue(latestPrice.multiply(position.getQuantity()).setScale(4, RoundingMode.HALF_UP));
+                if (position.getCostAmount() != null) {
+                    position.setUnrealizedProfit(position.getMarketValue().subtract(position.getCostAmount()));
+                }
+            }
             position.setCalculateTime(LocalDateTime.now());
         }
         positionRepository.saveAll(positions);
@@ -622,10 +801,14 @@ public class UserPortfolioService {
             vo.setLatestPrice(position.getLatestPrice());
             vo.setMarketValue(position.getMarketValue());
             vo.setUnrealizedProfit(position.getUnrealizedProfit());
-            vo.setUnrealizedProfitRate(position.getCostAmount() == null || position.getCostAmount().signum() == 0
+            // 券商同步源直取接口的盈亏比例（含费用口径更准确）；本地计算源按成本推算
+            vo.setUnrealizedProfitRate(position.getIncomeRate() != null ? position.getIncomeRate()
+                    : position.getCostAmount() == null || position.getCostAmount().signum() == 0
                     || position.getUnrealizedProfit() == null ? null
                     : position.getUnrealizedProfit().multiply(BigDecimal.valueOf(100))
                     .divide(position.getCostAmount(), 4, RoundingMode.HALF_UP));
+            vo.setDayIncome(position.getDayIncome());
+            vo.setDayIncomeRate(position.getDayIncomeRate());
             vo.setPositionRatio(position.getMarketValue() == null || denominator.signum() == 0
                     || !portfolio.getBaseCurrency().equals(position.getCurrency()) ? null
                     : position.getMarketValue().multiply(BigDecimal.valueOf(100))

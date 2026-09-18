@@ -8,6 +8,7 @@ import com.brotherc.aquant.portfolio.entity.UserPortfolioImportBatch;
 import com.brotherc.aquant.portfolio.model.vo.*;
 import com.brotherc.aquant.portfolio.service.UserPortfolioService;
 import com.brotherc.aquant.portfolio.service.PortfolioTradeImportService;
+import com.brotherc.aquant.portfolio.service.sync.PortfolioBrokerSyncService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -27,6 +28,7 @@ import java.nio.charset.StandardCharsets;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @Tag(name = "用户持仓")
 @RestController
@@ -36,6 +38,7 @@ public class UserPortfolioController {
 
     private final UserPortfolioService portfolioService;
     private final PortfolioTradeImportService tradeImportService;
+    private final PortfolioBrokerSyncService portfolioBrokerSyncService;
 
     @Operation(summary = "查询当前用户的投资组合")
     @GetMapping("/list")
@@ -84,17 +87,38 @@ public class UserPortfolioController {
     @Operation(summary = "校验并预览 CSV/Excel 交易流水文件")
     @PostMapping(value = "/trade/import/preview", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseDTO<PortfolioTradeImportPreviewVO> previewTradeFile(
-            @RequestParam Long accountId, @RequestPart("file") MultipartFile file) {
-        return ResponseDTO.success(tradeImportService.preview(accountId, file));
+            @RequestParam Long accountId,
+            @RequestParam(required = false) String brokerCode,
+            @RequestPart("file") MultipartFile file) {
+        return ResponseDTO.success(tradeImportService.preview(accountId, brokerCode, file));
     }
 
     @Operation(summary = "导入 CSV/Excel 交易流水文件")
     @PostMapping(value = "/trade/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseDTO<PortfolioImportResultVO> importTradeFile(
             @RequestParam Long accountId,
+            @RequestParam(required = false) String brokerCode,
             @RequestParam(defaultValue = "true") boolean syncCashBalance,
             @RequestPart("file") MultipartFile file) {
-        return ResponseDTO.success(tradeImportService.importFile(accountId, file, syncCashBalance));
+        return ResponseDTO.success(tradeImportService.importFile(accountId, brokerCode, file, syncCashBalance));
+    }
+
+    @Operation(summary = "按账户同步方式拉取最近成交并入库（EASYTRADER/EM_WEB）")
+    @PostMapping("/account/{accountId}/sync/trades")
+    public ResponseDTO<PortfolioImportResultVO> syncBrokerTrades(@PathVariable Long accountId) {
+        return ResponseDTO.success(portfolioBrokerSyncService.syncTrades(accountId));
+    }
+
+    @Operation(summary = "查询最近一次同步的券商持仓快照", description = "读持久化数据，Cookie 失效后仍可展示")
+    @GetMapping("/account/{accountId}/sync/positions")
+    public ResponseDTO<BrokerPositionSnapshotVO> syncBrokerPositions(@PathVariable Long accountId) {
+        return ResponseDTO.success(portfolioBrokerSyncService.positions(accountId));
+    }
+
+    @Operation(summary = "实时刷新券商持仓快照", description = "需交易会话有效；成功后覆盖持久化快照并返回")
+    @PostMapping("/account/{accountId}/sync/positions/refresh")
+    public ResponseDTO<BrokerPositionSnapshotVO> refreshBrokerPositions(@PathVariable Long accountId) {
+        return ResponseDTO.success(portfolioBrokerSyncService.refreshPositions(accountId));
     }
 
     @Operation(summary = "下载交易流水导入模板")

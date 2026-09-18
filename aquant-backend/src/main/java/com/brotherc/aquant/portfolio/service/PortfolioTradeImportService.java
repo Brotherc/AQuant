@@ -13,6 +13,7 @@ import com.brotherc.aquant.portfolio.repository.UserBrokerAccountRepository;
 import com.brotherc.aquant.portfolio.repository.UserPortfolioImportBatchRepository;
 import com.brotherc.aquant.portfolio.service.importer.BrokerTradeFileAdapter;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -33,8 +34,8 @@ public class PortfolioTradeImportService {
     private final UserPortfolioImportBatchRepository importBatchRepository;
     private final List<BrokerTradeFileAdapter> brokerTradeFileAdapters;
 
-    public PortfolioTradeImportPreviewVO preview(Long accountId, MultipartFile file) {
-        String brokerCode = validateAccount(accountId).getBrokerCode();
+    public PortfolioTradeImportPreviewVO preview(Long accountId, String brokerCodeOverride, MultipartFile file) {
+        String brokerCode = resolveBrokerCode(accountId, brokerCodeOverride);
         PortfolioTradeFileParseResult parsed = parse(brokerCode, file);
         PortfolioTradeImportPreviewVO preview = new PortfolioTradeImportPreviewVO();
         preview.setFileName(parsed.getFileName());
@@ -53,8 +54,9 @@ public class PortfolioTradeImportService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public PortfolioImportResultVO importFile(Long accountId, MultipartFile file, boolean syncCashBalance) {
-        String brokerCode = validateAccount(accountId).getBrokerCode();
+    public PortfolioImportResultVO importFile(Long accountId, String brokerCodeOverride, MultipartFile file,
+                                              boolean syncCashBalance) {
+        String brokerCode = resolveBrokerCode(accountId, brokerCodeOverride);
         PortfolioTradeFileParseResult parsed = parse(brokerCode, file);
         if (!parsed.getErrors().isEmpty()) {
             String firstError = parsed.getErrors().get(0).getMessage();
@@ -99,14 +101,31 @@ public class PortfolioTradeImportService {
         }
         try {
             byte[] content = file.getBytes();
+            // 优先按指定/账户券商匹配适配器；都不中时按文件内容签名兜底识别（避免账户券商代码
+            // 与实际文件来源不符——如东财账户挂着 CMS 代码——导致走错解析器）
             return brokerTradeFileAdapters.stream()
                     .filter(adapter -> adapter.supports(brokerCode, file.getOriginalFilename(), content))
                     .findFirst()
+                    .or(() -> brokerTradeFileAdapters.stream()
+                            .filter(adapter -> adapter.supports("*", file.getOriginalFilename(), content))
+                            .findFirst())
                     .map(adapter -> adapter.parse(file.getOriginalFilename(), content))
                     .orElseGet(() -> fileParser.parse(file.getOriginalFilename(), content));
         } catch (IOException e) {
             throw new BusinessException(ExceptionEnum.PORTFOLIO_IMPORT_FILE_INVALID, "读取上传文件失败");
         }
+    }
+
+    /**
+     * 导入券商代码：显式指定（前端券商选择器）优先，其次回落账户配置的 brokerCode。
+     * MANUAL 是同步方式的缺省值而非券商代码，不作为匹配依据。
+     */
+    private String resolveBrokerCode(Long accountId, String brokerCodeOverride) {
+        UserBrokerAccount account = validateAccount(accountId);
+        if (StringUtils.isNotBlank(brokerCodeOverride) && !"MANUAL".equalsIgnoreCase(brokerCodeOverride)) {
+            return brokerCodeOverride;
+        }
+        return StringUtils.defaultIfBlank(account.getBrokerCode(), "STANDARD");
     }
 
     private UserBrokerAccount validateAccount(Long accountId) {

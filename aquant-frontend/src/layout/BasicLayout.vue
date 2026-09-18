@@ -73,6 +73,10 @@
                     <key-outlined />
                     <span style="margin-left: 8px;">东财 Cookie</span>
                   </a-menu-item>
+                  <a-menu-item key="jywgCookie" @click="showJywgCookieModal">
+                    <safety-certificate-outlined />
+                    <span style="margin-left: 8px;">交易 Cookie</span>
+                  </a-menu-item>
                   <a-menu-divider />
                   <a-menu-item key="logout" @click="handleLogout">
                     <logout-outlined />
@@ -155,6 +159,52 @@
       </div>
     </a-modal>
 
+    <!-- 交易 Cookie（jywg 网页交易会话）Modal -->
+    <a-modal
+      v-model:visible="jywgModalVisible"
+      title="交易 Cookie（东财证券网页交易）"
+      @ok="handleUpdateJywgCookie"
+      :confirmLoading="jywgSaving"
+      destroyOnClose
+      @cancel="stopJywgCountdown"
+      @after-close="stopJywgCountdown"
+    >
+      <a-alert
+        v-if="jywgStatus !== null"
+        :message="jywgStatusMessage"
+        :type="jywgStatusType"
+        show-icon
+        style="margin-bottom: 12px;"
+      />
+      <a-form layout="vertical">
+        <a-form-item label="在线时长" required>
+          <a-radio-group v-model:value="jywgForm.durationMinutes">
+            <a-radio-button :value="15">15 分钟</a-radio-button>
+            <a-radio-button :value="30">30 分钟</a-radio-button>
+            <a-radio-button :value="180">3 小时</a-radio-button>
+          </a-radio-group>
+        </a-form-item>
+        <a-form-item label="完整 Cookie 请求头字符串" required>
+          <a-textarea
+            v-model:value="jywgForm.cookie"
+            :rows="4"
+            placeholder="浏览器登录 jywg.eastmoneysec.com 后从 DevTools 复制"
+          />
+        </a-form-item>
+        <a-form-item label="validatekey" required>
+          <a-input
+            v-model:value="jywgForm.validateKey"
+            placeholder="任意查询请求 URL 的 validatekey 参数，或页面 #em_validatekey 的 value"
+          />
+        </a-form-item>
+      </a-form>
+      <div class="cookie-help">
+        <p>获取方式：① 浏览器打开 jywg.eastmoneysec.com 并登录（滑块/验证码先完成）；② F12 → Network → 任意 jywg 查询请求 → 复制请求头完整 Cookie 和 URL 里的 validatekey 参数；③ 选择在线时长保存，立即生效。</p>
+        <p>到期后上游会话同步过期，持仓同步会提示重新获取；倒计时结束前更新即可。</p>
+        <p>注意：交易 Cookie 与「东财 Cookie」（行情中心）是两个独立凭证，互不通用，需分别维护。</p>
+      </div>
+    </a-modal>
+
     <a-drawer
       v-model:visible="navDrawerVisible"
       placement="right"
@@ -200,7 +250,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, watch, onMounted } from 'vue';
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   DashboardOutlined,
@@ -208,6 +258,7 @@ import {
   LineChartOutlined,
   RadarChartOutlined,
   UserOutlined,
+  SafetyCertificateOutlined,
   LogoutOutlined,
   LoginOutlined,
   MailOutlined,
@@ -217,7 +268,8 @@ import {
 } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
 import { updateEmail } from '@/api/auth';
-import { getEastmoneyCookieStatus, updateEastmoneyCookie } from '@/api/eastmoney';
+import { getEastmoneyCookieStatus, updateEastmoneyCookie, getJywgCookieStatus, updateJywgCookie } from '@/api/eastmoney';
+import type { JywgCookieStatus } from '@/api/eastmoney';
 
 type NavigationChild = {
   key: string;
@@ -453,6 +505,115 @@ const handleUpdateCookie = async () => {
     cookieSaving.value = false;
   }
 };
+
+// 交易 Cookie（jywg 网页交易会话）相关：与行情 Cookie 相互独立，带在线时长倒计时
+const jywgModalVisible = ref(false);
+const jywgSaving = ref(false);
+const jywgStatus = ref<JywgCookieStatus | null>(null);
+const jywgForm = ref({ cookie: '', validateKey: '', durationMinutes: 15 });
+let jywgCountdownTimer: number | null = null;
+
+const jywgRemainingSeconds = ref(0);
+
+const jywgStatusMessage = computed(() => {
+  const status = jywgStatus.value;
+  if (!status) return '';
+  if (!status.configured) return '当前未配置交易 Cookie';
+  if (status.expired || jywgRemainingSeconds.value <= 0) {
+    return `交易会话已过期，请重新获取 Cookie${jywgUpdateTimeText.value ? `（上次更新于 ${jywgUpdateTimeText.value}）` : ''}`;
+  }
+  return `交易会话有效，剩余 ${jywgRemainingDisplay.value}${jywgUpdateTimeText.value ? `（更新于 ${jywgUpdateTimeText.value}）` : ''}`;
+});
+
+const jywgUpdateTimeText = computed(() => {
+  const updateTime = jywgStatus.value?.updateTime;
+  if (!updateTime) return '';
+  const parsed = new Date(updateTime);
+  return Number.isNaN(parsed.getTime()) ? '' : parsed.toLocaleString('zh-CN', { hour12: false });
+});
+
+const jywgStatusType = computed(() => {
+  const status = jywgStatus.value;
+  if (!status) return 'info';
+  if (!status.configured) return 'warning';
+  return status.expired || jywgRemainingSeconds.value <= 0 ? 'error' : 'success';
+});
+
+const jywgRemainingDisplay = computed(() => {
+  const total = jywgRemainingSeconds.value;
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  return minutes > 0 ? `${minutes} 分 ${seconds.toString().padStart(2, '0')} 秒` : `${seconds} 秒`;
+});
+
+const stopJywgCountdown = () => {
+  if (jywgCountdownTimer !== null) {
+    window.clearInterval(jywgCountdownTimer);
+    jywgCountdownTimer = null;
+  }
+};
+
+const startJywgCountdown = () => {
+  stopJywgCountdown();
+  jywgCountdownTimer = window.setInterval(() => {
+    if (jywgRemainingSeconds.value > 0) {
+      jywgRemainingSeconds.value -= 1;
+    }
+  }, 1000);
+};
+
+const applyJywgStatus = (status: JywgCookieStatus) => {
+  jywgStatus.value = status;
+  jywgRemainingSeconds.value = status.configured && !status.expired ? status.remainingSeconds : 0;
+};
+
+const showJywgCookieModal = async () => {
+  jywgForm.value = { cookie: '', validateKey: '', durationMinutes: 15 };
+  jywgStatus.value = null;
+  jywgModalVisible.value = true;
+  try {
+    const res = await getJywgCookieStatus();
+    if (res.data.success) {
+      applyJywgStatus(res.data.data);
+      startJywgCountdown();
+    }
+  } catch (error) {
+    console.error('Failed to query jywg cookie status:', error);
+  }
+};
+
+const handleUpdateJywgCookie = async () => {
+  const cookie = jywgForm.value.cookie.trim();
+  const validateKey = jywgForm.value.validateKey.trim();
+  if (!cookie || !validateKey) {
+    message.warning('请填写完整的 Cookie 与 validatekey');
+    return;
+  }
+  jywgSaving.value = true;
+  try {
+    const res = await updateJywgCookie({
+      cookie,
+      validateKey,
+      durationMinutes: jywgForm.value.durationMinutes
+    });
+    if (res.data.success) {
+      applyJywgStatus(res.data.data);
+      stopJywgCountdown();
+      jywgModalVisible.value = false;
+      message.success(`交易 Cookie 已生效（在线 ${jywgForm.value.durationMinutes} 分钟），正在自动同步持仓/成交`);
+      // 通知持仓页在服务端异步同步完成后刷新数据
+      window.dispatchEvent(new CustomEvent('aquant:broker-sync-started'));
+    }
+  } catch (error) {
+    console.error('Failed to update jywg cookie:', error);
+  } finally {
+    jywgSaving.value = false;
+  }
+};
+
+onUnmounted(() => {
+  stopJywgCountdown();
+});
 </script>
 
 <style scoped>

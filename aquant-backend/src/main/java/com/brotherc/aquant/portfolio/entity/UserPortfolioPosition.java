@@ -58,6 +58,18 @@ public class UserPortfolioPosition {
     @Column(name = "unrealized_profit", precision = 24, scale = 4)
     private BigDecimal unrealizedProfit;
 
+    /** 持仓盈亏比例(%)。本地计算源由流水重算；券商同步源直取接口原值（如东财 income_rate） */
+    @Column(name = "income_rate", precision = 24, scale = 4)
+    private BigDecimal incomeRate;
+
+    /** 当日盈亏。券商同步源直取接口原值 */
+    @Column(name = "day_income", precision = 24, scale = 4)
+    private BigDecimal dayIncome;
+
+    /** 当日盈亏比例(%)。券商同步源直取接口原值 */
+    @Column(name = "day_income_rate", precision = 24, scale = 4)
+    private BigDecimal dayIncomeRate;
+
     @Column(name = "quote_date")
     private LocalDate quoteDate;
 

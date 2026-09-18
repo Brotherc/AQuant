@@ -11,7 +11,7 @@
 
     <!-- 2. 二级导航 Tab 与筛选选择器栏 -->
     <div class="portfolio-nav-tabs-bar">
-      <div class="portfolio-nav-tabs">
+      <div v-show="!activeSourceMeta.view" class="portfolio-nav-tabs">
         <button
           v-for="tab in navTabs"
           :key="tab.key"
@@ -62,11 +62,37 @@
             </a-select-option>
           </a-select>
         </div>
+
+        <div class="filter-select-group">
+          <a-button
+            type="primary"
+            ghost
+            size="small"
+            :loading="brokerSyncing"
+            :disabled="!selectedAccountId"
+            title="按选中账户的同步方式（网页交易/客户端）拉取最近成交并刷新持仓与收益"
+            @click="handleBrokerSync"
+          >
+            <template #icon><sync-outlined /></template>
+            同步持仓
+          </a-button>
+        </div>
+        <div class="filter-select-group" v-if="activeSourceMeta.view">
+          <a-button size="small" title="新增/管理投资组合与券商账户（本地数据）" @click="goToLocalTab('account')">
+            组合与账户管理
+          </a-button>
+        </div>
       </div>
     </div>
 
-    <!-- 4. Tab 视图内容 -->
-    <div class="tab-content-container">
+    <!-- 4. 页面由「券商账户」所属券商决定：有专属视图的券商动态加载其页面，
+         其余（未选账户/手动导入券商）沿用本地计算页签 -->
+    <component
+      v-if="activeSourceMeta.view"
+      :is="activeSourceMeta.view"
+      :selected-account-id="selectedAccountId"
+    />
+    <div v-else class="tab-content-container">
       <!-- Tab 1: 总览 -->
       <div v-show="activeTabKey === 'overview'" class="tab-pane-overview">
         <a-row :gutter="[16, 16]">
@@ -228,8 +254,9 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { message } from 'ant-design-vue';
+import { SyncOutlined } from '@ant-design/icons-vue';
 
 import type {
   UserPortfolioVO,
@@ -246,6 +273,7 @@ import type {
 } from '@/types/portfolio';
 
 import {
+  syncBrokerTrades,
   getPortfolioList,
   getAccountList,
   getPortfolioSummary,
@@ -273,6 +301,7 @@ import AccountManager from './components/AccountManager.vue';
 import CashManager from './components/CashManager.vue';
 
 import ImportUploadSection from './components/ImportUploadSection.vue';
+import { LOCAL_SOURCE, findSourceMeta, findSourceByBrokerCode, type PortfolioDataSource } from './sources/registry';
 import ImportBatchTable from './components/ImportBatchTable.vue';
 
 import PositionInitModal from './components/PositionInitModal.vue';
@@ -282,6 +311,32 @@ import TradeFormModal from './components/TradeFormModal.vue';
 const activeTabKey = ref('overview');
 const currentPortfolioId = ref<number | undefined>(undefined);
 const selectedAccountId = ref<number | undefined>(undefined);
+
+// 数据源驱动：不同券商指标不同，切换数据源即动态加载其专属页面（见 ./sources/registry.ts）。
+// 默认跟随选中账户所属券商（组合加载/切换账户时自动切换）；也可手动切回本地计算口径
+const dataSource = ref<PortfolioDataSource>('LOCAL');
+
+/** 组合内账户所属的券商数据源（去重） */
+const availableBrokerSources = computed(() => {
+  const seen = new Map<string, ReturnType<typeof findSourceMeta>>();
+  for (const acc of accounts.value) {
+    const meta = findSourceByBrokerCode(acc.brokerCode);
+    if (meta?.view && !seen.has(meta.key)) {
+      seen.set(meta.key, meta);
+    }
+  }
+  return [...seen.values()];
+});
+
+// dataSource 是唯一权威：显式选择券商源即加载该源视图，选「本地计算」即回到本地页签。
+// 账户只是建议——切换券商账户时由 handleAccountChange 自动更新 dataSource，但绝不覆盖手动选择
+const activeSourceMeta = computed(() => {
+  if (dataSource.value !== 'LOCAL') {
+    const meta = availableBrokerSources.value.find((source) => source.key === dataSource.value);
+    if (meta) return meta;
+  }
+  return LOCAL_SOURCE;
+});
 
 const navTabs = [
   { key: 'overview', label: '总览' },
@@ -365,6 +420,23 @@ const loadAccounts = async () => {
     accounts.value = accList || [];
     if (selectedAccountId.value && !accounts.value.some((a) => a.id === selectedAccountId.value)) {
       selectedAccountId.value = undefined;
+    }
+    // 恢复上次的选择（刷新后保持数据源与账户不回退）；无记录时默认选中带专属页面的券商账户
+    const savedAccountId = Number(localStorage.getItem('portfolio_selected_account')) || undefined;
+    const savedSource = localStorage.getItem('portfolio_data_source');
+    // 券商源仅在最近一次同步成功时才恢复（否则会话/数据不可用，回落本地计算页签）
+    const brokerSnapshotOk = localStorage.getItem('portfolio_broker_snapshot_ok') === '1';
+    if (savedAccountId && accounts.value.some((a) => a.id === savedAccountId)) {
+      selectedAccountId.value = savedAccountId;
+      if (savedSource && (savedSource === 'LOCAL' || brokerSnapshotOk)) {
+        dataSource.value = savedSource as PortfolioDataSource;
+      }
+    } else if (!selectedAccountId.value) {
+      const brokerAccount = accounts.value.find((acc) => findSourceByBrokerCode(acc.brokerCode)?.view);
+      if (brokerAccount) {
+        selectedAccountId.value = brokerAccount.id;
+        dataSource.value = findSourceByBrokerCode(brokerAccount.brokerCode)?.key ?? 'LOCAL';
+      }
     }
   } catch (err: any) {
     message.error(err?.message || '获取券商账户失败');
@@ -453,8 +525,25 @@ const handlePortfolioChange = async () => {
   await loadActiveTabData();
 };
 
+watch(dataSource, (value) => {
+  localStorage.setItem('portfolio_data_source', value);
+});
+watch(selectedAccountId, (value) => {
+  if (value) {
+    localStorage.setItem('portfolio_selected_account', String(value));
+  } else {
+    localStorage.removeItem('portfolio_selected_account');
+  }
+});
+
 const handleAccountChange = () => {
-  void loadActiveTabData();
+  // 切换券商账户时数据源自动跟随该账户所属券商
+  const account = accounts.value.find((item) => item.id === selectedAccountId.value);
+  const matched = findSourceByBrokerCode(account?.brokerCode);
+  dataSource.value = matched?.key ?? 'LOCAL';
+  if (!activeSourceMeta.value.view) {
+    void loadActiveTabData();
+  }
 };
 
 // 每个页签只加载自身可见区域依赖的数据，避免进入页面时请求所有接口。
@@ -479,29 +568,36 @@ watch(activeTabKey, (newTab) => {
   }
 });
 
+/** 跳转到本地口径的某个页签。本地页签（总览/交易/账户/导入）只在「本地计算」源下渲染，
+ *  若当前处于券商数据源视图，需先切回本地来源，否则导航无效果 */
+const goToLocalTab = (tabKey: 'overview' | 'trades' | 'account' | 'import') => {
+  dataSource.value = 'LOCAL';
+  activeTabKey.value = tabKey;
+};
+
 const handleStepClick = (step: number) => {
   if (step === 1 || step === 2) {
-    activeTabKey.value = 'account';
+    goToLocalTab('account');
   } else if (step === 3) {
-    activeTabKey.value = 'import';
+    goToLocalTab('import');
   } else {
-    activeTabKey.value = 'overview';
+    goToLocalTab('overview');
   }
 };
 
 const handleCtaClick = () => {
   if (!portfolioList.value || portfolioList.value.length === 0) {
     // 尚未创建组合 -> 跳转到 账户与资金
-    activeTabKey.value = 'account';
+    goToLocalTab('account');
   } else if (!accounts.value || accounts.value.length === 0) {
     // 尚未添加券商账户 -> 跳转到 账户与资金
-    activeTabKey.value = 'account';
+    goToLocalTab('account');
   } else if (!trades.value || (trades.value.length === 0 && !tradeTotal.value)) {
     // 尚未导入交易流水 -> 跳转到 数据导入
-    activeTabKey.value = 'import';
+    goToLocalTab('import');
   } else {
     // 全部设置已完成 -> 跳转到 总览查看持仓
-    activeTabKey.value = 'overview';
+    goToLocalTab('overview');
   }
 };
 
@@ -552,11 +648,39 @@ const handleInitSuccess = () => {
   void loadActiveTabData();
 };
 
+// 手动同步：按选中账户的同步方式（EM_WEB/EASYTRADER）拉取最近成交，联动刷新持仓与收益
+const brokerSyncing = ref(false);
+const handleBrokerSync = async () => {
+  const accountId = selectedAccountId.value;
+  if (!accountId) {
+    message.warning('请先在券商账户下拉中选择一个账户');
+    return;
+  }
+  const account = accounts.value.find((acc) => acc.id === accountId);
+  if (account && account.syncMode === 'MANUAL') {
+    message.warning('该账户为手动导入模式，请在数据导入页上传交割单文件');
+    return;
+  }
+  brokerSyncing.value = true;
+  try {
+    const result = await syncBrokerTrades(accountId);
+    message.success(
+      `同步完成！总计 ${result?.totalCount || 0} 笔，成功 ${result?.successCount || 0} 笔，跳过重复 ${result?.skipCount || 0} 笔`
+    );
+    await loadOverviewData();
+    await loadActiveTabData();
+  } catch (err: any) {
+    message.error(err?.message || '同步失败，请确认交易 Cookie / 客户端服务是否就绪');
+  } finally {
+    brokerSyncing.value = false;
+  }
+};
+
 const handleTradeSuccess = () => {
   void loadActiveTabData();
 };
 
-const handleFileUpload = async (file: File, accountId?: number) => {
+const handleFileUpload = async (file: File, accountId?: number, brokerCode?: string) => {
   const targetId =
     accountId ||
     selectedAccountId.value ||
@@ -569,7 +693,7 @@ const handleFileUpload = async (file: File, accountId?: number) => {
 
   const hide = message.loading(`正在上传并解析文件 ${file.name}...`, 0);
   try {
-    const result = await importTradeFile(targetId, file, true);
+    const result = await importTradeFile(targetId, file, true, brokerCode);
     hide();
     if (result) {
       message.success(
@@ -601,11 +725,11 @@ const handleDownloadTemplate = async () => {
 };
 
 const handleViewBatch = (batch: PortfolioImportBatchVO) => {
-  const isTradeTabActive = activeTabKey.value === 'trades';
+  const isTradeTabActive = activeTabKey.value === 'trades' && !activeSourceMeta.value.view;
   tradeQueryParams.value = {
     accountId: batch.accountId
   };
-  activeTabKey.value = 'trades';
+  goToLocalTab('trades');
   if (isTradeTabActive) {
     loadTradeData();
   }
@@ -616,7 +740,28 @@ onMounted(async () => {
   if (currentPortfolioId.value) {
     await loadActiveTabData();
   }
+  // 交易 Cookie 更新后后端会异步自动同步成交/持仓（EM_WEB 渠道），延时两次刷新兜底
+  window.addEventListener('aquant:broker-sync-started', handleBrokerSyncStarted);
 });
+
+onUnmounted(() => {
+  window.removeEventListener('aquant:broker-sync-started', handleBrokerSyncStarted);
+  brokerSyncRefreshTimers.forEach(timer => window.clearTimeout(timer));
+});
+
+let brokerSyncRefreshTimers: number[] = [];
+const handleBrokerSyncStarted = () => {
+  if (!currentPortfolioId.value) {
+    return;
+  }
+  message.info('交易 Cookie 已更新，正在同步当日成交与持仓…');
+  brokerSyncRefreshTimers.forEach(timer => window.clearTimeout(timer));
+  brokerSyncRefreshTimers = [3000, 8000].map(delay => window.setTimeout(async () => {
+    await loadOverviewData();
+    await loadActiveTabData();
+    message.success('持仓数据已按最新交易同步刷新');
+  }, delay));
+};
 </script>
 
 <style scoped>

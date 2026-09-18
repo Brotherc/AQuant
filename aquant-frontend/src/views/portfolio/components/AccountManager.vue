@@ -111,6 +111,12 @@
             <span class="text-muted">{{ record.brokerCode || getBrokerCode(record.brokerName) }}</span>
           </template>
 
+          <template v-else-if="column.dataIndex === 'syncMode'">
+            <span class="text-muted">
+              {{ SYNC_MODE_LABELS[record.syncMode as SyncMode] || '手动导入' }}
+            </span>
+          </template>
+
           <template v-else-if="column.dataIndex === 'status'">
             <div class="status-dot-wrap">
               <span class="status-dot dot-green"></span>
@@ -201,6 +207,14 @@
         <a-form-item label="券商代码 (选填)" name="brokerCode">
           <a-input v-model:value="accountForm.brokerCode" placeholder="如 CMS" />
         </a-form-item>
+        <a-form-item label="同步方式" name="syncMode">
+          <a-select v-model:value="accountForm.syncMode">
+            <a-select-option value="MANUAL">手动导入（交割单文件）</a-select-option>
+            <a-select-option value="EM_WEB">网页交易自动同步（东财 jywg）</a-select-option>
+            <a-select-option value="EASYTRADER">客户端自动化（easytrader）</a-select-option>
+          </a-select>
+          <p class="sync-mode-hint">选择自动同步的账户，需先在右上角用户菜单配置对应渠道的交易 Cookie / 客户端服务</p>
+        </a-form-item>
       </a-form>
     </a-modal>
   </div>
@@ -219,7 +233,8 @@ import type {
   BrokerAccountCreateRequest,
   BrokerAccountUpdateRequest
 } from '@/types/portfolio';
-import { ACCOUNT_TYPE_LABELS } from '@/types/portfolio';
+import { ACCOUNT_TYPE_LABELS, SYNC_MODE_LABELS } from '@/types/portfolio';
+import type { SyncMode } from '@/types/portfolio';
 import {
   savePortfolio,
   deletePortfolio,
@@ -252,6 +267,7 @@ const accountColumns: TableColumnType<BrokerAccountVO>[] = [
   { title: '账户类型', dataIndex: 'accountType', key: 'accountType', width: 120 },
   { title: '资金账号', dataIndex: 'accountNoMasked', key: 'accountNoMasked', width: 130 },
   { title: '券商代码', dataIndex: 'brokerCode', key: 'brokerCode', width: 110 },
+  { title: '同步方式', dataIndex: 'syncMode', key: 'syncMode', width: 150 },
   { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
   { title: '操作', dataIndex: 'action', key: 'action', width: 130, align: 'center' }
 ];
@@ -340,7 +356,8 @@ const accountForm = reactive<BrokerAccountCreateRequest & BrokerAccountUpdateReq
   accountName: '',
   brokerName: '',
   accountType: 'SECURITIES',
-  brokerCode: ''
+  brokerCode: '',
+  syncMode: 'MANUAL'
 });
 
 const accountRules = {
@@ -355,12 +372,14 @@ const openAccountModal = (acc?: BrokerAccountVO) => {
     accountForm.brokerName = acc.brokerName || '';
     accountForm.accountType = acc.accountType || 'SECURITIES';
     accountForm.brokerCode = acc.brokerCode || '';
+    accountForm.syncMode = acc.syncMode || 'MANUAL';
   } else {
     accountForm.portfolioId = props.currentPortfolioId || 0;
     accountForm.accountName = '';
     accountForm.brokerName = '';
     accountForm.accountType = 'SECURITIES';
     accountForm.brokerCode = '';
+    accountForm.syncMode = 'MANUAL';
   }
   accountModalVisible.value = true;
 };
@@ -375,7 +394,8 @@ const handleSaveAccount = async () => {
       accountName: accountForm.accountName,
       brokerName: accountForm.brokerName,
       accountType: accountForm.accountType,
-      brokerCode: accountForm.brokerCode || getBrokerCode(accountForm.brokerName)
+      brokerCode: accountForm.brokerCode || getBrokerCode(accountForm.brokerName),
+      syncMode: accountForm.syncMode
     });
     message.success(editingAccount.value ? '账户修改成功' : '券商账户创建成功');
     accountModalVisible.value = false;
@@ -605,5 +625,10 @@ const getBrokerCode = (name?: string): string => {
 :global(.mgmt-form-modal-wrap .ant-modal-footer) {
   border-top: none !important;
   padding: 10px 24px 20px 24px !important;
+}
+.sync-mode-hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--color-text-secondary, #999);
 }
 </style>

@@ -47,14 +47,10 @@
           placeholder="请选择券商类型"
           style="width: 100%;"
         >
-          <a-select-option value="CMS">招商证券 (支持原始流水)</a-select-option>
+          <a-select-option value="AUTO">自动识别 (推荐)</a-select-option>
+          <a-select-option value="EM">东方财富 (交割单)</a-select-option>
+          <a-select-option value="CMS">招商证券 (原始流水)</a-select-option>
           <a-select-option value="STANDARD">标准模板 (CSV / Excel)</a-select-option>
-          <a-select-option value="HTSC">华泰证券 (涨乐财富通)</a-select-option>
-          <a-select-option value="CITIC">中信证券</a-select-option>
-          <a-select-option value="GTJA">国泰君安</a-select-option>
-          <a-select-option value="EASTMONEY">东方财富</a-select-option>
-          <a-select-option value="THS">同花顺导出流水</a-select-option>
-          <a-select-option value="OTHER">其他券商 (标准模板)</a-select-option>
         </a-select>
       </div>
 
@@ -139,11 +135,11 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'fileSelected', file: File, accountId?: number): void;
+  (e: 'fileSelected', file: File, accountId?: number, brokerCode?: string): void;
   (e: 'downloadTemplate'): void;
 }>();
 
-const selectedBroker = ref<string>('CMS');
+const selectedBroker = ref<string>('AUTO');
 const targetAccountId = ref<number | undefined>(props.selectedAccountId);
 
 watch(
@@ -167,6 +163,9 @@ const currentHintText = computed(() => {
   if (selectedBroker.value === 'CMS') {
     return '招商证券支持直接上传客户端导出的原始资金流水文件 (XLS/XLSX/CSV)。';
   }
+  if (selectedBroker.value === 'EM') {
+    return '东方财富支持直接上传交割单 (对账单) 文件 (XLSX/CSV)，自动识别多只证券的成交流水。';
+  }
   return '当前券商暂推荐使用 AQuant 标准模板格式导入，请下载模板并按规范整理后上传。';
 });
 
@@ -180,7 +179,7 @@ const handleFileChange = (e: Event) => {
   const target = e.target as HTMLInputElement;
   if (target.files && target.files.length > 0 && target.files[0]) {
     const file = target.files[0];
-    emit('fileSelected', file, targetAccountId.value);
+    emit('fileSelected', file, targetAccountId.value, selectedBroker.value);
     target.value = '';
   }
 };
