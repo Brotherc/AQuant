@@ -109,6 +109,18 @@ aquant:
     # push2 实时主机对程序化客户端做间歇性主机级软封（时段性 502，浏览器正常，akshare#7230），
     # push2delay 为 akshare 官方采用的延迟行情主机，数据滞后约 1-2 分钟，收盘后同步无影响
     quote-base-urls: ${EASTMONEY_QUOTE_BASE_URLS:https://push2delay.eastmoney.com,https://push2.eastmoney.com}
+  portfolio:
+    # 券商持仓自动同步（多数据源切换，账户的 syncMode 决定走哪个渠道：EASYTRADER / EM_WEB）
+    # 渠道一：easytrader 客户端自动化服务地址（Windows 常驻，见 https://github.com/shidenggui/easytrader），留空停用
+    easytrader-base-url: ${EASYTRADER_BASE_URL:}
+    # 渠道二：东方财富证券网页交易（jywg.eastmoneysec.com，原 jywg.18.cn）。浏览器登录后从 DevTools
+    # 复制会话 Cookie 与 validatekey（任意查询请求 URL 参数或页面 #em_validatekey 的 value）粘贴到这里，
+    # 会话失效后重新复制；仅做持仓/成交只读查询，不含下单。
+    # 注意：这是 jywg 交易会话的 Cookie，与上面行情中心的东财 Cookie（aquant.eastmoney.cookie，
+    # 作用于 push2 行情接口）是两个完全独立的 Cookie，互不通用、需分别维护
+    jywg-base-url: ${JYWG_BASE_URL:https://jywg.eastmoneysec.com}
+    jywg-cookie: ${JYWG_COOKIE:}
+    jywg-validate-key: ${JYWG_VALIDATE_KEY:}
   jwt:
     # JWT 签名密钥（演示默认值，生产环境务必替换）
     secret: AQuant@2025!SecretKey#Jwt

@@ -1,4 +1,5 @@
 import request from '@/utils/request';
+import type { BrokerPositionSnapshot } from '@/types/portfolio';
 import type { ResponseDTO } from './stock';
 import type {
   UserPortfolio,
@@ -154,6 +155,30 @@ export const reverseTrade = async (
   });
 };
 
+/** 按账户同步方式手动拉取最近成交并入库（EM_WEB/EASYTRADER 渠道），联动重建持仓与收益 */
+export const syncBrokerTrades = async (accountId: number): Promise<TradeImportResult> => {
+  const res = await request.post<ResponseDTO<TradeImportResult>>(
+    `/portfolio/account/${accountId}/sync/trades`
+  );
+  return res.data?.data;
+};
+
+/** 查询最近一次同步的券商持仓快照（持久化数据，Cookie 失效后仍可展示） */
+export const getBrokerPositions = async (accountId: number): Promise<BrokerPositionSnapshot> => {
+  const res = await request.get<ResponseDTO<BrokerPositionSnapshot>>(
+    `/portfolio/account/${accountId}/sync/positions`
+  );
+  return res.data?.data;
+};
+
+/** 实时刷新券商持仓快照（需交易会话有效），成功后覆盖持久化快照 */
+export const refreshBrokerPositions = async (accountId: number): Promise<BrokerPositionSnapshot> => {
+  const res = await request.post<ResponseDTO<BrokerPositionSnapshot>>(
+    `/portfolio/account/${accountId}/sync/positions/refresh`
+  );
+  return res.data?.data;
+};
+
 /** 下载 AQuant 标准交易流水 Excel 模板 */
 export const downloadTradeImportTemplate = async (): Promise<Blob> => {
   const res = await request.get<Blob>('/portfolio/trade/import/template', {
@@ -167,12 +192,13 @@ export const downloadTradeImportTemplate = async (): Promise<Blob> => {
 export const importTradeFile = async (
   accountId: number,
   file: File,
-  syncCashBalance = true
+  syncCashBalance = true,
+  brokerCode?: string
 ): Promise<TradeImportResult> => {
   const formData = new FormData();
   formData.append('file', file);
   const res = await request.post<ResponseDTO<TradeImportResult>>('/portfolio/trade/import', formData, {
-    params: { accountId, syncCashBalance },
+    params: { accountId, brokerCode, syncCashBalance },
     headers: { 'Content-Type': 'multipart/form-data' }
   });
   return res.data?.data;

@@ -694,7 +694,7 @@ DROP TABLE IF EXISTS `stock_sync`;
 CREATE TABLE `stock_sync` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `name` varchar(50) NOT NULL COMMENT '名称',
-  `value` varchar(64) DEFAULT NULL COMMENT '值',
+  `value` text COMMENT '值',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='股票同步配置';
 
@@ -956,6 +956,9 @@ CREATE TABLE `user_portfolio_position` (
   `calculate_time` datetime NOT NULL COMMENT '计算时间',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `income_rate` decimal(24, 4) DEFAULT NULL COMMENT '持仓盈亏比例(%)（券商同步直取接口值）',
+  `day_income` decimal(24, 4) DEFAULT NULL COMMENT '当日盈亏（券商同步直取接口值）',
+  `day_income_rate` decimal(24, 4) DEFAULT NULL COMMENT '当日盈亏比例(%)（券商同步直取接口值）',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_portfolio_position_asset` (`account_id`,`asset_type`,`asset_code`),
   KEY `idx_portfolio_position_value` (`account_id`,`market_value`),

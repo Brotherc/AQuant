@@ -27,7 +27,7 @@
       :pagination="false"
       row-key="id"
       size="middle"
-      :scroll="{ x: 1000 }"
+      :scroll="{ x: 1300 }"
       class="clean-data-table"
     >
       <template #bodyCell="{ column, record }">
@@ -42,6 +42,11 @@
         <!-- 持仓数量 -->
         <template v-else-if="column.dataIndex === 'quantity'">
           <span class="num-font">{{ formatQuantity(record.quantity) }}</span>
+        </template>
+
+        <!-- 可用数量 -->
+        <template v-else-if="column.dataIndex === 'availableQuantity'">
+          <span class="num-font">{{ formatQuantity(record.availableQuantity) }}</span>
         </template>
 
         <!-- 持仓均价 -->
@@ -90,6 +95,30 @@
             :class="getProfitClass(record.unrealizedProfitRate)"
           >
             {{ formatSignedRate(record.unrealizedProfitRate) }}
+          </span>
+          <span v-else class="text-muted">--</span>
+        </template>
+
+        <!-- 当日盈亏 -->
+        <template v-else-if="column.dataIndex === 'dayIncome'">
+          <span
+            v-if="record.dayIncome !== null && record.dayIncome !== undefined"
+            class="num-font"
+            :class="getProfitClass(record.dayIncome)"
+          >
+            {{ formatSignedMoney(record.dayIncome) }}
+          </span>
+          <span v-else class="text-muted">--</span>
+        </template>
+
+        <!-- 当日盈亏比例 -->
+        <template v-else-if="column.dataIndex === 'dayIncomeRate'">
+          <span
+            v-if="record.dayIncomeRate !== null && record.dayIncomeRate !== undefined"
+            class="num-font"
+            :class="getProfitClass(record.dayIncomeRate)"
+          >
+            {{ formatSignedRate(record.dayIncomeRate) }}
           </span>
           <span v-else class="text-muted">--</span>
         </template>
@@ -152,6 +181,14 @@ const columns: TableColumnType<PortfolioPositionVO>[] = [
     width: 110
   },
   {
+    title: '可用数量',
+    dataIndex: 'availableQuantity',
+    key: 'availableQuantity',
+    align: 'right',
+    sorter: (a, b) => (Number(a.availableQuantity) || 0) - (Number(b.availableQuantity) || 0),
+    width: 110
+  },
+  {
     title: '持仓均价',
     dataIndex: 'costPrice',
     key: 'costPrice',
@@ -198,6 +235,22 @@ const columns: TableColumnType<PortfolioPositionVO>[] = [
     align: 'right',
     sorter: (a, b) => (Number(a.unrealizedProfitRate) || 0) - (Number(b.unrealizedProfitRate) || 0),
     width: 110
+  },
+  {
+    title: '当日盈亏',
+    dataIndex: 'dayIncome',
+    key: 'dayIncome',
+    align: 'right',
+    sorter: (a, b) => (Number(a.dayIncome) || 0) - (Number(b.dayIncome) || 0),
+    width: 120
+  },
+  {
+    title: '当日盈亏比例',
+    dataIndex: 'dayIncomeRate',
+    key: 'dayIncomeRate',
+    align: 'right',
+    sorter: (a, b) => (Number(a.dayIncomeRate) || 0) - (Number(b.dayIncomeRate) || 0),
+    width: 120
   },
   {
     title: '仓位占比',

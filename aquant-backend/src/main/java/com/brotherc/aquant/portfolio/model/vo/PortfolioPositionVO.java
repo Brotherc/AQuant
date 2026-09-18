@@ -24,6 +24,10 @@ public class PortfolioPositionVO {
     private BigDecimal marketValue;
     private BigDecimal unrealizedProfit;
     private BigDecimal unrealizedProfitRate;
+    /** 当日盈亏。券商同步源直取接口值，本地计算源为空 */
+    private BigDecimal dayIncome;
+    /** 当日盈亏比例(%)。券商同步源直取接口值 */
+    private BigDecimal dayIncomeRate;
     private BigDecimal positionRatio;
     private LocalDate quoteDate;
 }

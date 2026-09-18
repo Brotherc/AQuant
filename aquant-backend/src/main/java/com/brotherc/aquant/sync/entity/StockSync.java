@@ -21,8 +21,9 @@ public class StockSync {
     private String name;
 
     /**
-     * 值
+     * 值（交易会话 JSON 等凭证内容长度超过 255，使用 TEXT）
      */
+    @Column(name = "value", columnDefinition = "text")
     private String value;
 
 }
