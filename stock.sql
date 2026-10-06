@@ -820,6 +820,51 @@ CREATE TABLE `sys_user` (
   UNIQUE KEY `uk_username` (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='系统用户表';
 
+DROP TABLE IF EXISTS `ai_model_provider`;
+CREATE TABLE `ai_model_provider` (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` bigint NOT NULL COMMENT '所属用户ID',
+  `name` varchar(100) NOT NULL COMMENT '用户自定义的供应商配置名称',
+  `provider_type` varchar(32) NOT NULL COMMENT '供应商类型',
+  `base_url` varchar(500) DEFAULT NULL COMMENT '模型服务基础地址',
+  `api_key_encrypted` text COMMENT 'AES-256-GCM 加密后的模型 API Key',
+  `api_key_hint` varchar(16) DEFAULT NULL COMMENT 'API Key 末四位脱敏提示',
+  `enabled` tinyint(1) NOT NULL DEFAULT '1' COMMENT '是否启用',
+  `created_at` datetime(6) NOT NULL COMMENT '创建时间',
+  `updated_at` datetime(6) NOT NULL COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_ai_provider_user_name` (`user_id`,`name`),
+  KEY `ix_ai_model_provider_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户模型供应商配置表';
+
+DROP TABLE IF EXISTS `ai_model_config`;
+CREATE TABLE `ai_model_config` (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` bigint NOT NULL COMMENT '所属用户ID',
+  `provider_id` int NOT NULL COMMENT '模型供应商配置ID',
+  `name` varchar(100) NOT NULL COMMENT '用户自定义的模型显示名称',
+  `model_name` varchar(200) NOT NULL COMMENT '供应商模型标识',
+  `api_mode` varchar(32) NOT NULL DEFAULT 'RESPONSES' COMMENT '接口模式',
+  `supports_tool_calling` tinyint(1) NOT NULL DEFAULT '0' COMMENT '系统识别的工具调用能力',
+  `supports_structured_output` tinyint(1) NOT NULL DEFAULT '0' COMMENT '系统识别的结构化输出能力',
+  `supports_streaming` tinyint(1) NOT NULL DEFAULT '0' COMMENT '系统识别的流式输出能力',
+  `supports_reasoning` tinyint(1) NOT NULL DEFAULT '0' COMMENT '系统识别的推理能力',
+  `request_timeout_seconds` int NOT NULL DEFAULT '60' COMMENT '请求超时时间（秒）',
+  `extra_settings` json NOT NULL COMMENT '模型扩展配置',
+  `is_default` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否为用户默认模型',
+  `enabled` tinyint(1) NOT NULL DEFAULT '1' COMMENT '是否启用',
+  `last_test_status` varchar(16) DEFAULT NULL COMMENT '最近连接测试状态',
+  `last_test_message` varchar(500) DEFAULT NULL COMMENT '最近连接测试信息',
+  `last_test_at` datetime(6) DEFAULT NULL COMMENT '最近连接测试时间',
+  `created_at` datetime(6) NOT NULL COMMENT '创建时间',
+  `updated_at` datetime(6) NOT NULL COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_ai_model_user_provider_name` (`user_id`,`provider_id`,`model_name`),
+  KEY `ix_ai_model_config_user_id` (`user_id`),
+  KEY `ix_ai_model_config_provider_id` (`provider_id`),
+  KEY `ix_ai_model_config_is_default` (`is_default`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户 AI 模型配置表';
+
 DROP TABLE IF EXISTS `user_article`;
 CREATE TABLE `user_article` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '文章ID',
