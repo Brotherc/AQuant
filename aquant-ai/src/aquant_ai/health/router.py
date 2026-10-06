@@ -2,7 +2,7 @@ from fastapi import APIRouter
 
 from aquant_ai import __version__
 from aquant_ai.core.config import get_settings
-from aquant_ai.schemas.health import HealthResponse
+from aquant_ai.health.schema import HealthResponse
 
 router = APIRouter(tags=["health"])
 
@@ -16,4 +16,3 @@ def health() -> HealthResponse:
         environment=settings.app_env,
         version=__version__,
     )
-

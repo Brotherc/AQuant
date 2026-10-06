@@ -13,4 +13,3 @@ RUN pip install --no-cache-dir .
 EXPOSE 8085
 
 CMD ["uvicorn", "aquant_ai.main:app", "--host", "0.0.0.0", "--port", "8085"]
-
