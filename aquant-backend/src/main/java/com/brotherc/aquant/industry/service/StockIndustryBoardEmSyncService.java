@@ -51,12 +51,24 @@ public class StockIndustryBoardEmSyncService {
     private final AtomicBoolean syncRunning = new AtomicBoolean(false);
 
     /**
-     * Cookie 更新后自动触发的异步同步：独立线程执行，与调度链（task-1）上的其他数据同步并行，
-     * 不互相阻塞。水位校验与逐板块断点续传保证重复触发安全
+     * Cookie 更新后自动触发的异步同步：独立线程执行，与主同步链上的其他数据同步并行，
+     * 不互相阻塞。水位校验与逐板块断点续传保证重复触发安全。
+     * 与 {@link #triggerSynchronizeFromSchedule()} 共用 eastmoneySyncExecutor 单线程执行器，
+     * 两类触发相互排队，不会产生并发的东财同步
      */
-    @Async
+    @Async("eastmoneySyncExecutor")
     public void triggerSynchronizeAfterCookieUpdate() {
         log.info("东财会话 Cookie 已更新，异步触发行业同步（独立线程，与其他同步并行）");
+        synchronizeIfRequired(LocalDateTime.now());
+    }
+
+    /**
+     * 主同步链触发的异步同步：剥离到独立线程与 akshare 链并行，缩短整体同步耗时。
+     * 与 Cookie 触发共用单线程执行器串行排队，CAS 防重入兜底
+     */
+    @Async("eastmoneySyncExecutor")
+    public void triggerSynchronizeFromSchedule() {
+        log.info("东财行业同步已异步触发（独立线程，与主同步链并行）");
         synchronizeIfRequired(LocalDateTime.now());
     }
 
