@@ -77,6 +77,10 @@
                     <safety-certificate-outlined />
                     <span style="margin-left: 8px;">交易 Cookie</span>
                   </a-menu-item>
+                  <a-menu-item key="modelSettings" @click="showModelSettingsModal">
+                    <robot-outlined />
+                    <span style="margin-left: 8px;">模型配置</span>
+                  </a-menu-item>
                   <a-menu-divider />
                   <a-menu-item key="logout" @click="handleLogout">
                     <logout-outlined />
@@ -205,6 +209,19 @@
       </div>
     </a-modal>
 
+    <!-- 模型配置 Modal：仅在打开时挂载，避免进入系统后提前请求 AI 服务。 -->
+    <a-modal
+      v-model:open="modelSettingsModalVisible"
+      title="模型配置"
+      :width="'min(1280px, calc(100vw - 48px))'"
+      :footer="null"
+      centered
+      destroy-on-close
+      wrap-class-name="model-settings-modal"
+    >
+      <model-settings v-if="modelSettingsModalVisible" embedded />
+    </a-modal>
+
     <a-drawer
       v-model:visible="navDrawerVisible"
       placement="right"
@@ -250,7 +267,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, watch, onMounted, onUnmounted } from 'vue';
+import { computed, defineAsyncComponent, ref, watch, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   DashboardOutlined,
@@ -264,12 +281,15 @@ import {
   MailOutlined,
   MenuOutlined,
   FileTextOutlined,
-  KeyOutlined
+  KeyOutlined,
+  RobotOutlined
 } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
 import { updateEmail } from '@/api/auth';
 import { getEastmoneyCookieStatus, updateEastmoneyCookie, getJywgCookieStatus, updateJywgCookie } from '@/api/eastmoney';
 import type { JywgCookieStatus } from '@/api/eastmoney';
+
+const ModelSettings = defineAsyncComponent(() => import('@/views/settings/ModelSettings.vue'));
 
 type NavigationChild = {
   key: string;
@@ -292,6 +312,7 @@ const isLoggedIn = ref(!!localStorage.getItem('token'));
 const nickname = ref(localStorage.getItem('nickname') || '用户');
 const navDrawerVisible = ref(false);
 const drawerOpenKeys = ref<string[]>([]);
+const modelSettingsModalVisible = ref(false);
 
 const navigationGroups: NavigationGroup[] = [
   {
@@ -420,6 +441,10 @@ const handleDrawerNavigate = (path: string) => {
 const openNavDrawer = () => {
   syncMenuState();
   navDrawerVisible.value = true;
+};
+
+const showModelSettingsModal = () => {
+  modelSettingsModalVisible.value = true;
 };
 
 const handleLogout = () => {
@@ -953,5 +978,40 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+.model-settings-modal .ant-modal {
+  max-width: calc(100vw - 32px);
+  padding-bottom: 0;
+}
+
+.model-settings-modal .ant-modal-content {
+  max-height: 90vh;
+  overflow: hidden;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.18), 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+}
+
+.model-settings-modal .ant-modal-header {
+  margin-bottom: 0;
+  padding: 18px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.model-settings-modal .ant-modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.model-settings-modal .ant-modal-body {
+  max-height: calc(90vh - 65px);
+  overflow-y: auto;
+  padding: 0;
+  scrollbar-width: thin;
 }
 </style>

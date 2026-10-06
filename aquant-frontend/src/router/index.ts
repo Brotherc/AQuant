@@ -52,6 +52,18 @@ const router = createRouter({
                     ]
                 },
                 {
+                    path: 'settings',
+                    name: 'SettingsRoot',
+                    children: [
+                        {
+                            path: 'models',
+                            name: 'ModelSettings',
+                            component: () => import('@/views/settings/ModelSettings.vue'),
+                            meta: { requiresAuth: true }
+                        }
+                    ]
+                },
+                {
                     path: 'stock-data',
                     name: 'StockDataRoot',
                     children: [
