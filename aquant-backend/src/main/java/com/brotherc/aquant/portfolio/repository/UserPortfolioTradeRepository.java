@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
 
 public interface UserPortfolioTradeRepository extends JpaRepository<UserPortfolioTrade, Long> {
 
@@ -19,6 +20,9 @@ public interface UserPortfolioTradeRepository extends JpaRepository<UserPortfoli
 
     List<UserPortfolioTrade> findAllByAccountIdInAndAssetCodeInAndStatusOrderByTradeTimeAscIdAsc(
             Collection<Long> accountIds, Collection<String> assetCodes, String status);
+
+    List<UserPortfolioTrade> findAllByAccountIdInAndStatusAndTradeTimeGreaterThanEqualOrderByTradeTimeDescIdDesc(
+            Collection<Long> accountIds, String status, LocalDateTime tradeTime, Pageable pageable);
 
     List<UserPortfolioTrade> findAllByImportBatchIdAndAccountId(Long importBatchId, Long accountId);
 

@@ -1,11 +1,14 @@
 package com.brotherc.aquant.portfolio.model.vo;
 
+import com.brotherc.aquant.portfolio.entity.UserPortfolioTrade;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Objects;
+import java.util.stream.Stream;
 
 @Data
 @Schema(description = "投资组合交易及资金流水信息")
@@ -80,5 +83,37 @@ public class PortfolioTradeVO {
 
     @Schema(description = "流水备注或券商业务摘要")
     private String remark;
+
+    /**
+     * 根据交易流水构造前端展示对象。
+     */
+    public static PortfolioTradeVO from(UserPortfolioTrade trade, String accountName) {
+        PortfolioTradeVO result = new PortfolioTradeVO();
+        result.setId(trade.getId());
+        result.setAccountId(trade.getAccountId());
+        result.setAccountName(accountName);
+        result.setImportBatchId(trade.getImportBatchId());
+        result.setAssetType(trade.getAssetType());
+        result.setMarket(trade.getMarket());
+        result.setAssetCode(trade.getAssetCode());
+        result.setAssetName(trade.getAssetName());
+        result.setTradeType(trade.getTradeType());
+        result.setTradeTime(trade.getTradeTime());
+        result.setSettlementDate(trade.getSettlementDate());
+        result.setQuantity(trade.getQuantity());
+        result.setPrice(trade.getPrice());
+        result.setGrossAmount(trade.getGrossAmount());
+        result.setTotalFee(Stream.of(
+                        trade.getCommission(), trade.getStampDuty(), trade.getTransferFee(), trade.getOtherFee())
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+        result.setNetAmount(trade.getNetAmount());
+        result.setCurrency(trade.getCurrency());
+        result.setSource(trade.getSource());
+        result.setSourceTradeId(trade.getSourceTradeId());
+        result.setStatus(trade.getStatus());
+        result.setRemark(trade.getRemark());
+        return result;
+    }
 
 }

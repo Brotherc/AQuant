@@ -6,9 +6,11 @@ import com.brotherc.aquant.common.utils.UserContext;
 import com.brotherc.aquant.fund.repository.StockFundNetValueRepository;
 import com.brotherc.aquant.portfolio.entity.UserBrokerAccount;
 import com.brotherc.aquant.portfolio.entity.UserPortfolioImportBatch;
+import com.brotherc.aquant.portfolio.entity.UserPortfolio;
 import com.brotherc.aquant.portfolio.entity.UserPortfolioPosition;
 import com.brotherc.aquant.portfolio.entity.UserPortfolioTrade;
 import com.brotherc.aquant.portfolio.model.vo.PortfolioImportResultVO;
+import com.brotherc.aquant.portfolio.model.vo.PortfolioDiagnosisContextVO;
 import com.brotherc.aquant.portfolio.model.vo.PortfolioTradeBatchReqVO;
 import com.brotherc.aquant.portfolio.model.vo.PortfolioTradeSaveReqVO;
 import com.brotherc.aquant.portfolio.repository.*;
@@ -149,6 +151,35 @@ class UserPortfolioServiceTest {
         assertThatThrownBy(() -> portfolioService.getTrades(10L, org.springframework.data.domain.Pageable.unpaged()))
                 .isInstanceOf(BusinessException.class)
                 .extracting("code").isEqualTo(ExceptionEnum.PORTFOLIO_ACCOUNT_NOT_FOUND.getCode());
+    }
+
+    @Test
+    void shouldBuildDiagnosisContextForAnEmptyPortfolio() {
+        UserPortfolio portfolio = new UserPortfolio();
+        portfolio.setId(5L);
+        portfolio.setUserId(1L);
+        portfolio.setName("长期组合");
+        portfolio.setBaseCurrency("CNY");
+        when(portfolioRepository.findByIdAndUserIdAndDeletedFalse(5L, 1L)).thenReturn(Optional.of(portfolio));
+        when(accountRepository.findAllByPortfolioIdAndUserIdAndDeletedFalseOrderByCreateTimeAsc(5L, 1L))
+                .thenReturn(List.of());
+
+        PortfolioDiagnosisContextVO result = portfolioService.getDiagnosisContext(5L);
+
+        assertThat(result.getSchemaVersion()).isEqualTo("1.0");
+        assertThat(result.getPortfolio().getName()).isEqualTo("长期组合");
+        assertThat(result.getPositions()).isEmpty();
+        assertThat(result.getRecentTrades()).isEmpty();
+        assertThat(result.getDataQuality().getWarnings()).contains("当前组合没有持仓数据");
+    }
+
+    @Test
+    void shouldRejectDiagnosisContextForAnotherUsersPortfolio() {
+        when(portfolioRepository.findByIdAndUserIdAndDeletedFalse(5L, 1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> portfolioService.getDiagnosisContext(5L))
+                .isInstanceOf(BusinessException.class)
+                .extracting("code").isEqualTo(ExceptionEnum.PORTFOLIO_NOT_FOUND.getCode());
     }
 
     private void mockTradePersistence(

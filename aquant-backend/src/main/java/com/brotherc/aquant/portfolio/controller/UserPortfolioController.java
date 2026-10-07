@@ -238,6 +238,12 @@ public class UserPortfolioController {
         return ResponseDTO.success(portfolioService.getOverview(portfolioId));
     }
 
+    @Operation(summary = "获取角色化持仓会诊数据快照")
+    @GetMapping("/diagnosis/context")
+    public ResponseDTO<PortfolioDiagnosisContextVO> diagnosisContext(@RequestParam Long portfolioId) {
+        return ResponseDTO.success(portfolioService.getDiagnosisContext(portfolioId));
+    }
+
     @Operation(summary = "生成或刷新指定日期的持仓快照")
     @PostMapping("/snapshot/generate")
     public ResponseDTO<Void> generateSnapshot(

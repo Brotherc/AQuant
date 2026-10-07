@@ -2,9 +2,9 @@ package com.brotherc.aquant.portfolio.service;
 
 import com.brotherc.aquant.common.exception.BusinessException;
 import com.brotherc.aquant.common.exception.ExceptionEnum;
+import com.brotherc.aquant.common.constant.PortfolioDiagnosisConstant;
 import com.brotherc.aquant.common.utils.DigestUtils;
 import com.brotherc.aquant.sync.entity.StockSync;
-import com.brotherc.aquant.sync.repository.StockSyncRepository;
 import com.brotherc.aquant.common.utils.StockUtils;
 import com.brotherc.aquant.common.utils.UserContext;
 import com.brotherc.aquant.fund.entity.StockFundNetValue;
@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,7 +34,9 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -78,7 +81,7 @@ public class UserPortfolioService {
         Map<Long, Long> accountCount = accountRepository
                 .findAllByPortfolioIdInAndUserIdAndDeletedFalse(portfolioIds, userId).stream()
                 .collect(Collectors.groupingBy(UserBrokerAccount::getPortfolioId, Collectors.counting()));
-        return portfolios.stream().map(portfolio -> toPortfolioVO(portfolio,
+        return portfolios.stream().map(portfolio -> UserPortfolioVO.from(portfolio,
                 accountCount.getOrDefault(portfolio.getId(), 0L).intValue())).toList();
     }
 
@@ -123,7 +126,7 @@ public class UserPortfolioService {
         UserPortfolio savedPortfolio = portfolioRepository.save(portfolio);
         int accountCount = Math.toIntExact(accountRepository
                 .countByPortfolioIdAndUserIdAndDeletedFalse(savedPortfolio.getId(), userId));
-        return toPortfolioVO(savedPortfolio, accountCount);
+        return UserPortfolioVO.from(savedPortfolio, accountCount);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -148,7 +151,7 @@ public class UserPortfolioService {
         Long userId = UserContext.requireCurrentUserId();
         getPortfolio(portfolioId, userId);
         return accountRepository.findAllByPortfolioIdAndUserIdAndDeletedFalseOrderByCreateTimeAsc(portfolioId, userId)
-                .stream().map(this::toAccountVO).toList();
+                .stream().map(BrokerAccountVO::from).toList();
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -189,7 +192,7 @@ public class UserPortfolioService {
             account.setAccountNoHash(accountHash);
             account.setAccountNoMasked(maskAccountNo(accountNo));
         }
-        return toAccountVO(accountRepository.save(account));
+        return BrokerAccountVO.from(accountRepository.save(account));
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -324,9 +327,8 @@ public class UserPortfolioService {
 
     public Page<PortfolioTradeVO> getTrades(Long accountId, Pageable pageable) {
         UserBrokerAccount account = getAccount(accountId, UserContext.requireCurrentUserId());
-        Map<Long, String> accountNames = Map.of(account.getId(), account.getAccountName());
         return tradeRepository.findAllByAccountIdOrderByTradeTimeDescIdDesc(accountId, pageable)
-                .map(trade -> toTradeVO(trade, accountNames));
+                .map(trade -> PortfolioTradeVO.from(trade, account.getAccountName()));
     }
 
     public Page<PortfolioTradeVO> getTrades(Long portfolioId, Long accountId, Pageable pageable) {
@@ -339,7 +341,7 @@ public class UserPortfolioService {
         Map<Long, String> accountNames = accounts.stream().collect(Collectors.toMap(
                 UserBrokerAccount::getId, UserBrokerAccount::getAccountName));
         return tradeRepository.findAllByAccountIdInOrderByTradeTimeDescIdDesc(accountNames.keySet(), pageable)
-                .map(trade -> toTradeVO(trade, accountNames));
+                .map(trade -> PortfolioTradeVO.from(trade, accountNames.get(trade.getAccountId())));
     }
 
     public List<PortfolioTradeVO> getTradesByAssetCode(String assetCode) {
@@ -372,7 +374,7 @@ public class UserPortfolioService {
         return tradeRepository.findAllByAccountIdInAndAssetCodeInAndStatusOrderByTradeTimeAscIdAsc(
                         accountNames.keySet(), searchCodes, "NORMAL")
                 .stream()
-                .map(trade -> toTradeVO(trade, accountNames))
+                .map(trade -> PortfolioTradeVO.from(trade, accountNames.get(trade.getAccountId())))
                 .toList();
     }
 
@@ -446,6 +448,10 @@ public class UserPortfolioService {
         Long userId = UserContext.requireCurrentUserId();
         UserPortfolio portfolio = getPortfolio(portfolioId, userId);
         List<UserBrokerAccount> accounts = getTargetAccounts(portfolioId, null, userId);
+        return buildOverview(portfolio, accounts);
+    }
+
+    private PortfolioOverviewVO buildOverview(UserPortfolio portfolio, List<UserBrokerAccount> accounts) {
         refreshPositionPrices(accounts);
         List<PortfolioPositionVO> positions = buildPositionVOs(portfolio, accounts);
         List<Long> accountIds = accounts.stream().map(UserBrokerAccount::getId).toList();
@@ -483,6 +489,105 @@ public class UserPortfolioService {
                 + positions.stream().filter(position -> !portfolio.getBaseCurrency().equals(position.getCurrency())).count()));
         result.setCalculateTime(LocalDateTime.now());
         result.setPositions(positions);
+        return result;
+    }
+
+    /**
+     * 固化 AI 会诊使用的完整业务快照。
+     * <p>
+     * 持仓、成本和盈亏沿用 Java 服务现有计算口径；历史数据只读取限定时间和数量范围，
+     * 并通过专用 VO 排除账户号码、外部流水号及交易备注等非必要信息。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public PortfolioDiagnosisContextVO getDiagnosisContext(Long portfolioId) {
+        // 先按当前登录用户查询组合和账户，确保无法读取其他用户的持仓数据。
+        Long userId = UserContext.requireCurrentUserId();
+        UserPortfolio portfolio = getPortfolio(portfolioId, userId);
+        List<UserBrokerAccount> accounts = getTargetAccounts(portfolioId, null, userId);
+
+        // 复用资产概览的行情刷新和计算口径，AI 服务只消费结果，不重复计算持仓。
+        PortfolioOverviewVO overview = buildOverview(portfolio, accounts);
+        List<PortfolioPositionVO> positions = overview.getPositions();
+        List<Long> accountIds = accounts.stream().map(UserBrokerAccount::getId).toList();
+        Map<Long, String> accountNames = accounts.stream()
+                .collect(Collectors.toMap(UserBrokerAccount::getId, UserBrokerAccount::getAccountName));
+
+        // 历史快照和交易使用统一回看起点，交易数量另设上限，避免 AI 上下文无限增长。
+        LocalDate today = LocalDate.now();
+        LocalDate historyStart = today.minusDays(PortfolioDiagnosisConstant.DIAGNOSIS_HISTORY_DAYS);
+
+        // 没有券商账户时直接使用空集合，避免生成无意义的 in 查询。
+        List<UserPortfolioCash> cashList = accountIds.isEmpty() ? List.of() : cashRepository.findAllByAccountIdIn(accountIds);
+        List<UserPortfolioAccountSnapshot> snapshots = accountIds.isEmpty() ?
+                List.of() :
+                accountSnapshotRepository.findAllByAccountIdInAndSnapshotDateBetweenOrderBySnapshotDateAsc(
+                        accountIds, historyStart, today);
+        List<UserPortfolioTrade> trades = accountIds.isEmpty() ?
+                List.of() :
+                tradeRepository.findAllByAccountIdInAndStatusAndTradeTimeGreaterThanEqualOrderByTradeTimeDescIdDesc(
+                        accountIds, "NORMAL", historyStart.atStartOfDay(),
+                        PageRequest.of(0, PortfolioDiagnosisConstant.DIAGNOSIS_TRADE_LIMIT));
+
+        // 组装稳定的版本化契约；专用账户和交易 VO 会主动裁剪非会诊必需的敏感字段。
+        PortfolioDiagnosisContextVO result = new PortfolioDiagnosisContextVO();
+        result.setSchemaVersion("1.0");
+        result.setGeneratedAt(LocalDateTime.now());
+        result.setTradeRangeStart(historyStart);
+        result.setTradeLimit(PortfolioDiagnosisConstant.DIAGNOSIS_TRADE_LIMIT);
+        result.setPortfolio(PortfolioDiagnosisPortfolioVO.from(portfolio));
+        result.setOverview(overview);
+        result.setAccounts(accounts.stream().map(PortfolioDiagnosisAccountVO::from).toList());
+
+        List<PortfolioDiagnosisCashVO> cashBalances = cashList.stream().map(cash -> {
+            PortfolioDiagnosisCashVO item = new PortfolioDiagnosisCashVO();
+            item.setAccountId(cash.getAccountId());
+            item.setAccountName(accountNames.get(cash.getAccountId()));
+            item.setCurrency(cash.getCurrency());
+            item.setTotalBalance(cash.getTotalBalance());
+            item.setAvailableBalance(cash.getAvailableBalance());
+            item.setFrozenBalance(cash.getFrozenBalance());
+            item.setUpdateTime(cash.getUpdateTime());
+            return item;
+        }).toList();
+        result.setCashBalances(cashBalances);
+
+        result.setPositions(positions);
+
+        List<PortfolioDiagnosisSnapshotVO> assetSnapshots = snapshots.stream().map(snapshot -> {
+            PortfolioDiagnosisSnapshotVO item = new PortfolioDiagnosisSnapshotVO();
+            item.setAccountId(snapshot.getAccountId());
+            item.setAccountName(accountNames.get(snapshot.getAccountId()));
+            item.setSnapshotDate(snapshot.getSnapshotDate());
+            item.setCurrency(snapshot.getCurrency());
+            item.setCashAmount(snapshot.getCashAmount());
+            item.setMarketValue(snapshot.getMarketValue());
+            item.setTotalAsset(snapshot.getTotalAsset());
+            item.setCostAmount(snapshot.getCostAmount());
+            item.setUnrealizedProfit(snapshot.getUnrealizedProfit());
+            item.setUnpricedAssetCount(snapshot.getUnpricedAssetCount());
+            return item;
+        }).toList();
+        result.setAssetSnapshots(assetSnapshots);
+
+        List<PortfolioDiagnosisTradeVO> recentTrades = trades.stream()
+                .map(trade -> PortfolioDiagnosisTradeVO.from(trade, accountNames.get(trade.getAccountId())))
+                .toList();
+        result.setRecentTrades(recentTrades);
+
+        // 质量信息显式标记缺价、行情滞后和未进行汇率折算的数据，供后续角色限制结论范围。
+        result.setDataQuality(PortfolioDiagnosisQualityVO.from(portfolio, positions, cashList));
+
+        // 数据截止日期取所有业务数据中的最新日期；完全没有业务数据时保持为空，而非使用当前日期冒充。
+        Stream<LocalDate> quoteDates = positions.stream().map(PortfolioPositionVO::getQuoteDate);
+        Stream<LocalDate> snapshotDates = snapshots.stream().map(UserPortfolioAccountSnapshot::getSnapshotDate);
+        Stream<LocalDate> tradeDates = trades.stream().map(UserPortfolioTrade::getTradeTime)
+                .filter(Objects::nonNull).map(LocalDateTime::toLocalDate);
+        Stream<LocalDate> cashDates = cashList.stream().map(UserPortfolioCash::getUpdateTime)
+                .filter(Objects::nonNull).map(LocalDateTime::toLocalDate);
+
+        LocalDate dataAsOf = Stream.of(quoteDates, snapshotDates, tradeDates, cashDates)
+                .flatMap(Function.identity()).filter(Objects::nonNull).max(LocalDate::compareTo).orElse(null);
+        result.setDataAsOf(dataAsOf);
         return result;
     }
 
@@ -935,59 +1040,6 @@ public class UserPortfolioService {
             throw ExceptionEnum.PORTFOLIO_ACCOUNT_NOT_FOUND.toException();
         }
         return List.of(account);
-    }
-
-    private UserPortfolioVO toPortfolioVO(UserPortfolio portfolio, int accountCount) {
-        UserPortfolioVO vo = new UserPortfolioVO();
-        vo.setId(portfolio.getId());
-        vo.setName(portfolio.getName());
-        vo.setBaseCurrency(portfolio.getBaseCurrency());
-        vo.setBenchmarkCode(portfolio.getBenchmarkCode());
-        vo.setDefaultPortfolio(portfolio.getDefaultPortfolio());
-        vo.setAccountCount(accountCount);
-        vo.setCreateTime(portfolio.getCreateTime());
-        return vo;
-    }
-
-    private BrokerAccountVO toAccountVO(UserBrokerAccount account) {
-        BrokerAccountVO vo = new BrokerAccountVO();
-        vo.setId(account.getId());
-        vo.setPortfolioId(account.getPortfolioId());
-        vo.setAccountName(account.getAccountName());
-        vo.setBrokerCode(account.getBrokerCode());
-        vo.setBrokerName(account.getBrokerName());
-        vo.setAccountNoMasked(account.getAccountNoMasked());
-        vo.setAccountType(account.getAccountType());
-        vo.setSyncMode(account.getSyncMode());
-        vo.setStatus(account.getStatus());
-        vo.setCreateTime(account.getCreateTime());
-        return vo;
-    }
-
-    private PortfolioTradeVO toTradeVO(UserPortfolioTrade trade, Map<Long, String> accountNames) {
-        PortfolioTradeVO vo = new PortfolioTradeVO();
-        vo.setId(trade.getId());
-        vo.setAccountId(trade.getAccountId());
-        vo.setAccountName(accountNames.get(trade.getAccountId()));
-        vo.setImportBatchId(trade.getImportBatchId());
-        vo.setAssetType(trade.getAssetType());
-        vo.setMarket(trade.getMarket());
-        vo.setAssetCode(trade.getAssetCode());
-        vo.setAssetName(trade.getAssetName());
-        vo.setTradeType(trade.getTradeType());
-        vo.setTradeTime(trade.getTradeTime());
-        vo.setSettlementDate(trade.getSettlementDate());
-        vo.setQuantity(trade.getQuantity());
-        vo.setPrice(trade.getPrice());
-        vo.setGrossAmount(trade.getGrossAmount());
-        vo.setTotalFee(totalFee(trade));
-        vo.setNetAmount(trade.getNetAmount());
-        vo.setCurrency(trade.getCurrency());
-        vo.setSource(trade.getSource());
-        vo.setSourceTradeId(trade.getSourceTradeId());
-        vo.setStatus(trade.getStatus());
-        vo.setRemark(trade.getRemark());
-        return vo;
     }
 
     @Transactional(rollbackFor = Exception.class)
