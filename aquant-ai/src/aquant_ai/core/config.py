@@ -18,6 +18,13 @@ class Settings(BaseSettings):
     app_host: str = "0.0.0.0"
     app_port: int = 8085
     api_prefix: str = "/api"
+    # Java 主服务地址，AI 服务通过该地址获取持仓等权威业务数据。
+    aquant_backend_base_url: str = "http://127.0.0.1:8084"
+    # 调用 Java 主服务时建立连接和读取响应的超时时间。
+    aquant_backend_connect_timeout: float = 3.0
+    aquant_backend_read_timeout: float = 15.0
+    # Java 主服务短暂不可用时的额外重试次数，不包含首次请求。
+    aquant_backend_max_retries: int = 2
     # 本地默认连接 Java 示例服务使用的 MySQL 数据库，可通过 DATABASE_URL 覆盖。
     database_url: str = (
         "mysql+asyncmy://test:testtest@127.0.0.1:3306/nocobase?charset=utf8mb4"
@@ -25,7 +32,10 @@ class Settings(BaseSettings):
     # 本地默认与 Java 示例服务一致，可通过 AQUANT_JWT_SECRET 覆盖。
     aquant_jwt_secret: str = Field(default="AQuant@2025!SecretKey#Jwt", repr=False)
     # 用于加密和解密模型 API Key，按 UTF-8 编码后必须正好为 32 字节。
-    model_credential_master_key: str | None = Field(default="AQuant@2026!ModelCredentialKey#1", repr=False)
+    model_credential_master_key: str | None = Field(
+        default="AQuant@2026!ModelCredentialKey#1",
+        repr=False,
+    )
     # 是否启用 Agents SDK tracing。开启后会记录 Agent 执行、模型及工具调用、交接和
     # 护栏检查等链路，用于排查流程问题与分析耗时；需另行配置可用的 tracing exporter，
     # 当前运行配置仍会关闭敏感输入输出采集。
