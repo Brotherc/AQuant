@@ -1,6 +1,7 @@
 package com.brotherc.aquant.stock.repository;
 
 import com.brotherc.aquant.stock.entity.StockQuote;
+import com.brotherc.aquant.stock.model.dto.StockQuoteCodeNameProjection;
 import com.brotherc.aquant.stock.model.dto.StockQuoteSentimentDTO;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -22,6 +23,9 @@ public interface StockQuoteRepository extends JpaRepository<StockQuote, Long>, J
     List<StockQuote> findByCreatedAt(LocalDateTime createdAt);
 
     List<StockQuote> findByCodeIn(List<String> codeList);
+
+    @Query("select s.code as code, s.name as name from StockQuote s")
+    List<StockQuoteCodeNameProjection> findAllCodeNames();
 
     StockQuote findByCode(String code);
 

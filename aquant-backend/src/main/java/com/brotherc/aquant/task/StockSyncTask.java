@@ -943,58 +943,47 @@ public class StockSyncTask {
      * 清理 stock_quote 和 stock_quote_history 中已经退市的股票数据
      */
     public void clearDelistedStockData() {
-        Set<String> szDelistedCodes = new HashSet<>();
+        Map<String, String> szDelistedStocks = new LinkedHashMap<>();
         try {
-            szDelistedCodes = aKShareService.stockInfoSzDelist("终止上市公司").stream()
-                    .map(StockInfoSzDelist::getStockCode)
-                    .filter(StringUtils::isNotBlank)
-                    .collect(HashSet::new, Set::add, Set::addAll);
+            aKShareService.stockInfoSzDelist("终止上市公司").stream()
+                    .filter(stock -> StringUtils.isNotBlank(stock.getStockCode()))
+                    .forEach(stock -> szDelistedStocks.put("sz" + stock.getStockCode().trim(), stock.getStockName()));
         } catch (Exception e) {
             log.warn("获取深交所终止上市公司列表失败，退市清理回退到名称规则", e);
         }
-        Set<String> szDelistedCodesFinal = szDelistedCodes;
-        Set<String> shDelistedCodes = new HashSet<>();
+        stockAbnormalService.saveDelistedStocks(szDelistedStocks, "stock_info_sz_delist", "深交所终止上市公司");
+
+        Map<String, String> shDelistedStocks = new LinkedHashMap<>();
         try {
-            shDelistedCodes = aKShareService.stockInfoShDelist("全部").stream()
-                    .filter(stockInfoShDelist -> StringUtils.contains(stockInfoShDelist.getCompanyName(), "退市"))
-                    .map(StockInfoShDelist::getCompanyCode)
-                    .collect(HashSet::new, Set::add, Set::addAll);
+            aKShareService.stockInfoShDelist("全部").stream()
+                    .filter(stock -> StringUtils.contains(stock.getCompanyName(), "退市")
+                            && StringUtils.isNotBlank(stock.getCompanyCode()))
+                    .forEach(stock -> shDelistedStocks.put("sh" + stock.getCompanyCode().trim(), stock.getCompanyName()));
         } catch (Exception e) {
             log.warn("获取上交所退市公司列表失败，退市清理回退到名称规则", e);
         }
-        Set<String> shDelistedCodesFinal = shDelistedCodes;
-        Set<String> abnormalCodes = new HashSet<>(stockAbnormalService.findAllCodes());
+        stockAbnormalService.saveDelistedStocks(shDelistedStocks, "stock_info_sh_delist", "上交所退市公司（公司简称包含退市）");
 
-        List<StockQuote> delistedStocks = stockQuoteRepository.findAll().stream()
+        Map<String, String> localDelistedStocks = stockQuoteRepository.findAllCodeNames().stream()
                 .filter(stockQuote -> {
                     String code = stockQuote.getCode().toLowerCase(Locale.ROOT);
-                    String plainCode = code.length() > 2 ? code.substring(2) : code;
                     String name = stockQuote.getName();
                     return name.contains("退市")
                             || (code.startsWith("sz") && name.endsWith("退"))
                             || (code.startsWith("bj") && name.endsWith("退"))
-                            || (code.startsWith("sh") && name.startsWith("退市"))
-                            || (code.startsWith("sz") && szDelistedCodesFinal.contains(plainCode))
-                            || (code.startsWith("sh") && shDelistedCodesFinal.contains(plainCode))
-                            || abnormalCodes.contains(stockQuote.getCode());
+                            || (code.startsWith("sh") && name.startsWith("退市"));
                 })
-                .toList();
-        if (CollectionUtils.isEmpty(delistedStocks)) {
-            log.info("未发现退市股票数据，无需清理");
+                .collect(LinkedHashMap::new,
+                        (map, stockQuote) -> map.put(stockQuote.getCode(), stockQuote.getName()),
+                        Map::putAll);
+        stockAbnormalService.saveDelistedStocks(localDelistedStocks, "stock_quote", "本地行情股票名称符合退市规则");
+
+        List<String> abnormalCodes = stockAbnormalService.findAllCodes();
+        if (abnormalCodes.isEmpty()) {
+            log.info("未发现异常股票数据，无需清理");
             return;
         }
-
-        List<String> codes = delistedStocks.stream()
-                .map(StockQuote::getCode)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        if (CollectionUtils.isEmpty(codes)) {
-            log.info("退市股票缺少可清理的代码，无需删除");
-            return;
-        }
-
-        stockQuoteService.deleteQuoteAndHistoryByCodes(codes);
+        stockQuoteService.deleteQuoteAndHistoryByCodes(abnormalCodes);
     }
 
     /**
