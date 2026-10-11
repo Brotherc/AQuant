@@ -124,6 +124,11 @@ public class StockSyncTask {
     private void syncStackDtaLatest() {
         LocalDateTime now = LocalDateTime.now();
 
+        // 东财同步与 akshare 链无数据依赖（写独立的 _em 表，仅依赖自身水位和交易日历，
+        // 交易日历已在本方法调用前同步完成），剥离到专用单线程执行器与整条 akshare 链并行，
+        // 覆盖同花顺行业/成分股同步区间；网关侧的全局节流/重试/熔断保持不变
+        stockIndustryBoardEmSyncService.triggerSynchronizeFromSchedule();
+
         log.info("同步股票行情数据开始");
         syncStackQuote(now);
         log.info("同步股票行情数据完成");
@@ -139,7 +144,6 @@ public class StockSyncTask {
         log.info("同步股票板块数据开始");
         syncStockBoard(now);
         stockBoardConstituentSyncService.synchronizeAllIfRequired(now);
-        stockIndustryBoardEmSyncService.synchronizeIfRequired(now);
         log.info("同步股票板块数据完成");
 
         log.info("同步基金数据开始");
