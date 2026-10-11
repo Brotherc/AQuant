@@ -865,6 +865,58 @@ CREATE TABLE `ai_model_config` (
   KEY `ix_ai_model_config_is_default` (`is_default`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户 AI 模型配置表';
 
+DROP TABLE IF EXISTS `ai_portfolio_diagnosis`;
+CREATE TABLE `ai_portfolio_diagnosis` (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '会诊任务ID',
+  `user_id` bigint NOT NULL COMMENT '所属用户ID',
+  `portfolio_id` bigint NOT NULL COMMENT '投资组合ID',
+  `model_id` int NOT NULL COMMENT '本次会诊固化的模型配置ID',
+  `request_id` varchar(64) NOT NULL COMMENT '用户范围内的请求幂等标识',
+  `status` varchar(32) NOT NULL COMMENT '会诊任务状态',
+  `workflow_version` varchar(50) NOT NULL COMMENT 'Workflow版本',
+  `prompt_version` varchar(50) DEFAULT NULL COMMENT '主审Prompt版本',
+  `context_snapshot` json DEFAULT NULL COMMENT '本次会诊使用的不可变输入快照',
+  `context_hash` char(64) DEFAULT NULL COMMENT '输入快照SHA-256摘要',
+  `data_as_of` date DEFAULT NULL COMMENT '业务数据截止日期',
+  `risk_level` varchar(20) DEFAULT NULL COMMENT '最终组合风险等级',
+  `report_json` json DEFAULT NULL COMMENT '结构化最终报告',
+  `summary` text COMMENT '历史列表使用的报告摘要',
+  `error_message` varchar(1000) DEFAULT NULL COMMENT '脱敏后的任务失败原因',
+  `started_at` datetime(6) DEFAULT NULL COMMENT '任务开始时间',
+  `completed_at` datetime(6) DEFAULT NULL COMMENT '任务完成时间',
+  `created_at` datetime(6) NOT NULL COMMENT '创建时间',
+  `updated_at` datetime(6) NOT NULL COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_ai_diagnosis_user_request` (`user_id`,`request_id`),
+  KEY `ix_ai_diagnosis_user_portfolio_created` (`user_id`,`portfolio_id`,`created_at`),
+  KEY `ix_ai_diagnosis_status` (`status`),
+  KEY `ix_ai_diagnosis_model_id` (`model_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户持仓AI会诊任务表';
+
+DROP TABLE IF EXISTS `ai_portfolio_diagnosis_role_result`;
+CREATE TABLE `ai_portfolio_diagnosis_role_result` (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '角色执行结果ID',
+  `diagnosis_id` int NOT NULL COMMENT '所属会诊任务ID',
+  `role_code` varchar(50) NOT NULL COMMENT '角色代码',
+  `role_name` varchar(100) NOT NULL COMMENT '角色名称',
+  `model_id` int NOT NULL COMMENT '角色实际使用的模型配置ID',
+  `status` varchar(32) NOT NULL COMMENT '角色执行状态',
+  `prompt_version` varchar(50) NOT NULL COMMENT '角色Prompt版本',
+  `result_json` json DEFAULT NULL COMMENT '结构化角色结论',
+  `input_tokens` int DEFAULT NULL COMMENT '输入Token数量',
+  `output_tokens` int DEFAULT NULL COMMENT '输出Token数量',
+  `latency_ms` int DEFAULT NULL COMMENT '执行耗时毫秒数',
+  `error_message` varchar(1000) DEFAULT NULL COMMENT '脱敏后的角色失败原因',
+  `started_at` datetime(6) DEFAULT NULL COMMENT '角色开始时间',
+  `completed_at` datetime(6) DEFAULT NULL COMMENT '角色完成时间',
+  `created_at` datetime(6) NOT NULL COMMENT '创建时间',
+  `updated_at` datetime(6) NOT NULL COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_ai_diagnosis_role` (`diagnosis_id`,`role_code`),
+  KEY `ix_ai_diagnosis_role_status` (`diagnosis_id`,`status`),
+  KEY `ix_ai_diagnosis_role_model_id` (`model_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户持仓AI会诊角色结果表';
+
 DROP TABLE IF EXISTS `user_article`;
 CREATE TABLE `user_article` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '文章ID',
