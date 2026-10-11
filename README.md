@@ -122,6 +122,12 @@ AQuant 是一款基于现代 Web 技术栈构建的一站式量化交易分析�
 - **路由管理**: Vue Router 4.x
 - **HTTP 客户端**: Axios
 
+### AI 服务 (aquant-ai)
+- **核心框架**: FastAPI
+- **数据校验与配置**: Pydantic, Pydantic Settings
+- **Agent 编排**: OpenAI Agents SDK
+- **测试与质量检查**: Pytest, Ruff
+
 ---
 
 ## 📦 快速开始
@@ -164,6 +170,33 @@ npm run dev
 - 前端访问地址: `http://localhost:5173`
 - *注：Vite 已配置代理，会自动将 `/api` 请求反向代理至后端服务。*
 
+### 5. AI 服务启动 (Python / FastAPI)
+
+macOS / Linux：
+
+```bash
+cd aquant-ai
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+cp .env.example .env
+uvicorn aquant_ai.main:app --reload --port 8085
+```
+
+Windows PowerShell：
+
+```powershell
+cd aquant-ai
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e ".[dev]"
+Copy-Item .env.example .env
+uvicorn aquant_ai.main:app --reload --port 8085
+```
+
+- 健康检查: `http://localhost:8085/api/health`
+- OpenAPI 文档: `http://localhost:8085/docs`
+
 ---
 
 ## 📂 项目结构
@@ -178,6 +211,9 @@ AQuant/
 │   ├── src/views            # 视图组件 (大盘全景/行情/财务指标/基金/策略/自选/文章等)
 │   ├── src/layout           # 响应式布局组件
 │   └── src/router           # 路由守卫与配置
+├── aquant-ai/               # FastAPI + OpenAI Agents SDK AI 服务
+│   ├── src/aquant_ai        # API、配置、Agent 与 Workflow 包
+│   └── tests                # Python 自动化测试
 ├── screenshots/             # 系统各模块高清演示截图
 └── README.md                # 项目文档
 ```

@@ -106,6 +106,7 @@ src/aquant_ai/
 ├── core/         # 配置和基础设施
 ├── health/       # 健康检查业务
 ├── model_config/ # 模型配置业务的路由、服务、实体、Schema 和运行时工厂
+├── portfolio_diagnosis/ # 持仓会诊的数据契约、任务状态机、持久化和接口
 ├── workflows/    # 固定 AI Workflow
 └── main.py       # 应用入口
 ```
