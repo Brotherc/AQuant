@@ -32,7 +32,7 @@ import com.brotherc.aquant.indicator.service.StockDupontAnalysisService;
 import com.brotherc.aquant.indicator.service.StockGrowthMetricsService;
 import com.brotherc.aquant.indicator.service.StockPerformanceReportService;
 import com.brotherc.aquant.indicator.service.StockValuationMetricsService;
-import com.brotherc.aquant.stock.service.StockAbnormalService;
+import com.brotherc.aquant.stock.service.StockDelistedCleanupService;
 import com.brotherc.aquant.stock.service.StockQuoteHistoryService;
 import com.brotherc.aquant.stock.service.StockQuoteService;
 import com.brotherc.aquant.stock.service.StockShareChangeService;
@@ -73,7 +73,7 @@ public class StockSyncTask {
     private final TransactionTemplate transactionTemplate;
 
     private final StockQuoteService stockQuoteService;
-    private final StockAbnormalService stockAbnormalService;
+    private final StockDelistedCleanupService stockDelistedCleanupService;
     private final StockDividendDedupService stockDividendDedupService;
     private final StockQuoteHistoryService stockQuoteHistoryService;
     private final StockSyncService stockSyncService;
@@ -108,7 +108,7 @@ public class StockSyncTask {
     @Async
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
-        clearDelistedStockData();
+        stockDelistedCleanupService.clearDelistedStockData();
         stockTradeCalendarService.syncAStockNonTradeDays();
         syncStackDtaLatest();
         stockValuationMetricsService.refreshValuationMetrics();
@@ -937,53 +937,6 @@ public class StockSyncTask {
             cursor = getQuarterEnd(cursor.minusMonths(3));
         }
         return result;
-    }
-
-    /**
-     * 清理 stock_quote 和 stock_quote_history 中已经退市的股票数据
-     */
-    public void clearDelistedStockData() {
-        Map<String, String> szDelistedStocks = new LinkedHashMap<>();
-        try {
-            aKShareService.stockInfoSzDelist("终止上市公司").stream()
-                    .filter(stock -> StringUtils.isNotBlank(stock.getStockCode()))
-                    .forEach(stock -> szDelistedStocks.put("sz" + stock.getStockCode().trim(), stock.getStockName()));
-        } catch (Exception e) {
-            log.warn("获取深交所终止上市公司列表失败，退市清理回退到名称规则", e);
-        }
-        stockAbnormalService.saveDelistedStocks(szDelistedStocks, "stock_info_sz_delist", "深交所终止上市公司");
-
-        Map<String, String> shDelistedStocks = new LinkedHashMap<>();
-        try {
-            aKShareService.stockInfoShDelist("全部").stream()
-                    .filter(stock -> StringUtils.contains(stock.getCompanyName(), "退市")
-                            && StringUtils.isNotBlank(stock.getCompanyCode()))
-                    .forEach(stock -> shDelistedStocks.put("sh" + stock.getCompanyCode().trim(), stock.getCompanyName()));
-        } catch (Exception e) {
-            log.warn("获取上交所退市公司列表失败，退市清理回退到名称规则", e);
-        }
-        stockAbnormalService.saveDelistedStocks(shDelistedStocks, "stock_info_sh_delist", "上交所退市公司（公司简称包含退市）");
-
-        Map<String, String> localDelistedStocks = stockQuoteRepository.findAllCodeNames().stream()
-                .filter(stockQuote -> {
-                    String code = stockQuote.getCode().toLowerCase(Locale.ROOT);
-                    String name = stockQuote.getName();
-                    return name.contains("退市")
-                            || (code.startsWith("sz") && name.endsWith("退"))
-                            || (code.startsWith("bj") && name.endsWith("退"))
-                            || (code.startsWith("sh") && name.startsWith("退市"));
-                })
-                .collect(LinkedHashMap::new,
-                        (map, stockQuote) -> map.put(stockQuote.getCode(), stockQuote.getName()),
-                        Map::putAll);
-        stockAbnormalService.saveDelistedStocks(localDelistedStocks, "stock_quote", "本地行情股票名称符合退市规则");
-
-        List<String> abnormalCodes = stockAbnormalService.findAllCodes();
-        if (abnormalCodes.isEmpty()) {
-            log.info("未发现异常股票数据，无需清理");
-            return;
-        }
-        stockQuoteService.deleteQuoteAndHistoryByCodes(abnormalCodes);
     }
 
     /**

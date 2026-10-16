@@ -21,6 +21,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * A 股非交易日历
@@ -57,15 +59,13 @@ public class StockTradeCalendarService {
             return;
         }
 
-        Set<LocalDate> tradeDates = new HashSet<>();
-        for (ToolTradeDateHistSina item : tradeDateHistSinaList) {
-            if (item != null && StringUtils.isNotBlank(item.getTradeDate())) {
-                LocalDate tradeDate = DateUtils.parseLocalDate(item.getTradeDate());
-                if (tradeDate != null) {
-                    tradeDates.add(tradeDate);
-                }
-            }
-        }
+        Set<LocalDate> tradeDates = tradeDateHistSinaList.stream()
+                .filter(Objects::nonNull)
+                .map(ToolTradeDateHistSina::getTradeDate)
+                .filter(StringUtils::isNotBlank)
+                .map(DateUtils::parseLocalDate)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
         if (CollectionUtils.isEmpty(tradeDates)) {
             log.warn("AKShare A股交易日历未解析到有效日期，跳过非交易日历自动维护");
             return;
@@ -93,28 +93,25 @@ public class StockTradeCalendarService {
 
         List<StockTradeCalendar> exists = stockTradeCalendarRepository
                 .findByMarketAndTradeDateBetween(MARKET_A, startDate.toString(), endDate.toString());
-        Map<String, StockTradeCalendar> existsMap = new LinkedHashMap<>();
-        for (StockTradeCalendar calendar : exists) {
-            existsMap.put(calendar.getTradeDate(), calendar);
-        }
+        Map<String, StockTradeCalendar> existsMap = exists.stream()
+                .collect(Collectors.toMap(StockTradeCalendar::getTradeDate, Function.identity(),
+                        (previous, current) -> current, LinkedHashMap::new));
 
-        List<StockTradeCalendar> saveList = new ArrayList<>();
-        for (String nonTradeDate : expectedNonTradeDates) {
-            if (!existsMap.containsKey(nonTradeDate)) {
-                StockTradeCalendar calendar = new StockTradeCalendar();
-                calendar.setTradeDate(nonTradeDate);
-                calendar.setMarket(MARKET_A);
-                calendar.setRemark(AUTO_SYNC_REMARK);
-                saveList.add(calendar);
-            }
-        }
+        List<StockTradeCalendar> saveList = expectedNonTradeDates.stream()
+                .filter(nonTradeDate -> !existsMap.containsKey(nonTradeDate))
+                .map(nonTradeDate -> {
+                    StockTradeCalendar calendar = new StockTradeCalendar();
+                    calendar.setTradeDate(nonTradeDate);
+                    calendar.setMarket(MARKET_A);
+                    calendar.setRemark(AUTO_SYNC_REMARK);
+                    return calendar;
+                })
+                .toList();
 
-        List<StockTradeCalendar> deleteList = new ArrayList<>();
-        for (StockTradeCalendar calendar : exists) {
-            if (AUTO_SYNC_REMARK.equals(calendar.getRemark()) && !expectedNonTradeDates.contains(calendar.getTradeDate())) {
-                deleteList.add(calendar);
-            }
-        }
+        List<StockTradeCalendar> deleteList = exists.stream()
+                .filter(calendar -> AUTO_SYNC_REMARK.equals(calendar.getRemark())
+                        && !expectedNonTradeDates.contains(calendar.getTradeDate()))
+                .toList();
 
         if (!CollectionUtils.isEmpty(saveList)) {
             stockTradeCalendarRepository.saveAll(saveList);

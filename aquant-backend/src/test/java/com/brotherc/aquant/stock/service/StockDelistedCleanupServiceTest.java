@@ -1,12 +1,10 @@
-package com.brotherc.aquant.task;
+package com.brotherc.aquant.stock.service;
 
 import com.brotherc.aquant.integration.akshare.model.StockInfoShDelist;
 import com.brotherc.aquant.integration.akshare.model.StockInfoSzDelist;
 import com.brotherc.aquant.integration.akshare.service.AKShareService;
 import com.brotherc.aquant.stock.model.dto.StockQuoteCodeNameProjection;
 import com.brotherc.aquant.stock.repository.StockQuoteRepository;
-import com.brotherc.aquant.stock.service.StockAbnormalService;
-import com.brotherc.aquant.stock.service.StockQuoteService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -28,7 +26,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class StockSyncTaskDelistedTest {
+class StockDelistedCleanupServiceTest {
 
     @Mock
     private AKShareService aKShareService;
@@ -39,7 +37,7 @@ class StockSyncTaskDelistedTest {
     @Mock
     private StockQuoteService stockQuoteService;
     @InjectMocks
-    private StockSyncTask task;
+    private StockDelistedCleanupService service;
 
     @Test
     void shouldArchiveExchangeListsBeforeDeletingQuotes() {
@@ -56,7 +54,7 @@ class StockSyncTaskDelistedTest {
         when(quote.getName()).thenReturn("旧名称");
         when(stockQuoteRepository.findAllCodeNames()).thenReturn(List.of(quote));
 
-        task.clearDelistedStockData();
+        service.clearDelistedStockData();
 
         var order = inOrder(stockAbnormalService, stockQuoteService);
         order.verify(stockAbnormalService).saveDelistedStocks(Map.of("sz000001", "终止上市股票"),
@@ -76,7 +74,7 @@ class StockSyncTaskDelistedTest {
         doThrow(new IllegalStateException("归档失败")).when(stockAbnormalService)
                 .saveDelistedStocks(anyMap(), anyString(), anyString());
 
-        assertThatThrownBy(task::clearDelistedStockData).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(service::clearDelistedStockData).isInstanceOf(IllegalStateException.class);
         verifyNoInteractions(stockQuoteRepository, stockQuoteService);
     }
 
@@ -90,7 +88,7 @@ class StockSyncTaskDelistedTest {
         when(quote.getName()).thenReturn("旧名称");
         when(stockQuoteRepository.findAllCodeNames()).thenReturn(List.of(quote));
 
-        task.clearDelistedStockData();
+        service.clearDelistedStockData();
 
         verify(stockAbnormalService).saveDelistedStocks(Map.of(), "stock_quote", "本地行情股票名称符合退市规则");
         verify(stockQuoteService).deleteQuoteAndHistoryByCodes(List.of("sh600001"));
@@ -108,7 +106,7 @@ class StockSyncTaskDelistedTest {
                 quote("sh600003", "正常股票"));
         when(stockQuoteRepository.findAllCodeNames()).thenReturn(quotes);
 
-        task.clearDelistedStockData();
+        service.clearDelistedStockData();
 
         var order = inOrder(stockAbnormalService, stockQuoteService);
         order.verify(stockAbnormalService).saveDelistedStocks(Map.of(
@@ -133,7 +131,7 @@ class StockSyncTaskDelistedTest {
             return null;
         }).when(stockAbnormalService).saveDelistedStocks(anyMap(), anyString(), anyString());
 
-        assertThatThrownBy(task::clearDelistedStockData).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(service::clearDelistedStockData).isInstanceOf(IllegalStateException.class);
         verifyNoInteractions(stockQuoteService);
     }
 
@@ -144,7 +142,7 @@ class StockSyncTaskDelistedTest {
         when(stockQuoteRepository.findAllCodeNames()).thenReturn(List.of());
         when(stockAbnormalService.findAllCodes()).thenReturn(List.of("sh600001"));
 
-        task.clearDelistedStockData();
+        service.clearDelistedStockData();
 
         verify(stockQuoteService).deleteQuoteAndHistoryByCodes(List.of("sh600001"));
     }
@@ -156,7 +154,7 @@ class StockSyncTaskDelistedTest {
         when(stockQuoteRepository.findAllCodeNames()).thenReturn(List.of());
         when(stockAbnormalService.findAllCodes()).thenReturn(List.of());
 
-        task.clearDelistedStockData();
+        service.clearDelistedStockData();
 
         verifyNoInteractions(stockQuoteService);
     }
