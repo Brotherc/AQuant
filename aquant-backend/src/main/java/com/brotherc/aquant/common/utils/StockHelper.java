@@ -89,6 +89,16 @@ public class StockHelper {
         return false;
     }
 
+    /**
+     * 获取最近已收盘交易日的同步判断水位，即该交易日 15:00 对应的毫秒时间戳。
+     * <p>
+     * 交易日 15:00 之前取上一交易日的收盘时间；恰好 15:00 或之后取当日收盘时间；
+     * 周末、节假日等非交易日取向前最近一个交易日的收盘时间。
+     * 交易日判断复用 {@link #latestClosedTradeDay(LocalDateTime)}，包含非交易日历的配置。
+     *
+     * @param syncTime 用于判断最近已收盘交易日的时间，按系统默认时区解释
+     * @return 最近已收盘交易日 15:00 在系统默认时区下对应的 Unix 毫秒时间戳
+     */
     public long getLatestClosedTradeDaySyncWatermark(LocalDateTime syncTime) {
         return latestClosedTradeDay(syncTime)
                 .atTime(StockConstant.A_SHARE_MARKET_CLOSE_TIME)

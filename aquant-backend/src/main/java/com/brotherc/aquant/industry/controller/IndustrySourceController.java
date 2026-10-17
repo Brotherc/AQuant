@@ -12,7 +12,6 @@ import com.brotherc.aquant.industry.service.StockBoardConstituentService;
 import com.brotherc.aquant.industry.service.StockBoardConstituentEmService;
 import com.brotherc.aquant.industry.service.StockIndustryBoardAnalysisService;
 import com.brotherc.aquant.industry.service.StockIndustryBoardEmQueryService;
-import com.brotherc.aquant.industry.service.StockIndustryBoardEmSyncService;
 import com.brotherc.aquant.industry.service.StockIndustryBoardHistoryService;
 import com.brotherc.aquant.industry.service.StockIndustryBoardService;
 import com.brotherc.aquant.sync.entity.StockSync;
@@ -163,7 +162,7 @@ public class IndustrySourceController {
 
     private boolean isStale(IndustryDataSource source) {
         String name = source == IndustryDataSource.THS ? StockSyncConstant.STOCK_BOARD_INDUSTRY_LATEST
-                : StockIndustryBoardEmSyncService.WATERMARK;
+                : StockSyncConstant.STOCK_BOARD_INDUSTRY_EM_LATEST;
         StockSync watermark = stockSyncRepository.findByName(name);
         Long value = StockUtils.parseSyncTimestamp(watermark);
         return value == null || value < stockHelper.getLatestClosedTradeDaySyncWatermark(LocalDateTime.now());

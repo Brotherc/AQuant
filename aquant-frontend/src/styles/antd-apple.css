@@ -376,7 +376,15 @@
 
 .ant-input {
   padding: 6px 11px !important;
+}
+
+/* 固定高度仅适用于单行输入框，避免覆盖 textarea 的 rows 和拖动高度。 */
+input.ant-input {
   height: 32px !important;
+}
+
+textarea.ant-input {
+  resize: vertical;
 }
 
 .ant-input-affix-wrapper {

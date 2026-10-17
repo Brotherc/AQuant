@@ -143,22 +143,25 @@
     >
       <a-alert
         v-if="cookieConfigured !== null"
-        :message="cookieConfigured ? '当前已配置会话 Cookie' : '当前未配置会话 Cookie'"
+        :message="cookieConfigured ? '留空保存将清除当前 Cookie' : '当前未配置会话 Cookie'"
         :type="cookieConfigured ? 'success' : 'warning'"
         show-icon
         style="margin-bottom: 12px;"
       />
       <a-form layout="vertical">
-        <a-form-item label="完整 Cookie 请求头字符串" required>
+        <a-form-item label="完整 Cookie 请求头字符串">
           <a-textarea
             v-model:value="cookieForm.cookie"
-            :rows="4"
+            :rows="6"
             placeholder="qgqp_b_id=...; ct=...; ut=...; ..."
           />
         </a-form-item>
       </a-form>
       <div class="cookie-help">
-        <p>获取方式：① 浏览器打开东方财富行情中心页面，如遇滑块验证先完成；② F12 → Network → 任意 push2 请求 → Request Headers → 复制完整 Cookie 值；③ 粘贴保存后立即生效，无需重启。</p>
+        <p>获取方式：</p>
+        <p>① 浏览器打开东方财富行情中心页面，如遇滑块验证先完成。</p>
+        <p>② F12 → Network → 任意 push2 请求 → Request Headers → 复制完整 Cookie 值。</p>
+        <p>③ 粘贴保存后立即生效，无需重启。</p>
         <p>Cookie 有时效（重度使用约 30-40 分钟），失效后东财同步会自动熔断并提示，重复上述步骤更新即可。</p>
       </div>
     </a-modal>
@@ -512,16 +515,12 @@ const showCookieModal = async () => {
 
 const handleUpdateCookie = async () => {
   const cookie = cookieForm.value.cookie.trim();
-  if (!cookie) {
-    message.warning('请粘贴完整的 Cookie 字符串');
-    return;
-  }
   cookieSaving.value = true;
   try {
     const res = await updateEastmoneyCookie({ cookie });
     if (res.data.success) {
-      message.success('东财 Cookie 更新成功，已即时生效并自动触发同步');
-      cookieConfigured.value = true;
+      message.success(cookie ? '东财 Cookie 更新成功，已即时生效并自动触发同步' : '东财 Cookie 已清除');
+      cookieConfigured.value = Boolean(cookie);
       cookieModalVisible.value = false;
     }
   } catch (error) {

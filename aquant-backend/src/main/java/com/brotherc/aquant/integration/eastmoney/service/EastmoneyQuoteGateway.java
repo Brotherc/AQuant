@@ -2,6 +2,7 @@ package com.brotherc.aquant.integration.eastmoney.service;
 
 import com.brotherc.aquant.common.exception.BusinessException;
 import com.brotherc.aquant.common.exception.ExceptionEnum;
+import com.brotherc.aquant.integration.eastmoney.exception.EastmoneyCoolingDownException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
@@ -41,6 +42,9 @@ public class EastmoneyQuoteGateway {
     /** 退避基数与随机抖动，避免重试节奏被识别 */
     private static final long RETRY_BACKOFF_BASE_MILLIS = 1500L;
     private static final long RETRY_BACKOFF_SPREAD_MILLIS = 1000L;
+
+    private final Object paceLock = new Object();
+    private long lastRequestAtMillis = 0L;
 
     private final OkHttpClient okHttpClient;
     private final ObjectMapper objectMapper;
@@ -91,6 +95,15 @@ public class EastmoneyQuoteGateway {
     /** 带浏览器指纹头的专用客户端，不污染共享 OkHttpClient */
     private OkHttpClient browserClient;
 
+    /** 最近一次实时接口成功主机。分页/循环拉取固定走已验证主机，避免每页都先撞一遍坏主机 */
+    private volatile String preferredQuoteBaseUrl;
+
+    /** 各主机连续传输级失败计数 */
+    private final ConcurrentHashMap<String, AtomicInteger> failureStreakByHost = new ConcurrentHashMap<>();
+
+    /** 各主机熔断冷却截止时间戳 */
+    private final ConcurrentHashMap<String, Long> cooldownUntilByHost = new ConcurrentHashMap<>();
+
     @PostConstruct
     void initBrowserClient() {
         sessionCookie.set(configuredCookie == null || configuredCookie.isBlank() ? null : configuredCookie.trim());
@@ -112,8 +125,7 @@ public class EastmoneyQuoteGateway {
         sessionCookie.set(normalized);
         cooldownUntilByHost.clear();
         failureStreakByHost.values().forEach(streak -> streak.set(0));
-        log.info("东财会话 Cookie 已热更新({})，主机熔断状态已重置",
-                normalized == null ? "已清空" : "len=" + normalized.length());
+        log.info("东财会话 Cookie 已热更新({})，主机熔断状态已重置", normalized == null ? "已清空" : "len=" + normalized.length());
     }
 
     public boolean isSessionCookieConfigured() {
@@ -138,18 +150,6 @@ public class EastmoneyQuoteGateway {
         return false;
     }
 
-    private final Object paceLock = new Object();
-    private long lastRequestAtMillis = 0L;
-
-    /** 最近一次实时接口成功主机。分页/循环拉取固定走已验证主机，避免每页都先撞一遍坏主机 */
-    private volatile String preferredQuoteBaseUrl;
-
-    /** 各主机连续传输级失败计数 */
-    private final ConcurrentHashMap<String, AtomicInteger> failureStreakByHost = new ConcurrentHashMap<>();
-
-    /** 各主机熔断冷却截止时间戳 */
-    private final ConcurrentHashMap<String, Long> cooldownUntilByHost = new ConcurrentHashMap<>();
-
     /**
      * 请求节流：所有东财上游请求共享同一节奏预算，并发调用方（同步任务/分时查询）串行排队
      */
@@ -157,12 +157,15 @@ public class EastmoneyQuoteGateway {
         long interval = paceMinMillis + ThreadLocalRandom.current().nextLong(Math.max(1L, paceSpreadMillis));
         synchronized (paceLock) {
             long waitMillis = lastRequestAtMillis + interval - System.currentTimeMillis();
-            if (waitMillis > 0) {
+            while (waitMillis > 0) {
                 try {
-                    Thread.sleep(waitMillis);
+                    // 等待时释放锁，唤醒后重新检查间隔，避免并发唤醒或虚假唤醒导致请求过密。
+                    paceLock.wait(waitMillis);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                    break;
                 }
+                waitMillis = lastRequestAtMillis + interval - System.currentTimeMillis();
             }
             lastRequestAtMillis = System.currentTimeMillis();
         }
@@ -200,7 +203,7 @@ public class EastmoneyQuoteGateway {
         if (allCoolingDown) {
             throw new EastmoneyCoolingDownException("所有东财行情主机均在熔断冷却中: " + quoteBaseUrls);
         }
-        throw lastFailure == null ? ExceptionEnum.API_REQUEST_ERROR.toException() : lastFailure;
+        throw lastFailure;
     }
 
     /**
@@ -208,8 +211,7 @@ public class EastmoneyQuoteGateway {
      */
     public JsonNode execute(HttpUrl url) {
         if (isCoolingDown(url.host())) {
-            log.info("东财行情主机熔断冷却中，直接失败(未发请求): host={}, 剩余={}ms",
-                    url.host(), remainingCooldownMillis(url.host()));
+            log.info("东财行情主机熔断冷却中，直接失败(未发请求): host={}, 剩余={}ms", url.host(), remainingCooldownMillis(url.host()));
             throw new EastmoneyCoolingDownException(url.host(), remainingCooldownMillis(url.host()));
         }
         int maxAttempts = Math.max(1, maxRetries + 1);
@@ -220,10 +222,13 @@ public class EastmoneyQuoteGateway {
                 if (attempt >= maxAttempts) {
                     throw e;
                 }
-                long backoff = RETRY_BACKOFF_BASE_MILLIS * attempt
-                        + ThreadLocalRandom.current().nextLong(RETRY_BACKOFF_SPREAD_MILLIS);
+                long backoff = RETRY_BACKOFF_BASE_MILLIS * attempt + ThreadLocalRandom.current().nextLong(RETRY_BACKOFF_SPREAD_MILLIS);
                 log.warn("东财行情接口第{}次失败，{}ms 后重试: url={}", attempt, backoff, url);
-                sleepQuietly(backoff);
+                try {
+                    Thread.sleep(backoff);
+                } catch (InterruptedException interruptedException) {
+                    Thread.currentThread().interrupt();
+                }
             }
         }
         // 不可达：maxAttempts >= 1 时循环必在首次成功返回或最后一次抛出
@@ -296,14 +301,6 @@ public class EastmoneyQuoteGateway {
         }
     }
 
-    private static void sleepQuietly(long millis) {
-        try {
-            Thread.sleep(millis);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-    }
-
     private static String snippet(String body) {
         if (body == null || body.isBlank()) {
             return "<empty>";
@@ -311,4 +308,5 @@ public class EastmoneyQuoteGateway {
         String flat = body.replaceAll("\\s+", " ").trim();
         return flat.length() <= FAIL_BODY_SNIPPET ? flat : flat.substring(0, FAIL_BODY_SNIPPET) + "...";
     }
+
 }

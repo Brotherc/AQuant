@@ -1,5 +1,6 @@
 package com.brotherc.aquant.industry.service;
 
+import com.brotherc.aquant.common.constant.StockSyncConstant;
 import com.brotherc.aquant.common.utils.StockHelper;
 import com.brotherc.aquant.common.utils.StockUtils;
 import com.brotherc.aquant.industry.entity.StockIndustryBoardEm;
@@ -10,7 +11,7 @@ import com.brotherc.aquant.integration.eastmoney.model.EastmoneyBoardDetail;
 import com.brotherc.aquant.integration.eastmoney.model.EastmoneyBoardKline;
 import com.brotherc.aquant.integration.eastmoney.model.EastmoneyBoardList;
 import com.brotherc.aquant.integration.eastmoney.service.EastmoneyBoardService;
-import com.brotherc.aquant.integration.eastmoney.service.EastmoneyCoolingDownException;
+import com.brotherc.aquant.integration.eastmoney.exception.EastmoneyCoolingDownException;
 import com.brotherc.aquant.integration.eastmoney.service.EastmoneyQuoteGateway;
 import com.brotherc.aquant.sync.entity.StockSync;
 import com.brotherc.aquant.sync.repository.StockSyncRepository;
@@ -32,7 +33,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @RequiredArgsConstructor
 public class StockIndustryBoardEmSyncService {
 
-    public static final String WATERMARK = "stock_board_industry_em_latest";
     /** 逐板块成分股同步水位前缀。东财按 IP 统计请求频次触发临时封禁，逐板块水位让中断的
      * 同步任务下次从断点续传，避免每次触发都从头重拉全部板块成分股（一次全量约 500+ 请求） */
     public static final String CONSTITUENT_WATERMARK_PREFIX = "stock_board_constituent_em_latest_";
@@ -86,7 +86,8 @@ public class StockIndustryBoardEmSyncService {
 
     private void doSynchronizeIfRequired(LocalDateTime now) {
         long targetWatermark = stockHelper.getLatestClosedTradeDaySyncWatermark(now);
-        Long currentWatermark = StockUtils.parseSyncTimestamp(stockSyncRepository.findByName(WATERMARK));
+        Long currentWatermark = StockUtils.parseSyncTimestamp(
+                stockSyncRepository.findByName(StockSyncConstant.STOCK_BOARD_INDUSTRY_EM_LATEST));
 
         // 板块行情列表（含成交额/成交量/净流入）随每次触发刷新：单次 clist 分页拉取成本低、幂等，
         // 且修正存量字段需即时生效，不随水位跳过
@@ -156,10 +157,10 @@ public class StockIndustryBoardEmSyncService {
             return;
         }
         try {
-            StockSync watermark = stockSyncRepository.findByName(WATERMARK);
+            StockSync watermark = stockSyncRepository.findByName(StockSyncConstant.STOCK_BOARD_INDUSTRY_EM_LATEST);
             if (watermark == null) {
                 watermark = new StockSync();
-                watermark.setName(WATERMARK);
+                watermark.setName(StockSyncConstant.STOCK_BOARD_INDUSTRY_EM_LATEST);
             }
             watermark.setValue(String.valueOf(targetWatermark));
             stockSyncRepository.save(watermark);

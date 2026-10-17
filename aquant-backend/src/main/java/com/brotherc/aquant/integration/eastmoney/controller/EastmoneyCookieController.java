@@ -27,7 +27,11 @@ public class EastmoneyCookieController {
     private final EastmoneyQuoteGateway quoteGateway;
     private final StockIndustryBoardEmSyncService stockIndustryBoardEmSyncService;
 
-    @Operation(summary = "热更新会话 Cookie", description = "浏览器通过滑块验证后，从 DevTools 复制完整 Cookie 请求头字符串传入，立即生效并自动触发行业同步（异步并行，无需重启）；传空白视为清除")
+    @Operation(
+            summary = "热更新会话 Cookie",
+            description = "浏览器通过滑块验证后，从 DevTools 复制完整 Cookie 请求头字符串传入，" +
+                    "立即生效并自动触发行业同步（异步并行，无需重启）；传空白视为清除"
+    )
     @PostMapping("/cookie")
     public ResponseDTO<Void> updateCookie(@RequestBody EastmoneyCookieUpdateVO updateVO) {
         quoteGateway.updateSessionCookie(updateVO.getCookie());
@@ -42,4 +46,5 @@ public class EastmoneyCookieController {
     public ResponseDTO<Boolean> cookieStatus() {
         return ResponseDTO.success(quoteGateway.isSessionCookieConfigured());
     }
+
 }

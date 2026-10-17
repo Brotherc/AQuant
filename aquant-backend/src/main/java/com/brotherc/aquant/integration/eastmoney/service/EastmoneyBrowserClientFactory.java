@@ -5,6 +5,7 @@ import com.github.zhkl0228.impersonator.ImpersonatorFactory;
 import okhttp3.OkHttpClient;
 
 import javax.net.ssl.SSLContext;
+import java.util.function.Supplier;
 
 /**
  * 东财专用浏览器客户端工厂：
@@ -18,10 +19,6 @@ public final class EastmoneyBrowserClientFactory {
         return create(baseClient, true);
     }
 
-    /**
-     * @param impersonate
-     *
-     */
     public static OkHttpClient create(OkHttpClient baseClient, boolean impersonate) {
         return create(baseClient, impersonate, () -> null);
     }
@@ -33,8 +30,7 @@ public final class EastmoneyBrowserClientFactory {
     /**
      * @param cookieSource 会话 Cookie 来源，每次请求实时取值（支持运行期热更新），可为空
      */
-    public static OkHttpClient create(OkHttpClient baseClient, boolean impersonate,
-                                      java.util.function.Supplier<String> cookieSource) {
+    public static OkHttpClient create(OkHttpClient baseClient, boolean impersonate, Supplier<String> cookieSource) {
         OkHttpClient.Builder builder = baseClient.newBuilder()
                 .addInterceptor(new EastmoneyBrowserHeadersInterceptor(cookieSource));
         if (!impersonate) {
@@ -49,4 +45,5 @@ public final class EastmoneyBrowserClientFactory {
                 .sslSocketFactory(sslContext.getSocketFactory(), ImpersonatorFactory.DEFAULT_TRUST_MANAGER)
                 .build();
     }
+
 }

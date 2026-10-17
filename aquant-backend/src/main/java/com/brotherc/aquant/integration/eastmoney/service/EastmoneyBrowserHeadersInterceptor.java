@@ -7,6 +7,7 @@ import okhttp3.Response;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Supplier;
 
 /**
  * 东财请求浏览器指纹模拟：完整 Chrome 请求头，降低被 WAF 按固定指纹识别的风险。
@@ -31,7 +32,7 @@ public class EastmoneyBrowserHeadersInterceptor implements Interceptor {
     );
 
     /** 会话 Cookie 来源（每次请求实时取值，支持运行期热更新），可为空 */
-    private final java.util.function.Supplier<String> cookieSource;
+    private final Supplier<String> cookieSource;
 
     public EastmoneyBrowserHeadersInterceptor() {
         this(() -> null);
@@ -65,4 +66,5 @@ public class EastmoneyBrowserHeadersInterceptor implements Interceptor {
         }
         return chain.proceed(builder.build());
     }
+
 }

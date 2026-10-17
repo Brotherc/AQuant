@@ -1,4 +1,4 @@
-package com.brotherc.aquant.integration.eastmoney.service;
+package com.brotherc.aquant.integration.eastmoney.exception;
 
 /**
  * 东财行情主机熔断冷却中：请求被网关直接拒绝（未发出）。
@@ -14,4 +14,5 @@ public class EastmoneyCoolingDownException extends RuntimeException {
     public EastmoneyCoolingDownException(String host, long remainingMillis) {
         super("东财行情主机熔断冷却中(未发请求): host=" + host + ", 剩余=" + remainingMillis + "ms");
     }
+
 }

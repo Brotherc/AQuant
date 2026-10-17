@@ -1,5 +1,6 @@
 package com.brotherc.aquant.industry.service;
 
+import com.brotherc.aquant.common.constant.StockSyncConstant;
 import com.brotherc.aquant.common.utils.StockHelper;
 import com.brotherc.aquant.common.utils.StockUtils;
 import com.brotherc.aquant.industry.entity.StockBoardConstituentEm;
@@ -48,8 +49,8 @@ public class StockBoardConstituentEmService {
     }
 
     private boolean isStale() {
-        Long target = stockHelper.getLatestClosedTradeDaySyncWatermark(LocalDateTime.now());
-        StockSync watermark = stockSyncRepository.findByName(StockIndustryBoardEmSyncService.WATERMARK);
+        long target = stockHelper.getLatestClosedTradeDaySyncWatermark(LocalDateTime.now());
+        StockSync watermark = stockSyncRepository.findByName(StockSyncConstant.STOCK_BOARD_INDUSTRY_EM_LATEST);
         Long value = StockUtils.parseSyncTimestamp(watermark);
         return value == null || value < target;
     }
