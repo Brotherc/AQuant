@@ -100,11 +100,10 @@ aquant:
     # 东财封禁期内的重试只会刷新封禁窗口，必须停下来等冷却
     breaker-threshold: ${EASTMONEY_BREAKER_THRESHOLD:3}
     cooldown-millis: ${EASTMONEY_COOLDOWN_MILLIS:900000}
-    # 会话 Cookie（完整 Cookie 请求头字符串，可留空）。quote.eastmoney.com 首次访问会触发滑块验证，
-    # 通过后浏览器持有的会话 Cookie 是 push2 接口的通行证：在本机浏览器通过滑块后，
-    # 从 DevTools -> Network -> 任意 push2 请求 -> Request Headers 复制完整 Cookie 值粘贴到这里，
-    # 或在前端"我的"→"东财 Cookie"热更新（推荐，立即生效并自动触发同步）
-    cookie: ${EASTMONEY_COOKIE:}
+    # 行情 Cookie 通过头像菜单"东财 Cookie"维护，加密保存在 stock_sync，重启后自动恢复。
+    # AES-256 密钥是 UTF-8 编码后恰好 32 字节的字符串，部署后需固定保留，不能随重启改变。
+    # 默认值仅供本地开发，生产环境通过 EASTMONEY_COOKIE_AES_KEY 覆盖。
+    cookie-aes-key: ${EASTMONEY_COOKIE_AES_KEY:8c2f7a91d4b605e3a9f018c76d2b4e50}
     # 实时行情接口主机（逗号分隔，按优先级，失败自动切换下一主机，覆盖 clist 板块列表/成分股、分笔明细）。
     # push2 实时主机对程序化客户端做间歇性主机级软封（时段性 502，浏览器正常，akshare#7230），
     # push2delay 为 akshare 官方采用的延迟行情主机，数据滞后约 1-2 分钟，收盘后同步无影响
@@ -116,7 +115,7 @@ aquant:
     # 渠道二：东方财富证券网页交易（jywg.eastmoneysec.com，原 jywg.18.cn）。浏览器登录后从 DevTools
     # 复制会话 Cookie 与 validatekey（任意查询请求 URL 参数或页面 #em_validatekey 的 value）粘贴到这里，
     # 会话失效后重新复制；仅做持仓/成交只读查询，不含下单。
-    # 注意：这是 jywg 交易会话的 Cookie，与上面行情中心的东财 Cookie（aquant.eastmoney.cookie，
+    # 注意：这是 jywg 交易会话的 Cookie，与行情中心的东财 Cookie（通过前端维护并加密持久化，
     # 作用于 push2 行情接口）是两个完全独立的 Cookie，互不通用、需分别维护
     jywg-base-url: ${JYWG_BASE_URL:https://jywg.eastmoneysec.com}
     jywg-cookie: ${JYWG_COOKIE:}

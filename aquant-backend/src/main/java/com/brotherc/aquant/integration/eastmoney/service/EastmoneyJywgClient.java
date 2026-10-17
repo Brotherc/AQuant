@@ -35,7 +35,7 @@ import java.util.Set;
  * 字段名为拼音首字母（Zqdm 证券代码、Zqmc 证券名称、Cjjg 成交价格、Cjsl 成交数量、
  * Cjbh 成交编号、Kysl 可用数量、Zqsl 持仓数量、Cbjg 成本价等）。</p>
  *
- * <p>注意：这里的交易会话与行情中心的东财 Cookie（{@code aquant.eastmoney.cookie}，
+ * <p>注意：这里的交易会话与行情中心的东财 Cookie（通过前端维护并加密持久化，
  * 作用于 push2 行情接口）是两个完全独立的凭证，互不通用。</p>
  */
 @Slf4j

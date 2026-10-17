@@ -48,6 +48,7 @@ public class EastmoneyQuoteGateway {
 
     private final OkHttpClient okHttpClient;
     private final ObjectMapper objectMapper;
+    private final EastmoneyCookieStore eastmoneyCookieStore;
 
     /**
      * 实时行情接口主机列表（逗号分隔，按优先级，仅 scheme+host，路径由调用方追加）。
@@ -81,14 +82,6 @@ public class EastmoneyQuoteGateway {
     @Value("${aquant.eastmoney.cooldown-millis:900000}")
     private long cooldownMillis;
 
-    /**
-     * 会话 Cookie 初始值（完整 Cookie 请求头字符串，可留空）。quote.eastmoney.com 首次访问触发滑块验证，
-     * 通过后浏览器持有的会话 Cookie 是 push2 接口的通行证。实测有 TTL（重度使用约 30-40 分钟），
-     * 失效后在浏览器重新通过滑块验证，调用 POST /eastmoney/cookie 热更新，无需重启
-     */
-    @Value("${aquant.eastmoney.cookie:}")
-    private String configuredCookie;
-
     /** 会话 Cookie 当前值（支持运行期热更新，每次请求实时读取） */
     private final AtomicReference<String> sessionCookie = new AtomicReference<>();
 
@@ -106,7 +99,7 @@ public class EastmoneyQuoteGateway {
 
     @PostConstruct
     void initBrowserClient() {
-        sessionCookie.set(configuredCookie == null || configuredCookie.isBlank() ? null : configuredCookie.trim());
+        sessionCookie.set(eastmoneyCookieStore.loadCookie());
         browserClient = EastmoneyBrowserClientFactory.create(okHttpClient, tlsImpersonate, sessionCookie::get);
         log.info("东财行情网关已初始化: tlsImpersonate={}, maxRetries={}, pace={}~{}ms, breaker={}次/{}ms, sessionCookie={}, quoteBaseUrls={}",
                 tlsImpersonate, maxRetries, paceMinMillis, paceMinMillis + Math.max(1, paceSpreadMillis),
@@ -116,12 +109,14 @@ public class EastmoneyQuoteGateway {
 
     /**
      * 热更新会话 Cookie（浏览器重新通过滑块验证后，从 DevTools 复制完整 Cookie 调用），
-     * 立即对后续请求生效，无需重启。传空白视为清除。
+     * 加密持久化成功后对后续请求生效，重启后从数据库恢复。传空白视为清除。
      * 同时重置主机熔断状态：更新 Cookie 意味着人工已重新通过验证，新凭证应立即接受检验，
      * 否则冷却期内请求根本不会发出，更新的 Cookie 永远没有机会生效
      */
     public void updateSessionCookie(String cookie) {
         String normalized = cookie == null || cookie.isBlank() ? null : cookie.trim();
+        // 数据库事务提交失败时不更新内存，避免前端显示成功但重启后凭据恢复为旧值。
+        eastmoneyCookieStore.saveCookie(normalized);
         sessionCookie.set(normalized);
         cooldownUntilByHost.clear();
         failureStreakByHost.values().forEach(streak -> streak.set(0));

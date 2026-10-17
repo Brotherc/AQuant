@@ -5,6 +5,9 @@ public class StockSyncConstant {
     private StockSyncConstant() {
     }
 
+    /** 东财行情 Cookie 密文存储键，值为凭据密文 */
+    public static final String EASTMONEY_QUOTE_COOKIE = "eastmoney_quote_cookie";
+
     public static final String STOCK_DAILY_LATEST = "stock_daily_latest";
 
     public static final String STOCK_TRADE_CALENDAR_LATEST = "stock_trade_calendar_latest";

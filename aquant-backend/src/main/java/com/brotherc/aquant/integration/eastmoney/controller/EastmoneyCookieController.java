@@ -30,7 +30,7 @@ public class EastmoneyCookieController {
     @Operation(
             summary = "热更新会话 Cookie",
             description = "浏览器通过滑块验证后，从 DevTools 复制完整 Cookie 请求头字符串传入，" +
-                    "立即生效并自动触发行业同步（异步并行，无需重启）；传空白视为清除"
+                    "加密持久化后立即生效并自动触发行业同步（异步并行，无需重启）；传空白视为清除，重启后保持生效"
     )
     @PostMapping("/cookie")
     public ResponseDTO<Void> updateCookie(@RequestBody EastmoneyCookieUpdateVO updateVO) {
