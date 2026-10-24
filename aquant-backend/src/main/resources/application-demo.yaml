@@ -100,7 +100,7 @@ aquant:
     # 东财封禁期内的重试只会刷新封禁窗口，必须停下来等冷却
     breaker-threshold: ${EASTMONEY_BREAKER_THRESHOLD:3}
     cooldown-millis: ${EASTMONEY_COOLDOWN_MILLIS:900000}
-    # 行情 Cookie 通过头像菜单"东财 Cookie"维护，加密保存在 stock_sync，重启后自动恢复。
+    # 行情 Cookie 通过头像菜单"东财 Cookie"维护，加密保存在 system_cookie，业务标识为 eastmoney_quote。
     # AES-256 密钥是 UTF-8 编码后恰好 32 字节的字符串，部署后需固定保留，不能随重启改变。
     # 默认值仅供本地开发，生产环境通过 EASTMONEY_COOKIE_AES_KEY 覆盖。
     cookie-aes-key: ${EASTMONEY_COOKIE_AES_KEY:8c2f7a91d4b605e3a9f018c76d2b4e50}
@@ -108,6 +108,10 @@ aquant:
     # push2 实时主机对程序化客户端做间歇性主机级软封（时段性 502，浏览器正常，akshare#7230），
     # push2delay 为 akshare 官方采用的延迟行情主机，数据滞后约 1-2 分钟，收盘后同步无影响
     quote-base-urls: ${EASTMONEY_QUOTE_BASE_URLS:https://push2delay.eastmoney.com,https://push2.eastmoney.com}
+    # 板块日线、分钟 K 线接口地址。
+    kline-url: ${EASTMONEY_KLINE_URL:https://push2his.eastmoney.com/api/qt/stock/kline/get}
+    # 板块分时走势接口地址。
+    trends-url: ${EASTMONEY_TRENDS_URL:https://push2his.eastmoney.com/api/qt/stock/trends2/get}
   portfolio:
     # 券商持仓自动同步（多数据源切换，账户的 syncMode 决定走哪个渠道：EASYTRADER / EM_WEB）
     # 渠道一：easytrader 客户端自动化服务地址（Windows 常驻，见 https://github.com/shidenggui/easytrader），留空停用

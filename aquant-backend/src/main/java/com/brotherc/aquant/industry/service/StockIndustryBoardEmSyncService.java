@@ -15,8 +15,10 @@ import com.brotherc.aquant.integration.eastmoney.exception.EastmoneyCoolingDownE
 import com.brotherc.aquant.integration.eastmoney.service.EastmoneyQuoteGateway;
 import com.brotherc.aquant.sync.entity.StockSync;
 import com.brotherc.aquant.sync.repository.StockSyncRepository;
+import com.brotherc.aquant.sync.service.StockSyncService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -27,6 +29,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 @Slf4j
 @Service
@@ -34,13 +37,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class StockIndustryBoardEmSyncService {
 
     /** 逐板块成分股同步水位前缀。东财按 IP 统计请求频次触发临时封禁，逐板块水位让中断的
-     * 同步任务下次从断点续传，避免每次触发都从头重拉全部板块成分股（一次全量约 500+ 请求） */
+     * 同步任务下次从断点续传，避免每次触发都从头重拉全部板块成分股（一次全量约 500+ 请求）
+     */
     public static final String CONSTITUENT_WATERMARK_PREFIX = "stock_board_constituent_em_latest_";
     private static final long REQUEST_INTERVAL_MILLIS = 200L;
     private static final long[] RETRY_BACKOFF_MILLIS = {300L, 900L};
 
+    /** 单个板块的同步结果，用于汇总统计与断点续传观测 */
+    private enum BoardSyncOutcome {SYNCED, SKIPPED, FAILED}
+
     private final StockHelper stockHelper;
     private final StockSyncRepository stockSyncRepository;
+    private final StockSyncService stockSyncService;
     private final StockIndustryBoardEmRepository boardRepository;
     private final StockIndustryBoardHistoryEmRepository historyRepository;
     private final EastmoneyBoardService eastmoneyBoardService;
@@ -73,6 +81,10 @@ public class StockIndustryBoardEmSyncService {
     }
 
     public void synchronizeIfRequired(LocalDateTime now) {
+        if (!eastmoneyQuoteGateway.isSessionCookieConfigured()) {
+            log.info("未配置东财会话 Cookie，跳过东方财富行业同步");
+            return;
+        }
         if (!syncRunning.compareAndSet(false, true)) {
             log.info("东方财富行业同步已在进行中，跳过本次触发");
             return;
@@ -86,11 +98,10 @@ public class StockIndustryBoardEmSyncService {
 
     private void doSynchronizeIfRequired(LocalDateTime now) {
         long targetWatermark = stockHelper.getLatestClosedTradeDaySyncWatermark(now);
-        Long currentWatermark = StockUtils.parseSyncTimestamp(
-                stockSyncRepository.findByName(StockSyncConstant.STOCK_BOARD_INDUSTRY_EM_LATEST));
+        StockSync watermark = stockSyncRepository.findByName(StockSyncConstant.STOCK_BOARD_INDUSTRY_EM_LATEST);
+        Long currentWatermark = StockUtils.parseSyncTimestamp(watermark);
 
-        // 板块行情列表（含成交额/成交量/净流入）随每次触发刷新：单次 clist 分页拉取成本低、幂等，
-        // 且修正存量字段需即时生效，不随水位跳过
+        // 板块行情列表（含成交额/成交量/净流入）随每次触发刷新：单次 clist 分页拉取成本低、幂等，且修正存量字段需即时生效，不随水位跳过
         EastmoneyBoardList boardList;
         try {
             boardList = callWithRetry(eastmoneyBoardService::fetchBoardList);
@@ -98,11 +109,16 @@ public class StockIndustryBoardEmSyncService {
             log.warn("东方财富行业列表同步最终失败，已保留缓存", exception);
             return;
         }
-        List<EastmoneyBoardList.Board> boards = boardList.getBoards();
-        if (CollectionUtils.isEmpty(boards)) {
-            log.warn("东方财富行业列表为空，保留缓存");
+
+        List<EastmoneyBoardList.Board> boards = boardList.getBoards().stream()
+                .filter(board -> board != null && StringUtils.isNotBlank(board.getSectorName())
+                        && StringUtils.isNotBlank(board.getSectorCode()))
+                .toList();
+        if (boards.isEmpty()) {
+            log.warn("东方财富行业列表过滤后无有效板块，保留缓存及既有水位");
             return;
         }
+
         try {
             industryBoardEmPersistenceService.saveBoards(boards, now);
         } catch (RuntimeException exception) {
@@ -123,12 +139,10 @@ public class StockIndustryBoardEmSyncService {
         int skipped = 0;
         int failed = 0;
         int index = 0;
+        LocalDate targetTradeDate = stockHelper.latestClosedTradeDay(now);
         for (EastmoneyBoardList.Board board : boards) {
-            if (board == null || board.getSectorName() == null || board.getSectorName().isBlank()) {
-                continue;
-            }
             index++;
-            BoardSyncOutcome outcome = synchronizeBoard(board, stockHelper.latestClosedTradeDay(now), targetWatermark, now);
+            BoardSyncOutcome outcome = synchronizeBoard(board, targetTradeDate, targetWatermark, now);
             switch (outcome) {
                 case SYNCED -> {
                     synced++;
@@ -145,7 +159,7 @@ public class StockIndustryBoardEmSyncService {
                         synced, skipped, failed);
                 return;
             }
-            if (!sleep(REQUEST_INTERVAL_MILLIS)) {
+            if (sleepInterrupted(REQUEST_INTERVAL_MILLIS)) {
                 log.warn("东方财富行业同步被中断: 已同步={}, 跳过={}, 失败={}", synced, skipped, failed);
                 return;
             }
@@ -157,95 +171,106 @@ public class StockIndustryBoardEmSyncService {
             return;
         }
         try {
-            StockSync watermark = stockSyncRepository.findByName(StockSyncConstant.STOCK_BOARD_INDUSTRY_EM_LATEST);
-            if (watermark == null) {
-                watermark = new StockSync();
-                watermark.setName(StockSyncConstant.STOCK_BOARD_INDUSTRY_EM_LATEST);
-            }
-            watermark.setValue(String.valueOf(targetWatermark));
-            stockSyncRepository.save(watermark);
+            stockSyncService.save(watermark, StockSyncConstant.STOCK_BOARD_INDUSTRY_EM_LATEST, targetWatermark);
         } catch (RuntimeException exception) {
             log.warn("东方财富行业同步水位写入失败，等待下次触发", exception);
         }
     }
 
-    /** 单个板块的同步结果，用于汇总统计与断点续传观测 */
-    private enum BoardSyncOutcome { SYNCED, SKIPPED, FAILED }
-
-    private BoardSyncOutcome synchronizeBoard(EastmoneyBoardList.Board board, LocalDate targetTradeDate,
-                                              long targetWatermark, LocalDateTime now) {
+    /**
+     * 按需同步单个板块的历史日 K、当前成分股和行情详情快照。
+     * 三类数据分别判断是否需要刷新；各落库步骤使用独立事务，后续失败不会回滚之前已提交的数据。
+     *
+     * @param board 已过滤无效代码及名称的板块
+     * @param targetTradeDate 历史日 K 需要覆盖到的最近已收盘交易日
+     * @param targetWatermark 本轮成分股同步需要达到的收盘时间戳水位
+     * @param now 本轮同步时间，用于详情刷新日期判断和记录落库时间
+     * @return 全部无需刷新时返回 SKIPPED；必要数据同步失败或熔断时返回 FAILED；
+     *         其余情况返回 SYNCED，详情快照的普通失败不影响该结果
+     */
+    private BoardSyncOutcome synchronizeBoard(
+            EastmoneyBoardList.Board board, LocalDate targetTradeDate, long targetWatermark, LocalDateTime now
+    ) {
         String sectorName = board.getSectorName();
         try {
-            StockIndustryBoardHistoryEm latestHistory = historyRepository
-                    .findTopBySectorNameOrderByTradeDateDesc(sectorName);
+            // 历史行情以本地最大交易日期为进度：没有有效日期，或未覆盖目标收盘交易日时补齐。
+            StockIndustryBoardHistoryEm latestHistory = historyRepository.findTopBySectorNameOrderByTradeDateDesc(sectorName);
             boolean requiresHistory = latestHistory == null || latestHistory.getTradeDate() == null
                     || LocalDate.parse(latestHistory.getTradeDate()).isBefore(targetTradeDate);
-            Long constituentWatermark = StockUtils.parseSyncTimestamp(
-                    stockSyncRepository.findByName(CONSTITUENT_WATERMARK_PREFIX + sectorName));
+
+            // 成分股没有历史日期可供判断，按板块独立水位决定是否刷新，支持同步中断后跳过已完成板块。
+            // 保留查询到的记录，成功保存成分股后直接复用它更新水位，避免再次查询。
+            StockSync constituentSync = stockSyncRepository.findByName(CONSTITUENT_WATERMARK_PREFIX + sectorName);
+            Long constituentWatermark = StockUtils.parseSyncTimestamp(constituentSync);
             boolean requiresConstituents = constituentWatermark == null || constituentWatermark < targetWatermark;
+
+            // 详情快照按本轮自然日判断，区别于历史日 K 和成分股采用的收盘交易日口径。
+            // 仅在当前板块实体存在，且详情日期缺失或早于今天时刷新。
             StockIndustryBoardEm boardRow = boardRepository.findBySectorCode(board.getSectorCode());
             boolean requiresDetail = boardRow != null && (boardRow.getDetailTradeDate() == null
                     || boardRow.getDetailTradeDate().isBefore(now.toLocalDate()));
+
+            // 三类数据均满足要求时，不再发起该板块的外部请求。
             if (!requiresHistory && !requiresConstituents && !requiresDetail) {
                 return BoardSyncOutcome.SKIPPED;
             }
-            List<EastmoneyBoardKline.Bar> history = requiresHistory ? callWithRetry(() ->
-                    eastmoneyBoardService.fetchBoardDailyKline(board.getSectorCode(),
-                            latestHistory == null ? "19900101" : LocalDate.parse(latestHistory.getTradeDate())
-                                    .plusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE),
-                            targetTradeDate.format(DateTimeFormatter.BASIC_ISO_DATE)).getBars()) : List.of();
+
+            List<EastmoneyBoardKline.Bar> history = List.of();
+            if (requiresHistory) {
+                // 首次同步从固定起点拉取；已有历史则从最大日期的次日增量补齐，截止到目标收盘日。
+                String historyStartDate = latestHistory == null || latestHistory.getTradeDate() == null ?
+                        "19900101" :
+                        LocalDate.parse(latestHistory.getTradeDate()).plusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE);
+                history = callWithRetry(() -> eastmoneyBoardService.fetchBoardDailyKline(
+                        board.getSectorCode(), historyStartDate,
+                        targetTradeDate.format(DateTimeFormatter.BASIC_ISO_DATE)).getBars());
+            }
+
+            // 只有水位落后时才拉取当前成分股；无需刷新时用 null 表示本次不处理该项。
             List<EastmoneyBoardList.Board> constituents = requiresConstituents ? callWithRetry(
                     () -> eastmoneyBoardService.fetchBoardConstituents(board.getSectorCode())
             ) : null;
+            // 需要刷新的必要数据若返回空集合，本次不写历史及成分股，也不推进该板块水位。
+            // 无需刷新的项目不参与空集合校验，避免将“主动跳过”误判为同步失败。
             if ((requiresHistory && CollectionUtils.isEmpty(history))
                     || (requiresConstituents && CollectionUtils.isEmpty(constituents))) {
                 log.warn("东方财富行业同步返回空数据，sectorName={}，保留缓存", sectorName);
                 return BoardSyncOutcome.FAILED;
             }
+
+            // 先保存历史，再保存成分股；成分股落库成功后才推进其独立水位。
             if (requiresHistory) {
                 industryBoardEmPersistenceService.saveHistory(sectorName, history, now);
             }
             if (requiresConstituents) {
                 industryBoardEmPersistenceService.saveConstituents(sectorName, constituents, now);
-                writeConstituentWatermark(sectorName, targetWatermark);
+                stockSyncService.save(constituentSync, CONSTITUENT_WATERMARK_PREFIX + sectorName, targetWatermark);
             }
             if (requiresDetail) {
                 // 详情快照失败不判定板块失败：K线/成分股可能已成功落库，快照留待下次触发重抓
                 try {
-                    EastmoneyBoardDetail detail = callWithRetry(
-                            () -> eastmoneyBoardService.fetchBoardDetail(board.getSectorCode()));
+                    EastmoneyBoardDetail detail = callWithRetry(() -> eastmoneyBoardService.fetchBoardDetail(board.getSectorCode()));
                     industryBoardEmPersistenceService.applyDetail(boardRow, detail, now);
                 } catch (EastmoneyCoolingDownException exception) {
+                    // 熔断不能按普通详情失败忽略，需要交给外层返回 FAILED，由调用方决定提前结束本轮。
                     throw exception;
                 } catch (RuntimeException exception) {
                     log.warn("东方财富板块详情快照抓取失败，sectorName={}，下次触发重试", sectorName, exception);
                 }
             }
+
             return BoardSyncOutcome.SYNCED;
         } catch (EastmoneyCoolingDownException exception) {
             log.warn("东方财富行情源熔断冷却中，板块未同步: sectorName={}, 原因={}", sectorName, exception.getMessage());
             return BoardSyncOutcome.FAILED;
         } catch (RuntimeException exception) {
+            // 当前板块失败，阻止外层推进整轮成功水位；已提交的历史/成分股保留，后续按各自进度重试。
             log.warn("东方财富行业同步失败，sectorName={}，保留缓存", sectorName, exception);
             return BoardSyncOutcome.FAILED;
         }
     }
 
-    private void writeConstituentWatermark(String sectorName, long targetWatermark) {
-        try {
-            StockSync watermark = stockSyncRepository.findByName(CONSTITUENT_WATERMARK_PREFIX + sectorName);
-            if (watermark == null) {
-                watermark = new StockSync();
-                watermark.setName(CONSTITUENT_WATERMARK_PREFIX + sectorName);
-            }
-            watermark.setValue(String.valueOf(targetWatermark));
-            stockSyncRepository.save(watermark);
-        } catch (RuntimeException exception) {
-            log.warn("东方财富成分股水位写入失败，下次将重拉该板块，sectorName={}", sectorName, exception);
-        }
-    }
-
-    private <T> T callWithRetry(java.util.function.Supplier<T> request) {
+    private <T> T callWithRetry(Supplier<T> request) {
         RuntimeException lastException = null;
         for (int attempt = 0; attempt <= RETRY_BACKOFF_MILLIS.length; attempt++) {
             try {
@@ -259,7 +284,7 @@ public class StockIndustryBoardEmSyncService {
                     long backoffMillis = RETRY_BACKOFF_MILLIS[attempt];
                     log.warn("东方财富请求失败，准备退避重试，attempt={}/{}, backoffMillis={}",
                             attempt + 1, RETRY_BACKOFF_MILLIS.length + 1, backoffMillis);
-                    if (!sleep(backoffMillis)) {
+                    if (sleepInterrupted(backoffMillis)) {
                         break;
                     }
                 } else {
@@ -267,16 +292,20 @@ public class StockIndustryBoardEmSyncService {
                 }
             }
         }
-        throw lastException == null ? new IllegalStateException("东方财富请求失败") : lastException;
+        throw lastException;
     }
 
-    private boolean sleep(long millis) {
+    /**
+     * 等待指定毫秒数，中断时恢复线程中断标志并返回 true。
+     */
+    private boolean sleepInterrupted(long millis) {
         try {
             TimeUnit.MILLISECONDS.sleep(millis);
-            return true;
+            return false;
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
-            return false;
+            return true;
         }
     }
+
 }

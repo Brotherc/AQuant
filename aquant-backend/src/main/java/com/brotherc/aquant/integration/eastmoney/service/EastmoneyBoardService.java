@@ -1,6 +1,7 @@
 package com.brotherc.aquant.integration.eastmoney.service;
 
 import com.brotherc.aquant.common.exception.ExceptionEnum;
+import com.brotherc.aquant.common.utils.StockUtils;
 import com.brotherc.aquant.integration.eastmoney.model.EastmoneyBoardDetail;
 import com.brotherc.aquant.integration.eastmoney.model.EastmoneyBoardKline;
 import com.brotherc.aquant.integration.eastmoney.model.EastmoneyBoardList;
@@ -9,9 +10,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.HttpUrl;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,8 +27,6 @@ import java.util.List;
 public class EastmoneyBoardService {
 
     private static final String BOARD_MARKET_PREFIX = "90.";
-    private static final String KLINE_URL = "https://push2his.eastmoney.com/api/qt/stock/kline/get";
-    private static final String TRENDS_URL = "https://push2his.eastmoney.com/api/qt/stock/trends2/get";
     /**
      * stock/get 详情快照字段（与浏览器详情页一致）：f57/f58 代码名称，f43 最新，f44-f46 最高/最低/今开，
      * f47 成交量(手)，f48 成交额(元)，f49 外盘(手)，f50 量比，f60 昨收，f85 流通股本(股)，
@@ -58,6 +57,14 @@ public class EastmoneyBoardService {
 
     private final EastmoneyQuoteGateway quoteGateway;
 
+    /** 板块日线、分钟 K 线接口地址。 */
+    @Value("${aquant.eastmoney.kline-url:https://push2his.eastmoney.com/api/qt/stock/kline/get}")
+    private String klineUrl;
+
+    /** 板块分时走势接口地址。 */
+    @Value("${aquant.eastmoney.trends-url:https://push2his.eastmoney.com/api/qt/stock/trends2/get}")
+    private String trendsUrl;
+
     /**
      * 行业板块列表（全量分页拉取，约 496 个板块）
      */
@@ -83,29 +90,12 @@ public class EastmoneyBoardService {
             if (!diff.isArray() || diff.isEmpty()) {
                 break;
             }
-            int pageBoardCount = 0;
-            for (JsonNode item : diff) {
-                EastmoneyBoardList.Board board = new EastmoneyBoardList.Board();
-                board.setSectorCode(item.path("f12").asText());
-                board.setSectorName(item.path("f14").asText());
-                board.setLatestPrice(parseDecimal(item.path("f2")));
-                board.setChangePercent(parseDecimal(item.path("f3")));
-                board.setTotalVolume(parseDecimal(item.path("f5")));
-                board.setTotalAmount(parseDecimal(item.path("f6")));
-                board.setNetInflow(parseDecimal(item.path("f62")));
-                board.setRiseCount(item.path("f104").isNumber() ? item.path("f104").asInt() : null);
-                board.setFallCount(item.path("f105").isNumber() ? item.path("f105").asInt() : null);
-                board.setLeadingStock(item.path("f140").asText(null));
-                board.setLeadingStockChangePercent(parseDecimal(item.path("f136")));
-                if (board.getSectorCode().startsWith("BK") && !board.getSectorName().isBlank()) {
-                    result.getBoards().add(board);
-                    pageBoardCount++;
-                }
-            }
-            if (pageBoardCount == 0) {
+            List<EastmoneyBoardList.Board> pageBoards = parseBoards(diff);
+            if (pageBoards.isEmpty()) {
                 log.warn("东财板块列表响应不含板块代码，fs 过滤可能被上游忽略，total={}", total);
                 throw ExceptionEnum.API_REQUEST_ERROR.toException();
             }
+            result.getBoards().addAll(pageBoards);
             if (page * PAGE_SIZE >= total) {
                 break;
             }
@@ -114,6 +104,31 @@ public class EastmoneyBoardService {
             throw ExceptionEnum.API_REQUEST_ERROR.toException();
         }
         return result;
+    }
+
+    /**
+     * 解析单页 diff 数据，仅保留代码以 BK 开头且名称非空白的板块。
+     */
+    private List<EastmoneyBoardList.Board> parseBoards(JsonNode diff) {
+        List<EastmoneyBoardList.Board> boards = new ArrayList<>();
+        for (JsonNode item : diff) {
+            EastmoneyBoardList.Board board = new EastmoneyBoardList.Board();
+            board.setSectorCode(item.path("f12").asText());
+            board.setSectorName(item.path("f14").asText());
+            board.setLatestPrice(StockUtils.parseDecimal(item.path("f2")));
+            board.setChangePercent(StockUtils.parseDecimal(item.path("f3")));
+            board.setTotalVolume(StockUtils.parseDecimal(item.path("f5")));
+            board.setTotalAmount(StockUtils.parseDecimal(item.path("f6")));
+            board.setNetInflow(StockUtils.parseDecimal(item.path("f62")));
+            board.setRiseCount(item.path("f104").isNumber() ? item.path("f104").asInt() : null);
+            board.setFallCount(item.path("f105").isNumber() ? item.path("f105").asInt() : null);
+            board.setLeadingStock(item.path("f140").asText(null));
+            board.setLeadingStockChangePercent(StockUtils.parseDecimal(item.path("f136")));
+            if (board.getSectorCode().startsWith("BK") && !board.getSectorName().isBlank()) {
+                boards.add(board);
+            }
+        }
+        return boards;
     }
 
     /**
@@ -182,21 +197,21 @@ public class EastmoneyBoardService {
         EastmoneyBoardDetail detail = new EastmoneyBoardDetail();
         detail.setSectorCode(data.path("f57").asText());
         detail.setSectorName(data.path("f58").asText(null));
-        detail.setLatestPrice(parseDecimal(data.path("f43")));
-        detail.setOpenPrice(parseDecimal(data.path("f46")));
-        detail.setPreClosePrice(parseDecimal(data.path("f60")));
-        detail.setHighPrice(parseDecimal(data.path("f44")));
-        detail.setLowPrice(parseDecimal(data.path("f45")));
-        detail.setChangeAmount(parseDecimal(data.path("f169")));
-        detail.setChangePercent(parseDecimal(data.path("f170")));
-        detail.setAmplitude(parseDecimal(data.path("f171")));
-        detail.setVolume(parseDecimal(data.path("f47")));
-        detail.setAmount(parseDecimal(data.path("f48")));
-        detail.setTurnoverRate(parseDecimal(data.path("f168")));
-        detail.setVolumeRatio(parseDecimal(data.path("f50")));
-        detail.setOuterDisc(parseDecimal(data.path("f49")));
-        detail.setCirculatingMarketValue(parseDecimal(data.path("f117")));
-        detail.setCirculatingShares(parseDecimal(data.path("f85")));
+        detail.setLatestPrice(StockUtils.parseDecimal(data.path("f43")));
+        detail.setOpenPrice(StockUtils.parseDecimal(data.path("f46")));
+        detail.setPreClosePrice(StockUtils.parseDecimal(data.path("f60")));
+        detail.setHighPrice(StockUtils.parseDecimal(data.path("f44")));
+        detail.setLowPrice(StockUtils.parseDecimal(data.path("f45")));
+        detail.setChangeAmount(StockUtils.parseDecimal(data.path("f169")));
+        detail.setChangePercent(StockUtils.parseDecimal(data.path("f170")));
+        detail.setAmplitude(StockUtils.parseDecimal(data.path("f171")));
+        detail.setVolume(StockUtils.parseDecimal(data.path("f47")));
+        detail.setAmount(StockUtils.parseDecimal(data.path("f48")));
+        detail.setTurnoverRate(StockUtils.parseDecimal(data.path("f168")));
+        detail.setVolumeRatio(StockUtils.parseDecimal(data.path("f50")));
+        detail.setOuterDisc(StockUtils.parseDecimal(data.path("f49")));
+        detail.setCirculatingMarketValue(StockUtils.parseDecimal(data.path("f117")));
+        detail.setCirculatingShares(StockUtils.parseDecimal(data.path("f85")));
         return detail;
     }
 
@@ -208,7 +223,7 @@ public class EastmoneyBoardService {
      * @param endDate    结束日期 yyyyMMdd
      */
     public EastmoneyBoardKline fetchBoardDailyKline(String sectorCode, String startDate, String endDate) {
-        HttpUrl url = HttpUrl.get(KLINE_URL).newBuilder()
+        HttpUrl url = HttpUrl.get(klineUrl).newBuilder()
                 .addQueryParameter("secid", BOARD_MARKET_PREFIX + sectorCode)
                 .addQueryParameter("klt", "101")
                 .addQueryParameter("fqt", "1")
@@ -227,7 +242,7 @@ public class EastmoneyBoardService {
      * @param days       拉取天数（东财按交易日返回最近 days 个交易日的分钟线）
      */
     public EastmoneyBoardKline fetchBoardMinuteKline(String sectorCode, int days) {
-        HttpUrl url = HttpUrl.get(KLINE_URL).newBuilder()
+        HttpUrl url = HttpUrl.get(klineUrl).newBuilder()
                 .addQueryParameter("secid", BOARD_MARKET_PREFIX + sectorCode)
                 .addQueryParameter("klt", "1")
                 .addQueryParameter("fqt", "1")
@@ -247,7 +262,7 @@ public class EastmoneyBoardService {
      * @param days       1=当日分时，5=五日分时
      */
     public EastmoneyBoardTrends fetchBoardTrends(String sectorCode, int days) {
-        HttpUrl url = HttpUrl.get(TRENDS_URL).newBuilder()
+        HttpUrl url = HttpUrl.get(trendsUrl).newBuilder()
                 .addQueryParameter("secid", BOARD_MARKET_PREFIX + sectorCode)
                 .addQueryParameter("fields1", "f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13")
                 .addQueryParameter("fields2", "f51,f52,f53,f54,f55,f56,f57,f58")
@@ -261,7 +276,7 @@ public class EastmoneyBoardService {
         EastmoneyBoardTrends result = new EastmoneyBoardTrends();
         result.setCode(data.path("code").asText());
         result.setName(data.path("name").asText());
-        result.setPreClose(parseDecimal(data.path("preClose")));
+        result.setPreClose(StockUtils.parseDecimal(data.path("preClose")));
         for (JsonNode node : data.path("trends")) {
             // 格式: "yyyy-MM-dd HH:mm,开,收/现,高,低,量(手),额(元),均价"
             String[] parts = node.asText().trim().split(",");
@@ -270,10 +285,10 @@ public class EastmoneyBoardService {
             }
             EastmoneyBoardTrends.Trend trend = new EastmoneyBoardTrends.Trend();
             trend.setTime(parts[0]);
-            trend.setPrice(parseDecimalNode(parts[2]));
-            trend.setAvgPrice(parseDecimalNode(parts[7]));
-            trend.setVolume(parseDecimalNode(parts[5]));
-            trend.setAmount(parseDecimalNode(parts[6]));
+            trend.setPrice(StockUtils.parseDecimalNode(parts[2]));
+            trend.setAvgPrice(StockUtils.parseDecimalNode(parts[7]));
+            trend.setVolume(StockUtils.parseDecimalNode(parts[5]));
+            trend.setAmount(StockUtils.parseDecimalNode(parts[6]));
             result.getTrends().add(trend);
         }
         if (result.getTrends().isEmpty()) {
@@ -290,7 +305,7 @@ public class EastmoneyBoardService {
         EastmoneyBoardKline result = new EastmoneyBoardKline();
         result.setCode(data.path("code").asText());
         result.setKlt(klt);
-        result.setPreClose(parseDecimal(data.path("prePrice")));
+        result.setPreClose(StockUtils.parseDecimal(data.path("prePrice")));
         for (JsonNode node : data.path("klines")) {
             // 格式: "时间,开,收,高,低,量(手),额(元),振幅"
             String[] parts = node.asText().trim().split(",");
@@ -299,33 +314,16 @@ public class EastmoneyBoardService {
             }
             EastmoneyBoardKline.Bar bar = new EastmoneyBoardKline.Bar();
             bar.setTime(parts[0]);
-            bar.setOpenPrice(parseDecimalNode(parts[1]));
-            bar.setClosePrice(parseDecimalNode(parts[2]));
-            bar.setHighPrice(parseDecimalNode(parts[3]));
-            bar.setLowPrice(parseDecimalNode(parts[4]));
-            bar.setVolume(parseDecimalNode(parts[5]));
-            bar.setAmount(parseDecimalNode(parts[6]));
-            bar.setAmplitude(parts.length >= 8 ? parseDecimalNode(parts[7]) : null);
+            bar.setOpenPrice(StockUtils.parseDecimalNode(parts[1]));
+            bar.setClosePrice(StockUtils.parseDecimalNode(parts[2]));
+            bar.setHighPrice(StockUtils.parseDecimalNode(parts[3]));
+            bar.setLowPrice(StockUtils.parseDecimalNode(parts[4]));
+            bar.setVolume(StockUtils.parseDecimalNode(parts[5]));
+            bar.setAmount(StockUtils.parseDecimalNode(parts[6]));
+            bar.setAmplitude(parts.length >= 8 ? StockUtils.parseDecimalNode(parts[7]) : null);
             result.getBars().add(bar);
         }
         return result;
     }
 
-    private static BigDecimal parseDecimalNode(String value) {
-        if (value == null || value.isBlank() || "-".equals(value.trim())) {
-            return null;
-        }
-        try {
-            return new BigDecimal(value.trim());
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    private static BigDecimal parseDecimal(JsonNode node) {
-        if (node == null || node.isMissingNode() || node.isNull()) {
-            return null;
-        }
-        return parseDecimalNode(node.asText());
-    }
 }

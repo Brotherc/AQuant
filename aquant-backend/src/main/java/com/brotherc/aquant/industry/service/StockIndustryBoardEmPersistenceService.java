@@ -36,26 +36,30 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class StockIndustryBoardEmPersistenceService {
 
+    private static final BigDecimal ONE_YI = BigDecimal.valueOf(100_000_000L);
+    private static final BigDecimal ONE_WAN_SHOU = BigDecimal.valueOf(10_000L);
+
     private final StockHelper stockHelper;
     private final StockIndustryBoardEmRepository boardRepository;
     private final StockIndustryBoardHistoryEmRepository historyRepository;
     private final StockBoardConstituentEmRepository constituentRepository;
 
+    /**
+     * 保存已由同步编排层过滤无效记录的板块列表，并按有效代码进行对账。
+     */
     @Transactional(rollbackFor = Exception.class)
     public void saveBoards(List<EastmoneyBoardList.Board> boards, LocalDateTime now) {
         Map<String, StockIndustryBoardEm> existing = boardRepository.findAll().stream()
-                .collect(Collectors.toMap(StockIndustryBoardEm::getSectorCode, item -> item, (first, second) -> first));
+                .collect(Collectors.toMap(
+                        StockIndustryBoardEm::getSectorCode,
+                        item -> item, (first, second) -> first)
+                );
+
         // 上游按涨跌幅排序分页拼接，排名变动会使页边界板块在单次响应中重复出现，须批内去重
         Map<String, StockIndustryBoardEm> saves = new LinkedHashMap<>();
         Set<String> sourceSectorCodes = new HashSet<>(boards.size());
         int rank = 0;
         for (EastmoneyBoardList.Board board : boards) {
-            if (board == null || board.getSectorName() == null || board.getSectorName().isBlank()) {
-                continue;
-            }
-            if (board.getSectorCode() == null || board.getSectorCode().isBlank()) {
-                continue;
-            }
             sourceSectorCodes.add(board.getSectorCode());
             rank++;
             StockIndustryBoardEm entity = existing.getOrDefault(board.getSectorCode(), new StockIndustryBoardEm());
@@ -77,6 +81,7 @@ public class StockIndustryBoardEmPersistenceService {
             entity.setCreateTime(now);
             saves.put(board.getSectorCode(), entity);
         }
+
         boardRepository.saveAll(saves.values());
         // 与上游列表对账：上游已下线的板块从本地删除（历史/成分股以 sectorName 关联，孤儿数据保留不影响展示）
         List<StockIndustryBoardEm> stale = existing.values().stream()
@@ -181,9 +186,6 @@ public class StockIndustryBoardEmPersistenceService {
         boardRepository.save(boardRow);
     }
 
-    private static final BigDecimal ONE_YI = BigDecimal.valueOf(100_000_000L);
-    private static final BigDecimal ONE_WAN_SHOU = BigDecimal.valueOf(10_000L);
-
     /** 东财成交额/主力净流入单位换算：元 → 亿元 */
     private BigDecimal yuanAmountToYi(BigDecimal yuan) {
         if (yuan == null) return null;
@@ -195,4 +197,5 @@ public class StockIndustryBoardEmPersistenceService {
         if (shou == null) return null;
         return shou.divide(ONE_WAN_SHOU, 4, RoundingMode.HALF_UP);
     }
+
 }

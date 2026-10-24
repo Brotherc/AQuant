@@ -288,7 +288,7 @@ public class StockSyncService {
         }
     }
 
-    private void save(StockSync stockSync, String name, Object value) {
+    public void save(StockSync stockSync, String name, Object value) {
         if (stockSync == null) {
             stockSync = new StockSync();
             stockSync.setName(name);

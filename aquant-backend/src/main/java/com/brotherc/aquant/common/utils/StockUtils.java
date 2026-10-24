@@ -1,6 +1,7 @@
 package com.brotherc.aquant.common.utils;
 
 import com.brotherc.aquant.sync.entity.StockSync;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.commons.lang3.StringUtils;
 
 import java.math.BigDecimal;
@@ -188,6 +189,30 @@ public class StockUtils {
             return amount.multiply(BigDecimal.valueOf(100000000));
         }
         return "万".equals(unit) ? amount.multiply(BigDecimal.valueOf(10000)) : amount;
+    }
+
+    /**
+     * 解析行情数值文本，空白、横杠及非法数字返回 {@code null}，有效的零值保留为零。
+     */
+    public static BigDecimal parseDecimalNode(String value) {
+        if (value == null || value.isBlank() || "-".equals(value.trim())) {
+            return null;
+        }
+        try {
+            return new BigDecimal(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 解析行情 JSON 中的数值或数字文本，空节点及缺失节点返回 {@code null}。
+     */
+    public static BigDecimal parseDecimal(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return null;
+        }
+        return parseDecimalNode(node.asText());
     }
 
     /**

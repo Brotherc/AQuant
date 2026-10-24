@@ -1,3 +1,14 @@
+DROP TABLE IF EXISTS `system_cookie`;
+CREATE TABLE `system_cookie` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `cookie_key` varchar(255) NOT NULL COMMENT 'Cookie唯一业务标识，区分平台和用途',
+  `cookie_encrypted` mediumtext COMMENT 'AES-256-GCM加密的Cookie，空字符串表示已清除',
+  `create_time` datetime(6) DEFAULT NULL COMMENT '首次创建时间',
+  `update_time` datetime(6) DEFAULT NULL COMMENT '最近更新或清除时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_system_cookie_key` (`cookie_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='系统Cookie配置';
+
 DROP TABLE IF EXISTS `stock_abnormal`;
 CREATE TABLE `stock_abnormal` (
   `id` bigint NOT NULL AUTO_INCREMENT,
